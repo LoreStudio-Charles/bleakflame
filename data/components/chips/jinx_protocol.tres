@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_jinx"]
+
+[resource]
+script = ExtResource("1_jinx")
+tags = PackedStringArray("jinx")
+profession_lock = "privateer"
+extra = {
+"jinx_cap": 0.75,
+"jinx_cooldown": 22.0,
+"jinx_duration": 6.0,
+"jinx_energy": 20.0,
+"jinx_floor": 0.3,
+"jinx_mult": 2.0,
+"jinx_radius": 420.0
+}
+display_name = "JINX Evasion Protocol"
+description = "Privateer tech. Floods the wing's flight computers with the Shoal's own jink tables — every ally in range flies a smaller profile for a few seconds. Doesn't soak the spike; makes it miss."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

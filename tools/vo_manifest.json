@@ -1,0 +1,102 @@
+{
+	"caught_looking_briefing": {
+		"text": "The absence had a vector. I ran it against the old colony almanac and I need you to not ask me what I found. Something comes through there. Soon. Hold position and record everything. Then come straight home — I mean straight — the moment your instruments so much as flinch.",
+		"voice": "lab"
+	},
+	"caught_looking_debrief": {
+		"text": "...No one brings me this. No one brings me anything. That's the whole horror of it — they don't come back to bring it. You did. You're the first. I'm taking this to Ruel and Voss both, tonight. Stay near the light, pilot. Stay near the light.",
+		"voice": "lab"
+	},
+	"cold_patch_briefing": {
+		"text": "Rumors don't calibrate. I need numbers. There's a residue off the lane — right where the Kestrel-class Pale Wager stopped transmitting. Survey scanner, select it, channel a full scan. Bring me what the instruments say, not what the dock rats feel.",
+		"voice": "lab"
+	},
+	"cold_patch_debrief": {
+		"text": "This isn't a residue. It's an absence. Matter that reads as removed — not burned, not scattered. Taken out of the equation. I'm escalating this. Keep your scanner fitted.",
+		"voice": "lab"
+	},
+	"ember_word_briefing": {
+		"text": "The Meridian's going to cost me sleep, and I'd rather it cost yours. Ember Row. Odessa. She owes me a listen, and she hears everything on this deck before I do. Go find out what people are too sober to say to an underwriter.",
+		"voice": "voss"
+	},
+	"ember_word_pirates": {
+		"text": "Pirates take the cargo and leave the crew as a message, or take the crew and sell the cargo. They LEAVE things — that's the whole point of a message. Whatever this is, it doesn't leave. It just... closes over them.",
+		"voice": "odessa"
+	},
+	"ember_word_start": {
+		"text": "You've got the look — the one that's stood over an empty patch of space where a ship ought to be. The Meridian wasn't the first. Won't be the last. And not one of them left so much as a scorch on the dark.",
+		"voice": "odessa"
+	},
+	"ember_word_stories": {
+		"text": "Old dock rats call it the thing in the dark. Say it breathes. Say it's got the patience of an orbit — comes round when it comes round, and God help what's exposed when it does. I'd call it nerves. If the manifests weren't a body count.",
+		"voice": "odessa"
+	},
+	"first_contact_briefing": {
+		"text": "It left something. It has NEVER left something. A fragment — a tendril, sheared off and just... hanging there in the dark. Scan it before it's gone. And Ruel's sending a Guardian wing with you — real hardware, not volunteers this time. Let them handle whatever's on the lane. You get the reading.",
+		"voice": "lab"
+	},
+	"first_contact_debrief": {
+		"text": "It's not a phenomenon, It's an animal. Old, and patient, and it came from SOMEWHERE. Every story says the same word — a gate. Go to the colony. Find the one they call the Counter. He's been listening longer than any of us.",
+		"voice": "lab"
+	},
+	"nothing_left_behind_briefing": {
+		"text": "...it's got the Shoal, it's got all of it, there's no— listen. LISTEN. The gate. Coordinates are in the packet. The sequence is three long, two short, hold on the third — the ring remembers. Wake it and GO. Don't let them— don't let this be for—",
+		"voice": "krayt"
+	},
+	"odessa_bar_place": {
+		"text": "Ember Row. Only warm light on the deck. Dock crews drink here, miners lie about seams here, and everything worth knowing gets said one table too loud. I just pour.",
+		"voice": "odessa"
+	},
+	"odessa_bar_start": {
+		"text": "Sit anywhere that holds you. First one's watered, same as everyone's.",
+		"voice": "odessa"
+	},
+	"odessa_bar_who": {
+		"text": "Ruel runs the board — come back alive twice and he'll learn your callsign. Voss pays for bad news, poor woman. And the lab annex pays for anything the Reach shouldn't contain. Me, I take stories.",
+		"voice": "odessa"
+	},
+	"overdue_briefing": {
+		"text": "The Long Meridian. Freight hauler, nine days overdue on the planet run. No distress call, no beacon, no claim from anyone who hit her. I need eyes on her last transmitted position for the file. Fly it, sweep it, tell me what's there. Precisely what's there.",
+		"voice": "voss"
+	},
+	"overdue_debrief": {
+		"text": "No debris. Pirates leave debris. Storms leave debris. Everything leaves debris. ...Thank you. Take the payment. And keep your comm on.",
+		"voice": "voss"
+	},
+	"prove_wings_briefing": {
+		"text": "New transponder on my dock. Means nothing to me yet. Board's got work — bounties, hauling, salvage recovery. Run a couple, come back in one piece, and maybe your callsign starts meaning something. Off you go.",
+		"voice": "ruel"
+	},
+	"prove_wings_debrief": {
+		"text": "Twice now you've come back whole. That's twice more than some. Voss — the underwriter — has been asking after someone exactly this lucky. Go see her before I change my mind about you.",
+		"voice": "ruel"
+	},
+	"rust_shoal_deal": {
+		"text": "Smart. Give me a few to load what's mine and— ...no. No, it's early. It's not supposed to be here yet. The lights. The lights just went out across the whole Shoal— GET CLEAR. Get clear, I'll transmit on the way out, I'll—",
+		"voice": "krayt"
+	},
+	"rust_shoal_evidence": {
+		"text": "WE leave evidence. This thing leaves a bill of lading and a hole where a ship used to be. I've lost six crews. Six. No wreckage, no bodies, no ransom. Just... quiet. So yeah. I ran. I'm the smart one.",
+		"voice": "krayt"
+	},
+	"rust_shoal_gate": {
+		"text": "The ring at the rim. I've seen it up close — dead metal older than the colony, and it HUMS when the dark passes. I know how to wake it. Coordinates, sequence, all of it. But it's my ticket out, and I'm not spending it for free. Get me clear of the Shoal and it's yours. Deal?",
+		"voice": "krayt"
+	},
+	"rust_shoal_start": {
+		"text": "Far enough, hero. I see the paint — you're the Board's, not a raider. The Counter sent you. Course he did. Nobody else believes the old man, and nobody else RAN when the dark started eating us.",
+		"voice": "krayt"
+	},
+	"the_hermit_gate": {
+		"text": "It came from somewhere, and it'll go back if we let it — or drag us with it. There's an old ring out at the system's rim. Dead since before the colony. The stories say THAT'S the door it came through. You want to know how to open a dead gate, go ask the only man who's flown the rim and lived. There's a pirate hiding in the Rust Shoal. Krayt. Tell him the Counter sent you, and that the light won't hold.",
+		"voice": "hermit"
+	},
+	"the_hermit_start": {
+		"text": "Thirty years I've counted its breathing. Eight minutes, some seconds that drift. The colony calls it a story. The almanac calls it a story. But stories don't keep a schedule, and this thing keeps one.",
+		"voice": "hermit"
+	},
+	"the_hermit_what": {
+		"text": "The old tale calls it the lantern-drinker — the sky-web that swallows lights and won't come near a hearth that burns bright enough. That's why your station's still standing. Its light burns bright. For now. The tally says the orbit's tightening.",
+		"voice": "hermit"
+	}
+}

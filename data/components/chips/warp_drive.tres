@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_warp"]
+
+[resource]
+script = ExtResource("1_warp")
+tags = PackedStringArray("warp")
+profession_lock = "scout"
+extra = {
+"warp_energy": 10.0,
+"warp_cooldown": 10.0,
+"warp_distance": 900.0
+}
+display_name = "Micro-Warp Drive"
+description = "Scout tech. A short, controlled blink toward your selected target — cross a killbox, close a gap, or peel off a tail in a single flash."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

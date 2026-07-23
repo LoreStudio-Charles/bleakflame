@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="DefenseDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/defense_def.gd" id="1_nr7bt"]
+
+[resource]
+script = ExtResource("1_nr7bt")
+kind = 2
+shield_hp = 50.0
+shield_regen = 3.0
+armor_hp = 50.0
+display_name = "Aegis Composite Lattice"
+description = "Plate with a woven field. Best of both, master of neither."
+mark = 2
+grade = 4
+mass = 12.0
+power_draw = 14.0

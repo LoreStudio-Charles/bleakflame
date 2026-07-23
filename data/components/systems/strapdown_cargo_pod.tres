@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SystemDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/system_def.gd" id="1_58mtx"]
+
+[resource]
+script = ExtResource("1_58mtx")
+tags = PackedStringArray("cargo")
+cargo_capacity = 20.0
+display_name = "Strapdown Cargo Pod"
+description = "Space for loot. Draws nothing but patience."
+grade = 1
+mass = 4.0

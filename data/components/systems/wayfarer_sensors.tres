@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SystemDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/system_def.gd" id="1_jglfv"]
+
+[resource]
+script = ExtResource("1_jglfv")
+tags = PackedStringArray("sensor")
+sensor_range = 1500.0
+display_name = "Wayfarer Sensor Suite"
+description = "Sees farther than you can run."
+mass = 3.0
+power_draw = 6.0

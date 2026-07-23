@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_drone"]
+
+[resource]
+script = ExtResource("1_drone")
+tags = PackedStringArray("repair_drone")
+profession_lock = "trader"
+extra = {
+"repair_drone_energy": 22.0,
+"repair_drone_cooldown": 36.0,
+"repair_drone_heal": 14.0,
+"repair_drone_life": 30.0,
+"repair_drone_pulse": 3.0,
+"repair_drone_range": 900.0
+}
+display_name = "Tender Drone"
+description = "Trader-guild tech. Launches a miniature tender that circles your selected ally, mending hull and armor every few seconds for half a minute. Fire and forget — the drone works while you fly."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

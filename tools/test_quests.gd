@@ -1,0 +1,302 @@
+extends SceneTree
+## Headless smoke test for the story-quest framework:
+##   godot --headless --path . --script res://tools/test_quests.gd
+## Covers the post-tutorial funnel: auto-start gating, contract counting,
+## goto/report stages, rewards, log entries, and the save round-trip.
+
+
+class DummyShip:
+	var commodities := {}
+
+	func remove_commodity(key: String, qty: int) -> void:
+		commodities[key] = commodities.get(key, 0) - qty
+		if commodities[key] <= 0:
+			commodities.erase(key)
+
+
+func _init() -> void:
+	var failures := 0
+	Quests.reset()
+	Research.reset()
+	Wallet.credits = 0
+	Wallet.xp = 0
+	var ship := DummyShip.new()
+
+	# Gating: nothing starts before the tutorial is done.
+	Quests.on_dock(true, ship, false)
+	if not Quests.active.is_empty():
+		print("FAIL: quest started before tutorial completion")
+		failures += 1
+	# LANDING TUTORIAL first: the dirtside milk run is the opening post-tutorial
+	# job (it forces a planetary landing), and prove_wings gates behind it.
+	Quests.on_dock(true, ship, true)
+	if not Quests.active.has("dirtside_run"):
+		print("FAIL: dirtside_run (landing tutorial) should auto-start after tutorial")
+		failures += 1
+	if Quests.active.has("prove_wings"):
+		print("FAIL: prove_wings started before the landing tutorial")
+		failures += 1
+	Quests.take_talks(true)   # drain Ruel's dirtside briefing
+	# It resolves as a TALK with Imari at the PLANET — you have to land to finish.
+	Quests.on_dock(false, ship, true)
+	var dirt_talk := Quests.take_talks(false)
+	if dirt_talk.is_empty() or dirt_talk[0].giver != "imari":
+		print("FAIL: dirtside talk not queued at the planet: ", dirt_talk)
+		failures += 1
+	Quests.advance_talk("dirtside_run")
+	if not Quests.completed.has("dirtside_run"):
+		print("FAIL: dirtside_run did not complete on the colony talk")
+		failures += 1
+	# Ruel's DEBRIEF does not fire here: he is at the station and the quest
+	# completed at the colony, so it waits for the trip home (venue rule).
+	if not Quests.take_talks(false).is_empty():
+		print("FAIL: Ruel debriefed from the colony, where he isn't")
+		failures += 1
+	# Zero the purse so the reward assertions below stay about THEIR quest.
+	Wallet.credits = 0
+	Wallet.xp = 0
+
+	Quests.on_dock(true, ship, true)
+	if not Quests.active.has("prove_wings"):
+		print("FAIL: prove_wings should start once the landing tutorial is done")
+		failures += 1
+	if Quests.active.has("overdue"):
+		print("FAIL: overdue started before its prerequisite")
+		failures += 1
+	# Starting a quest queues its giver's briefing for the dock UI to present.
+	# Back at the station: the held debrief AND the new briefing, both Ruel's.
+	var briefings := Quests.take_talks(true)
+	if briefings.size() != 2 or briefings[0].giver != "ruel" 			or briefings[1].giver != "ruel":
+		print("FAIL: station talks not queued on return: ", briefings)
+		failures += 1
+
+	# Contracts stage counts turn-ins; completion pays out and debriefs.
+	Quests.note_contract()
+	if Quests.log_entries(ship)[0].current.find("1/2") < 0:
+		print("FAIL: contracts progress not reflected: ", Quests.log_entries(ship)[0].current)
+		failures += 1
+	Quests.note_contract()
+	if not Quests.completed.has("prove_wings") or Wallet.credits != 150 or Wallet.xp != 20:
+		print("FAIL: prove_wings completion/rewards: %dc %dxp" % [Wallet.credits, Wallet.xp])
+		failures += 1
+	var debriefs := Quests.take_talks(true)
+	if debriefs.size() != 1 or debriefs[0].giver != "ruel":
+		print("FAIL: debrief talk not queued on completion: ", debriefs)
+		failures += 1
+
+	# Next dock hands out the follow-up; entering its goto stage charts the
+	# POI and snaps an idle waypoint to it.
+	PoiMap.register("meridian_fix", "Last Fix", Vector2(6950, 3400), "signal")
+	PoiMap.waypoint_id = ""
+	Quests.on_dock(true, ship, true)
+	if not Quests.active.has("overdue"):
+		print("FAIL: overdue should start once prove_wings completes")
+		failures += 1
+	if not PoiMap.is_discovered("meridian_fix") or PoiMap.waypoint_id != "meridian_fix":
+		print("FAIL: goto stage should chart + waypoint its POI")
+		failures += 1
+
+	# Far away: nothing. On site: the sweep completes with a HUD flash.
+	if not Quests.tick_goto(Vector2.ZERO).is_empty():
+		print("FAIL: goto fired from across the system")
+		failures += 1
+	var flashes := Quests.tick_goto(Vector2(7000, 3300))
+	if flashes.size() != 1 or Quests.stage_def("overdue").get("kind", "") != "report":
+		print("FAIL: goto arrival should advance to the report stage")
+		failures += 1
+
+	# Reporting at the station completes the quest and pays.
+	var credits_before := Wallet.credits
+	Quests.on_dock(true, ship, true)
+	if not Quests.completed.has("overdue") or Wallet.credits != credits_before + 220:
+		print("FAIL: overdue completion/rewards")
+		failures += 1
+	# dirtside_run (landing tutorial) + prove_wings + overdue.
+	if Quests.completed_entries().size() != 3:
+		print("FAIL: completed entries: ", Quests.completed_entries().size())
+		failures += 1
+	# The journal recorded the arc.
+	if Research.journal.size() < 5:
+		print("FAIL: journal too thin: ", Research.journal.size())
+		failures += 1
+
+	# TALK stage: completing overdue starts ember_word; its briefing queues,
+	# then docking queues the talk-stage conversation (venue = station).
+	Quests.take_talks(true)   # clear voss briefing for ember_word
+	if not Quests.active.has("ember_word"):
+		print("FAIL: ember_word should start after overdue")
+		failures += 1
+	if Quests.stage_def("ember_word").get("kind", "") != "talk":
+		print("FAIL: ember_word stage should be a talk")
+		failures += 1
+	# A planet dock must NOT resolve a station-venue talk.
+	Quests.on_dock(false, ship, true)
+	if not Quests.take_talks(false).is_empty():
+		print("FAIL: station talk fired at the planet")
+		failures += 1
+	# Station dock queues the conversation, but does NOT auto-advance it.
+	Quests.on_dock(true, ship, true)
+	var talks := Quests.take_talks(true)
+	if talks.size() != 1 or talks[0].giver != "odessa" or not talks[0].has("advance"):
+		print("FAIL: talk-stage conversation not queued: ", talks)
+		failures += 1
+	if Quests.completed.has("ember_word"):
+		print("FAIL: talk stage auto-advanced without the conversation")
+		failures += 1
+	# Finishing the conversation (UI close -> advance_talk) completes it.
+	var cred := Wallet.credits
+	Quests.advance_talk("ember_word")
+	if not Quests.completed.has("ember_word") or Wallet.credits != cred + 120:
+		print("FAIL: advance_talk did not complete ember_word")
+		failures += 1
+
+	# SCAN_TARGET stage: docking starts cold_patch (requires ember_word);
+	# the flight scene asks where to place the anomaly, and surveying it
+	# advances the stage.
+	Quests.on_dock(true, ship, true)
+	Quests.take_talks(true)   # clear lab briefing
+	if Quests.stage_def("cold_patch").get("kind", "") != "scan_target":
+		print("FAIL: cold_patch stage should be scan_target")
+		failures += 1
+	var site := Quests.scan_site()
+	if site.get("quest", "") != "cold_patch" or not (site.get("pos") is Vector2):
+		print("FAIL: scan_site did not report the anomaly to place: ", site)
+		failures += 1
+	var cred2 := Wallet.credits
+	Quests.note_scan_target("cold_patch")
+	if not Quests.completed.has("cold_patch") or Wallet.credits != cred2 + 260:
+		print("FAIL: note_scan_target did not complete cold_patch")
+		failures += 1
+	if not Quests.scan_site().is_empty():
+		print("FAIL: scan_site should be empty once the stage is done")
+		failures += 1
+
+	# SURVIVE_EVENT stage: docking starts caught_looking; the flight scene
+	# asks where the ambush triggers, and reaching safety advances it.
+	Quests.on_dock(true, ship, true)
+	Quests.take_talks(true)   # clear lab briefing
+	if Quests.stage_def("caught_looking").get("kind", "") != "survive_event":
+		print("FAIL: caught_looking stage should be survive_event")
+		failures += 1
+	var asite := Quests.survive_site()
+	if asite.get("quest", "") != "caught_looking" or not (asite.get("pos") is Vector2):
+		print("FAIL: survive_site did not report the ambush trigger: ", asite)
+		failures += 1
+	var cred3 := Wallet.credits
+	Quests.note_survived("caught_looking")
+	if not Quests.completed.has("caught_looking") or Wallet.credits != cred3 + 320:
+		print("FAIL: note_survived did not complete caught_looking")
+		failures += 1
+	if not Quests.survive_site().is_empty():
+		print("FAIL: survive_site should be empty once survived")
+		failures += 1
+
+	# BEAT 4: first_contact starts; it's a scan_target (tendril) with an
+	# escort flag, completed by scanning the fragment.
+	Quests.on_dock(true, ship, true)
+	Quests.take_talks(true)
+	var ts := Quests.scan_site()
+	if ts.get("quest", "") != "first_contact" or ts.get("anomaly", "") != "tendril":
+		print("FAIL: scan_site did not report the tendril: ", ts)
+		failures += 1
+	if not Quests.escort_active():
+		print("FAIL: first_contact should request a guardian escort")
+		failures += 1
+	Quests.note_scan_target("first_contact")
+	if not Quests.completed.has("first_contact") or Quests.escort_active():
+		print("FAIL: scanning the tendril did not complete first_contact")
+		failures += 1
+
+	# BEAT 5 HERMIT: DEX hands you the lead (giver "lab"), so the_hermit ACTIVATES
+	# at the STATION and charts a breadcrumb to the planet — a quest whose giver
+	# stood at the destination could never send you there (the dead-end the user
+	# hit: Dex referenced the Counter but no quest pointed the way). The TALK still
+	# happens with the hermit, at the planet.
+	Quests.on_dock(true, ship, true)
+	Quests.take_talks(true)
+	if not Quests.active.has("the_hermit"):
+		print("FAIL: the_hermit should activate at the station (Dex hands the lead)")
+		failures += 1
+	# The campaign step points at the planet (the breadcrumb).
+	var step := Quests.current_step()
+	if step.get("quest") == "the_hermit" and step.get("target_poi") != "planetoid":
+		print("FAIL: hermit breadcrumb should point at the planet, got ", step.get("target_poi"))
+		failures += 1
+	# The hermit TALK presents at the planet, and completes the beat.
+	Quests.on_dock(false, ship, true)
+	var htalk := Quests.take_talks(false)
+	if htalk.size() != 1 or htalk[0].giver != "hermit":
+		print("FAIL: hermit talk not queued at the planet: ", htalk)
+		failures += 1
+	Quests.advance_talk("the_hermit")
+	if not Quests.completed.has("the_hermit"):
+		print("FAIL: hermit talk did not complete")
+		failures += 1
+
+	# BEAT 6 GOTO+DIALOGUE: rust_shoal starts; tick_goto must NOT auto-finish
+	# it (it carries a dialogue), advance_goto_dialogue does.
+	Quests.on_dock(true, ship, true)
+	Quests.take_talks(true)
+	var gd := Quests.goto_dialogue_site()
+	if gd.get("quest", "") != "rust_shoal" or gd.get("npc", "") != "krayt":
+		print("FAIL: goto_dialogue_site did not report rust_shoal: ", gd)
+		failures += 1
+	Quests.tick_goto(Vector2(gd.pos))   # arriving must not complete a dialogue-goto
+	if Quests.completed.has("rust_shoal"):
+		print("FAIL: dialogue-goto auto-completed on arrival")
+		failures += 1
+	Quests.advance_goto_dialogue("rust_shoal")
+	if not Quests.completed.has("rust_shoal"):
+		print("FAIL: advance_goto_dialogue did not complete rust_shoal")
+		failures += 1
+
+	# BEAT 7 REACH_GATE: the finale is manual_start — the flight scene's
+	# Shoal's-fall set-piece begins it (Krayt's final transmission), NOT a dock.
+	Quests.on_dock(true, ship, true)
+	Quests.take_talks(true)
+	if Quests.active.has("nothing_left_behind"):
+		print("FAIL: the finale auto-started at a dock (should be manual_start)")
+		failures += 1
+	Quests.begin_manual("nothing_left_behind")   # the set-piece delivers the transmission
+	if not Quests.active.has("nothing_left_behind"):
+		print("FAIL: begin_manual did not start the finale")
+		failures += 1
+	if Quests.gate_site().get("quest", "") != "nothing_left_behind":
+		print("FAIL: gate_site did not report the finale")
+		failures += 1
+	Quests.note_gate_reached("nothing_left_behind")
+	if not Quests.completed.has("nothing_left_behind"):
+		print("FAIL: reaching the gate did not complete the finale")
+		failures += 1
+
+	# Save round-trip mid-quest. Clear the landing tutorial first — it's the
+	# opening job now, so prove_wings only starts behind it.
+	Quests.reset()
+
+	Quests.on_dock(true, ship, true)     # dirtside_run
+	Quests.on_dock(false, ship, true)    # queues the colony talk
+	Quests.take_talks(false)
+	Quests.advance_talk("dirtside_run")
+	Quests.on_dock(true, ship, true)     # now prove_wings
+	Quests.note_contract()
+	var snap := Quests.to_dict()
+	Quests.reset()
+	Quests.from_dict(snap)
+	if not Quests.active.has("prove_wings") or Quests.active["prove_wings"].count != 1:
+		print("FAIL: save round-trip lost quest state")
+		failures += 1
+	Quests.from_dict({"active": {"bogus": {"stage": 3}}, "completed": ["fake"]})
+	if not Quests.active.is_empty() or not Quests.completed.is_empty():
+		print("FAIL: corrupt save entries accepted")
+		failures += 1
+
+	Quests.reset()
+	Research.reset()
+	Wallet.credits = 0
+	Wallet.xp = 0
+	
+	if failures == 0:
+		print("test_quests: ALL PASS")
+	else:
+		print("test_quests: %d FAILURES" % failures)
+	quit(failures)

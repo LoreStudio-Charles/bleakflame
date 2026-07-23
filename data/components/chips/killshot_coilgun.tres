@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_killshot"]
+
+[resource]
+script = ExtResource("1_killshot")
+tags = PackedStringArray("killshot")
+profession_lock = "scout"
+sensor_range = 2600.0
+extra = {
+"killshot_cone": 30.0,
+"killshot_cooldown": 14.0,
+"killshot_damage": 200.0,
+"killshot_energy": 18.0,
+"killshot_max_range": 1800.0,
+"killshot_min_range": 300.0,
+"killshot_shield_factor": 0.5
+}
+display_name = "Longsight Coilgun"
+description = "Scout tech. A shoulder-braced rail with its own optics: line the mark up in the forward 30 degrees at distance and the shot does not miss. Blunt against live shields, and useless up close — it needs the room to spin up."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

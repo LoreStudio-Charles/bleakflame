@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EngineDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/engine_def.gd" id="1_33fui"]
+
+[resource]
+script = ExtResource("1_33fui")
+display_name = "Drifter Ion Drive"
+description = "Slow to spool, cheap to feed."
+grade = 1
+mass = 8.0
+power_draw = 10.0

@@ -1,0 +1,67 @@
+[gd_resource type="Resource" script_class="HullDef" format=3 uid="uid://b6dvwx661twa2"]
+
+[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_yavjm"]
+[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_rnxwn"]
+
+[sub_resource type="Resource" id="Resource_d2j2o"]
+script = ExtResource("1_yavjm")
+display_name = "Chin Gun"
+offset = Vector2(11, 0)
+arc_deg = 90.0
+
+[sub_resource type="Resource" id="Resource_fgyac"]
+script = ExtResource("1_yavjm")
+display_name = "Port Drive"
+offset = Vector2(-11, -4)
+slot_type = 1
+
+[sub_resource type="Resource" id="Resource_lu04b"]
+script = ExtResource("1_yavjm")
+display_name = "Starboard Drive"
+offset = Vector2(-11, 4)
+slot_type = 1
+
+[sub_resource type="Resource" id="Resource_5j3m0"]
+script = ExtResource("1_yavjm")
+display_name = "Reactor Cradle"
+offset = Vector2(-5, 0)
+slot_type = 2
+
+[sub_resource type="Resource" id="Resource_0i6pb"]
+script = ExtResource("1_yavjm")
+display_name = "Sensor Spine"
+offset = Vector2(5, 0)
+slot_type = 4
+mark = 2
+
+[sub_resource type="Resource" id="Resource_8oqi3"]
+script = ExtResource("1_yavjm")
+display_name = "Utility Bay A"
+offset = Vector2(0, -3)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_iopye"]
+script = ExtResource("1_yavjm")
+display_name = "Utility Bay B"
+offset = Vector2(0, 3)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_cplhull"]
+script = ExtResource("1_yavjm")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_rnxwn")
+grade = 1
+display_name = "Kestrel"
+category = "Scout"
+mass = 32.0
+hull_hp = 80.0
+cargo_base = 8.0
+price = 3000
+trait_id = "long_sight"
+trait_description = "Long Sight: sensor ranges +25%; contacts are identified one grade sooner."
+hardpoints = Array[ExtResource("1_yavjm")]([SubResource("Resource_d2j2o"), SubResource("Resource_fgyac"), SubResource("Resource_lu04b"), SubResource("Resource_5j3m0"), SubResource("Resource_0i6pb"), SubResource("Resource_8oqi3"), SubResource("Resource_iopye"), SubResource("Resource_cplhull")])

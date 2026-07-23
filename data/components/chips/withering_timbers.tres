@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_blight"]
+
+[resource]
+script = ExtResource("1_blight")
+tags = PackedStringArray("blight")
+profession_lock = "privateer"
+extra = {
+"blight_cooldown": 20.0,
+"blight_damage": 30.0,
+"blight_energy": 8.0,
+"blight_life": 30.0,
+"blight_pulse": 6.0,
+"blight_range": 900.0
+}
+display_name = "Withering Timbers"
+description = "Privateer tech. Infects a hull with a blight of a thousand nanobot privateers that take her apart at the molecular level — biting away for as long as they stay attached. Slow, patient, and nothing aboard can shoot them off."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

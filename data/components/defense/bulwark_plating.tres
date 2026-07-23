@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="DefenseDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/defense_def.gd" id="1_nqacg"]
+
+[resource]
+script = ExtResource("1_nqacg")
+armor_hp = 80.0
+display_name = "Bulwark Plating"
+description = "Milled, matched, and bolted right."
+mass = 16.0

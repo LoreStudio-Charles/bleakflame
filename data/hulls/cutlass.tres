@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="HullDef" format=3 uid="uid://ca5ce0jchp7dw"]
+
+[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_bhnlq"]
+[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_gsni2"]
+
+[sub_resource type="Resource" id="Resource_1x4sc"]
+script = ExtResource("1_bhnlq")
+display_name = "Upper Talon Gun"
+offset = Vector2(10, -8)
+arc_deg = 25.0
+
+[sub_resource type="Resource" id="Resource_4nvu2"]
+script = ExtResource("1_bhnlq")
+display_name = "Lower Talon Gun"
+offset = Vector2(10, 8)
+arc_deg = 25.0
+
+[sub_resource type="Resource" id="Resource_guiji"]
+script = ExtResource("1_bhnlq")
+display_name = "Main Drive"
+offset = Vector2(-8, 0)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_sewf6"]
+script = ExtResource("1_bhnlq")
+display_name = "Reactor Cradle"
+slot_type = 2
+
+[sub_resource type="Resource" id="Resource_coasj"]
+script = ExtResource("1_bhnlq")
+display_name = "Defense Bay"
+offset = Vector2(4, 0)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_igad5"]
+script = ExtResource("1_bhnlq")
+display_name = "Utility Bay"
+offset = Vector2(-2, -4)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_cplhull"]
+script = ExtResource("1_bhnlq")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_gsni2")
+grade = 1
+display_name = "Cutlass"
+category = "Interceptor"
+mass = 34.0
+hull_hp = 90.0
+cargo_base = 6.0
+price = 3800
+trait_id = "closing_talon"
+trait_description = "Closing Talon: born to chase, built to catch."
+hardpoints = Array[ExtResource("1_bhnlq")]([SubResource("Resource_1x4sc"), SubResource("Resource_4nvu2"), SubResource("Resource_guiji"), SubResource("Resource_sewf6"), SubResource("Resource_coasj"), SubResource("Resource_igad5"), SubResource("Resource_cplhull")])

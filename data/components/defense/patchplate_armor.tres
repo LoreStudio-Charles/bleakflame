@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DefenseDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/defense_def.gd" id="1_fejei"]
+
+[resource]
+script = ExtResource("1_fejei")
+armor_hp = 40.0
+display_name = "Patchplate Armor"
+description = "Overlapping wreck-plates. Rattles at speed — that's the drawback affix talking."
+grade = 0
+mass = 12.0

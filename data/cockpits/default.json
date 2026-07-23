@@ -1,0 +1,101 @@
+{
+	"_readme": [
+		"Cockpit layout \u2014 edit and relaunch, no code changes needed.",
+		"Rects are {x, y, w, h} in canvas pixels, relative to the console",
+		"the widget lives on. NEGATIVE x measures from the console's RIGHT",
+		"edge (use for right-aligned instruments like the radar).",
+		"panel_height/panel_frac size the console slabs; flat_frac is how",
+		"much of the width stays level before the slope; drop_frac is how",
+		"far down the slope reaches (0-1 of panel height).",
+		"target.mode: 'floating' = windshield projection centered above the",
+		"dash V (its rects use x from SCREEN CENTER, y negative from screen",
+		"bottom); 'console' = seated on the band beside the radar (uses the",
+		"right.target_* rects).",
+		"Future cockpits: copy this file, point the hull/cockpit component",
+		"at it, rearrange freely."
+	],
+	"panel_height": 170,
+	"panel_frac": 0.46,
+	"flat_frac": 0.72,
+	"drop_frac": 0.85,
+	"left": {
+		"effigy": {
+			"x": 18,
+			"y": 52,
+			"w": 100,
+			"h": 100
+		},
+		"speed": {
+			"x": 132,
+			"y": 58,
+			"w": 26,
+			"h": 96
+		},
+		"cargo": {
+			"x": 164,
+			"y": 58,
+			"w": 36,
+			"h": 96
+		},
+		"gems": {
+			"x": 208,
+			"y": 60,
+			"w": 152,
+			"h": 28
+		},
+		"sys": {
+			"x": 216,
+			"y": 100,
+			"w": 136,
+			"h": 46
+		},
+		"ordnance": {
+			"x": 380,
+			"y": 56,
+			"w": 130,
+			"h": 96
+		}
+	},
+	"right": {
+		"comm": {
+			"x": -650,
+			"y": 30,
+			"w": 515,
+			"h": 135
+		},
+		"radar": {
+			"radius": 50,
+			"x": -136,
+			"y": 39,
+			"w": 120,
+			"h": 120
+		},
+		"target_effigy": {
+			"x": -256,
+			"y": 70,
+			"w": 88,
+			"h": 88
+		},
+		"target_info": {
+			"x": -646,
+			"y": 68,
+			"w": 380,
+			"h": 80
+		}
+	},
+	"target": {
+		"mode": "floating",
+		"effigy": {
+			"x": -44,
+			"y": -282,
+			"w": 88,
+			"h": 88
+		},
+		"label": {
+			"x": -190,
+			"y": -308,
+			"w": 380,
+			"h": 22
+		}
+	}
+}

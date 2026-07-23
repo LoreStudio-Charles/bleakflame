@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CouplingDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/coupling_def.gd" id="1_broadband_coupling"]
+
+[resource]
+script = ExtResource("1_broadband_coupling")
+display_name = "Broadband Coupling"
+description = "Four clips on a shielded rail. The first coupling that makes a pilot think in loadouts rather than in one favourite trick."
+grade = 2
+mass = 2.0
+power_draw = 0.0
+affix_ids = PackedStringArray()

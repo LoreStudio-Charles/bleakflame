@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://c3rg8ics5fari"]
+
+[ext_resource type="Script" uid="uid://8rn5k82hbkvp" path="res://scenes/flight/starfield.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/flight/ship.tscn" id="2"]
+[ext_resource type="Script" uid="uid://bwk1d5ewkeme8" path="res://scenes/flight/flight_hud.gd" id="3"]
+[ext_resource type="Script" uid="uid://bxxtaeihk0y6b" path="res://scenes/flight/flight_test.gd" id="4"]
+
+[node name="FlightTest" type="Node2D" unique_id=532346343]
+script = ExtResource("4")
+
+[node name="Starfield" type="Node2D" parent="." unique_id=304499797]
+z_index = -10
+script = ExtResource("1")
+
+[node name="Ship" parent="." unique_id=809645025 instance=ExtResource("2")]
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1166412023]
+script = ExtResource("3")
+
+[node name="Info" type="Label" parent="HUD" unique_id=161187640]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 960.0
+offset_bottom = 460.0
+theme_override_font_sizes/font_size = 15

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_ewdw2"]
+
+[resource]
+script = ExtResource("1_ewdw2")
+damage = 6.0
+fire_interval = 0.5
+projectile_speed = 750.0
+weapon_range = 420.0
+bolt_color = Color(1, 0.62, 0.3, 1)
+bolt_scale = 1.15
+display_name = "Junker Slugthrower"
+description = "Rebuilt mass-driver. Kicks like it resents you."
+grade = 1
+mass = 6.0
+power_draw = 8.0

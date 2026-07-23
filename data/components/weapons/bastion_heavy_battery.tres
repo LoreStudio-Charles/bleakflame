@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_4outr"]
+
+[resource]
+script = ExtResource("1_4outr")
+damage = 60.0
+fire_interval = 1.4
+projectile_speed = 720.0
+bolt_color = Color(1, 0.45, 0.3, 1)
+bolt_scale = 1.9
+display_name = "Bastion Heavy Battery"
+description = "Fortress artillery. If it catches you square, you were already too slow."
+mark = 4
+mass = 42.0
+power_draw = 48.0

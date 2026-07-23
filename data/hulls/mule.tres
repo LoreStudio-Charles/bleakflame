@@ -1,0 +1,62 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_nwe0y"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_1ctwf"]
+
+[sub_resource type="Resource" id="Resource_pxafd"]
+script = ExtResource("1_nwe0y")
+display_name = "Topside Turret Ring"
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_cg0m4"]
+script = ExtResource("1_nwe0y")
+display_name = "Main Drive"
+offset = Vector2(-16, 0)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_sor6v"]
+script = ExtResource("1_nwe0y")
+display_name = "Reactor Cradle"
+offset = Vector2(-7, 0)
+slot_type = 2
+mark = 2
+
+[sub_resource type="Resource" id="Resource_3ttca"]
+script = ExtResource("1_nwe0y")
+display_name = "Defense Bay Fore"
+offset = Vector2(7, 0)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_b2ihv"]
+script = ExtResource("1_nwe0y")
+display_name = "Defense Bay Aft"
+offset = Vector2(-11, 0)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_exjhr"]
+script = ExtResource("1_nwe0y")
+display_name = "Utility Bay"
+offset = Vector2(4, 5)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_cplhull"]
+script = ExtResource("1_nwe0y")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_1ctwf")
+grade = 1
+display_name = "Mule"
+category = "Freighter"
+mass = 70.0
+hull_hp = 150.0
+cargo_base = 60.0
+price = 3000
+trait_id = "packrat"
+trait_description = "Packrat: cargo components 25% lighter; jettisoned cargo can be re-scooped."
+hardpoints = Array[ExtResource("1_nwe0y")]([SubResource("Resource_pxafd"), SubResource("Resource_cg0m4"), SubResource("Resource_sor6v"), SubResource("Resource_3ttca"), SubResource("Resource_b2ihv"), SubResource("Resource_exjhr"), SubResource("Resource_cplhull")])
+silhouette = PackedVector2Array(14, 0, 9, -9, -14, -10, -18, -4, -18, 4, -14, 10, 9, 9)

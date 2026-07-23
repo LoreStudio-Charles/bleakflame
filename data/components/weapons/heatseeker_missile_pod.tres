@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_heat"]
+
+[resource]
+script = ExtResource("1_heat")
+damage = 42.0
+fire_interval = 1.1
+projectile_speed = 620.0
+weapon_range = 620.0
+bolt_color = Color(1, 0.5, 0.28, 1)
+bolt_scale = 1.5
+magazine = 5
+ammo_price = 12
+hit_bonus = 6.0
+blast_radius = 26.0
+homing = 100.0
+seek_nearest = true
+display_name = "Heat-Seeker Missile Pod"
+description = "Fire and forget — the warhead chases the hottest engine in the sky. Five rounds that hit like a grudge; enough to break a fight you didn't start, never enough for a long hunt."
+grade = 3
+mark = 2
+mass = 7.0
+power_draw = 4.0
+affix_ids = PackedStringArray()

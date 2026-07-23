@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_blackout"]
+
+[resource]
+script = ExtResource("1_blackout")
+tags = PackedStringArray("blackout")
+profession_lock = "trader"
+extra = {
+"blackout_energy": 14.0,
+"blackout_cooldown": 16.0,
+"blackout_duration": 3.0
+}
+display_name = "Blackout Transponder"
+description = "Trader tech. Kill your transponder and go briefly untargetable — long enough to break contact and let a bad situation forget you were ever there."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

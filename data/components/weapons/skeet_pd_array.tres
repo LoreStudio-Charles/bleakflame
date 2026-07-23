@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_x8mbt"]
+
+[resource]
+script = ExtResource("1_x8mbt")
+damage = 2.0
+fire_interval = 0.08
+projectile_speed = 1100.0
+weapon_range = 380.0
+traverse_override = 540.0
+bolt_color = Color(0.7, 0.9, 1, 1)
+bolt_scale = 0.55
+display_name = "Skeet PD Array"
+description = "A hail of small answers to small problems."
+mass = 6.0
+power_draw = 18.0

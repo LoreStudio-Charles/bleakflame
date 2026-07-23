@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_repair"]
+
+[resource]
+script = ExtResource("1_repair")
+tags = PackedStringArray("repair")
+profession_lock = "science"
+extra = {
+"repair_energy": 25.0,
+"repair_cooldown": 20.0,
+"repair_duration": 4.0,
+"repair_radius": 380.0,
+"repair_rate": 20.0
+}
+display_name = "Repair Field"
+description = "Science-officer tech. Channel a green repair field for a few seconds, mending hull and armor on yourself and every ally caught inside it."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

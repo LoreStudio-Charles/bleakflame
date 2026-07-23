@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_blq1e"]
+
+[resource]
+script = ExtResource("1_blq1e")
+damage = 34.0
+fire_interval = 0.9
+projectile_speed = 500.0
+weapon_range = 520.0
+bolt_color = Color(1, 0.55, 0.35, 1)
+bolt_scale = 1.6
+magazine = 12
+ammo_price = 4
+hit_bonus = 6.0
+blast_radius = 48.0
+display_name = "Bombard Rocket Pod"
+description = "Twelve dumb rockets and a rail. Aim is your problem; the warhead forgives."
+mass = 7.0
+power_draw = 3.0

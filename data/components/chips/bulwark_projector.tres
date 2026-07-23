@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_p4rne"]
+
+[resource]
+script = ExtResource("1_p4rne")
+tags = PackedStringArray("bulwark")
+profession_lock = "guardian"
+extra = {
+"bulwark_energy": 20.0,
+"bulwark_cooldown": 18.0,
+"bulwark_duration": 5.0,
+"bulwark_radius": 420.0,
+"bulwark_reduction": 0.5
+}
+display_name = "Bulwark Projector"
+description = "Guardian tech. Throw a blue damage-reduction dome over yourself and every ally in range for 5s — the brace for a boss's alpha strike."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

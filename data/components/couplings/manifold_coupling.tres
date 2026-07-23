@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CouplingDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/coupling_def.gd" id="1_manifold_coupling"]
+
+[resource]
+script = ExtResource("1_manifold_coupling")
+display_name = "Manifold Coupling"
+description = "Sixteen clips and a bus that never argues. At this point the limit is what you can memorise, not what you can carry."
+grade = 4
+mass = 2.0
+power_draw = 0.0
+affix_ids = PackedStringArray()

@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_hj3m5"]
+[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_jkwv8"]
+
+[sub_resource type="Resource" id="Resource_dw0"]
+script = ExtResource("1_hj3m5")
+display_name = "Foredeck Turret"
+offset = Vector2(16, 0)
+mark = 2
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_dw1"]
+script = ExtResource("1_hj3m5")
+display_name = "Spite Gun"
+offset = Vector2(6, -8)
+arc_deg = 200.0
+
+[sub_resource type="Resource" id="Resource_dw2"]
+script = ExtResource("1_hj3m5")
+display_name = "Tired Drive"
+offset = Vector2(-26, 0)
+slot_type = 1
+
+[sub_resource type="Resource" id="Resource_dw3"]
+script = ExtResource("1_hj3m5")
+display_name = "Reactor Cradle"
+offset = Vector2(-12, 0)
+slot_type = 2
+mark = 2
+
+[sub_resource type="Resource" id="Resource_dw4"]
+script = ExtResource("1_hj3m5")
+display_name = "Patched Plate"
+offset = Vector2(0, 6)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_dw5"]
+script = ExtResource("1_hj3m5")
+display_name = "Smuggler's Hold"
+offset = Vector2(-4, -6)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_cplhull"]
+script = ExtResource("1_hj3m5")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_jkwv8")
+grade = 0
+display_name = "Dowager"
+category = "Gunboat"
+size_band = 1
+mass = 118.0
+hull_hp = 230.0
+cargo_base = 34.0
+price = 5500
+trait_id = "old_girl"
+trait_description = "The Old Girl: she isn't a dancer. More stomp than step. Forty years of patches, one gun worth the bragging, half her systems running on faith — but full of memories, though."
+silhouette = PackedVector2Array(28, 0, 20, -11, -6, -16, -24, -12, -28, -4, -28, 4, -24, 12, -6, 16, 20, 11)
+hardpoints = Array[ExtResource("1_hj3m5")]([SubResource("Resource_dw0"), SubResource("Resource_dw1"), SubResource("Resource_dw2"), SubResource("Resource_dw3"), SubResource("Resource_dw4"), SubResource("Resource_dw5"), SubResource("Resource_cplhull")])

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_1ouhr"]
+
+[resource]
+script = ExtResource("1_1ouhr")
+damage = 3.0
+fire_interval = 0.12
+weapon_range = 260.0
+mining_power = 2.0
+bolt_color = Color(0.4, 1, 0.55, 1)
+bolt_scale = 0.8
+beam = true
+display_name = "Ferro Cutter Beam"
+description = "Industrial cutting beam. Asteroids yield; hulls mostly scoff."
+mass = 5.0
+power_draw = 10.0

@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_h6uxo"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_q6gqk"]
+
+[sub_resource type="Resource" id="Resource_w13xu"]
+script = ExtResource("1_h6uxo")
+display_name = "Port Nose Gun"
+offset = Vector2(10, -5)
+mark = 2
+
+[sub_resource type="Resource" id="Resource_6d3bx"]
+script = ExtResource("1_h6uxo")
+display_name = "Starboard Nose Gun"
+offset = Vector2(10, 5)
+mark = 2
+
+[sub_resource type="Resource" id="Resource_ix6fl"]
+script = ExtResource("1_h6uxo")
+display_name = "Dorsal Flex Mount"
+offset = Vector2(-2, 0)
+arc_deg = 180.0
+
+[sub_resource type="Resource" id="Resource_0yyly"]
+script = ExtResource("1_h6uxo")
+display_name = "Main Drive"
+offset = Vector2(-12, 0)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_gjyjh"]
+script = ExtResource("1_h6uxo")
+display_name = "Reactor Cradle"
+offset = Vector2(-4, 0)
+slot_type = 2
+
+[sub_resource type="Resource" id="Resource_8yl28"]
+script = ExtResource("1_h6uxo")
+display_name = "Defense Bay"
+offset = Vector2(2, 0)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_cplhull"]
+script = ExtResource("1_h6uxo")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_q6gqk")
+grade = 1
+display_name = "Sparrowhawk"
+category = "Fighter"
+hull_hp = 120.0
+cargo_base = 12.0
+price = 3500
+trait_id = "knife_fighter"
+trait_description = "Knife-fighter: weapon gimbal arcs are 50% wider on this hull."
+hardpoints = Array[ExtResource("1_h6uxo")]([SubResource("Resource_w13xu"), SubResource("Resource_6d3bx"), SubResource("Resource_ix6fl"), SubResource("Resource_0yyly"), SubResource("Resource_gjyjh"), SubResource("Resource_8yl28"), SubResource("Resource_cplhull")])
+silhouette = PackedVector2Array(18, 0, 3, -6, -8, -10, -14, -4, -14, 4, -8, 10, 3, 6)

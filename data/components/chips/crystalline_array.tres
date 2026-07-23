@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_crystal"]
+
+[resource]
+script = ExtResource("1_crystal")
+tags = PackedStringArray("crystal")
+profession_lock = "miner"
+extra = {
+"crystal_cooldown": 16.0,
+"crystal_duration": 7.0,
+"crystal_energy": 18.0,
+"crystal_place_range": 1000.0,
+"crystal_radius": 128.0
+}
+display_name = "Crystalline Defense Array"
+description = "Miner tech. Refracts a cutting laser through a crystal lattice into a point-defense screen — placed where you point it, and every warhead that wanders in comes apart. Doesn't stop gunfire, and can't hurt a hull."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

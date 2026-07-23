@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_tangle"]
+
+[resource]
+script = ExtResource("1_tangle")
+tags = PackedStringArray("tangle")
+profession_lock = "miner"
+extra = {
+"tangle_energy": 12.0,
+"tangle_cooldown": 12.0,
+"tangle_duration": 3.5,
+"tangle_range": 900.0
+}
+display_name = "Tangle Projector"
+description = "Miner tech. Fire a clinging charge at your selected target: it drags and guts their thrust for a few seconds. A rock-cutter's magnetic net, turned on ships."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

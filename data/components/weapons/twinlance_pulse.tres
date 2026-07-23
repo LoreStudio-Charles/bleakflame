@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_t0wab"]
+
+[resource]
+script = ExtResource("1_t0wab")
+damage = 9.0
+projectile_speed = 2200.0
+weapon_range = 620.0
+bolt_color = Color(0.55, 0.8, 1, 1)
+bolt_scale = 1.1
+beam_tail = 170.0
+display_name = "Twinlance Pulse Laser"
+description = "Paired emitters tuned a half-phase apart."
+mark = 2
+grade = 3
+mass = 8.0
+power_draw = 22.0

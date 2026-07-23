@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ReactorDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/reactor_def.gd" id="1_q748l"]
+
+[resource]
+script = ExtResource("1_q748l")
+energy_capacity = 80.0
+energy_recharge = 1.0
+power_output = 40.0
+trail_color = Color(0.75, 0.62, 0.35, 1)
+display_name = "Scrap-Cell Pile"
+description = "Salvaged cells wired in defiance of several manuals."
+grade = 1
+mass = 10.0

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_6tcmp"]
+
+[resource]
+script = ExtResource("1_6tcmp")
+tags = PackedStringArray("cloak")
+profession_lock = "privateer"
+extra = {
+"cloak_energy": 22.0,
+"cloak_cooldown": 14.0,
+"cloak_duration": 6.0
+}
+display_name = "Umbral Cloak Field"
+description = "Privateer tech. Bend light around the hull: hostiles lose their lock for a few seconds. Firing a weapon collapses the field."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

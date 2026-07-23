@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_overload"]
+
+[resource]
+script = ExtResource("1_overload")
+tags = PackedStringArray("overload")
+profession_lock = "science"
+extra = {
+"overload_cooldown": 18.0,
+"overload_duration": 3.0,
+"overload_energy": 16.0,
+"overload_range": 900.0
+}
+display_name = "Overload Pulse"
+description = "Science-officer tech. An instant EMP that collapses a target's shield envelope for a few seconds — then it blinks back exactly as strong as it was. Buys the wing an opening; takes nothing away."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

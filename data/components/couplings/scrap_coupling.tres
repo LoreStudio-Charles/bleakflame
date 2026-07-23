@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CouplingDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/coupling_def.gd" id="1_scrap_coupling"]
+
+[resource]
+script = ExtResource("1_scrap_coupling")
+display_name = "Scrap Coupling"
+description = "A cannibalised bus rail with one working clip. Holds a single chip, and only if you don't look at it too hard."
+grade = 0
+mass = 2.0
+power_draw = 0.0
+affix_ids = PackedStringArray()

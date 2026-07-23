@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_scanchip"]
+
+[resource]
+script = ExtResource("1_scanchip")
+tags = PackedStringArray("scan")
+profession_lock = ""
+extra = {
+"scan_energy": 0.0
+}
+display_name = "Survey Routine"
+description = "The standard survey package, burned to a chip. Every pilot's first ability: point it at a rock to read the ore inside, or at a ship to log Scan Data. Costs nothing to run — curiosity should be free. A fitted survey scanner makes it reach further and finish faster."
+grade = 1
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

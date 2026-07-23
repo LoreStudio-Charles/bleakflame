@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AbilityChipDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ability_chip_def.gd" id="1_decoy"]
+
+[resource]
+script = ExtResource("1_decoy")
+tags = PackedStringArray("decoy")
+profession_lock = "trader"
+extra = {
+"decoy_energy": 14.0,
+"decoy_cooldown": 16.0,
+"decoy_duration": 4.0
+}
+display_name = "Decoy Flare"
+description = "Trader-guild tech. Break every hostile lock and eject a bright decoy that pulls their fire for a few seconds — standard convoy countermeasure, and the reason most haulers get home."
+grade = 3
+mass = 0.2
+power_draw = 0.0
+affix_ids = PackedStringArray()

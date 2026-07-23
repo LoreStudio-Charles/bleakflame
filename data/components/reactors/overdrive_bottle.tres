@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ReactorDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/reactor_def.gd" id="1_bhy3q"]
+
+[resource]
+script = ExtResource("1_bhy3q")
+energy_capacity = 240.0
+energy_recharge = 2.5
+power_output = 120.0
+trail_color = Color(0.8, 0.45, 0.95, 1)
+display_name = "Overcharged Cell"
+description = "Runs 40% past rated containment. The paperwork says don't."
+mark = 2
+grade = 4
+mass = 16.0
