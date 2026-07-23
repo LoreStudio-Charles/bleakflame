@@ -446,36 +446,32 @@ func _tick_flight_lessons() -> void:
 			hunted = true
 			break
 	Tutor.safe = not hunted and (sheltered or nearest > TEACH_THREAT_R)
-	Tutor.pump()
 
-	# WHERE HULL/SHIELD/ARMOR/ENERGY live — foundational, so arm it on the very
-	# first safe flight beat, before anything wants the pilot to read those bars.
-	Tutor.arm("vitals")
-	# Doug exists the moment ore does. Told in FLIGHT, because the answer is a
-	# place to fly to, not a screen to open.
-	if not Pilot.has_met("doug"):
-		for key in ship.commodities:
-			if str(key).ends_with("_ore") and int(ship.commodities[key]) > 0:
-				Tutor.arm("meet_doug")
-				break
-	# The log, once there is anything IN it worth reading.
-	if not Research.journal.is_empty():
-		Tutor.arm("log")
-	# Running Dark: taught the moment the pilot has SPENT energy on an ability
-	# (pool below full) AND still has a live one gemmed — so "recharge fast + swap
-	# safely" both apply right now. Shows at the next safe beat.
-	if ship.energy_max > 0.0 and ship.energy < ship.energy_max * 0.6:
-		for i in Pilot.GEM_SLOTS:
-			var aid := Pilot.gem_at(i)
-			if aid != "" and ship._known_abilities.has(aid):
-				Tutor.arm("running_dark")
-				break
-	# Targeting: taught on CONTACT, not in the melee — something is on sensors
-	# but still far enough out that reading a callout costs nothing.
-	if ship.target == null and nearest > TEACH_THREAT_R:
-		var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
-		if nearest < reach:
-			Tutor.arm("targeting")
+	# DECLARATIVE TUTOR (2026-07-23): hand the tutor a snapshot of what's true right
+	# now and let each migrated lesson's own predicate decide arming + completion
+	# (Tutor.observe -> Tutor._build_preds). These flight lessons — vitals, meet_doug,
+	# log, running_dark, targeting — used to be scattered arm() calls here.
+	var has_ore := false
+	for key in ship.commodities:
+		if str(key).ends_with("_ore") and int(ship.commodities[key]) > 0:
+			has_ore = true
+			break
+	var live_ability := false
+	for i in Pilot.GEM_SLOTS:
+		var aid := Pilot.gem_at(i)
+		if aid != "" and ship._known_abilities.has(aid):
+			live_ability = true
+			break
+	var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
+	Tutor.observe({
+		"flying": true,
+		"has_ore": has_ore,
+		"met_doug": Pilot.has_met("doug"),
+		"journal": not Research.journal.is_empty(),
+		"energy_spent": ship.energy_max > 0.0 and ship.energy < ship.energy_max * 0.6 and live_ability,
+		"has_target": ship.target != null and is_instance_valid(ship.target),
+		"contact_far": nearest > TEACH_THREAT_R and nearest < reach,
+	})
 
 
 func _tick_distress(delta: float) -> void:

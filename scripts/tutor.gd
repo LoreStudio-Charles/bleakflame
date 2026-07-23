@@ -543,6 +543,100 @@ static func finish() -> void:
 	pump()
 
 
+# ============================================================================
+# DECLARATIVE ENGINE (2026-07-23) — the fix for tutor fragility.
+#
+# Every tutor bug had one shape: a SIGNAL that didn't fire, or fired from the
+# wrong place. The old model pushes state around imperatively — Tutor.arm() from
+# a dozen call sites, Tutor.note() sprinkled wherever the player "does the thing".
+# Here a lesson instead DECLARES its trigger (`_arm_pred[id]`) and each step its
+# completion (`_done_pred[id][step]`) as predicates over a CONTEXT snapshot, and
+# `observe()` evaluates them every frame. "Did someone remember to call note()?"
+# becomes "is this true right now?" — which can't be forgotten or double-fired,
+# and (because completion is a poll) a resumed lesson AUTO-SKIPS steps already
+# satisfied, so an evicted lesson picks up exactly where it should.
+#
+# SAFE + INCREMENTAL: predicates are registered per lesson in _build_preds(). A
+# lesson with no predicate still runs on the old arm/note path, so migration is
+# one lesson at a time and nothing breaks in between. `note()` only touches the
+# ACTIVE lesson's current pointing-anchor, so a leftover note() no-ops the moment
+# a predicate has advanced past it — no double-advance.
+# ============================================================================
+
+## The game-state snapshot the predicates read, refreshed by observe().
+static var ctx := {}
+## id -> Callable(ctx) -> bool. Lesson arms when true (and not seen/active/pending).
+static var _arm_pred := {}
+## id -> Array[Callable|null], one per step. Step completes when its predicate is
+## true; a null entry falls back to note()/dwell for that step.
+static var _done_pred := {}
+static var _preds_built := false
+
+
+## Drive the declarative engine from a fresh context snapshot. Called every frame
+## in flight and on every dock refresh. Idempotent with the old arm/note path.
+static func observe(snapshot: Dictionary) -> void:
+	_build_preds()
+	ctx = snapshot
+	# Advance the active lesson past EVERY currently-satisfied step at once (instant
+	# resume: an evicted lesson whose early steps are already done lands on the
+	# right one). Bounded by step count; finish() clears `active` and ends the loop.
+	var guard := 0
+	while active != "" and guard < 16:
+		guard += 1
+		var dp: Array = _done_pred.get(active, [])
+		if step >= dp.size() or not (dp[step] is Callable):
+			break
+		if not _fits(active, step) or not (dp[step] as Callable).call(ctx):
+			break
+		_complete_step()
+	# Arm any declarative lesson whose trigger is now true.
+	for id in _arm_pred:
+		if seen.has(id) or pending.has(id) or id == active:
+			continue
+		if (_arm_pred[id] as Callable).call(ctx):
+			arm(id)
+	pump()
+
+
+## Advance the active step (declarative completion). Mirrors note()'s advance without
+## the anchor gate — the predicate already decided the step is done.
+static func _complete_step() -> void:
+	if active == "":
+		return
+	step += 1
+	_confirm()
+	if step >= (LESSONS[active] as Array).size():
+		finish()
+	else:
+		_chime()
+
+
+## Register the arm/step predicates. Predicates are pure functions of the context
+## dict, so they read game state through simple keys the callers populate. Built
+## once; a lesson absent here still runs on the old imperative path.
+static func _build_preds() -> void:
+	if _preds_built:
+		return
+	_preds_built = true
+
+	# --- Flight lessons (context "flight"): arm on a live condition, complete on a
+	# poll or a dwell. The flight scene feeds the snapshot each frame (flight_test).
+	# WHERE HULL/SHIELD/ARMOR/ENERGY live — foundational, shown on the first flight.
+	_arm_pred["vitals"] = func(c): return bool(c.get("flying", false))
+	# Doug exists the moment ore does — a place to fly to, not a screen to open.
+	_arm_pred["meet_doug"] = func(c): return bool(c.get("has_ore", false)) and not bool(c.get("met_doug", false))
+	# The captain's log, once there is anything in it worth reading.
+	_arm_pred["log"] = func(c): return bool(c.get("journal", false))
+	# Running Dark: the pilot has SPENT reserves on an ability and still has a live
+	# one gemmed, so both of its benefits (fast recharge + safe re-flash) are live.
+	_arm_pred["running_dark"] = func(c): return bool(c.get("energy_spent", false))
+	# Targeting: something is on sensors but still far enough out that reading a
+	# callout costs nothing — and completes the instant they lock ANY target.
+	_arm_pred["targeting"] = func(c): return bool(c.get("contact_far", false)) and not bool(c.get("has_target", false))
+	_done_pred["targeting"] = [func(c): return bool(c.get("has_target", false))]
+
+
 ## The stall log as plain data for the save. NOT cleared by reset(): a fresh
 ## pilot inherits the known-bug list so it keeps accumulating across playtests —
 ## that is the whole value of it.
