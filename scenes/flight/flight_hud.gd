@@ -490,7 +490,11 @@ func _approach_line() -> String:
 	for planet in get_tree().get_nodes_in_group("planetoids"):
 		var s: Dictionary = planet.status_for(ship)
 		var dist := ship.global_position.distance_to(planet.global_position)
-		if dist < planet.GRAV_R + 200.0:
+		if dist < planet.grav_r + 200.0:
+			# A not-yet-landable world (Orivel) warns of the well but has no berth —
+			# never dangle an [E] the world can't honour.
+			if not planet.landable:
+				return "GRAVITY WELL — CAPITAL APPROACH: no berth cleared"
 			if s.in_band:
 				return "LANDING BAND:  descent %s   speed %s   [E] to land" % [
 					"OK" if s.angle_ok else "BAD", "OK" if s.speed_ok else "HOT"]

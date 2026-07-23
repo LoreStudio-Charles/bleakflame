@@ -19,6 +19,19 @@ const UI_RANGE := 640.0
 ## Reach only ever sees light + medium ships — heavies need a real port (a
 ## later system). Default accepts anything; the station sets its own cap.
 var max_size_band: int = HullDef.SizeBand.SUPER_HEAVY_PLUS
+## SMALLEST hull this berth will take. Default 0 (LIGHT) = no floor. A DRYDOCK
+## sets this to SUPER_HEAVY so it REFUSES anything that could fit a landing bay —
+## the capital's drydocks are for the big hulls a bay can't hold (>64px), and a
+## fighter is waved off to a bay. The band boundary IS the 64px split (HullDef
+## BAND_PX: HEAVY 64, SUPER_HEAVY 128).
+var min_size_band: int = HullDef.SizeBand.LIGHT
+## False for a bare berth (Orivel's capital pads for now): still repairs + saves +
+## checkpoints like any dock, but runs NO station economy (no research calendar,
+## no contract board, no auto-started quests) — the "no services yet" fiction.
+var runs_dock_services := true
+## Shown by a bespoke dock screen so the pilot knows which berth they took
+## ("Landing Bay · East", "Drydock · NE"). Empty for the plain station pad.
+var berth_label := ""
 ## True while a berthing cinematic is playing (one at a time, no re-entry).
 var _berthing := false
 var _scolding := false   # the one-time scrape lesson is open; don't re-trigger
@@ -64,6 +77,15 @@ func try_dock(ship: TestShip) -> void:
 	if ship.build != null and ship.build.hull != null \
 			and ship.build.hull.size_band > max_size_band:
 		ship._flash_note("TOO LARGE TO BERTH — this station can't dock a hull this size. Heavies need a bigger port.")
+		ship.velocity = -approach_dir() * 90.0 + ship.velocity.bounce(approach_dir()) * 0.2
+		Sfx.play_at("scrape", ship.global_position, -8.0, 0.5)
+		return
+	# SIZE FLOOR: a DRYDOCK is for the big hulls a bay can't take. A craft small
+	# enough for a landing bay is turned away — go use one. (The opposite of the
+	# cap above; only drydocks set a floor.)
+	if ship.build != null and ship.build.hull != null \
+			and ship.build.hull.size_band < min_size_band:
+		ship._flash_note("TOO SMALL FOR A DRYDOCK — take a landing bay; the cradles are for capital hulls.")
 		ship.velocity = -approach_dir() * 90.0 + ship.velocity.bounce(approach_dir()) * 0.2
 		Sfx.play_at("scrape", ship.global_position, -8.0, 0.5)
 		return

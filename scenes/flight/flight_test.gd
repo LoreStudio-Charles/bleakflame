@@ -30,6 +30,10 @@ const VERGE_SEED := 0x5A17E
 ## enough to make the all-legs haul out there. Traversal stays a real haul until
 ## warp tech; nobody's meant to fly it yet.
 const ORIVEL := Vector2(-84000, -52000)
+## The Orivel Orbital Outpost's offset from the planet — ~9k out, clear of the
+## 3x gravity well (radius ~6240), a stable parking orbit off the capital.
+const ORIVEL_ORBITAL := Vector2(-84000, -52000) + Vector2(8200, -3600)
+const ORIVEL_ORBITAL_OFFSET := Vector2(8200, -3600)
 
 const DRONE_COUNT := 2
 
@@ -43,6 +47,8 @@ var planetoid: Planetoid
 var shoal: PirateDen
 var station_screen: DockScreen
 var planet_screen: DockScreen
+var orivel_screen: OrivelDock
+var _outpost: OrivelOutpost
 var shoal_screen: SpeakEasy
 var diggs: DiggsFreighter
 var diggs_screen: ProspectDeck
@@ -67,16 +73,26 @@ func _ready() -> void:
 	planetoid.position = Vector2(8400, 5200)
 	add_child(planetoid)
 
-	# Orivel, the capital, drawn ~3x Epharon's size far out on the far side. A pure
-	# landmark for now (a Sprite, no gravity/landing/services): the payoff is SEEING
-	# it after the mad haul. Behind everything (z -5) and far away, so it never
-	# touches normal play out on the fringe.
-	var orivel := Sprite2D.new()
-	orivel.texture = load("res://assets/world/planetoid.png")
+	# Orivel, the capital, ~3x Epharon's size far out on the far side. A real body
+	# now — its own gravity well + surface collider (radius_mult 3) — but NOT
+	# landable yet (no services): approach it, feel the pull, can't set down. The
+	# payoff is SEEING it after the mad haul. Art assets/world/orivel.png (a
+	# futuristic ocean-world capital with a domed megacity), 256px like planetoid.png.
+	var orivel := Planetoid.new()
+	orivel.radius_mult = 3.0
+	orivel.landable = false
+	orivel.sprite_path = "res://assets/world/orivel.png"
 	orivel.position = ORIVEL
-	orivel.scale = Vector2.ONE * (Planetoid.SPRITE_SCALE * 3)
 	orivel.z_index = -5
 	add_child(orivel)
+
+	# The Orivel Orbital Outpost — the capital's drydock ring, in a safe orbit just
+	# OUTSIDE Orivel's gravity well (well radius ~6240; this sits ~9k out). A
+	# landmark for now; a place to /warp near and see the capital's scale.
+	_outpost = OrivelOutpost.new()
+	_outpost.position = ORIVEL + ORIVEL_ORBITAL_OFFSET
+	_outpost.z_index = -4
+	add_child(_outpost)
 
 	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
 	SaveGame.restore_ship(ship)
@@ -112,6 +128,8 @@ func _ready() -> void:
 	add_child(station_screen)
 	planet_screen = DockScreen.new(ship, false)
 	add_child(planet_screen)
+	orivel_screen = OrivelDock.new(ship)
+	add_child(orivel_screen)
 	shoal_screen = SpeakEasy.new(ship)
 	add_child(shoal_screen)
 	diggs_screen = ProspectDeck.new(ship)
@@ -124,6 +142,8 @@ func _ready() -> void:
 	# Orivel is SECRET: it charts only when a pilot actually reaches it (the crazy
 	# trip), and being uncharted it never shows on radar or auto-marks a waypoint.
 	PoiMap.register("orivel", "Orivel — the Capital", ORIVEL, "planet")
+	# The capital's orbital outpost — SECRET like Orivel, charts on arrival.
+	PoiMap.register("orivel_orbital", "Orivel Orbital Outpost", ORIVEL_ORBITAL, "station")
 	PoiMap.register("belt", "Drift Belt", BELT_CENTER, "belt", true)
 	PoiMap.register("verge", "The Verge", VERGE_CENTER, "belt", true)
 	PoiMap.register("the_dig", "The Dig — Doug Diggs", diggs.position, "station", true)
@@ -162,6 +182,11 @@ func _ready() -> void:
 		Telemetry.reset()
 		_dev_vitals = DevVitals.new(ship)
 		add_child(_dev_vitals)
+		# Dev cheats now live in the comm terminal (Enter, then type). Registering
+		# the hook is itself the dev gate — a release export skips this whole block,
+		# so /cash & friends are simply unknown commands there.
+		Chat.dev_command = _run_dev_command
+		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /ruler /heartbeat /rearm"
 
 	_populate_world()
 
@@ -282,6 +307,7 @@ func _process(_delta: float) -> void:
 	planet_screen.visible = ship.docked_at is Planetoid
 	shoal_screen.visible = ship.docked_at == shoal.pad
 	diggs_screen.visible = ship.docked_at == diggs.pad
+	orivel_screen.visible = _outpost != null and _outpost.pads.has(ship.docked_at)
 	if station_screen.visible:
 		station_screen.refresh()
 	if planet_screen.visible:
@@ -290,6 +316,8 @@ func _process(_delta: float) -> void:
 		shoal_screen.refresh()
 	if diggs_screen.visible:
 		diggs_screen.show_deck()
+	if orivel_screen.visible:
+		orivel_screen.refresh()
 	# Music follows place: docked comfort vs the drift. Silent until tracks
 	# land in res://audio/music/ (station.ogg / drift.ogg).
 	Sfx.play_music("station" if ship.docked_at != null else "drift")
@@ -1080,70 +1108,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			hud.comm.open("/")
 			get_viewport().set_input_as_handled()
 			return
-	# Dev cheats: editor/debug builds only — release exports never see
-	# these (OS.is_debug_build). For trying ships/trees without the grind.
-	# NOT function keys: the editor owns those while debugging (F8 = Stop
-	# Running Project, discovered the hard way).
-	if OS.is_debug_build() and event.keycode == KEY_QUOTELEFT:   # ` grave
-		Wallet.credits += 10000
-		ship._flash_note("+10,000c [dev]")
-		get_tree().call_group("dock_screens", "refresh")
-		return
-	if OS.is_debug_build() and event.keycode == KEY_BACKSLASH:
-		Research.insight += 100.0
-		ship._flash_note("+100 Insight [dev]")
-		get_tree().call_group("dock_screens", "refresh")
-		return
-	# [ = re-arm the approach tutorials WITHOUT wiping the save. Iterating on the
-	# docking/landing teaching meant a full New Game (and re-creating the pilot)
-	# just to see the briefing again — this resets only those flags, in place.
-	# Matches PHYSICAL key too: `keycode` is keyboard-layout dependent, so on a
-	# non-US layout the bracket lands on a different code and the cheat silently
-	# does nothing.
-	if OS.is_debug_build() and (event.keycode == KEY_BRACKETLEFT \
-			or event.physical_keycode == KEY_BRACKETLEFT):
-		SaveGame.docking_taught = false
-		SaveGame.landing_taught = false
-		SaveGame.crash_taught = false
-		SaveGame.crater_taught = false
-		_taught_landing = false          # the in-session latch, or it won't re-fire
-		_taught_chart = false
-		ship.approach_fault = ""
-		# Every TUTOR lesson too — iterating on the pings means replaying them,
-		# and a lesson is once-ever by design.
-		Tutor.seen.clear()
-		Tutor.pending.clear()
-		Tutor.active = ""
-		Tutor.step = 0
-		ship._flash_note("Tutorials + tutor lessons re-armed [dev]")
-		return
-	# ] = toggle the RANGE RULER: labelled distance rings + live target range, for
-	# eyeballing what an ability's unit range actually covers on screen. Physical
-	# key too (layout-independent, like the [ cheat above).
-	if OS.is_debug_build() and (event.keycode == KEY_BRACKETRIGHT \
-			or event.physical_keycode == KEY_BRACKETRIGHT):
-		_range_ruler.visible = not _range_ruler.visible
-		ship._flash_note("Range ruler %s [dev]" % ("ON" if _range_ruler.visible else "off"))
-		return
-	# = toggles the DEV HEARTBEAT monitor (live telemetry feed).
-	if OS.is_debug_build() and _dev_vitals != null and (event.keycode == KEY_EQUAL 			or event.physical_keycode == KEY_EQUAL):
-		_dev_vitals.visible = not _dev_vitals.visible
-		ship._flash_note("Heartbeat %s [dev]" % ("ON" if _dev_vitals.visible else "off"))
-		return
-	# ; = SUMMON THE WAYGATE ahead of the ship, so the whole finale interaction
-	# (approach -> [E] console -> enter Krayt's code -> it opens -> fly through) can
-	# be tested without playing the campaign to the end. Physical key too.
-	if OS.is_debug_build() and (event.keycode == KEY_SEMICOLON \
-			or event.physical_keycode == KEY_SEMICOLON):
-		if _waygate == null or not is_instance_valid(_waygate):
-			_dev_gate = true
-			_waygate = WayGate.create(ship.global_position
-				+ Vector2.RIGHT.rotated(ship.rotation) * 700.0)
-			add_child(_waygate)
-			ship._flash_note("WayGate summoned ahead — fly to it, press [E] [dev]")
-		else:
-			ship._flash_note("WayGate already present [dev]")
-		return
+	# Dev cheats now live in the COMM TERMINAL as slash commands (Enter, then type
+	# /cash, /warp, /gate…) — see _run_dev_command. The hook is registered only in
+	# a debug build, so release exports can never reach them. They moved off the
+	# keyboard so a stray keypress can't fire one and so there's ONE dev gate, not
+	# five scattered is_debug_build() key checks.
 	match event.keycode:
 		KEY_F1:
 			get_tree().change_scene_to_file("res://scenes/debug/assembly_viewer.tscn")
@@ -1161,6 +1130,152 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				station_screen.refresh()
 
 
+## DEV COMMANDS — the old dev keys, now typed into the comm terminal (Enter, then
+## e.g. "/cash 5000"). Registered on Chat ONLY in a debug build (see _ready), so
+## release exports can never reach this. Returns true if the command was handled;
+## a false return lets Chat print "unknown command". Feedback goes to BOTH the
+## ship note (read in flight) and the terminal log (read where you typed it).
+func _run_dev_command(cmd: String, rest: String) -> bool:
+	match cmd:
+		"cash", "c", "money":
+			var amt := int(rest) if rest.is_valid_int() else 10000
+			Wallet.credits += amt
+			_dev_feedback("+%s credits (now %s)" % [amt, Wallet.credits])
+			get_tree().call_group("dock_screens", "refresh")
+			return true
+		"insight", "in":
+			var amt := int(rest) if rest.is_valid_int() else 100
+			Research.insight += float(amt)
+			_dev_feedback("+%s Insight (now %s)" % [amt, int(Research.insight)])
+			get_tree().call_group("dock_screens", "refresh")
+			return true
+		"xp":
+			var amt := int(rest) if rest.is_valid_int() else 100
+			Wallet.xp += amt
+			_dev_feedback("+%s XP (now %s)" % [amt, Wallet.xp])
+			get_tree().call_group("dock_screens", "refresh")
+			return true
+		"warp":
+			return _dev_warp(rest)
+		"gate":
+			_dev_summon_gate()
+			return true
+		"ruler":
+			_range_ruler.visible = not _range_ruler.visible
+			_dev_feedback("Range ruler %s" % ("ON" if _range_ruler.visible else "off"))
+			return true
+		"heartbeat", "vitals":
+			if _dev_vitals != null:
+				_dev_vitals.visible = not _dev_vitals.visible
+				_dev_feedback("Heartbeat %s" % ("ON" if _dev_vitals.visible else "off"))
+			return true
+		"rearm", "tutorials":
+			_dev_rearm_tutorials()
+			return true
+	return false
+
+
+## Dev feedback goes two places on purpose: the flash note is seen in flight, the
+## terminal notice is seen in the log you just typed into (they don't overlap).
+func _dev_feedback(msg: String) -> void:
+	ship._flash_note("%s [dev]" % msg)
+	Chat.notice("[dev] " + msg)
+
+
+## /warp <x> <y>  ·  /warp <x>,<y>  ·  /warp <poi>  — teleport the ship. Orivel is
+## a ~100k-unit haul on thrusters; this drops you on a landmark (or raw coords) so
+## the capital/gate flows are testable in seconds, not minutes of holding W.
+func _dev_warp(rest: String) -> bool:
+	var arg := rest.strip_edges()
+	if arg.is_empty():
+		_dev_feedback("warp where? /warp <x> <y>  or  /warp <poi>")
+		return true
+	var parts := arg.replace(",", " ").split(" ", false)
+	# A single non-numeric token = a POI id or name fragment (e.g. /warp orivel).
+	if parts.size() == 1 and not parts[0].is_valid_float():
+		var q := parts[0].to_lower()
+		for p in PoiMap.pois:
+			if str(p.id).to_lower() == q or str(p.name).to_lower().contains(q):
+				var arrival := _safe_arrival(p.pos)
+				_warp_to(arrival, p.pos)
+				PoiMap.discover(str(p.id))
+				var off := "  (safe standoff)" if arrival != p.pos else ""
+				_dev_feedback("Warped to %s%s" % [str(p.name), off])
+				return true
+		_dev_feedback("no POI matching \"%s\"" % parts[0])
+		return true
+	if parts.size() < 2 or not parts[0].is_valid_float() or not parts[1].is_valid_float():
+		_dev_feedback("warp needs two numbers: /warp <x> <y>")
+		return true
+	var dest := Vector2(parts[0].to_float(), parts[1].to_float())
+	var arr := _safe_arrival(dest)
+	_warp_to(arr, dest if arr != dest else Vector2.INF)
+	var note := "  (stood off a body)" if arr != dest else ""
+	_dev_feedback("Warped to (%s, %s)%s" % [int(arr.x), int(arr.y), note])
+	return true
+
+
+## Nudge a warp destination so we never materialise inside a gravity well (Orivel
+## would crush you) or on top of a station. Returns the target UNCHANGED if it's
+## already clear. Approaches from the ship's current side, so paired with a
+## face-target you arrive looking AT the body.
+func _safe_arrival(target: Vector2) -> Vector2:
+	var from := ship.global_position
+	for g in ["planetoids", "outposts", "structures"]:
+		for node in get_tree().get_nodes_in_group(g):
+			if not (node is Node2D):
+				continue
+			var keep := 900.0
+			var gr: Variant = node.get("grav_r")
+			var ar: Variant = node.get("avoid_radius")
+			if gr != null:
+				keep = float(gr) + 900.0
+			elif ar != null:
+				keep = float(ar) + 500.0
+			var center: Vector2 = (node as Node2D).global_position
+			if target.distance_to(center) < keep:
+				var dir := from - center
+				if dir.length() < 1.0:
+					dir = Vector2.RIGHT
+				return center + dir.normalized() * keep
+	return target
+
+
+func _warp_to(pos: Vector2, face_target := Vector2.INF) -> void:
+	ship.global_position = pos
+	ship.velocity = Vector2.ZERO
+	if face_target != Vector2.INF and face_target.distance_to(pos) > 1.0:
+		ship.rotation = (face_target - pos).angle()
+
+
+func _dev_summon_gate() -> void:
+	if _waygate == null or not is_instance_valid(_waygate):
+		_dev_gate = true
+		_waygate = WayGate.create(ship.global_position
+			+ Vector2.RIGHT.rotated(ship.rotation) * 700.0)
+		add_child(_waygate)
+		_dev_feedback("WayGate summoned ahead — fly to it, press [E]")
+	else:
+		_dev_feedback("WayGate already present")
+
+
+## Re-arm the approach tutorials + every Tutor lesson WITHOUT wiping the save, so
+## the docking/landing teaching can be replayed in place (a lesson is once-ever).
+func _dev_rearm_tutorials() -> void:
+	SaveGame.docking_taught = false
+	SaveGame.landing_taught = false
+	SaveGame.crash_taught = false
+	SaveGame.crater_taught = false
+	_taught_landing = false          # the in-session latch, or it won't re-fire
+	_taught_chart = false
+	ship.approach_fault = ""
+	Tutor.seen.clear()
+	Tutor.pending.clear()
+	Tutor.active = ""
+	Tutor.step = 0
+	_dev_feedback("Tutorials + tutor lessons re-armed")
+
+
 func _handle_interact() -> void:
 	# While the launch window is up it owns [E]/[Q] — don't re-trigger from here.
 	if _launch_window != null and is_instance_valid(_launch_window):
@@ -1175,6 +1290,8 @@ func _handle_interact() -> void:
 			shoal_screen.refresh()
 		elif ship.docked_at == diggs.pad:
 			diggs_screen.refresh()
+		elif _outpost != null and _outpost.pads.has(ship.docked_at):
+			orivel_screen.refresh()
 		elif ship.docked_at is Planetoid:
 			planet_screen.refresh()
 		else:
@@ -1191,6 +1308,12 @@ func _handle_interact() -> void:
 		diggs.pad.try_dock(ship)
 	elif planetoid.status_for(ship).in_band:
 		planetoid.try_land(ship)
+	elif _outpost != null:
+		# The capital ring's 8 berths — dock whichever the pilot is lined up on.
+		for pad in _outpost.pads:
+			if pad.status_for(ship).in_range:
+				pad.try_dock(ship)
+				break
 
 
 ## EVERY launch is a deliberate act: a countdown + your hold at risk, station or

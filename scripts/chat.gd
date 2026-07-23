@@ -31,6 +31,15 @@ const DEFAULT_CHANNEL := "sys"
 ## typing "w" would fire the thrusters. Every control read checks it.
 static var typing := false
 
+## DEV COMMAND HOOK. flight_test registers this in DEBUG BUILDS ONLY, so the
+## registration ITSELF is the dev-only gate — a release export never sets it, so
+## every dev command falls through to "unknown command" and can never slip into a
+## shipped build. Signature: (cmd: String, rest: String) -> bool; return true if
+## handled (the handler posts its own feedback). `dev_help` is the one-line
+## summary shown under /help while the hook is live.
+static var dev_command := Callable()
+static var dev_help := ""
+
 static var lines: Array[Dictionary] = []
 static var channel := DEFAULT_CHANNEL
 
@@ -84,6 +93,8 @@ static func submit(raw: String) -> void:
 		for c in CHANNELS:
 			parts.append("/%s (%s)" % [c.cmd, c.desc])
 		notice("Channels: " + ", ".join(parts))
+		if not dev_help.is_empty():
+			notice(dev_help)
 		return
 	if is_channel(cmd):
 		channel = cmd
@@ -91,6 +102,10 @@ static func submit(raw: String) -> void:
 			notice("Now speaking on %s." % str(channel_def(cmd).name))
 		else:
 			_say(rest)
+		return
+	# Dev commands: only reachable when flight_test registered the hook (debug
+	# builds). In a release export dev_command is never valid, so these are unknown.
+	if dev_command.is_valid() and dev_command.call(cmd, rest):
 		return
 	notice("Unknown command \"/%s\" — try /help." % cmd)
 

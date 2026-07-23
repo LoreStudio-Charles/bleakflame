@@ -475,7 +475,12 @@ func dock(target_host: Node) -> void:
 	# so what the lab consumed and concluded is what gets checkpointed. The Rust
 	# Shoal is a lawless haven, NEITHER station nor colony — it runs no research
 	# calendar and posts no contract board, so it skips these hooks entirely.
-	if target_host is not ShoalPad:
+	# A bare berth (the Shoal; Orivel's capital pads while it has no services)
+	# repairs + saves but runs NO station economy — no research calendar, no
+	# contract board, no auto-started quests. Everything else runs the full hooks.
+	var bare: bool = target_host is ShoalPad \
+		or (target_host is DockingPad and not target_host.runs_dock_services)
+	if not bare:
 		Research.on_dock(target_host is DockingPad, self)
 		Quests.on_dock(target_host is DockingPad, self, SaveGame.tutorial_done)
 	# Docking is the save checkpoint: safe harbor (even a den), saved progress.

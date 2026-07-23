@@ -6,31 +6,54 @@ extends Node2D
 ## into the descent and speed under the re-entry limit, then commit with E.
 ## Hitting the surface without landing is a crash — for pirates too.
 
-# Radii match the sprite: 112px drawn radius x 4 integer upscale.
+# Radii match the sprite: 112px drawn radius x 4 integer upscale. These are the
+# BASE (mult=1) radii; a bigger body scales them by `radius_mult` — see the
+# instance `surface_r`/`band_r`/`grav_r` set in _ready, which the physics uses.
 const MULT := 8
 const SPRITE_SCALE := MULT
 const SURFACE_R := 112.0 * MULT
 const BAND_R := 155.0 * MULT
 const GRAV_R := 260.0 * MULT
-const GRAV_ACCEL := 160.0   # px/s^2 at the surface, fading toward GRAV_R
+const GRAV_ACCEL := 160.0   # px/s^2 at the surface, fading toward grav_r
 const REENTRY_SPEED := 150.0
 const CRASH_ERROR := 0.72
 const SCRAPE_FREE_ERROR := 0.18
 const CRASH_DAMAGE_SCALE := 260.0
 const SURFACE_CRASH_DAMAGE := 110.0
 
+## Size + role knobs so ONE class serves the fringe colony (Epharon, the tuned
+## landing tutorial) AND the capital (Orivel, 3x, a gravity landmark you can't
+## land at YET). `radius_mult` scales every radius off the base consts; `landable`
+## gates the landing minigame + band (the well + surface collider always apply, so
+## a not-yet-landable world still pulls you in and can't be flown through).
+@export var radius_mult := 1.0
+@export var landable := true
+@export var sprite_path := "res://assets/world/planetoid.png"
+
+## Instance radii, = the base consts * radius_mult (set in _ready). The physics
+## and _draw read THESE, not the consts, so a scaled body wells and crashes at its
+## own drawn size. External code that only ever meant Epharon may still read the
+## consts (they equal the mult=1 values).
+var surface_r := SURFACE_R
+var band_r := BAND_R
+var grav_r := GRAV_R
+
 ## How much room AI ships give the planet (BuildShip.separation_dir). Set beyond
 ## the GRAVITY WELL so they steer clear BEFORE the pull can grab them — "safety
 ## first" at the planet (user, 2026-07-22). Generous on purpose: the AI have no
-## business near the well, only the player lands.
-var avoid_radius := GRAV_R * 1.9   # ~3950: the well is in the strong-push zone
+## business near the well, only the player lands. Set in _ready off grav_r.
+var avoid_radius := GRAV_R * 1.9   # ~3950 at mult=1; recomputed in _ready
 
 
 func _ready() -> void:
 	add_to_group("planetoids")
+	surface_r = SURFACE_R * radius_mult
+	band_r = BAND_R * radius_mult
+	grav_r = GRAV_R * radius_mult
+	avoid_radius = grav_r * 1.9
 	var sprite := Sprite2D.new()
-	sprite.texture = load("res://assets/world/planetoid.png")
-	sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
+	sprite.texture = load(sprite_path)
+	sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE) * radius_mult
 	add_child(sprite)
 
 
@@ -53,11 +76,11 @@ func _physics_process(delta: float) -> void:
 				continue
 			var to_center := global_position - ship.global_position
 			var dist := to_center.length()
-			if dist > GRAV_R:
+			if dist > grav_r:
 				continue
-			var pull := GRAV_ACCEL * clampf(1.0 - (dist - SURFACE_R) / (GRAV_R - SURFACE_R), 0.25, 1.0)
+			var pull := GRAV_ACCEL * clampf(1.0 - (dist - surface_r) / (grav_r - surface_r), 0.25, 1.0)
 			ship.velocity += to_center.normalized() * pull * delta
-			if dist < SURFACE_R + ship.hit_radius:
+			if dist < surface_r + ship.hit_radius:
 				Sfx.play_at("scrape", ship.global_position, -4.0, 0.6)
 				ship.take_damage(SURFACE_CRASH_DAMAGE)
 				# Live telemetry: an AI hitting the surface is the exact thing the
@@ -70,7 +93,7 @@ func _physics_process(delta: float) -> void:
 				Telemetry.warn("planet", "%s (%s) crashed the surface" % [who, role])
 				if not ship.dead:
 					var out := -to_center.normalized()
-					ship.global_position = global_position + out * (SURFACE_R + ship.hit_radius + 6.0)
+					ship.global_position = global_position + out * (surface_r + ship.hit_radius + 6.0)
 					ship.velocity = ship.velocity.bounce(out) * 0.3 + out * 90.0
 
 
@@ -85,7 +108,7 @@ func status_for(ship: BuildShip) -> Dictionary:
 			absf(rad_to_deg(ship.velocity.angle_to(to_center))) / 90.0, 0.0, 1.5)
 	var speed_err := maxf(0.0, speed - REENTRY_SPEED) / 180.0
 	return {
-		"in_band": dist > SURFACE_R and dist <= BAND_R,
+		"in_band": dist > surface_r and dist <= band_r,
 		"descending": descending,
 		"angle_ok": angle_err < 0.35,
 		"speed_ok": speed <= REENTRY_SPEED,
@@ -99,6 +122,11 @@ var _scolding := false   # the one-time hard-set-down lesson is open
 
 
 func try_land(ship: TestShip) -> void:
+	# Not-yet-landable worlds (Orivel) still well + collide, but there is no berth
+	# to set down at — a clear refusal, never a silent no-op (visibility rule).
+	if not landable:
+		ship._flash_note("NO CLEARANCE — this world has no berth for you")
+		return
 	var s := status_for(ship)
 	if not s.in_band:
 		return
@@ -246,7 +274,7 @@ func _run_landing(ship: TestShip, s: Dictionary, tier: String) -> void:
 	var start := ship.global_position
 	# Set down just above the surface, on the bearing she approached from.
 	var bearing := (start - global_position).normalized()
-	var pad := global_position + bearing * (SURFACE_R + 6.0)
+	var pad := global_position + bearing * (surface_r + 6.0)
 	if tier == "green":
 		ship._flash_note("\"Bringing her down.\"")
 		await _descend(ship, start, pad, 1.35)
@@ -291,7 +319,7 @@ func undock_exit(ship: TestShip) -> void:
 	var out := (ship.global_position - global_position).normalized()
 	if out.length_squared() < 0.5:
 		out = Vector2.RIGHT
-	ship.global_position = global_position + out * (SURFACE_R + 40.0)
+	ship.global_position = global_position + out * (surface_r + 40.0)
 	ship.rotation = out.angle()
 	ship.velocity = out * 220.0
 
@@ -299,13 +327,16 @@ func undock_exit(ship: TestShip) -> void:
 func _draw() -> void:
 	# Body is the sprite; only the landing band + gravity rings are drawn,
 	# colored by the player's current approach.
-	var band_color := Color(0.6, 0.6, 0.7, 0.35)
-	var player := get_tree().get_first_node_in_group("player_ship") as TestShip
-	if player != null and player.docked_at == null \
-			and player.global_position.distance_to(global_position) < GRAV_R + 300.0:
-		var s := status_for(player)
-		if s.in_band:
-			band_color = Color(0.35, 0.9, 0.45, 0.6) if (s.angle_ok and s.speed_ok) \
-				else (Color(0.95, 0.75, 0.3, 0.6) if s.error < CRASH_ERROR else Color(0.95, 0.3, 0.25, 0.6))
-	draw_arc(Vector2.ZERO, BAND_R, 0, TAU, 64, band_color, 2.0)
-	draw_arc(Vector2.ZERO, GRAV_R, 0, TAU, 64, Color(0.5, 0.5, 0.65, 0.18), 1.5)
+	# The gravity ring always draws (the well is real on every body); the LANDING
+	# BAND only on a landable world, so Orivel reads as "pull, but no berth".
+	if landable:
+		var band_color := Color(0.6, 0.6, 0.7, 0.35)
+		var player := get_tree().get_first_node_in_group("player_ship") as TestShip
+		if player != null and player.docked_at == null \
+				and player.global_position.distance_to(global_position) < grav_r + 300.0:
+			var s := status_for(player)
+			if s.in_band:
+				band_color = Color(0.35, 0.9, 0.45, 0.6) if (s.angle_ok and s.speed_ok) \
+					else (Color(0.95, 0.75, 0.3, 0.6) if s.error < CRASH_ERROR else Color(0.95, 0.3, 0.25, 0.6))
+		draw_arc(Vector2.ZERO, band_r, 0, TAU, 64, band_color, 2.0)
+	draw_arc(Vector2.ZERO, grav_r, 0, TAU, 64, Color(0.5, 0.5, 0.65, 0.18), 1.5)
