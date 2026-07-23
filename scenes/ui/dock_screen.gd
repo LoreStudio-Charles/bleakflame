@@ -937,6 +937,7 @@ func _build_missions_tab(title: String) -> void:
 	# you can re-read), Chronicle (the day-stamped Captain's Log stream).
 	var log_col := _column(row, "QUEST LOG")
 	log_col.size_flags_stretch_ratio = 1.3
+	# Curation lives ON the Active-tab entries now (★ / ▲▼ / tint) — no separate panel.
 	var subtabs := TabContainer.new()
 	subtabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	log_col.add_child(subtabs)

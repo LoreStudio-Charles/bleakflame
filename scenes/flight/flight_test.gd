@@ -23,6 +23,14 @@ const VERGE_CENTER := Vector2(-6000, 2600)
 const VERGE_COUNT := 14   # trimmed (was 22): aurite_min 6 still guarantees the payoff
 const VERGE_SEED := 0x5A17E
 
+## ORIVEL — the Galean capital, the HEART of Cinder Reach. We start on the fringe;
+## Orivel is ~10x the fringe->Epharon distance out, on the FAR side of the station
+## from the colony (a clean -10x the planet's position). ~3x Epharon's size. A
+## landmark only for now (no services, no waypoint) — a reward for the pilot mad
+## enough to make the all-legs haul out there. Traversal stays a real haul until
+## warp tech; nobody's meant to fly it yet.
+const ORIVEL := Vector2(-84000, -52000)
+
 const DRONE_COUNT := 2
 
 @onready var ship: TestShip = $Ship
@@ -58,6 +66,17 @@ func _ready() -> void:
 	planetoid = Planetoid.new()
 	planetoid.position = Vector2(8400, 5200)
 	add_child(planetoid)
+
+	# Orivel, the capital, drawn ~3x Epharon's size far out on the far side. A pure
+	# landmark for now (a Sprite, no gravity/landing/services): the payoff is SEEING
+	# it after the mad haul. Behind everything (z -5) and far away, so it never
+	# touches normal play out on the fringe.
+	var orivel := Sprite2D.new()
+	orivel.texture = load("res://assets/world/planetoid.png")
+	orivel.position = ORIVEL
+	orivel.scale = Vector2.ONE * (Planetoid.SPRITE_SCALE * 3)
+	orivel.z_index = -5
+	add_child(orivel)
 
 	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
 	SaveGame.restore_ship(ship)
@@ -101,7 +120,10 @@ func _ready() -> void:
 	# The chart: charted places start discovered; the rest must be FOUND.
 	PoiMap.clear_scene()
 	PoiMap.register("station", "Station", station.pad.global_position, "station", true)
-	PoiMap.register("planetoid", "Planet Colony", planetoid.position, "planet", true)
+	PoiMap.register("planetoid", "Epharon", planetoid.position, "planet", true)
+	# Orivel is SECRET: it charts only when a pilot actually reaches it (the crazy
+	# trip), and being uncharted it never shows on radar or auto-marks a waypoint.
+	PoiMap.register("orivel", "Orivel — the Capital", ORIVEL, "planet")
 	PoiMap.register("belt", "Drift Belt", BELT_CENTER, "belt", true)
 	PoiMap.register("verge", "The Verge", VERGE_CENTER, "belt", true)
 	PoiMap.register("the_dig", "The Dig — Doug Diggs", diggs.position, "station", true)
@@ -847,6 +869,16 @@ func _fall_ok() -> bool:
 	return is_inside_tree() and not ship.dead
 
 
+## HOW FAR THE STATIC OVERLAPS KRAYT'S FINAL LINE (seconds). The static crashes
+## over the LAST this-many seconds of his VO, so it sounds like his ship coming
+## apart mid-word. Tune to taste:
+##   bigger  = static cuts in EARLIER, swallowing more of his last words
+##   smaller = static waits LONGER, clipping only the very end
+##   0.0     = static begins exactly as his line ends (back-to-back, no overlap)
+## If there's no VO clip, STATIC_NO_VO_DELAY is used instead (a beat behind the text).
+const STATIC_OVERLAP := 0.2
+const STATIC_NO_VO_DELAY := 1.3
+
 ## Krayt's final transmission — delivered IN FLIGHT, in the dark, not as a dry
 ## dock briefing. Closing it BEGINS the finale (charts the gate), then Vyper.
 func _present_krayt_final() -> void:
@@ -876,7 +908,7 @@ func _present_krayt_final() -> void:
 	# add_child ran the panel's _ready, so his VO is already playing — time the
 	# static to overlap its tail (or fall a beat behind the text if there's no clip).
 	var vlen := Sfx.voice_length()
-	var lead: float = maxf(vlen - 0.5, 0.0) if vlen > 0.0 else 1.3
+	var lead: float = maxf(vlen - STATIC_OVERLAP, 0.0) if vlen > 0.0 else STATIC_NO_VO_DELAY
 	await get_tree().create_timer(lead).timeout
 	if is_instance_valid(panel) and panel.is_inside_tree():
 		crash.call()
@@ -907,22 +939,87 @@ func _apply_vyper_truce() -> void:
 ## into its throat leaves the Cinder Reach — the demo's end.
 var _waygate: WayGate
 var _left_system := false
+var _gate_console: GateConsole
+var _gate_prompted := false
+var _traversing := false
+var _dev_gate := false          # a dev-summoned gate ([;]); drives the full flow too
 
 func _tick_gate() -> void:
 	if _left_system:
 		return
+	# The finale charts the gate; a dev summon ([;]) stands one in with no quest.
 	var site := Quests.gate_site()
-	if site.is_empty():
+	var pos: Vector2
+	var quest_id := ""
+	if not site.is_empty():
+		pos = site.pos
+		quest_id = str(site.quest)
+	elif _dev_gate and _waygate != null and is_instance_valid(_waygate):
+		pos = _waygate.position
+	else:
 		return
 	if _waygate == null or not is_instance_valid(_waygate):
-		_waygate = WayGate.create(site.pos)
+		_waygate = WayGate.create(pos)
 		add_child(_waygate)
-	if ship.dead or ship.docked_at != null:
+	if ship.dead or ship.docked_at != null or _traversing:
 		return
-	if ship.global_position.distance_to(site.pos) < 220.0:
-		_left_system = true
-		Quests.note_gate_reached(str(site.quest))
-		_enter_gate()
+	var d := ship.global_position.distance_to(pos)
+	if _waygate.is_open():
+		# The ring is a doorway now — fly into the throat to leave the Reach.
+		if d < 190.0:
+			_traverse_gate(quest_id)
+	elif _waygate.phase == WayGate.Phase.CLOSED and _gate_console == null:
+		# Dormant: nudge the pilot to use it, once per approach.
+		if d < 460.0 and not _gate_prompted:
+			_gate_prompted = true
+			ship._flash_note("THE WAYGATE IS DORMANT — press [E] to use it")
+		elif d >= 460.0:
+			_gate_prompted = false
+
+
+## Open the alien console. Freeze the pilot so they don't drift off the ring while
+## entering the code; control returns when the console closes (see _on_gate_console_closed).
+func _open_gate_console() -> void:
+	if _gate_console != null:
+		return
+	_gate_console = GateConsole.new()
+	_gate_console.entered.connect(func() -> void: _waygate.begin_opening())
+	_gate_console.tree_exited.connect(_on_gate_console_closed)
+	ship.set_physics_process(false)
+	add_child(_gate_console)
+
+
+func _on_gate_console_closed() -> void:
+	_gate_console = null
+	if not ship.dead and not _traversing:
+		ship.set_physics_process(true)   # watch the ring wake, then fly in
+
+
+## Fly into the open ring: the ship shrinks and dims toward the throat so it reads
+## as flying off into distant space. The camera is unpinned from the hull first, so
+## it holds on the gate instead of zooming with the shrinking ship.
+func _traverse_gate(quest_id: String) -> void:
+	if _traversing:
+		return
+	_traversing = true
+	_left_system = true
+	if quest_id != "":
+		Quests.note_gate_reached(quest_id)   # (dev-summoned gate has no quest to advance)
+	ship.set_physics_process(false)
+	Sfx.play("jingle", -6.0, 0.6)
+	var cam := ship.get_node_or_null("Camera") as Camera2D
+	if cam != null:
+		var gpos := cam.global_position
+		cam.reparent(self)
+		cam.global_position = gpos
+		cam.position_smoothing_enabled = false
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(ship, "global_position", _waygate.position, 1.9).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(ship, "scale", Vector2.ONE * 0.02, 1.9).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(ship, "modulate:a", 0.0, 1.9).set_ease(Tween.EASE_IN)
+	await tw.finished
+	_enter_gate()
 
 
 func _enter_gate() -> void:
@@ -1033,6 +1130,20 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_dev_vitals.visible = not _dev_vitals.visible
 		ship._flash_note("Heartbeat %s [dev]" % ("ON" if _dev_vitals.visible else "off"))
 		return
+	# ; = SUMMON THE WAYGATE ahead of the ship, so the whole finale interaction
+	# (approach -> [E] console -> enter Krayt's code -> it opens -> fly through) can
+	# be tested without playing the campaign to the end. Physical key too.
+	if OS.is_debug_build() and (event.keycode == KEY_SEMICOLON \
+			or event.physical_keycode == KEY_SEMICOLON):
+		if _waygate == null or not is_instance_valid(_waygate):
+			_dev_gate = true
+			_waygate = WayGate.create(ship.global_position
+				+ Vector2.RIGHT.rotated(ship.rotation) * 700.0)
+			add_child(_waygate)
+			ship._flash_note("WayGate summoned ahead — fly to it, press [E] [dev]")
+		else:
+			ship._flash_note("WayGate already present [dev]")
+		return
 	match event.keycode:
 		KEY_F1:
 			get_tree().change_scene_to_file("res://scenes/debug/assembly_viewer.tscn")
@@ -1068,6 +1179,10 @@ func _handle_interact() -> void:
 			planet_screen.refresh()
 		else:
 			station_screen.refresh()
+	elif _waygate != null and is_instance_valid(_waygate) \
+			and _waygate.phase == WayGate.Phase.CLOSED and _gate_console == null \
+			and ship.global_position.distance_to(_waygate.position) < 460.0:
+		_open_gate_console()          # feed the ring the waking sequence Krayt sent
 	elif station.pad.status_for(ship).in_range:
 		station.pad.try_dock(ship)
 	elif shoal.pad.status_for(ship).in_range:

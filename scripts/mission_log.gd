@@ -9,6 +9,10 @@ const MAX_ACTIVE := 2
 static var offers: Array = []
 static var active: Array = []
 static var total_kills := 0
+## A monotonic id stamped on each accepted contract, so the mission tracker can
+## reference a specific one across a save round-trip (two identical bounties are
+## still distinct). Persisted; assigned lazily to legacy saves via uid_of().
+static var next_uid := 1
 
 ## Every contract has a face AND a place: it is OFFERED at `venue` and TURNED
 ## IN at `turn_in`. The trade route is reciprocal and physical — the station
@@ -141,8 +145,19 @@ static func accept(index: int) -> bool:
 	offers.remove_at(index)
 	if m.type == "bounty":
 		m["start_kills"] = total_kills
+	m["uid"] = next_uid
+	next_uid += 1
 	active.append(m)
 	return true
+
+
+## Stable per-contract id, assigned on the fly to any contract that predates the
+## uid field (older saves) so the tracker never keys off a missing value.
+static func uid_of(m: Dictionary) -> int:
+	if not m.has("uid"):
+		m["uid"] = next_uid
+		next_uid += 1
+	return int(m["uid"])
 
 
 static func note_kill() -> void:

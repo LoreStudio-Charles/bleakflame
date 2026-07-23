@@ -194,7 +194,7 @@ dark cratered stone, glowing ember pore-craters, gas-drift, dark muted palette):
     Great Thresher that reaches an inhabited planet SEEDS it and the world is
     LOST — its people become swarm. STRATEGIC/campaign menace: a race to intercept
     the slow drift before it reaches the colony, or the colony goes dark and
-    becomes a nursery. Feeds the convergence arc (worlds falling = a front closing).
+    becomes a nursery. Feeds the Saga (worlds falling = a front closing).
 
 **DAMAGE-FLAVOUR WHEEL** (keep the four threats mechanically distinct):
 human = BALLISTIC (VK autocannon *pew*); Warden = clean ENERGY (laser/plasma);

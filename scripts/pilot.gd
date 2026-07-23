@@ -327,6 +327,16 @@ static func scan_mult() -> float:
 	return 0.9 if background == "prospector" else 1.0
 
 
+## MINER SENSOR RANGE: how far mineable rock paints the radar as a small blip. A
+## commission perk — a prospector's rig reads ore signatures the standard sensor
+## suite ignores; 0 for everyone else (rocks are still visible in the world, they
+## just don't show on the scope). A real stat (stats.ore_sense) so mining gear can
+## add to it later; the Miner commission is the source for now.
+const MINER_ORE_SENSE := 1600.0
+static func ore_sense_range() -> float:
+	return MINER_ORE_SENSE if profession == "miner" else 0.0
+
+
 static func kill_xp_mult() -> float:
 	return 1.15 if background == "militia" else 1.0
 

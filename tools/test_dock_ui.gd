@@ -51,6 +51,7 @@ func _ready() -> void:
 	_case_all_held_talks_play_in_one_sitting()
 	_case_talk_to_odessa_does_quest_first()
 	_case_every_npc_desk_is_uniform()
+	_case_quest_log_is_the_tracker()
 	_case_contracts_credit_their_giver_guild()
 	_case_gem_bar_never_starts_crossed_out()
 	_case_odessa_has_no_dead_ask()
@@ -962,6 +963,41 @@ func _case_every_npc_desk_is_uniform() -> void:
 			desk.set_news(true)
 			_ok(desk._dot.visible, "%s desk dot lights on news" % npc)
 		screen.queue_free()
+
+
+## CURATION LIVES ON THE ACTIVE LOG ENTRIES (user, 2026-07-23): the QuestLogView
+## active tab IS the tracker — every objective (campaign + contract) is an entry
+## with a ★ show/hide and ▲▼ reorder on its title, and starring one off drops it
+## from the HUD list. No separate TrackerPanel any more.
+func _case_quest_log_is_the_tracker() -> void:
+	Quests.reset()
+	MissionTracker.reset()
+	MissionLog.active.clear()
+	MissionLog.offers.clear()
+	MissionLog.ensure_offers()
+	Quests.active["overdue"] = {"stage": 0, "count": 0}
+	_ok(MissionLog.accept(0), "seed a contract for the tracker")
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var view := QuestLogView.new(ship, "active")
+	add_child(view)
+	view.rebuild()
+
+	_ok(_count_buttons(view, "★") + _count_buttons(view, "☆") >= 2,
+		"every active objective carries a show/hide star on its title row")
+	_ok(_count_buttons(view, "▲") >= 2 and _count_buttons(view, "▼") >= 2,
+		"...and ▲▼ reorder arrows")
+
+	var before := MissionTracker.visible_tracked(ship).size()
+	_ok(before >= 2, "campaign + contract both track")
+	MissionTracker.toggle("q:overdue")
+	_ok(MissionTracker.visible_tracked(ship).size() == before - 1,
+		"starring an objective off drops it from the HUD list")
+	MissionTracker.toggle("q:overdue")
+
+	view.queue_free()
+	ship.queue_free()
 
 
 # ---- rig ----

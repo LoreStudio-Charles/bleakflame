@@ -115,16 +115,34 @@ func aim_at(world_target: Vector2, delta: float, target_vel := Vector2.ZERO) -> 
 		rotation = rotate_toward(rotation, _facing,
 			deg_to_rad(def.traverse_speed() * traverse_mult) * delta)
 		return
-	var aim_point := world_target
-	if target_vel != Vector2.ZERO and def.projectile_speed > 0.0:
-		for i in 2:   # two passes converge close enough at these speeds
-			var t := global_position.distance_to(aim_point) / def.projectile_speed
-			aim_point = world_target + target_vel * lead_factor * t
 	var ship := get_parent() as Node2D
+	# The bolt now INHERITS the shooter's velocity (Projectile.spawn), so a moving
+	# shooter's shots drift unless we cancel it out here — see intercept_point. A
+	# strafing pirate was firing wide until this ("bullets aren't accurate", found in
+	# playtest after velocity-inheritance landed).
+	var sv = ship.get("velocity")
+	var shooter_vel: Vector2 = sv if sv is Vector2 else Vector2.ZERO
+	var aim_point := intercept_point(global_position, world_target, target_vel,
+		shooter_vel, def.projectile_speed, lead_factor)
 	var desired := (aim_point - global_position).angle() - ship.global_rotation
 	var clamped := _facing + clampf(angle_difference(_facing, desired), -_half_arc, _half_arc)
 	rotation = rotate_toward(rotation, clamped,
 		deg_to_rad(def.traverse_speed() * traverse_mult) * delta)
+
+
+## Where to aim so a bolt — which carries the SHOOTER's velocity now — meets the
+## target. Solve it in the shooter's own frame: lead the TARGET imperfectly (lead =
+## the AI's aim skill) but cancel OUR OWN velocity EXACTLY (physics, not skill), so a
+## moving shooter no longer fires wide. Pure + static so it's testable.
+static func intercept_point(from: Vector2, world_target: Vector2, target_vel: Vector2,
+		shooter_vel: Vector2, projectile_speed: float, lead: float) -> Vector2:
+	var lead_vel := target_vel * lead - shooter_vel
+	var aim_point := world_target
+	if lead_vel != Vector2.ZERO and projectile_speed > 0.0:
+		for i in 2:   # two passes converge close enough at these speeds
+			var t := from.distance_to(aim_point) / projectile_speed
+			aim_point = world_target + lead_vel * t
+	return aim_point
 
 
 ## 1.0 = charged and ready; rising fraction = recharge. Drives the HUD rack.

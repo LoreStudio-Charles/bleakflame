@@ -209,7 +209,7 @@ credits / tasks, slowly.
 
 **CAMPAIGN-DYNAMIC PIRATE HOSTILITY:** after Krayt dies (campaign end), the Rust
 Shoal pirates go NEUTRAL toward you under Vyper (ambient attacks stop) — UNLESS
-you keep taking anti-pirate missions, which flips them hostile again (and lowers
+you keep taking anti-pirate contracts, which flips them hostile again (and lowers
 Privateer standing). Pirate hostility is standing/campaign-driven, not hardcoded.
 Also: the SHOAL MOVES FARTHER OUT (a real journey; it's the outlaw home base).
 
@@ -315,7 +315,7 @@ commission. Closes the outlaw gear loop self-contained at the Shoal. STILL TODO
 ## Core (user-decided)
 
 - **No pick at start.** Professions are EARNED by building trust with NPC
-  faction leaders, who serve as trainer / mission giver / respect agent /
+  faction leaders, who serve as trainer / contract-giver / respect agent /
   quartermaster.
 - At a faction's trust threshold, they INVITE you to become one of:
   **Guardian / Science Officer / Scout / Trader / Miner / Privateer**.
@@ -325,7 +325,7 @@ commission. Closes the outlaw gear loop self-contained at the Shoal. STILL TODO
     efficiency (recharge), etc.
   - **Trait lines** — spec trees, points spent per level: ACTIVE
     abilities, special maneuvers, and major bonuses you must spec into.
-- Each profession has unique abilities, ships, gear, and missions.
+- Each profession has unique abilities, ships, gear, and an Arc (its own story).
 
 ## Faction leaders (mapped to the existing cast)
 
@@ -346,7 +346,7 @@ Guardian fiction already flying.
 
 - **One ACTIVE COMMISSION at a time**, switched at dock. Earned passive
   skills persist across commissions forever; the active commission gates
-  trait actives, profession missions, and quartermaster stock.
+  trait actives, Arc beats, and quartermaster stock.
 - **Actives live on the systems-engagement keys [1]-[5]** — same grammar
   as the scanner: select target (where relevant), press key. Hardware
   modules and trained abilities compete for the same five buttons; "what
@@ -364,14 +364,14 @@ Guardian fiction already flying.
 - **Domain split vs Research**: Insight/tech trees = station KNOWLEDGE
   (recipes, charting, lab passives). Profession skills = PILOT ability
   (handling, arcs, efficiency). Traits = ACTIVES. No double-granting.
-- **Profession missions ride the Quests framework** (stage kinds mostly
+- **Profession Arcs ride the Quests framework** (stage kinds mostly
   exist; add kinds per need).
 
 ## Build phasing [P]
 
 1. Faction standing tracking (+ retroactive seed) + visible meters +
    GUARDIAN end-to-end: invitation quest, small skill line, first trait
-   active, a few defense missions, quartermaster stub.
+   active, a few defense Arc beats, quartermaster stub.
 2. Miner + Science Officer (trust verbs fully tracked already).
 3. Trader, Scout, Privateer (Privateer waits on campaign beat 7).
 

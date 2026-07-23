@@ -404,6 +404,8 @@ func apply_build(new_build: ShipBuild) -> void:
 	stats.shield_hp *= Pilot.shield_hp_mult()
 	stats.shield_regen *= Pilot.shield_regen_mult()
 	stats.cargo *= Pilot.cargo_mult()
+	# Miner commission perk: mineable rock paints the radar (see Radar._draw).
+	stats["ore_sense"] = float(stats.get("ore_sense", 0.0)) + Pilot.ore_sense_range()
 	hull = stats.hull_hp
 	armor = stats.armor_hp
 	shield = stats.shield_hp

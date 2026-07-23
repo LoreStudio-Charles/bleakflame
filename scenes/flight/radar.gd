@@ -119,3 +119,28 @@ func _draw() -> void:
 			var color: Color = Grades.color(pickup.def.grade) if pickup.def != null \
 				else Color(0.92, 0.82, 0.5)
 			draw_circle(p, 1.5, color)
+
+	# MINEABLE ROCK — a MINER'S perk (ore_sense is 0 for everyone else, so the scope
+	# stays clean). A small ore-brown chip within ore-sense range says "something to
+	# cut here"; once SURVEYED it reads its verdict — brighter if it holds ore, dim
+	# grey if it proved barren — so a prospector can skip the empties at a glance.
+	var ore_sense: float = ship.stats.get("ore_sense", 0.0)
+	if ore_sense > 0.0:
+		var ore_sq: float = ore_sense * ore_sense
+		for rock in get_tree().get_nodes_in_group("asteroids"):
+			if ship.global_position.distance_squared_to(rock.global_position) > ore_sq:
+				continue
+			var rp = _to_radar(rock.global_position, false)
+			if rp == null:
+				continue
+			var col := Color(0.62, 0.5, 0.32)                 # unsurveyed: unknown ore-brown
+			if rock.get("surveyed") == true:
+				# Object.get() takes ONE arg (unlike Dictionary.get) — the rock is a
+				# MineableAsteroid, so these properties always resolve.
+				if str(rock.get("ore_type")) != "" and int(rock.get("ore_units")) > 0:
+					col = Color(0.85, 0.72, 0.4)              # surveyed & rich: brighter
+				else:
+					col = Color(0.4, 0.42, 0.46)              # surveyed & barren: dim
+			draw_colored_polygon(PackedVector2Array([
+				rp + Vector2(0, -2.5), rp + Vector2(2.5, 0),
+				rp + Vector2(0, 2.5), rp + Vector2(-2.5, 0)]), col)

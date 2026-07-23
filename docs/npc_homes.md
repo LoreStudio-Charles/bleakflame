@@ -77,7 +77,7 @@ pip a convenience rather than a single point of failure.
 
 The campaign personally introduces Ruel, Voss, Dex, Imari, the Counter and
 Krayt. It never introduces **Sella** or **Doug Diggs** at all — a player can
-finish the whole starter arc without learning that the Explorer's Union or the
+finish the whole starter Campaign without learning that the Explorer's Union or the
 Prospector Guild have faces, which quietly hides two professions. (Vyper is
 introduced by the finale, so she is fine.)
 

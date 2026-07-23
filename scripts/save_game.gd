@@ -49,9 +49,12 @@ static func save_game(ship: TestShip) -> void:
 		"commodities": ship.commodities,
 		"missions_offers": MissionLog.offers,
 		"missions_active": MissionLog.active,
+		"missions_next_uid": MissionLog.next_uid,
 		"total_kills": MissionLog.total_kills,
 		"pois_discovered": PoiMap.discovered_ids(),
 		"waypoint": PoiMap.waypoint_id,
+		"waypoint_manual": PoiMap.waypoint_manual,
+		"tracker": MissionTracker.to_dict(),
 		"research": Research.to_dict(),
 		"quests": Quests.to_dict(),
 		"pilot": Pilot.to_dict(),
@@ -120,9 +123,12 @@ static func load_game() -> void:
 	MissionLog.offers = _sanitize_missions(data.get("missions_offers", []))
 	MissionLog.active = _sanitize_missions(data.get("missions_active", []))
 	MissionLog.total_kills = int(data.get("total_kills", 0))
+	MissionLog.next_uid = int(data.get("missions_next_uid", 1))
 	for id in data.get("pois_discovered", []):
 		PoiMap.discover(str(id))
 	PoiMap.waypoint_id = str(data.get("waypoint", ""))
+	PoiMap.waypoint_manual = bool(data.get("waypoint_manual", false))
+	MissionTracker.from_dict(data.get("tracker", {}))
 	Research.from_dict(data.get("research", {}))
 	Quests.from_dict(data.get("quests", {}))
 	# Pre-pilot saves: mark created with defaults, or veterans would be
@@ -237,8 +243,10 @@ static func reset_all_progress() -> void:
 	MissionLog.offers = []
 	MissionLog.active = []
 	MissionLog.total_kills = 0
+	MissionLog.next_uid = 1
 	MissionLog.ensure_offers()
 	PoiMap.reset()
+	MissionTracker.reset()
 	Research.reset()
 	Quests.reset()
 	Pilot.reset()
@@ -253,4 +261,6 @@ static func _sanitize_missions(raw: Array) -> Array:
 		m["reward"] = int(m.get("reward", 0))
 		if m.has("start_kills"):
 			m["start_kills"] = int(m["start_kills"])
+		if m.has("uid"):
+			m["uid"] = int(m["uid"])   # JSON floats back to ints for stable keys
 	return raw

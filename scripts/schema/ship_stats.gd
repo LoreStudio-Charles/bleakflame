@@ -19,6 +19,9 @@ static func aggregate(build: ShipBuild) -> Dictionary:
 		"armor_hp": 0.0,
 		"dps": 0.0,
 		"sensor_range": 0.0,
+		# Miner sensor: range at which mineable rock paints the radar. 0 by default;
+		# the Miner commission grants it (ship.apply_build), and gear may add later.
+		"ore_sense": 0.0,
 	}
 	for comp: ComponentDef in build.slots.values():
 		s.mass += comp.mass

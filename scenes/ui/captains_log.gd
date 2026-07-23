@@ -39,6 +39,7 @@ func _ready() -> void:
 	header.add_theme_color_override("font_color", UiTheme.AMBER)
 	header.add_theme_font_size_override("font_size", 15)
 	col.add_child(header)
+	# Curation lives ON the Active-tab entries now (★ / ▲▼ / tint) — no separate panel.
 	var subtabs := TabContainer.new()
 	subtabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(subtabs)

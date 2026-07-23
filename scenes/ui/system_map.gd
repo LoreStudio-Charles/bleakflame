@@ -68,7 +68,10 @@ class ChartView:
 					best_d = d
 					best_id = p.id
 			if best_id != "":
-				PoiMap.waypoint_id = "" if PoiMap.waypoint_id == best_id else best_id
+				# Clicking the current waypoint clears it (back to auto-tracking);
+				# clicking anything else pins it MANUALLY, overriding the tracker.
+				var clearing: bool = PoiMap.waypoint_id == best_id and PoiMap.waypoint_manual
+				PoiMap.set_waypoint("" if clearing else best_id, true)
 				Sfx.play("click", -8.0, 1.4 if PoiMap.waypoint_id != "" else 0.8)
 				queue_redraw()
 

@@ -15,7 +15,7 @@ silhouette + one signature prop.
 station's spine of normalcy.
 
 **Personality**: Pragmatic, dry, allergic to superstition — which is why
-his arc matters: across the campaign he goes from "pirates, obviously" to
+his journey matters: across the Campaign he goes from "pirates, obviously" to
 quietly moving the loss-chart into his private office so dockhands stop
 seeing it grow. Respect from him is earned twice: once by coming back
 alive, once by coming back honest.
@@ -48,7 +48,7 @@ any actuarial table, and being the only person whose *job* is to stare at
 that fact is corroding her. First campaign character to believe the player.
 
 **Voice**: Clause-perfect sentences that fray at the edges late in the
-arc. "No debris? Pirates leave debris." Files stamped LOST, CAUSE UNKNOWN
+Campaign. "No debris? Pirates leave debris." Files stamped LOST, CAUSE UNKNOWN
 — she hates the word "unknown" like other people hate a slur.
 
 **Appearance**: Woman, 40s. Slight, upright posture, immaculate charcoal

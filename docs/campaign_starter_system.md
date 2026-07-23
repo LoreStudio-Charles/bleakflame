@@ -1,7 +1,7 @@
 # Starter System Campaign — "Nothing Left Behind"
 
-Working title. Cinder Reach's main story arc, from first missing ship to the
-gate out of the system. Premise and beat structure authored by the user
+Working title. Cinder Reach's Campaign (its system story within the Saga), from
+first missing ship to the gate out of the system. Premise and beat structure authored by the user
 2026-07-19; connective tissue drafted for reaction. CANON RULES and the
 BEAT SPINE are fixed; everything else is adjustable.
 
@@ -43,7 +43,7 @@ BEAT SPINE are fixed; everything else is adjustable.
 1. **Last position** — a contract to seek out a lost ship's last known
    position. The sweep finds nothing at all — except one strange reading
    nearby that shouldn't be there.
-2. **The anomaly** — scan the strange anomaly (survey scanner mission):
+2. **The anomaly** — scan the strange anomaly (needs a survey scanner):
    a cold violet residue, matter that reads as ABSENT. The lab has no
    category for it. (This is a devouring's only footprint.)
 3. **The ambush** — a scripted Cinderweb ambush. This is exactly what
@@ -90,14 +90,14 @@ BEAT SPINE are fixed; everything else is adjustable.
      die drawing it off. Grief + a brief memorial + a banner of truce — the
      Shoal declares the player OFF LIMITS (honor it and no raider burns you;
      break it and she sheds your blood). This heals the ending's rough edge:
-     horror → grief → truce → departure, one arc. Standing +privateer; the
+     horror → grief → truce → departure, one full turn. Standing +privateer; the
      Shoal's peace goes permanent (`Pilot.shoal_invited`).
    - The gate opens (reach_gate). The campaign ends with passage to the next
      system and the Reach on the clock.
 
 ## Cast (draft names — rename freely)
 
-- **Harbormaster Ruel** (station, Landing Bay) — pragmatic mission-giver;
+- **Harbormaster Ruel** (station, Landing Bay) — pragmatic contract-giver;
   tracks the losses; arcs from dismissive to scared.
 - **Underwriter Voss** (station) — insurance agent whose missing-ship
   contracts open the campaign; the paperwork face of the body count.
@@ -147,5 +147,5 @@ BEAT SPINE are fixed; everything else is adjustable.
 
 - All cast names are placeholders.
 - Whether beat 4 (first contact) requires the scanner fitted or lends the
-  player a mission-issued one (a broke player must not be soft-locked).
+  player a quest-issued one (a broke player must not be soft-locked).
 - Gate wake-up mechanics: instant vs a short defense/attunement sequence.

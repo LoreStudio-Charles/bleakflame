@@ -18,6 +18,7 @@ var hit_radius := R
 var _t := 0.0
 var _core: Polygon2D
 var _ring: Line2D
+var _sprite: Sprite2D
 var _tendrils: Array[Line2D] = []
 
 
@@ -74,6 +75,20 @@ func _ready() -> void:
 			add_child(t)
 			_tendrils.append(t)
 
+	# DROP-IN ART (no code needed to add it): assets/world/anomaly_<kind>.png. If
+	# present it becomes the body and the solid violet core softens to a glow aura
+	# under it; the ring/tendrils keep breathing over the art. Absent = procedural.
+	var art_path := "res://assets/world/anomaly_%s.png" % kind
+	if ResourceLoader.exists(art_path):
+		var tex: Texture2D = load(art_path)
+		_sprite = Sprite2D.new()
+		_sprite.texture = tex
+		_sprite.z_index = -1                        # under the additive glow
+		var target := hit_radius * 2.2
+		_sprite.scale = Vector2.ONE * (target / maxf(float(tex.get_width()), 1.0))
+		add_child(_sprite)
+		_core.color.a *= 0.4                         # the art is the body now
+
 
 func _process(delta: float) -> void:
 	_t += delta
@@ -82,6 +97,8 @@ func _process(delta: float) -> void:
 	_core.scale = Vector2.ONE * pulse
 	_ring.rotation = _t * 0.3
 	_core.color.a = 0.35 + 0.2 * sin(_t * 2.1)
+	if _sprite != null:
+		_sprite.rotation = _t * (0.12 if kind == "tendril" else 0.05)   # a slow, wrong turn
 	for i in _tendrils.size():
 		_tendrils[i].rotation = sin(_t * 0.7 + i) * 0.3   # writhing
 

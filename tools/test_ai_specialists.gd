@@ -23,6 +23,8 @@ func _ready() -> void:
 	_case_ships_keep_their_distance()
 	_case_shadow_escort_trails_and_hangs_back()
 	_case_shadow_escort_commits_on_spring()
+	_case_miner_ore_sense_is_a_commission_perk()
+	_case_moving_shooter_fires_true()
 	_case_bolts_inherit_shooter_velocity()
 	_case_scan_chip_enables_scanning()
 	_case_killshot_range_and_fire()
@@ -477,6 +479,58 @@ func _case_shadow_escort_commits_on_spring() -> void:
 	_ok(g.velocity.x > 0.0, "on spring the wing charges the beast, not the objective it was patrolling")
 	g.free()
 	beast.free()
+
+
+## MINER ORE-SENSE is a commission perk: mineable rock paints the radar only for a
+## Miner (ore_sense stat > 0), staying off the scope for everyone else. Gates the
+## radar loop that draws asteroid blips.
+func _case_miner_ore_sense_is_a_commission_perk() -> void:
+	var prev := Pilot.profession
+	Pilot.profession = ""
+	var civ := TestShip.new()
+	add_child(civ)
+	civ.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	_ok(float(civ.stats.get("ore_sense", 0.0)) == 0.0,
+		"a non-miner has no ore-sense — rock stays off the scope")
+
+	Pilot.profession = "miner"
+	var miner := TestShip.new()
+	add_child(miner)
+	miner.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	_ok(float(miner.stats.get("ore_sense", 0.0)) >= Pilot.MINER_ORE_SENSE,
+		"the Miner commission grants ore-sense, painting rock on the radar")
+
+	Pilot.profession = prev
+	civ.free()
+	miner.free()
+
+
+## AIM COMPENSATES FOR THE SHOOTER'S OWN VELOCITY. Bolts inherit the shooter's
+## velocity now (so your guns don't crawl at speed), but the auto-aim wasn't leading
+## for that — a strafing pirate fired wide ("bullets aren't accurate", playtest).
+## WeaponMount.intercept_point solves the lead in the shooter's frame so a moving
+## shooter's bolt flies true.
+func _case_moving_shooter_fires_true() -> void:
+	var from := Vector2.ZERO
+	var target := Vector2(1000, 0)      # dead ahead, stationary
+	var strafe := Vector2(0, 200)       # shooter sliding sideways at 200
+	var speed := 800.0
+
+	# Aiming STRAIGHT at the target, the inherited sideways velocity flings the bolt
+	# wide — that's the bug.
+	var naive := Vector2(1, 0) * speed + strafe
+	_ok(absf(naive.angle_to(target - from)) > deg_to_rad(10.0),
+		"a strafing shooter aiming straight WOULD miss (the regression)")
+
+	# Aiming in the shooter's frame, the bolt's WORLD velocity points at the target.
+	var aim := WeaponMount.intercept_point(from, target, Vector2.ZERO, strafe, speed, 1.0)
+	var bolt := (aim - from).normalized() * speed + strafe
+	_ok(absf(bolt.angle_to(target - from)) < deg_to_rad(1.5),
+		"canceling the shooter's own velocity makes the bolt fly true")
+
+	# A stationary shooter is unchanged — aim is still just the target.
+	var still := WeaponMount.intercept_point(from, target, Vector2.ZERO, Vector2.ZERO, speed, 1.0)
+	_ok(still.is_equal_approx(target), "a stationary shooter still aims dead at the target")
 
 
 # ---- rig ----

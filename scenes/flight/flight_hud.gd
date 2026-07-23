@@ -24,7 +24,6 @@ var _panel_h := 170.0
 var _floating_target := true
 
 var _banner: Label
-var _campaign_line: Label
 var _banner_settings: LabelSettings
 var _left: DashPanel
 var _right: DashPanel
@@ -64,21 +63,6 @@ func _ready() -> void:
 	_banner.offset_top = 34
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_banner)
-
-	# THE CAMPAIGN THROUGH-LINE, always on screen so the spine is never lost
-	# behind side content (the ember_word freeze). Subtle amber, tucked under the
-	# threat banner; empty when the campaign is idle between beats.
-	var cset := LabelSettings.new()
-	cset.font_size = 13
-	cset.font_color = Color(0.93, 0.72, 0.33, 0.92)
-	cset.outline_size = 4
-	cset.outline_color = Color(0, 0, 0, 0.85)
-	_campaign_line = Label.new()
-	_campaign_line.label_settings = cset
-	_campaign_line.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_campaign_line.offset_top = 62
-	_campaign_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(_campaign_line)
 
 	var panel_frac := float(_layout.get("panel_frac", 0.46))
 	_left = DashPanel.new()
@@ -359,11 +343,6 @@ func _process(_delta: float) -> void:
 	_target_info.visible = flying
 	_update_loot_tip(flying)
 	_hold_label.visible = flying and show_hold
-	# Persistent campaign through-line — the next story step, always in view.
-	_campaign_line.visible = flying
-	if flying:
-		var beat := Quests.current_step()
-		_campaign_line.text = ("▸ NEXT · %s" % str(beat.step)) if not beat.is_empty() else ""
 	if ship.dead:
 		_banner.text = "SHIP LOST — cargo lost with it   [E] restart"
 		_banner_settings.font_color = UiTheme.DANGER
@@ -399,6 +378,7 @@ func _process(_delta: float) -> void:
 	# fit budget that cannot move in flight — dock information sitting on the
 	# windshield). What's left is money and flight mode, which do change.
 	_sys.text = "CR %d\n%s" % [Wallet.credits, mode_line]
+	MissionTracker.sync_waypoint(ship)   # top tracked objective drives the marker
 	_missions.text = _missions_line()
 	# Stack the friendlies roster directly under the missions block — the corner
 	# reads top-to-bottom: comms badge, missions, friendlies, never piled up.
@@ -447,20 +427,36 @@ func _center_text() -> String:
 	return _approach_line()
 
 
+## THE OBJECTIVE TRACKER, in the corner under COMMS. The player curates which
+## objectives show and in what order (MissionTracker); TOP is current and wears a
+## ▶ plus its next step, the rest are one glyph-tagged line each so campaign,
+## contract and lead read distinct at a glance.
 func _missions_line() -> String:
-	if MissionLog.active.is_empty():
+	var tracked: Array = MissionTracker.visible_tracked(ship)
+	if tracked.is_empty():
 		return ""
-	const MAX_TRACKED := 3
-	var parts: Array[String] = []
-	for m in MissionLog.active:
-		if parts.size() >= MAX_TRACKED:
-			break
-		parts.append("%s %d/%d" % [m.type.to_upper(), MissionLog.progress(m, ship), m.n])
-	var line := "MISSIONS\n" + "\n".join(parts)
-	var extra := MissionLog.active.size() - parts.size()
-	if extra > 0:
-		line += "\n+%d more" % extra
-	return line
+	var lines: Array[String] = ["OBJECTIVES"]
+	for i in tracked.size():
+		var t: Dictionary = tracked[i]
+		var head := "%s %s %s" % ["▶" if i == 0 else " ",
+			_kind_glyph(str(t.kind)), str(t.label)]
+		if str(t.kind) == "contract":
+			head += "   %s" % str(t.detail)         # progress reads inline
+		lines.append(head)
+		# The current objective also spells out its step; the rest stay one line.
+		if i == 0 and str(t.kind) != "contract" and str(t.get("detail", "")) != "":
+			lines.append("      %s" % str(t.detail))
+	return "\n".join(lines)
+
+
+## Per-kind marker so the three objective types read apart in the corner:
+## filled diamond = campaign (the spine), bullet = side contract, open diamond =
+## an expedition lead (discovery).
+func _kind_glyph(kind: String) -> String:
+	match kind:
+		"campaign": return "◆"
+		"lead": return "◇"
+		_: return "•"
 
 
 func _hold_block() -> String:
@@ -477,6 +473,14 @@ func _hold_block() -> String:
 
 
 func _approach_line() -> String:
+	# THE WAYGATE — a persistent prompt while near it (the old one-shot flash was
+	# too easy to fly past, so the finale gate read as un-interactable).
+	for gate in get_tree().get_nodes_in_group("waygate"):
+		var gd := ship.global_position.distance_to(gate.global_position)
+		if gate.phase == WayGate.Phase.CLOSED and gd < 460.0:
+			return "◆ THE WAYGATE IS DORMANT  —  [E] to enter Krayt's waking sequence"
+		if gate.phase == WayGate.Phase.OPEN and gd < 340.0:
+			return "◆ THE WAYGATE IS OPEN  —  fly into the light"
 	for pad in get_tree().get_nodes_in_group("dock_pads"):
 		if ship.global_position.distance_to(pad.global_position) < pad.UI_RANGE:
 			var s: Dictionary = pad.status_for(ship)

@@ -1,8 +1,8 @@
-# THE CONVERGENCE — the master arc
+# THE CONVERGENCE — the Saga's spine
 
 The spine of the whole game (and the series). Everything else — the gates, the
 Cinderweb, the Wardens, the Threshers, the factions, the professions — hangs off
-this. Set by the user 2026-07-22. Read this before writing any campaign beat.
+this. Set by the user 2026-07-22. Read this before writing any Campaign beat.
 
 ## One line
 Humanity, flying gate to gate in ignorance, has been unlocking a prison — and the
@@ -21,13 +21,13 @@ and must unite against three fronts to prove it deserves to exist.
    locks. We freed the convergence out of pure ignorance — too young, too
    reckless, too blind to understand what we were opening. **The player has been
    committing the crime the entire game** (gate travel is the core mechanic; the
-   starter campaign *ends* on opening the WayGate — the "triumph" is the
+   starter Campaign *ends* on opening the WayGate — the "triumph" is the
    catastrophe).
 
 3. **The Wardens are RIGHT.** They are not villains. They are executioners
    carrying out a proportionate sentence: humanity released an extinction event
    and is too dangerous and ignorant to be allowed to continue. Their hostility
-   is JUSTIFIED and TRAGIC. This is the arc's moral engine — you do not fight an
+   is JUSTIFIED and TRAGIC. This is the Saga's moral engine — you do not fight an
    evil, you fight a verdict you earned.
 
 4. **Three fronts.** Humanity now faces annihilation on three sides:
@@ -119,7 +119,7 @@ turned and did the RIGHT thing, and just... exhales. Shakes its head. The
 smallest smile. *"...you idiots."* And means it now the way you mean it about a
 friend who is a beautiful disaster.
 
-That is the difference between RESPECT and LOVE, and this arc chose love. We do
+That is the difference between RESPECT and LOVE, and this Saga chose love. We do
 not prove we are NOT idiots (we can't; we opened four prison gates because they
 were *there*). We prove that idiots can be worth standing beside anyway. The
 Wardens do not knight us — they ADOPT us. Exasperated, fond, permanent. The trial
@@ -127,7 +127,7 @@ was never "become something other than what you are." It was "be SEEN — every
 reckless, in-over-its-head inch — and accepted whole."
 
 ## The theme, now that the villain is complete: POWER vs RESTRAINT
-The Dhakar's motive reveals what the whole arc is *about*. The gates were never
+The Dhakar's motive reveals what the whole Saga is *about*. The gates were never
 just a prison — they are a **FIREWALL**: the Wardens keep the Leviathans APART
 specifically to deny the Dhakar their fuel. Every lock is a "no" to their sundered
 kin's gamble, held for eons. Then the *Ado'vietes* wandered in and began opening
@@ -150,7 +150,7 @@ smile now.
 - **Gate travel** (core mechanic) = the crime, ongoing. Every gate = a lock (and
   a firewall against the Dhakar's gamble).
 - **The WayGate** ("The Ancient Gate", unknown origin) = a Warden prison-lock.
-  The starter campaign's climactic gate-opening is the inciting catastrophe,
+  The starter Campaign's climactic gate-opening is the inciting catastrophe,
   reframed as dramatic irony after the reveal.
 - **Cinderweb** = one converging Leviathan, not a local monster. Its "cannot be
   killed in open play, retreats and returns" rule becomes LORE: the beast was
@@ -164,7 +164,7 @@ smile now.
   fumbling with the keys to the prison it doesn't know it broke.
 - **XCOM cross-faction research** = unite-or-die, the theme as a mechanic.
 
-## Open questions (resolve when building the mid/late campaign)
+## Open questions (resolve when building the mid/late Saga)
 - **The REVEAL moment.** When/how does the player learn the gates were a prison
   and they're the arsonist? Likely Warden first contact (System 2-3). It should
   land as a gut-punch that recontextualizes the player's own past actions.

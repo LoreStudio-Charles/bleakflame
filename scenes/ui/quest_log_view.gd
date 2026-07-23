@@ -1,11 +1,16 @@
 class_name QuestLogView
 extends ScrollContainer
-## The expandable quest log, shared by the dock Missions tab and the [L]
-## flight overlay. One entry per quest/expedition: click the title to expand
-## into quest text, a fold of completed steps (what you've done, for when
-## you're lost), the highlighted current step, and the rewards. `mode`
-## picks active vs completed-history content; entries come from
-## Quests.log_entries/Research.log_entries in a unified shape.
+## The expandable quest log, shared by the dock Missions tab and the [L] flight
+## overlay. In ACTIVE mode it IS the objective tracker (user, 2026-07-23): every
+## live objective — campaign quest, side contract, expedition lead — is one entry,
+## in the player's tracker order, and the title row carries the curation controls
+## right where you read it: ★ (show on HUD) / ☆ (hidden), ▲▼ to reorder (top = the
+## CURRENT objective, ▶, that drives the waypoint), and a kind tint. Click the title
+## to expand into quest text, completed steps, the current step and rewards. The
+## COMPLETED tab stays a plain read-only history.
+
+const TINT := {"campaign": UiTheme.AMBER, "lead": UiTheme.ACCENT, "contract": UiTheme.TEXT}
+const GLYPH := {"campaign": "◆", "lead": "◇", "contract": "•"}
 
 var ship: TestShip
 var mode := "active"   # "active" | "completed"
@@ -29,32 +34,117 @@ func _init(p_ship: TestShip, p_mode: String) -> void:
 func rebuild() -> void:
 	for child in _box.get_children():
 		child.queue_free()
-	var entries: Array = []
-	if mode == "active":
-		entries = Quests.log_entries(ship) + Research.log_entries(ship)
-	else:
-		entries = Quests.completed_entries() + Research.completed_entries()
+	var entries: Array = _active_entries() if mode == "active" \
+		else Quests.completed_entries() + Research.completed_entries()
 	if entries.is_empty():
 		var lbl := Label.new()
 		lbl.text = "— nothing here yet —" if mode == "completed" \
-			else "— no active quests — work finds pilots at the station —"
+			else "— no active objectives — work finds pilots at the station —"
 		lbl.add_theme_color_override("font_color", Color(0.38, 0.41, 0.5))
 		_box.add_child(lbl)
+		if mode == "active":
+			var tip := Label.new()
+			tip.text = "★ show on HUD   ·   ▲▼ order (top is current)"
+			tip.add_theme_font_size_override("font_size", 11)
+			tip.add_theme_color_override("font_color", Color(0.4, 0.44, 0.54))
+			_box.add_child(tip)
 	for e in entries:
 		_add_entry(e)
 
 
+## Every live objective, resolved to a rich entry, in the tracker's order — with
+## its tracker `key`/`kind`/`hidden` and which one is the current (top-shown) one.
+func _active_entries() -> Array:
+	var rich := {}
+	for e in Quests.log_entries(ship):
+		rich["q:" + str(e.id)] = e
+	for e in Research.log_entries(ship):
+		rich["r:" + str(e.id)] = e
+	var tracked: Array = MissionTracker.trackables(ship)
+	var current_key := ""
+	for t in tracked:
+		if not t.hidden:
+			current_key = str(t.key)
+			break
+	var out: Array = []
+	for t in tracked:
+		var key := str(t.key)
+		var e: Dictionary = (rich[key] as Dictionary).duplicate() if rich.has(key) \
+			else _contract_entry(key, t)
+		e["key"] = key
+		e["kind"] = str(t.kind)
+		e["hidden"] = bool(t.hidden)
+		e["is_current"] = key == current_key
+		out.append(e)
+	return out
+
+
+## A compact log entry for a side contract (which has no authored quest text).
+func _contract_entry(key: String, t: Dictionary) -> Dictionary:
+	var uid := int(key.substr(2))
+	for m in MissionLog.active:
+		if MissionLog.uid_of(m) == uid:
+			var giver := str(m.get("giver", ""))
+			return {"id": key, "title": str(m.get("desc", "Contract")),
+				"giver": Npcs.display_name(giver) if giver != "" else "Contract Board",
+				"giver_id": giver,
+				"body": "%s contract — turn in at %s." % [
+					str(m.get("type", "")).capitalize(), str(m.get("turn_in", "station"))],
+				"done": [], "current": str(t.get("detail", "")),
+				"rewards": "%dc" % int(m.get("reward", 0)), "done_quest": false}
+	return {"id": key, "title": str(t.get("label", "Contract")), "giver": "", "giver_id": "",
+		"body": "", "done": [], "current": str(t.get("detail", "")), "rewards": "", "done_quest": false}
+
+
 func _add_entry(e: Dictionary) -> void:
 	var open: bool = _expanded.get(e.id, false)
+	var kind := str(e.get("kind", ""))
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 3)
+	_box.add_child(header)
+
+	# Curation controls live on the title row (active tracker entries only).
+	if mode == "active" and e.has("key"):
+		var key := str(e.key)
+		var star := Button.new()
+		star.text = "★" if not e.hidden else "☆"
+		star.tooltip_text = "Hide from the HUD" if not e.hidden else "Show on the HUD"
+		star.custom_minimum_size = Vector2(30, 0)
+		star.pressed.connect(func() -> void:
+			MissionTracker.toggle(key)
+			rebuild())
+		header.add_child(star)
+		var up := Button.new()
+		up.text = "▲"
+		up.custom_minimum_size = Vector2(28, 0)
+		up.pressed.connect(func() -> void:
+			MissionTracker.move(key, -1)
+			rebuild())
+		header.add_child(up)
+		var down := Button.new()
+		down.text = "▼"
+		down.custom_minimum_size = Vector2(28, 0)
+		down.pressed.connect(func() -> void:
+			MissionTracker.move(key, 1)
+			rebuild())
+		header.add_child(down)
+
 	var title := Button.new()
-	title.text = "%s  %s  —  %s" % ["▾" if open else "▸", e.title, e.giver]
+	var mark := "▶ " if e.get("is_current", false) else ""
+	var glyph := (str(GLYPH.get(kind, "")) + " ") if kind != "" else ""
+	title.text = "%s  %s%s%s  —  %s" % ["▾" if open else "▸", mark, glyph, e.title, e.giver]
 	title.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if kind != "":
+		title.add_theme_color_override("font_color", TINT.get(kind, UiTheme.TEXT))
 	title.pressed.connect(func() -> void:
 		_expanded[e.id] = not open
 		rebuild())
 	if e.done_quest:
 		title.modulate = Color(1, 1, 1, 0.75)
-	_box.add_child(title)
+	elif e.get("hidden", false):
+		title.modulate = Color(1, 1, 1, 0.55)   # dimmed while off the HUD
+	header.add_child(title)
 	if not open:
 		return
 

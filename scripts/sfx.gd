@@ -155,6 +155,9 @@ func _build_synth_streams() -> void:
 		"click": _sweep(900.0, 700.0, 0.025, true),
 		"thrust_loop": _thrust_loop(0.5),
 		"dread": _sweep(85.0, 30.0, 1.7, false),
+		# Ancient machinery waking: a two-tone alarm as the WayGate's aperture
+		# dilates. Drop-in audio/sfx/claxon.* overrides it.
+		"claxon": _tones([415.0, 277.0], 0.6),
 		# A channel dissolving into static — a transmission cut off mid-word. Used
 		# when a leviathan devours a ship (the distress goes dead) and at the end
 		# of Krayt's final transmission. Drop-in audio/sfx/static.* overrides it.

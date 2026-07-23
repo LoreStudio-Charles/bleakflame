@@ -9,7 +9,19 @@ class_name PoiMap
 
 static var pois: Array[Dictionary] = []
 static var waypoint_id := ""
+## MANUAL vs AUTO waypoint. The mission tracker auto-points the waypoint at the
+## top tracked objective; a manual click-tag on the chart overrides that until
+## the player clears it. `waypoint_manual` records which of the two owns the mark.
+static var waypoint_manual := false
 static var _discovered := {}   # id -> true; survives scene reloads
+
+
+## Tag the waypoint. `manual` = the player picked it on the chart (locks out the
+## auto tracker); auto callers (the tracker) pass false. Clearing (id "") always
+## drops back to auto.
+static func set_waypoint(id: String, manual: bool) -> void:
+	waypoint_id = id
+	waypoint_manual = manual and id != ""
 
 
 ## Scene setup: positions can differ per scene, discovery never resets.
@@ -71,3 +83,4 @@ static func waypoint_pos() -> Variant:
 static func reset() -> void:
 	_discovered.clear()
 	waypoint_id = ""
+	waypoint_manual = false
