@@ -258,7 +258,12 @@ func _refresh_talk() -> void:
 		door.pressed.connect(_open_office.bind(prof))
 		_talk_box.add_child(door)
 		Tutor.register("office_door", door)
-		Tutor.arm("office")
+	# The "office" lesson arms itself off `office_open` in the deck context below.
+	Tutor.observe({
+		"flying": false,
+		"venue": "verge",
+		"office_open": prof != "" and Professions.office_open(prof),
+	})
 
 
 func _open_office(prof: String) -> void:

@@ -97,7 +97,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
 	if event.keycode == KEY_B and not ship.dead and ship.docked_at == null:
-		Tutor.note("cargo_gauge")   # they opened the salvage panel themselves
+		Tutor.did("salvage_opened")   # they opened the salvage panel themselves
 		if _open:
 			close()
 		else:

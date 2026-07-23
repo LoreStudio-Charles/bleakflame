@@ -29,7 +29,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		visible = not visible
 		_esc_capture(visible)
 		if visible:
-			Tutor.note("radar")   # they found the chart themselves
+			Tutor.did("chart_opened")   # they found the chart themselves
 		Sfx.play("click", -10.0, 1.3 if visible else 0.9)
 	elif event.keycode == KEY_ESCAPE and visible:
 		visible = false

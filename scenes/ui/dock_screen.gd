@@ -499,7 +499,6 @@ func _populate_loadout() -> void:
 			if tgt < 0:
 				tgt = 0
 			Pilot.set_gem(tgt, id)
-			Tutor.note("loadout")   # they memorized it themselves — lesson done
 			Sfx.play("click", -12.0)
 			_refresh_pilot())
 		_loadout_box.add_child(ab)
@@ -1046,42 +1045,6 @@ func refresh() -> void:
 	# dock, while his briefing now waits on his desk until you go and hear it —
 	# so this used to tell you to prep a run nobody had asked you to make yet.
 	# The lesson follows the conversation, never precedes it.
-	if is_station and Quests.active.has("dirtside_run"):
-		if Quests.talks_for("ruel").is_empty():
-			Tutor.arm("trade")
-	_note_open_tab()
-	# A live survey lead but no scan ability: teach the buy->fit loop HERE, at the
-	# station where the Survey Routine chip is sold — before the trip to the belt,
-	# not after a wasted one. Caught at the dock as well as on refit, because
-	# taking the lead does not re-board the ship.
-	if is_station and ship._needs_scan_ability():
-		Tutor.arm("buy_scanner")
-	# A contract can be CLOSED here. Armed first so the hand-in is taught before
-	# the "never fly home empty" lesson — that is the order you actually do them.
-	if _has_turn_in_here():
-		Tutor.arm("turn_in")
-	# The way home: the colony teaches the other half of the same route. NOT
-	# gated on `seen("trade")` any more — chaining one lesson off another
-	# COMPLETING meant a single stalled lesson disinherited this one forever, and
-	# the return leg stands on its own regardless of how the outbound was learned.
-	if not is_station:
-		Tutor.arm("trade_return")
-	# Nobody stays a stranger: the campaign never introduces Sella, so the
-	# colony does it the first time you stand in her building's doorway.
-	if not is_station and not Pilot.has_met("sella"):
-		Tutor.arm("meet_sella")
-	# Dex is the only leader the campaign never walks you to — the lab is
-	# optional, so without this a pilot can finish the demo never knowing what
-	# Insight is for.
-	if is_station and not Pilot.has_met("lab"):
-		Tutor.arm("meet_dex")
-	# A commission has become available and the pilot has never taken one —
-	# nothing else in the UI announces that, so point at it once.
-	if is_station and Pilot.profession == "":
-		for p in Professions.visible():
-			if Standing.eligible(str(p.id)):
-				Tutor.arm("commission")
-				break
 	# Chain and quest events that fired on this docking (rumors overheard,
 	# turn-ins, new work, completions) surface here — whichever screen is up.
 	var notes := Research.take_notes() + Quests.take_notes()
@@ -1115,6 +1078,10 @@ func refresh() -> void:
 	_refresh_persons()
 	_refresh_info()
 	_present_talks()
+	# DECLARATIVE TUTOR — LAST, so the snapshot sees the FINAL state of this refresh
+	# (esp. _held_talks, which drives the pip lesson). Every dock lesson arms +
+	# completes from _dock_context via its own predicate; see Tutor._build_preds.
+	Tutor.observe(_dock_context())
 
 
 ## Quest givers speak in person at the dock: briefings when work is handed
@@ -1141,12 +1108,7 @@ func _collect_talks() -> void:
 		if not _held_talks.has(giver):
 			_held_talks[giver] = []
 		_held_talks[giver].append(talk)
-	# The first time anyone is ever waiting, explain the dot. Everything about
-	# talking to people now hangs off it.
-	for giver in _held_talks:
-		if not (_held_talks[giver] as Array).is_empty():
-			Tutor.arm("pips")
-			break
+	# ("pips" lesson arms itself off `pip_showing` in the dock context.)
 	_announce_waiting()
 
 
@@ -1250,8 +1212,7 @@ func _add_office_door(box: VBoxContainer, npc: String) -> void:
 	Tutor.register("office_door", door)
 	# Only teach a door the pilot actually EARNED. A dev-unlocked door is not an
 	# invitation, and announcing one at standing 0 reads as a bug to a playtester.
-	if member or Standing.eligible(prof):
-		Tutor.arm("office")
+	# ("office" lesson arms itself off `office_open` in the dock context.)
 	if not member and Standing.eligible(prof):
 		var hint := Label.new()
 		hint.text = "They have an offer for you."
@@ -1274,7 +1235,7 @@ func _open_office(npc: String, prof: String) -> void:
 ## the flash and the tutor note all happen the same way they always have.
 func _join_commission(id: String) -> void:
 	Pilot.join_profession(id)
-	Tutor.note("commissions")
+	Tutor.did("joined_commission")
 	Sfx.play("jingle", -8.0)
 	_flash("Commission accepted — %s. New skill caps unlocked." % Professions.display_name(id))
 	Research.journal.append({"day": Research.day,
@@ -1321,7 +1282,7 @@ func _on_accept_person_board(npc: String) -> void:
 	if not MissionLog.accept(int(lst.get_item_metadata(sel[0]))):
 		_flash("Mission log full (max %d active)." % MissionLog.MAX_ACTIVE)
 	else:
-		Tutor.note("offers")
+		Tutor.did("accepted_contract")
 	MissionLog.ensure_offers()
 	refresh()
 
@@ -1457,6 +1418,57 @@ const _TAB_LESSON := {
 ## therefore never advance — the event had already happened. That is how the
 ## "buy 4 food" step never appeared: its predecessor sat waiting for a click the
 ## pilot had no reason to make.
+## The snapshot the declarative tutor reads at every dock refresh (Tutor.observe /
+## Tutor._build_preds). Level state — tab, cargo, standing, quest — plus a
+## normalized `tab`; the one-shot events (accepted / bought / turned in / viewed
+## commissions / fired) arrive through Tutor.did().
+func _dock_context() -> Dictionary:
+	var ctrl := _tabs.get_current_tab_control()
+	var tab := str(ctrl.name) if ctrl != null else ""
+	match tab:
+		"Landing Bay", "Landing Pad": tab = "Landing Bay"
+		"Market Terminal", "Market": tab = "Market"
+		"Mission Computer", "Mission Uplink": tab = "Mission"
+	var has_wired := false
+	for i in Pilot.GEM_SLOTS:
+		var aid := Pilot.gem_at(i)
+		if aid != "" and ship._known_abilities.has(aid):
+			has_wired = true
+			break
+	var commission_eligible := false
+	for p in Professions.visible():
+		if Standing.eligible(str(p.id)):
+			commission_eligible = true
+			break
+	var pip_showing := false
+	for giver in _held_talks:
+		if not (_held_talks[giver] as Array).is_empty():
+			pip_showing = true
+			break
+	return {
+		"flying": false,
+		"venue": "station" if is_station else "planet",
+		"tab": tab,
+		"cargo_circuits": int(ship.commodities.get("circuits", 0)),
+		"cargo_food": int(ship.commodities.get("food", 0)),
+		"needs_scan": ship._needs_scan_ability(),
+		"knows_scan": ship._known_abilities.has("scan"),
+		"has_wired_ability": has_wired,
+		"dirtside_active": Quests.active.has("dirtside_run"),
+		# Ruel's briefing is "unheard" while it still waits on his desk. By the time
+		# this snapshot is taken (end of refresh) _collect_talks has moved it out of
+		# Quests' queue into _held_talks, so THAT is where "still pending" lives.
+		"ruel_pending": not (_held_talks.get("ruel", []) as Array).is_empty(),
+		"turn_in_here": _has_turn_in_here(),
+		"met_sella": Pilot.has_met("sella"),
+		"met_dex": Pilot.has_met("lab"),
+		"no_profession": Pilot.profession == "",
+		"commission_eligible": commission_eligible,
+		"pip_showing": pip_showing,
+		"office_open": Pilot.profession != "" or commission_eligible,
+	}
+
+
 func _note_open_tab() -> void:
 	var ctrl := _tabs.get_current_tab_control()
 	if ctrl == null:
@@ -1475,23 +1487,10 @@ func _on_tab_changed(_index: int) -> void:
 	# Tutor: reaching the Pilot tab completes the "open PILOT" step, so the ping
 	# moves on to the loadout panel rather than still pointing at the tab you're
 	# already standing in.
-	var ctrl := _tabs.get_current_tab_control()
-	if ctrl != null:
-		match ctrl.name:
-			"Pilot": Tutor.note("tab_pilot")
-			"Armory": Tutor.note("tab_armory")
-			"Engineering Bay": Tutor.note("tab_engineering")
-			"Market Terminal", "Market":
-				Tutor.note("tab_market" if is_station else "tab_market_planet")
-			"Mission Computer", "Mission Uplink":
-				Tutor.note("tab_missions" if is_station else "tab_missions_planet")
-		# FIRST VISIT to any tab explains what it's for, once. Armed on OPEN, so
-		# curiosity paces it — the game never volunteers a screen you haven't
-		# looked at, and never repeats one you have.
-		# Never let a tab blurb interrupt real work. It is scenery: it arms only
-		# when the tutor has nothing else to say, here or queued.
-		if Tutor.active == "" and Tutor.pending.is_empty():
-			Tutor.arm(_TAB_LESSON.get(ctrl.name, ""))
+	# Re-evaluate the declarative tutor for the newly-open tab: tab-poll steps
+	# (open Armory / Market / …) and the first-visit tab-intro filler both arm off
+	# the current tab in the dock context.
+	Tutor.observe(_dock_context())
 	_present_bar_talk_if_shown()
 	# An inspect belongs to the tab you inspected it on (the Armory has its own
 	# detail panel). Don't let a stale module readout haunt the Market/Missions.
@@ -2826,7 +2825,7 @@ func _buy_component(path: String) -> void:
 		# profession module at the quartermaster) should sound like you got something.
 		Sfx.play("pickup", -8.0)
 		_flash("Bought %s — %dc." % [comp.display_name, price])
-		Tutor.note("armory_shop")   # they made the purchase themselves
+		Tutor.did("armory_bought")   # completes the buy_scanner "bought" step
 	refresh()
 
 
@@ -2978,7 +2977,7 @@ func _on_accept() -> void:
 	if not MissionLog.accept(int(_offers_list.get_item_metadata(sel[0]))):
 		_flash("Mission log full (max %d active)." % MissionLog.MAX_ACTIVE)
 	else:
-		Tutor.note("offers")   # they took the contract themselves
+		Tutor.did("accepted_contract")   # they took the contract themselves
 	MissionLog.ensure_offers()
 	refresh()
 
@@ -2990,7 +2989,7 @@ func _on_turn_in(index: int) -> void:
 	if index >= 0 and index < MissionLog.active.size():
 		m = MissionLog.active[index]
 	if MissionLog.turn_in(index, ship):
-		Tutor.note("contracts_held")   # the loop closes: work -> cargo -> paid
+		Tutor.did("turned_in")   # the loop closes: work -> cargo -> paid
 		Tutor.retire("turn_in")        # they did it; no need to be told how
 		# Standing follows the GIVER, not the work type. Sella's Scan Data runs
 		# are `delivery` contracts, so a type-only map (delivery->trader) fed her

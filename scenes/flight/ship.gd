@@ -252,13 +252,10 @@ func apply_build(new_build: ShipBuild) -> void:
 	scanner_fitted = _known_abilities.has("scan")
 	# This file IS the player ship, so no ownership guard is needed here.
 	Pilot.autowire(_known_abilities)   # reconcile the bus: equip wires to next open slot, unequip drops it
-	_arm_memorize_lesson()
-	# Ordnance is finite and costs credits to restock — a pilot who never learns
-	# [Z] burns rockets on wasps. Armed the moment a magazine weapon is aboard.
-	for m in _mounts:
-		if m.def != null and m.def.magazine > 0:
-			Tutor.arm("ordnance")
-			break
+	# (buy_scanner + memorize now arm themselves off the dock/flight context via the
+	# declarative tutor — needs_scan and has_wired_ability — no arm() call here.)
+	# ("ordnance" lesson now arms itself off `carrying_ordnance` via the declarative
+	# tutor — a magazine weapon aboard — and completes when they first press [Z].)
 	_cloak_dur = 6.0
 	_cloak_cd_max = 14.0
 	for comp in _ability_sources():
@@ -554,6 +551,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_activate_gem(4)
 			KEY_Z:
 				_toggle_array(1, "ORDNANCE")   # guns stay hot; [Z] holds ordnance
+				Tutor.did("held_ordnance")     # completes the "ordnance" lesson
 
 
 ## Cycle sensor-range contacts in a group, nearest first, wrapping. The
@@ -664,7 +662,7 @@ func note_hold_full() -> void:
 	_hold_full_cd = 2.5
 	_flash_note("HOLD FULL %d/%.0f — [B] to manage cargo & jettison" % [
 		int(cargo_used()), stats.cargo])
-	Tutor.arm("salvage")   # the moment it first matters, and not before
+	# ("salvage" lesson arms itself off `hold_full` via the declarative tutor.)
 
 
 func _select_target_at(point: Vector2) -> void:
@@ -799,7 +797,7 @@ func _activate_gem(i: int) -> void:
 	# ("SYSTEM LIVE — press its key"). Without this the step had NO completion hook
 	# and hung 50s until the watchdog killed it — the most satisfying beat in the
 	# ability tutorial landed on a shrug. (Found in the stall log, 2026-07-23.)
-	Tutor.note("gem_bar")
+	Tutor.did("fired_ability")   # completes the "memorize" (now: firing) lesson
 	match aid:
 		"scan":
 			_try_start_scan()

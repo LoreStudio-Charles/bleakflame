@@ -462,6 +462,11 @@ func _tick_flight_lessons() -> void:
 		if aid != "" and ship._known_abilities.has(aid):
 			live_ability = true
 			break
+	var carrying_ordnance := false
+	for m in ship._mounts:
+		if m.def != null and m.def.magazine > 0:
+			carrying_ordnance = true
+			break
 	var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
 	Tutor.observe({
 		"flying": true,
@@ -469,8 +474,13 @@ func _tick_flight_lessons() -> void:
 		"met_doug": Pilot.has_met("doug"),
 		"journal": not Research.journal.is_empty(),
 		"energy_spent": ship.energy_max > 0.0 and ship.energy < ship.energy_max * 0.6 and live_ability,
+		"has_wired_ability": live_ability,
 		"has_target": ship.target != null and is_instance_valid(ship.target),
 		"contact_far": nearest > TEACH_THREAT_R and nearest < reach,
+		"waypoint_set": PoiMap.waypoint_id != "",
+		"comms_any": not Comms.messages.is_empty(),
+		"hold_full": ship.cargo_used() >= float(ship.stats.cargo),
+		"carrying_ordnance": carrying_ordnance,
 	})
 
 
@@ -746,9 +756,8 @@ func _tick_chart_hint() -> void:
 	var line := "\"Colony's already on your chart. Press [G] for the nav map, set it as your waypoint, and follow the diamond. The Reach is bigger than it looks.\""
 	ship._flash_note("RUEL: %s" % line)
 	Comms.post("ruel", "Dirtside Run", line)
-	# Ruel SAYS it; the ping SHOWS it. The comm scrolls away in seconds — the
-	# bracket on the scope stays until they actually open the chart.
-	Tutor.arm("chart")
+	# Ruel SAYS it; the ping SHOWS it. The "chart" lesson arms itself off a set
+	# waypoint via the declarative tutor and completes when they open the chart.
 	Sfx.play("click", -10.0, 1.1)
 
 

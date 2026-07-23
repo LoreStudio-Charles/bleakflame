@@ -37,12 +37,13 @@ const LESSONS := {
 		{"venue": "station", "anchor": "tab_engineering", "where": "dock", "tab": "Engineering Bay", "text": "A chip in your hold does nothing. Open Engineering."},
 		{"venue": "station", "anchor": "coupling", "where": "dock", "text": "Drop it into your UNIVERSAL COUPLING — the rack that holds everything your ship KNOWS. (Right-click a chip to load it.)"},
 	],
-	# The first ability a pilot ever owns. Fitting is done — this is the step
-	# everyone misses: a known ability still has to be MEMORIZED to a gem.
+	# The first ability a pilot ever owns. The bus AUTO-WIRES a fitted ability into
+	# an open slot now (Pilot.autowire), so the lesson is no longer "go memorize it"
+	# — it teaches FIRING. One flight step; completes the first time they run one,
+	# and cannot restart (once fired, seen). This is the 2026-07-23 fix for the
+	# "ability tutorial restarts every time the survey scan is equipped" bug.
 	"memorize": [
-		{"anchor": "tab_pilot", "where": "dock", "tab": "Pilot", "text": "New ability aboard — open PILOT to bring it online."},
-		{"anchor": "loadout", "where": "dock", "text": "Pick a bus slot, then choose the ability. It fires on that number key."},
-		{"anchor": "gem_bar", "where": "flight", "text": "SYSTEM LIVE — press its key in flight to run it."},
+		{"anchor": "gem_bar", "where": "flight", "text": "SYSTEM WIRED — your new ability sits on the [1]-[5] bus. Press its number key in flight to run it. (Rewire the bus any time from the Pilot tab at dock.)"},
 	],
 	# Taught the moment they undock for the planet: a first-timer has no idea
 	# where the colony IS, and hunting for it is the confusing part — not the
@@ -565,6 +566,18 @@ static func finish() -> void:
 
 ## The game-state snapshot the predicates read, refreshed by observe().
 static var ctx := {}
+## One-shot EVENT flags for the few completions that aren't a level poll — firing
+## an ability, opening the chart/comms/salvage, launching. An action site calls
+## Tutor.did("x") ONCE, unconditionally (no anchor to match, nothing to miss — the
+## failure mode note() had), and observe() folds these into the ctx so a step's
+## predicate can read c.get("x"). Session-only; cleared on reset().
+static var _did := {}
+
+
+## Record that a one-shot tutorial-relevant action happened (replaces note() for
+## genuine events). Unconditional: it cannot "miss" the way a mis-anchored note did.
+static func did(event: String) -> void:
+	_did[event] = true
 ## id -> Callable(ctx) -> bool. Lesson arms when true (and not seen/active/pending).
 static var _arm_pred := {}
 ## id -> Array[Callable|null], one per step. Step completes when its predicate is
@@ -577,7 +590,9 @@ static var _preds_built := false
 ## in flight and on every dock refresh. Idempotent with the old arm/note path.
 static func observe(snapshot: Dictionary) -> void:
 	_build_preds()
-	ctx = snapshot
+	ctx = snapshot.duplicate()
+	for k in _did:
+		ctx[k] = true
 	# Advance the active lesson past EVERY currently-satisfied step at once (instant
 	# resume: an evicted lesson whose early steps are already done lands on the
 	# right one). Bounded by step count; finish() clears `active` and ends the loop.
@@ -593,6 +608,10 @@ static func observe(snapshot: Dictionary) -> void:
 	# Arm any declarative lesson whose trigger is now true.
 	for id in _arm_pred:
 		if seen.has(id) or pending.has(id) or id == active:
+			continue
+		# Scenery (tab-intro filler) only arms in a clear moment — never queued
+		# behind real work, matching the old "arm only when idle" gate.
+		if is_filler(id) and (active != "" or not pending.is_empty()):
 			continue
 		if (_arm_pred[id] as Callable).call(ctx):
 			arm(id)
@@ -623,18 +642,96 @@ static func _build_preds() -> void:
 	# --- Flight lessons (context "flight"): arm on a live condition, complete on a
 	# poll or a dwell. The flight scene feeds the snapshot each frame (flight_test).
 	# WHERE HULL/SHIELD/ARMOR/ENERGY live — foundational, shown on the first flight.
-	_arm_pred["vitals"] = func(c): return bool(c.get("flying", false))
+	# EVERY predicate reads keys with `c.get(key, false)` (or "", 0) — a DEFAULT, so a
+	# missing ctx key is falsy, never a bool(null) crash that would silently break a
+	# lesson. That defensiveness is part of "can't jam": a caller can forget a key.
+	_arm_pred["vitals"] = func(c): return c.get("flying", false)
 	# Doug exists the moment ore does — a place to fly to, not a screen to open.
-	_arm_pred["meet_doug"] = func(c): return bool(c.get("has_ore", false)) and not bool(c.get("met_doug", false))
-	# The captain's log, once there is anything in it worth reading.
-	_arm_pred["log"] = func(c): return bool(c.get("journal", false))
+	_arm_pred["meet_doug"] = func(c): return c.get("has_ore", false) and not c.get("met_doug", false)
+	# The captain's log, once there is anything in it worth reading; completes [L].
+	_arm_pred["log"] = func(c): return c.get("journal", false)
+	_done_pred["log"] = [func(c): return c.get("log_opened", false)]
 	# Running Dark: the pilot has SPENT reserves on an ability and still has a live
 	# one gemmed, so both of its benefits (fast recharge + safe re-flash) are live.
-	_arm_pred["running_dark"] = func(c): return bool(c.get("energy_spent", false))
+	_arm_pred["running_dark"] = func(c): return c.get("energy_spent", false)
 	# Targeting: something is on sensors but still far enough out that reading a
 	# callout costs nothing — and completes the instant they lock ANY target.
-	_arm_pred["targeting"] = func(c): return bool(c.get("contact_far", false)) and not bool(c.get("has_target", false))
-	_done_pred["targeting"] = [func(c): return bool(c.get("has_target", false))]
+	_arm_pred["targeting"] = func(c): return c.get("contact_far", false) and not c.get("has_target", false)
+	_done_pred["targeting"] = [func(c): return c.get("has_target", false)]
+	# Chart: there IS somewhere to go (a waypoint is set) and they haven't opened it.
+	_arm_pred["chart"] = func(c): return c.get("flying", false) and c.get("waypoint_set", false) and not c.get("chart_opened", false)
+	_done_pred["chart"] = [func(c): return c.get("chart_opened", false)]
+	# Comms: a transmission has arrived; completes when they open the archive [C].
+	_arm_pred["comms"] = func(c): return c.get("flying", false) and c.get("comms_any", false) and not c.get("comms_opened", false)
+	_done_pred["comms"] = [func(c): return c.get("comms_opened", false)]
+	# Salvage: the hold is full; completes when they open the cargo manager [B].
+	_arm_pred["salvage"] = func(c): return c.get("flying", false) and c.get("hold_full", false) and not c.get("salvage_opened", false)
+	_done_pred["salvage"] = [func(c): return c.get("salvage_opened", false)]
+	# Ordnance: a magazine weapon is aboard; completes the first time they hold it [Z].
+	_arm_pred["ordnance"] = func(c): return c.get("flying", false) and c.get("carrying_ordnance", false) and not c.get("held_ordnance", false)
+	_done_pred["ordnance"] = [func(c): return c.get("held_ordnance", false)]
+
+	# --- The gear loop + firing (dock -> flight) ---
+	# memorize: a fitted ability is WIRED to the bus (auto-wired now); completes the
+	# first time they FIRE one. One step, can't restart — the #2 survey-scan fix.
+	_arm_pred["memorize"] = func(c): return c.get("has_wired_ability", false) and not c.get("fired_ability", false)
+	_done_pred["memorize"] = [func(c): return c.get("fired_ability", false)]
+	# buy_scanner: a live scan need but no scan ability — walk buy (Armory) -> fit
+	# (Engineering). Each step is a level poll of tab/inventory; auto-skips if the
+	# pilot is already ahead.
+	_arm_pred["buy_scanner"] = func(c): return c.get("needs_scan", false)
+	_done_pred["buy_scanner"] = [
+		func(c): return str(c.get("tab", "")) == "Armory",
+		func(c): return c.get("armory_bought", false) or c.get("knows_scan", false),
+		func(c): return str(c.get("tab", "")) == "Engineering Bay",
+		func(c): return c.get("knows_scan", false),
+	]
+
+	# --- Dock: the trade loop ---
+	# trade: armed at the station while the planet run is live AND Ruel has said it.
+	_arm_pred["trade"] = func(c): return str(c.get("venue", "")) == "station" and c.get("dirtside_active", false) and not c.get("ruel_pending", false)
+	_done_pred["trade"] = [
+		func(c): return str(c.get("tab", "")) == "Mission",
+		func(c): return c.get("accepted_contract", false),
+		func(c): return str(c.get("tab", "")) == "Market",
+		func(c): return int(c.get("cargo_circuits", 0)) >= 4,
+		func(c): return str(c.get("tab", "")) == "Mission" and str(c.get("venue", "")) == "planet",
+		func(c): return c.get("turned_in", false),
+	]
+	# trade_return: the colony half of the reciprocal route.
+	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "planet"
+	_done_pred["trade_return"] = [
+		func(c): return str(c.get("tab", "")) == "Market" and str(c.get("venue", "")) == "planet",
+		func(c): return int(c.get("cargo_food", 0)) >= 4,
+		func(c): return str(c.get("tab", "")) == "Market" and str(c.get("venue", "")) == "station",
+	]
+
+	# --- Dock: dwell / pip lessons (arm-only; a dwell timer retires them) ---
+	# turn_in: a contract can be closed at this venue.
+	_arm_pred["turn_in"] = func(c): return c.get("turn_in_here", false)
+	# Introductions the campaign never makes.
+	_arm_pred["meet_sella"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("met_sella", false)
+	_arm_pred["meet_dex"] = func(c): return str(c.get("venue", "")) == "station" and not c.get("met_dex", false)
+	# The pip itself, the first time anyone is waiting.
+	_arm_pred["pips"] = func(c): return c.get("pip_showing", false)
+	# A commission door has been drawn (earned).
+	_arm_pred["office"] = func(c): return c.get("office_open", false)
+	# A commission is available and the pilot has never taken one.
+	_arm_pred["commission"] = func(c): return str(c.get("venue", "")) == "station" and c.get("no_profession", false) and c.get("commission_eligible", false)
+	_done_pred["commission"] = [
+		func(c): return str(c.get("tab", "")) == "Pilot",
+		func(c): return c.get("joined_commission", false),
+	]
+
+	# --- Dock: first-visit tab intros (FILLER; arm when that tab is open, dwell) ---
+	_arm_pred["tab_intro_bay"] = func(c): return str(c.get("tab", "")) == "Landing Bay"
+	_arm_pred["tab_intro_armory"] = func(c): return str(c.get("tab", "")) == "Armory"
+	_arm_pred["tab_intro_engineering"] = func(c): return str(c.get("tab", "")) == "Engineering Bay"
+	_arm_pred["tab_intro_market"] = func(c): return str(c.get("tab", "")) == "Market"
+	_arm_pred["tab_intro_missions"] = func(c): return str(c.get("tab", "")) == "Mission"
+	_arm_pred["tab_intro_shipyard"] = func(c): return str(c.get("tab", "")) == "Shipyard"
+	_arm_pred["tab_intro_research"] = func(c): return str(c.get("tab", "")) == "Research Lab"
+	_arm_pred["tab_intro_bar"] = func(c): return str(c.get("tab", "")) == "Ember Row"
 
 
 ## The stall log as plain data for the save. NOT cleared by reset(): a fresh
@@ -660,3 +757,6 @@ static func reset() -> void:
 	active = ""
 	step = 0
 	_anchors.clear()
+	_did.clear()
+	ctx = {}
+	_progress.clear()

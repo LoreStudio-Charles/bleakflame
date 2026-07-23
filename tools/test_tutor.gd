@@ -12,6 +12,7 @@ func _ready() -> void:
 	_arm_and_complete_by_condition()
 	_no_rearm_once_seen()
 	_auto_skip_satisfied_steps()
+	_multistep_advances_past_satisfied_middle_step()
 	if _fails == 0:
 		print("test_tutor: ALL PASS")
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -67,3 +68,18 @@ func _auto_skip_satisfied_steps() -> void:
 	Tutor.observe({"has_target": true})
 	_check(Tutor.active == "" and Tutor.seen.has("targeting"),
 		"an active step whose poll is already true completes instantly (auto-skip)")
+
+
+# A MULTI-STEP lesson advances past a satisfied middle step and stops at the first
+# UN-satisfied one — the cross-step version of the resume that fixes the old
+# starve/restart class. buy_scanner step 1 ("bought") is satisfied by knowing scan;
+# step 2 ("open Engineering") is a tab poll we don't satisfy, so it must halt there.
+func _multistep_advances_past_satisfied_middle_step() -> void:
+	_fresh()
+	Tutor.context = "dock"
+	Tutor.venue = "station"
+	Tutor.active = "buy_scanner"
+	Tutor.step = 1
+	Tutor.observe({"knows_scan": true})
+	_check(Tutor.active == "buy_scanner" and Tutor.step == 2,
+		"a satisfied middle step auto-advances; an unsatisfied one halts (got step %d)" % Tutor.step)

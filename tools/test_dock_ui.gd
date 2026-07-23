@@ -439,6 +439,13 @@ func _case_informational_lessons_do_not_starve_the_queue() -> void:
 	_ok(Tutor.safe, "docking asserts that the dock is a safe context")
 	_ok(Tutor.active != "" or not Tutor.pending.is_empty(), "a lesson is running at the dock")
 
+	# Hear Ruel out (the trade lesson now waits for the conversation, not just for
+	# the briefing to land on his desk) so trade legitimately arms and queues
+	# BEHIND the active pip lesson — the starvation scenario this case exists for.
+	Quests.take_talk("ruel")
+	screen._held_talks["ruel"] = []
+	screen.refresh()
+
 	# Run the clock the way the ping node does, rather than waiting real seconds.
 	for i in 40:
 		for c in screen.get_children():
