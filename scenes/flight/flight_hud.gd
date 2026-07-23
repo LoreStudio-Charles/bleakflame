@@ -402,6 +402,10 @@ func _process(_delta: float) -> void:
 	_target_effigy.subject = ship.target if is_instance_valid(ship.target) else null
 	_target_info.text = _target_text()
 	_center_note.text = _center_text()
+	# A refused ability flashes RED so it reads unmistakably as a failure; every
+	# other center note keeps the amber. (label_settings here is _center_note's own.)
+	_center_note.label_settings.font_color = UiTheme.DANGER \
+		if (ship.scan_note_t > 0.0 and ship.scan_note_fail) else UiTheme.AMBER
 	_hold_label.text = _hold_block() if show_hold else ""
 
 
