@@ -136,10 +136,13 @@ func _ready() -> void:
 	# Just off the lane, planet-side — and well OUTSIDE the planetoid's
 	# 2080-unit gravity well: a quest diamond must never drag a new pilot
 	# into a gravity check they didn't sign up for.
-	PoiMap.register("meridian_fix", "Last Fix: Long Meridian", Vector2(6950, 3400), "signal")
-	PoiMap.register("cold_patch_site", "Anomalous Return", Vector2(4200, -1600), "signal")
-	PoiMap.register("ambush_site", "Plotted Intercept", Vector2(2800, -2800), "signal")
-	PoiMap.register("tendril_site", "Severed Tendril", Vector2(3400, -3300), "signal")
+	# EPHEMERAL (ephemeral=true): quest-ONLY markers — nothing is there unless the
+	# beat places it. They never proximity-chart, and Quests.refresh_pois shows them
+	# ONLY while their stage is live, then hides them (no orphaned map clutter).
+	PoiMap.register("meridian_fix", "Last Fix: Long Meridian", Vector2(6950, 3400), "signal", false, true)
+	PoiMap.register("cold_patch_site", "Anomalous Return", Vector2(4200, -1600), "signal", false, true)
+	PoiMap.register("ambush_site", "Plotted Intercept", Vector2(2800, -2800), "signal", false, true)
+	PoiMap.register("tendril_site", "Severed Tendril", Vector2(3400, -3300), "signal", false, true)
 	PoiMap.register("waygate", "The Ancient Gate", Vector2(-6800, 8200), "gate")
 	if PoiMap.waypoint_id == "":
 		PoiMap.waypoint_id = "station"   # a new pilot can always find home
@@ -445,6 +448,9 @@ func _tick_flight_lessons() -> void:
 	Tutor.safe = not hunted and (sheltered or nearest > TEACH_THREAT_R)
 	Tutor.pump()
 
+	# WHERE HULL/SHIELD/ARMOR/ENERGY live — foundational, so arm it on the very
+	# first safe flight beat, before anything wants the pilot to read those bars.
+	Tutor.arm("vitals")
 	# Doug exists the moment ore does. Told in FLIGHT, because the answer is a
 	# place to fly to, not a screen to open.
 	if not Pilot.has_met("doug"):

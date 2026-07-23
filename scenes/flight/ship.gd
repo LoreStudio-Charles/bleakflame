@@ -251,7 +251,7 @@ func apply_build(new_build: ShipBuild) -> void:
 	# exactly "knows scan", so read it from there.
 	scanner_fitted = _known_abilities.has("scan")
 	# This file IS the player ship, so no ownership guard is needed here.
-	Pilot.autowire(_known_abilities)   # a granted ability lands on [1] if the bar is bare
+	Pilot.autowire(_known_abilities)   # reconcile the bus: equip wires to next open slot, unequip drops it
 	_arm_memorize_lesson()
 	# Ordnance is finite and costs credits to restock — a pilot who never learns
 	# [Z] burns rockets on wasps. Armed the moment a magazine weapon is aboard.
@@ -1260,7 +1260,11 @@ func _engage_crystal() -> void:
 	screen.shield_group = "player_team"   # cuts what is aimed at OUR side
 	get_parent().add_child(screen)
 	screen.global_position = global_position + offset
-	_flash_note("ARRAY DEPLOYED — AT MAX RANGE" if clamped else "ARRAY DEPLOYED")
+	# Name the FUNCTION at point of use — the ability is anti-ordnance point
+	# defence, and with nothing firing missiles at you it otherwise reads as "did
+	# nothing". This tells the pilot exactly what the screen is for.
+	_flash_note(("POINT-DEFENSE SCREEN — shreds incoming missiles (max range)" if clamped \
+		else "POINT-DEFENSE SCREEN — shreds incoming missiles"))
 	Sfx.play("click", -4.0, 1.6)
 
 

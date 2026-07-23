@@ -23,6 +23,30 @@ func _ready() -> void:
 
 
 func _run() -> void:
+	# --- Every rune must be a DISTINCT glyph ---
+	# A duplicate glyph puts the same symbol on the keypad twice — one correct, one
+	# a wrong decoy — which no player can tell apart by sight (rune 1 and rune 5 were
+	# both a "+" until 2026-07-23). Compare the RENDERED geometry, not the segment
+	# lists: rune 1's "1-7" and rune 5's "1-4"+"4-7" draw the identical line, so
+	# rasterize each rune to a fine point set and compare those.
+	var seen := {}
+	for i in GateConsole.RUNES.size():
+		var pts := {}
+		for s in GateConsole.RUNES[i]:
+			var a := GateConsole.grid_point(int(s[0]))
+			var b := GateConsole.grid_point(int(s[1]))
+			# Sample densely (spacing well under one cell) so the SAME line drawn as
+			# one long segment vs two half-segments fills identical cells — otherwise
+			# "1-7" (even cells only) reads as different from "1-4"+"4-7".
+			for k in 201:
+				var p := a.lerp(b, float(k) / 200.0)
+				pts[Vector2i(roundi(p.x * 64.0), roundi(p.y * 64.0))] = true
+		var keys := pts.keys()
+		keys.sort()
+		var key := str(keys)
+		_ok(not seen.has(key), "rune %d is a distinct glyph (collides with rune %s)" % [i, str(seen.get(key, -1))])
+		seen[key] = i
+
 	# --- The console accepts only Krayt's sequence ---
 	var con := GateConsole.new()
 	add_child(con)

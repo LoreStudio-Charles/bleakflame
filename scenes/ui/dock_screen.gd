@@ -2822,7 +2822,9 @@ func _buy_component(path: String) -> void:
 	else:
 		Wallet.credits -= price
 		ship.add_cargo(load(path))
-		Sfx.play("click", -12.0)
+		# A distinct ACQUIRE cue, not the generic UI click — a purchase (incl. a
+		# profession module at the quartermaster) should sound like you got something.
+		Sfx.play("pickup", -8.0)
 		_flash("Bought %s — %dc." % [comp.display_name, price])
 		Tutor.note("armory_shop")   # they made the purchase themselves
 	refresh()

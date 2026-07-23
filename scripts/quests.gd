@@ -465,6 +465,27 @@ static func _advance(id: String) -> void:
 				"vo": str(id) + "_debrief"})
 	else:
 		_enter_stage(id)
+	refresh_pois()   # ephemeral markers follow the live stages: old one gone, new one shown
+
+
+## Reconcile ephemeral (quest-only) POIs against the LIVE stages: an ephemeral POI
+## is charted ONLY while it is the target of a currently-active stage, and hidden
+## the instant it isn't (user rule, 2026-07-23 — a quest marker must never outlive
+## its moment or get pinned by flying past). Real landmarks are untouched; only POIs
+## flagged ephemeral in PoiMap are managed here. Called on every quest-state change.
+static func refresh_pois() -> void:
+	var targets := {}
+	for id in active.keys():
+		if quest_def(id).is_empty():
+			continue
+		var poi := str(stage_def(id).get("poi", ""))
+		if poi != "":
+			targets[poi] = true
+	for pid in PoiMap.ephemeral_ids():
+		if targets.has(pid):
+			PoiMap.discover(pid)
+		else:
+			PoiMap.undiscover(pid)
 
 
 ## Entering a stage charts its POI; an idle waypoint snaps to it so the
@@ -478,8 +499,17 @@ static func _enter_stage(id: String) -> void:
 	var poi := str(here.get("target_poi", "")) if str(here.get("quest", "")) == id else str(st.get("poi", ""))
 	if poi != "" and PoiMap.exists(poi):
 		PoiMap.discover(poi)
-		if PoiMap.waypoint_id == "":
-			PoiMap.waypoint_id = poi
+		# Re-point the AUTO waypoint at this new beat unless the player hand-tagged
+		# one on the chart. It used to set the mark ONLY when the waypoint was empty,
+		# so a lingering diamond from the previous beat stuck and a new objective —
+		# "Ask the Only One Who Ran" at the Rust Shoal — never got its own mark until
+		# something else cleared the old one. Entering a stage means "go HERE now".
+		if not PoiMap.waypoint_manual:
+			PoiMap.set_waypoint(poi, false)
+	# Reconcile every ephemeral marker to the live stages: this reveals THIS beat's
+	# quest-only POI and hides any stale one. Covers every reveal path (fresh start,
+	# advance, manual start, load) since they all enter a stage.
+	refresh_pois()
 
 
 ## The active campaign beat, for the always-on "NEXT" surfaces (flight HUD +

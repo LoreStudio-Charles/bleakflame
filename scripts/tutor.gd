@@ -18,6 +18,14 @@ class_name Tutor
 ## Screens only have to call `register()` for the controls they own.
 
 const LESSONS := {
+	# WHERE YOUR VITALS LIVE — the first thing a new pilot needs to be able to
+	# read: the effigy carries HULL/SHIELD/ARMOR and the reactor ENERGY pill, all
+	# in one place. Pinned at the effigy with a dwell so it points, teaches, and
+	# retires on its own (no action to complete, can't jam the queue).
+	"vitals": [
+		{"anchor": "effigy", "where": "flight", "dwell": 13.0,
+			"text": "YOUR SHIP AT A GLANCE (top-left): the ship sprite is your HULL — it tints green→amber→red as you take hits. The ring is your SHIELD (regenerates), the outline your ARMOR. The glowing pill is ENERGY — abilities spend it, and it recharges over time. When hull hits red, dock or run."},
+	],
 	# THE BIG ONE, armed when the lab asks for a scan and the ship has no
 	# scanner. It walks the entire gear loop in the order a pilot will repeat
 	# forever after — buy in the Armory, fit on the paperdoll — and lands them

@@ -90,6 +90,9 @@ func _ready() -> void:
 	_status.subject = ship
 	_left.add_child(_status)
 	_place(_status, "left", "effigy", [18, 52, 100, 100])
+	# The effigy carries HULL/SHIELD/ARMOR (health) AND the reactor pill (energy),
+	# so the "vitals" lesson points here to teach both at once.
+	Tutor.register("effigy", _status)
 
 	# Slim identity/credits/gems readout (the numeric stats are gauges now).
 	# A CRT set into the dash, not a caption floating on it: black screen, green
@@ -220,6 +223,14 @@ func _ready() -> void:
 	_group.offset_top = 40   # repositioned each frame under the missions block
 	_group.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	add_child(_group)
+
+	# Screen-edge bearing to the current target when it's OFF-SCREEN — so a
+	# Y-cycled ally (or any target you can't see) tells you which way to turn.
+	var bearing := TargetBearing.new()
+	bearing.ship = ship
+	bearing.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bearing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bearing)
 
 	var hold_settings := LabelSettings.new()
 	hold_settings.font_size = 12
@@ -502,6 +513,52 @@ func _approach_line() -> String:
 				pickup.payload_name(), pickup.payload_mass(),
 				ship.stats.cargo - ship.cargo_used()]
 	return ""
+
+
+## Screen-edge bearing arrow to the CURRENT target when it's off-screen. The world
+## target marker (ship._target_marker, teal/orange corner arcs) shows an on-screen
+## target fine, but a Y-cycled ally is often far out of view — this points the way.
+## Full-rect, screen-space (CanvasLayer), so it converts the target's WORLD position
+## with the viewport's canvas transform and clamps a chevron to the screen edge.
+class TargetBearing:
+	extends Control
+
+	var ship: TestShip
+	const MARGIN := 56.0
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if ship == null or ship.dead or ship.docked_at != null:
+			return
+		var t: Node2D = ship.target
+		if not is_instance_valid(t) or t.get("dead") == true:
+			return
+		var sp: Vector2 = get_viewport().get_canvas_transform() * t.global_position
+		var inner := Rect2(Vector2.ZERO, size).grow(-MARGIN)
+		if inner.has_point(sp):
+			return   # on-screen — the world marker is enough
+		var center := size * 0.5
+		var dir := sp - center
+		if dir.length() < 1.0:
+			return
+		# Clamp the projected position into the inner rect: the chevron rides the
+		# edge nearest the target, pointing outward toward it.
+		var at := Vector2(clampf(sp.x, inner.position.x, inner.end.x),
+			clampf(sp.y, inner.position.y, inner.end.y))
+		var hostile: bool = t.is_in_group(ship.enemy_group)
+		var col := Color(0.95, 0.45, 0.3) if hostile else Color(0.45, 0.9, 0.75)
+		var fwd := dir.normalized()
+		var perp := Vector2(-fwd.y, fwd.x)
+		var tip := at + fwd * 12.0
+		var b1 := at - fwd * 8.0 + perp * 9.0
+		var b2 := at - fwd * 8.0 - perp * 9.0
+		draw_colored_polygon(PackedVector2Array([tip, b1, b2]), col)
+		draw_polyline(PackedVector2Array([tip, b1, b2, tip]), Color(0, 0, 0, 0.65), 1.0)
+		var dist := int(ship.global_position.distance_to(t.global_position))
+		draw_string(get_theme_default_font(), at - fwd * 8.0 + Vector2(-16, 20),
+			"%du" % dist, HORIZONTAL_ALIGNMENT_CENTER, 60, 12, col)
 
 
 ## Top-right roster: the nearest friendlies within COMM RANGE — right-click a

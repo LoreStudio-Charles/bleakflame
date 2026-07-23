@@ -622,14 +622,29 @@ func _case_gem_bar_never_starts_crossed_out() -> void:
 		_ok(Pilot.gem_at(0) == "",
 			"boarding a ship with no abilities leaves the bar empty, not crossed out")
 
-	# ...but the moment a fit DOES grant something, [1] is wired for free.
+	# ...but the moment a fit DOES grant something, it wires into the first open slot.
+	Pilot.gems = ["", "", "", "", ""]
 	Pilot.autowire(["scan"])
-	_ok(Pilot.gem_at(0) == "scan", "a granted ability lands on [1] automatically")
+	_ok(Pilot.gem_at(0) == "scan", "a granted ability wires into the first open slot")
 
-	# And autowire never overwrites a deliberate loadout.
-	Pilot.set_gem(0, "cloak")
+	# EQUIP adds to the next OPEN slot without disturbing a still-fitted gem
+	# (user, 2026-07-23: equip a chip -> wire it into the last open ability slot).
+	Pilot.autowire(["scan", "cloak"])
+	_ok(Pilot.gem_at(0) == "scan" and Pilot.gem_at(1) == "cloak",
+		"equipping a second ability fills the next open slot, leaving the first")
+
+	# UNEQUIP removes that ability from the bus (chip no longer fitted).
 	Pilot.autowire(["scan"])
-	_ok(Pilot.gem_at(0) == "cloak", "autowire never overwrites what the pilot chose")
+	_ok(Pilot.gem_at(0) == "scan" and Pilot.gem_at(1) == "",
+		"unequipping a chip drops its ability off the bus")
+
+	# A still-fitted ability is left EXACTLY where the pilot placed it — reconcile
+	# only removes the unfitted and fills the empty, never reshuffles the kept.
+	Pilot.gems = ["", "", "", "", ""]
+	Pilot.set_gem(2, "scan")
+	Pilot.autowire(["scan"])
+	_ok(Pilot.gem_at(2) == "scan" and Pilot.gem_at(0) == "",
+		"a still-fitted gem stays where the pilot put it")
 	screen.queue_free()
 
 

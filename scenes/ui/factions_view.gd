@@ -73,6 +73,13 @@ func _refresh() -> void:
 		c.queue_free()
 	for pd in Professions.visible():
 		_rows.add_child(_faction_row(str(pd.id)))
+	# The PIRATE faction reputation stays on the menu even though the Privateer
+	# COMMISSION is hidden (user, 2026-07-23): a faction and a profession are
+	# different things — you can hold standing (and eventually declare war) with the
+	# Rust Shoal without the secret commission ever being advertised. This row reads
+	# the "privateer" standing but is presented purely as the pirate FACTION and
+	# never prints the word "Privateer".
+	_rows.add_child(_pirate_row())
 
 
 func _faction_row(fid: String) -> Control:
@@ -111,6 +118,39 @@ func _faction_row(fid: String) -> Control:
 		civ.add_theme_color_override("font_color", UiTheme.DIM)
 		civ.add_theme_font_size_override("font_size", 11)
 		row.add_child(civ)
+	return row
+
+
+## The pirate faction's reputation row (standing id "privateer", but presented as
+## the Rust Shoal, never the hidden commission). The war toggle self-gates: while
+## the pirates are hostile it's disabled ("mend standing first"), so it only
+## becomes usable once you're at peace with them — i.e. after the Shoal truce.
+func _pirate_row() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+
+	var info := RichTextLabel.new()
+	info.bbcode_enabled = true
+	info.fit_content = true
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var st := Standing.state("privateer")
+	var p := Standing.get_points("privateer")
+	info.text = "[b]The Rust Shoal[/b]  [color=#8890a0]— pirates of the Reach[/color]\n[color=%s]%s[/color]   [color=#8890a0]standing %d[/color]   %s" % [
+		_state_color(st), st.to_upper(), p, _bar(p)]
+	row.add_child(info)
+
+	var toggle := CheckButton.new()
+	toggle.text = "At Peace" if Standing.at_peace("privateer") else "At War"
+	toggle.button_pressed = Standing.at_peace("privateer")
+	toggle.disabled = Standing.is_hostile("privateer")
+	toggle.tooltip_text = "They're hostile — mend standing first" if Standing.is_hostile("privateer") \
+		else "On = the truce holds · Off = declare war on the Shoal"
+	toggle.toggled.connect(func(on: bool) -> void:
+		Standing.set_peace("privateer", on)
+		Sfx.play("click", -10.0, 1.2 if on else 0.7)
+		_sync_faction("privateer")
+		_refresh())
+	row.add_child(toggle)
 	return row
 
 

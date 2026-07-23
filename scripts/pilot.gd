@@ -417,13 +417,28 @@ static func from_dict(data: Dictionary) -> void:
 ## completely empty. This is what "the bar works out of the box" was meant to
 ## do: it fires when a fit actually GRANTS something, instead of pre-wiring an
 ## ability the hull cannot use and rendering it crossed out.
+## Reconcile the bus with what the current fit KNOWS (called every apply_build, i.e.
+## on every fit/unfit/board). UNEQUIP a chip -> its ability drops off the bus; EQUIP
+## a chip -> its ability is wired into the first open slot (user, 2026-07-23). Gems
+## for abilities that are STILL fitted stay exactly where the pilot placed them —
+## only unfitted ones are removed, only not-yet-wired ones are added, and only while
+## there's room. The starter grants nothing, so the bus honestly stays empty.
 static func autowire(known: Array) -> void:
-	if known.is_empty():
-		return
-	for g in gems:
-		if str(g) != "":
-			return
-	set_gem(0, str(known[0]))
+	_ensure_gems()
+	# 1. Drop any wired ability the fit no longer knows (chip unequipped).
+	for i in GEM_SLOTS:
+		if str(gems[i]) != "" and not known.has(str(gems[i])):
+			gems[i] = ""
+	# 2. Wire any known ability not already on the bus into the first open slot
+	#    (chip equipped). Stop when the bus is full — no room, no overwrite.
+	for aid in known:
+		var id := str(aid)
+		if id == "" or gems.has(id):
+			continue
+		var slot := first_empty_gem()
+		if slot < 0:
+			break
+		gems[slot] = id
 
 
 static func reset() -> void:
