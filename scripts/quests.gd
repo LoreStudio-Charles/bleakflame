@@ -530,6 +530,12 @@ static func current_step() -> Dictionary:
 		var poi := str(st.get("poi", ""))
 		if poi == "":
 			var venue := str(st.get("venue", ""))
+			if venue == "":
+				# A report/talk beat with no venue points at its GIVER (you report TO
+				# them — Voss at the station). Without this "The Long Meridian"'s report
+				# stage charted nothing: the sweep marker vanished and the pilot was
+				# left with no direction (user, 2026-07-24).
+				venue = Npcs.venue_of(str(quest_def(id).get("giver", "")))
 			poi = "planetoid" if venue == "planet" else ("station" if venue == "station" else "")
 		return {
 			"quest": id,

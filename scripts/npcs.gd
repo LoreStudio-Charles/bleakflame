@@ -88,3 +88,9 @@ static func at_venue(id: String, is_station: bool) -> bool:
 static func is_dockside(id: String) -> bool:
 	var v := str(CAST.get(id, {}).get("venue", "station"))
 	return v == "station" or v == "planet"
+
+
+## Where an NPC physically works ("station"/"planet"/"shoal", "" if unknown). Used
+## to breadcrumb a report/talk beat back to its GIVER when the stage names no venue.
+static func venue_of(id: String) -> String:
+	return str(CAST.get(id, {}).get("venue", ""))
