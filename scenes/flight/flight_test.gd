@@ -178,9 +178,10 @@ func _populate_world() -> void:
 	for i in DRONE_COUNT:
 		_spawn_drone(_drone_spot())
 	_spawn_guard_wing()
-	# +25%-ish density (user, 2026-07-23): one more raider + wasp — the light
-	# harassers, so the lanes feel busier without stacking heavies on a new pilot.
-	for kind in ["raider", "raider", "raider", "brawler", "wasp", "wasp", "wasp"]:
+	# Denser lanes (user, 2026-07-23): more raiders + wasps, the LIGHT harassers, so
+	# the sky feels busier without stacking heavies on a new pilot. 4 raider / 1
+	# brawler / 5 wasp on the trade lane (+ 1 vulture + the Verge prowler elsewhere).
+	for kind in ["raider", "raider", "raider", "raider", "brawler", "wasp", "wasp", "wasp", "wasp", "wasp"]:
 		var route := _patrol_route(kind)
 		# Start mid-route: the world is already in motion, not queued at home.
 		_spawn_pirate(route[randi() % route.size()] + _jitter(500.0), kind, route)
