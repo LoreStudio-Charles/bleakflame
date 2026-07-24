@@ -51,6 +51,7 @@ var _turn_speed := 0.0
 var _trail_color := Color(0.55, 0.75, 1.0)
 var _hull_visual: Polygon2D
 var _hull_sprite: Sprite2D
+var _livery_node: Polygon2D
 var _plumes: Array[CPUParticles2D] = []
 var _mounts: Array[WeaponMount] = []
 var _regen_blocked := 0.0
@@ -250,6 +251,29 @@ func set_hull_tint(tint: Color) -> void:
 		_hull_sprite.modulate = tint
 	else:
 		_hull_visual.color = tint
+
+
+## FACTION LIVERY — a forward-pointing chevron on the deck in the faction's colour,
+## clipped to the hull silhouette by the sprite stencil and scaled to the sprite, so
+## it fits any hull. Replaces any prior livery. Faction-driven eventually; tunable
+## now via the /livery <colour> dev command. No-op on a silhouette-only (art-less) hull.
+func apply_livery(color: Color) -> void:
+	if _hull_sprite == null or _hull_sprite.texture == null:
+		return
+	if _livery_node != null and is_instance_valid(_livery_node):
+		_livery_node.queue_free()
+	var h := 0.5 * float(_hull_sprite.texture.get_width())   # half-width, sprite-local
+	var chevron := Polygon2D.new()
+	chevron.polygon = PackedVector2Array([
+		Vector2(0.30 * h, 0.0),
+		Vector2(-0.06 * h, -0.40 * h),
+		Vector2(-0.24 * h, -0.40 * h),
+		Vector2(0.12 * h, 0.0),
+		Vector2(-0.24 * h, 0.40 * h),
+		Vector2(-0.06 * h, 0.40 * h)])
+	chevron.color = Color(color.r, color.g, color.b, 0.9)
+	_hull_sprite.add_child(chevron)
+	_livery_node = chevron
 
 
 ## Shared soft radial-glow sprite for engine particles — a white dot fading to

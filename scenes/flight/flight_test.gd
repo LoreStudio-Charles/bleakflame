@@ -192,7 +192,7 @@ func _ready() -> void:
 		# the hook is itself the dev gate — a release export skips this whole block,
 		# so /cash & friends are simply unknown commands there.
 		Chat.dev_command = _run_dev_command
-		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /ruler /heartbeat /rearm"
+		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /livery <colour> /ruler /heartbeat /rearm"
 
 	_populate_world()
 
@@ -1203,6 +1203,24 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			_spawn_galean_fleet(ahead)
 			_dev_feedback("Galean Navy fleet spawned ~900u DEAD AHEAD (fly forward; it's on radar)")
 			return true
+		"livery":
+			# /livery <colour> — paint the TARGETED ship's deck chevron. Colour is a
+			# name (red/blue/gold/white…) or a hex code (#0077FF). from_string returns
+			# the sentinel (negative r) on anything it can't parse.
+			var arg := rest.strip_edges()
+			var col := Color.from_string(arg, Color(-1.0, -1.0, -1.0))
+			if col.r < 0.0:
+				_dev_feedback("Unknown colour '%s' — try red/blue/gold/white or #0077FF" % arg)
+				return true
+			if ship.target == null or not is_instance_valid(ship.target):
+				_dev_feedback("No target — RMB or T-cycle a ship first, then /livery <colour>")
+				return true
+			if ship.target.has_method("apply_livery"):
+				ship.target.apply_livery(col)
+				_dev_feedback("Livery '%s' on target" % arg)
+			else:
+				_dev_feedback("That target can't wear a livery")
+			return true
 	return false
 
 
@@ -1234,11 +1252,13 @@ func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
 	# for its friendly-patrol behaviour; the real fix is a Galean Confederacy faction
 	# with its own team/colours/standing — deferred.)
 	cap.set_hull_tint(Color.WHITE)
+	cap.apply_livery(Color(0.23, 0.44, 0.85))   # Galean Navy blue chevron (retint via /livery)
 	# A fighter screen flying formation on the capital — the "a capital wants a
 	# screen" fiction, and it reads as a real fleet element.
 	for i in 3:
 		var esc := GuardianShip.spawn_protector(self, SampleBuilds.guardian_kestrel(), cap, i, 3)
 		esc.set_hull_tint(Color.WHITE)
+		esc.apply_livery(Color(0.23, 0.44, 0.85))
 	return cap
 
 
