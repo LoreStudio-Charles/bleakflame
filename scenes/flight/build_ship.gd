@@ -211,8 +211,8 @@ func _rebuild_visuals() -> void:
 			plume.initial_velocity_max = 160.0 * comp.trail_scale
 			plume.damping_min = 60.0
 			plume.damping_max = 120.0
-			plume.scale_amount_min = 0.45 * comp.trail_scale
-			plume.scale_amount_max = 0.9 * comp.trail_scale
+			plume.scale_amount_min = 0.11 * comp.trail_scale
+			plume.scale_amount_max = 0.24 * comp.trail_scale
 			# COLORED SPRITES IN ADDITIVE LAYERS (user, 2026-07-24): a soft radial-glow
 			# texture per particle + additive blend so they stack into light instead of
 			# reading as flat dots, and a lifetime ramp — hot white core -> the engine's
@@ -265,12 +265,12 @@ func apply_livery(color: Color) -> void:
 	var h := 0.5 * float(_hull_sprite.texture.get_width())   # half-width, sprite-local
 	var chevron := Polygon2D.new()
 	chevron.polygon = PackedVector2Array([
-		Vector2(0.30 * h, 0.0),
-		Vector2(-0.06 * h, -0.40 * h),
-		Vector2(-0.24 * h, -0.40 * h),
-		Vector2(0.12 * h, 0.0),
-		Vector2(-0.24 * h, 0.40 * h),
-		Vector2(-0.06 * h, 0.40 * h)])
+		Vector2(0.28 * h, 0.0),
+		Vector2(-0.06 * h, -0.38 * h),
+		Vector2(-0.18 * h, -0.38 * h),
+		Vector2(0.16 * h, 0.0),
+		Vector2(-0.18 * h, 0.38 * h),
+		Vector2(-0.06 * h, 0.38 * h)])
 	chevron.color = Color(color.r, color.g, color.b, 0.9)
 	_hull_sprite.add_child(chevron)
 	_livery_node = chevron

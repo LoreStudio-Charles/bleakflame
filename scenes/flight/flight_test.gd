@@ -1212,14 +1212,18 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			if col.r < 0.0:
 				_dev_feedback("Unknown colour '%s' — try red/blue/gold/white or #0077FF" % arg)
 				return true
-			if ship.target == null or not is_instance_valid(ship.target):
-				_dev_feedback("No target — RMB or T-cycle a ship first, then /livery <colour>")
-				return true
-			if ship.target.has_method("apply_livery"):
-				ship.target.apply_livery(col)
-				_dev_feedback("Livery '%s' on target" % arg)
+			# Paint your TARGET (Y-cycle for a friendly), else the NEAREST ship — so it
+			# just works even though RMB/T only target enemies.
+			var tgt: Node = ship.target if (ship.target != null and is_instance_valid(ship.target)) else null
+			var which := "target"
+			if tgt == null or not tgt.has_method("apply_livery"):
+				tgt = _nearest_liveried_ship()
+				which = "nearest ship"
+			if tgt != null and tgt.has_method("apply_livery"):
+				tgt.apply_livery(col)
+				_dev_feedback("Livery '%s' on %s" % [arg, which])
 			else:
-				_dev_feedback("That target can't wear a livery")
+				_dev_feedback("No ship nearby to paint")
 			return true
 	return false
 
@@ -1260,6 +1264,21 @@ func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
 		esc.set_hull_tint(Color.WHITE)
 		esc.apply_livery(Color(0.23, 0.44, 0.85))
 	return cap
+
+
+## Nearest ship that can wear a livery — the /livery fallback when nothing is
+## targeted (RMB/T only target enemies, so a friendly capital needs this or Y-cycle).
+func _nearest_liveried_ship() -> Node:
+	var best: Node = null
+	var best_d := 5000.0
+	for n in get_tree().get_nodes_in_group("ships"):
+		if n == ship or not n.has_method("apply_livery"):
+			continue
+		var d: float = ship.global_position.distance_to((n as Node2D).global_position)
+		if d < best_d:
+			best_d = d
+			best = n
+	return best
 
 
 ## /warp <x> <y>  ·  /warp <x>,<y>  ·  /warp <poi>  — teleport the ship. Orivel is
