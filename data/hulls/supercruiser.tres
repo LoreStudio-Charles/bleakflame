@@ -7,21 +7,21 @@
 script = ExtResource("1_hp")
 display_name = "Spinal Lance"
 offset = Vector2(100, 0)
-mark = 3
+mark = 4
 arc_deg = 45.0
 
 [sub_resource type="Resource" id="hp_bat_d"]
 script = ExtResource("1_hp")
 display_name = "Dorsal Main Battery"
 offset = Vector2(35, -16)
-mark = 3
+mark = 4
 arc_deg = 360.0
 
 [sub_resource type="Resource" id="hp_bat_v"]
 script = ExtResource("1_hp")
 display_name = "Ventral Main Battery"
 offset = Vector2(35, 16)
-mark = 3
+mark = 4
 arc_deg = 360.0
 
 [sub_resource type="Resource" id="hp_pd_p"]
@@ -42,7 +42,7 @@ arc_deg = 360.0
 script = ExtResource("1_hp")
 display_name = "Secondary Battery"
 offset = Vector2(-45, 0)
-mark = 2
+mark = 3
 arc_deg = 360.0
 
 [sub_resource type="Resource" id="hp_drive_m"]

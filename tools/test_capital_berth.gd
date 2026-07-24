@@ -52,19 +52,19 @@ func _case_supercruiser_is_the_first_capital() -> void:
 	_ok(h.size_band == SB.SUPER_HEAVY, "Supercruiser is SUPER_HEAVY (got band %d)" % h.size_band)
 	_ok(h.hull_hp >= 1000.0, "capital-scale hull (%d hp)" % int(h.hull_hp))
 	_ok(h.silhouette.size() > 0 and h.fits_art_budget(), "silhouette + hardpoints fit the 256u SUPER_HEAVY canvas")
-	# Marks capped at 3 on combat slots (the coupling is always Mk5, exempt), with
-	# the mixed battery present: a Mk1 turret that CAN track fighters (traverse
-	# 360/mark = 360 deg/s) and a Mk3 main.
+	# A Mk4 cruiser: combat slots cap at Mk4 (the coupling is always Mk5, exempt),
+	# with the mixed battery present — a Mk1 turret that CAN track fighters (traverse
+	# 360/mark = 360 deg/s) alongside Mk4 mains.
 	var has_mk1_weapon := false
-	var has_mk3_weapon := false
+	var has_mk4_weapon := false
 	for hp in h.hardpoints:
 		if hp.slot_type != HardpointDef.SlotType.COUPLING:
-			_ok(hp.mark <= 3, "%s is Mk<=3 (got %d)" % [hp.display_name, hp.mark])
+			_ok(hp.mark <= 4, "%s is Mk<=4 (got %d)" % [hp.display_name, hp.mark])
 		if hp.slot_type == HardpointDef.SlotType.WEAPON:
 			has_mk1_weapon = has_mk1_weapon or hp.mark == 1
-			has_mk3_weapon = has_mk3_weapon or hp.mark == 3
+			has_mk4_weapon = has_mk4_weapon or hp.mark == 4
 	_ok(has_mk1_weapon, "has a Mk1 turret — point-defense that swats fighters")
-	_ok(has_mk3_weapon, "has a Mk3 main battery")
+	_ok(has_mk4_weapon, "has a Mk4 main battery")
 
 
 func _case_fleet_build_fits() -> void:
@@ -75,6 +75,18 @@ func _case_fleet_build_fits() -> void:
 	_ok(b.hull.size_band == SB.SUPER_HEAVY, "fleet build flies the Supercruiser hull")
 	# Every hardpoint got something (13 slots, 0..12).
 	_ok(b.slots.size() >= b.hull.hardpoints.size(), "all %d hardpoints are fitted (got %d)" % [b.hull.hardpoints.size(), b.slots.size()])
+	# NO OVER-MARK: every fitted component's mark must be <= its slot's mark. This is
+	# the exact bug the navy weapons fix — a Mk4 gun in a Mk3 mount slipped past
+	# _make (which doesn't validate) and armed the ship with an illegal fit.
+	for i in b.slots:
+		if i >= b.hull.hardpoints.size():
+			continue
+		var comp = b.slots[i]
+		if comp == null:
+			continue
+		var slot_mark: int = b.hull.hardpoints[i].mark
+		var comp_mark: int = int(comp.get("mark")) if comp.get("mark") != null else 1
+		_ok(comp_mark <= slot_mark, "%s (Mk%d) fits its Mk%d slot [%d]" % [str(comp.get("display_name")), comp_mark, slot_mark, i])
 
 
 func _drydock(outpost: OrivelOutpost) -> DockingPad:

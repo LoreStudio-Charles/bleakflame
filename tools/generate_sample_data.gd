@@ -175,6 +175,54 @@ func _generate_components() -> void:
 	pd.bolt_scale = 0.55
 	_save(pd, "res://data/components/weapons/skeet_pd_array.tres")
 
+	# ---- GALEAN NAVY ARMAMENT (user, 2026-07-24) ----
+	# The fleet's own guns — "good tech for the navy, not the newbie garbage". A
+	# proper tier above fringe salvage: ADVANCED (blue) standard issue, with one
+	# EXPERIMENTAL (purple) piece the fleet only mounts on elite variants. Marks are
+	# capital (3-4): the traverse rule (360/mark) makes the Mk4 lances murder on a
+	# cruiser and helpless against a fighter, which is why the Mk1 PD + escorts exist.
+	# Pale-gold/ivory livery matches Orivel and the Confederacy.
+
+	# AEGIS LANCE BATTERY — Mk4 LASER, the main + spinal armament. Beam (hit-scan),
+	# so every tick lands; long reach; slow-tracking (90 deg/s) so it can't chase a gnat.
+	var aegis := _weapon("Aegis Lance Battery", G.ADVANCED, 4, 12.0, 7.0, 8.0, 0.10,
+		"Galean naval laser: a sustained ivory lance, instant on target. Line-standard, and it shows — steady, long-reaching, merciless to anything that lingers in the open.")
+	aegis.beam = true
+	aegis.beam_tail = 40.0
+	aegis.projectile_speed = 2600.0
+	aegis.weapon_range = 1000.0
+	aegis.bolt_color = Color(1.0, 0.92, 0.66)   # pale gold / ivory
+	aegis.bolt_scale = 1.4
+	_save(aegis, "res://data/components/weapons/aegis_lance_battery.tres")
+
+	# GALEAN NAVAL AUTOCANNON — Mk3 kinetic, the secondary. Fills the gaps the slow
+	# lances can't sweep; navy-standard, a clear cut above the fringe VK-2.
+	var navgun := _weapon("Galean Naval Autocannon", G.ADVANCED, 3, 10.0, 5.0, 34.0, 0.22,
+		"Confederacy secondary armament: a fast-cycling autocannon that answers what the main lances are too slow to catch.")
+	navgun.projectile_speed = 1500.0
+	navgun.weapon_range = 820.0
+	navgun.bolt_color = Color(1.0, 0.85, 0.4)   # gold tracer
+	navgun.bolt_scale = 1.1
+	_save(navgun, "res://data/components/weapons/naval_autocannon.tres")
+
+	# SENTINEL RADAR BATTERY — Mk4 EXPERIMENTAL (purple), the elite-variant piece.
+	# Up-tier of the Radio Missile: command-guided heavy warheads ride the ship's
+	# radar to its locked target. Reach + blast the lances lack. Ordnance (magazine).
+	var sentinel := _weapon("Sentinel Radar Battery", G.EXPERIMENTAL, 4, 14.0, 8.0, 95.0, 1.2,
+		"Command-guided capital ordnance: heavy warheads ride the ship's targeting radar to whatever it has locked. Reaches where the lances can't — and the fleet doesn't hand these out.")
+	sentinel.projectile_speed = 900.0
+	sentinel.weapon_range = 1300.0
+	sentinel.blast_radius = 34.0
+	sentinel.blast_falloff = 0.7
+	sentinel.homing = 120.0
+	sentinel.seek_nearest = false
+	sentinel.homing_by_band = PackedFloat32Array([2.6, 2.6, 2.4, 2.2, 2.0])
+	sentinel.magazine = 6
+	sentinel.ammo_price = 40
+	sentinel.bolt_color = Color(0.6, 0.85, 1.0)   # radar blue
+	sentinel.bolt_scale = 1.7
+	_save(sentinel, "res://data/components/weapons/sentinel_radar_battery.tres")
+
 	var e := EngineDefS.new()
 	e.display_name = "Drifter Ion Drive"
 	e.grade = G.SALVAGE
@@ -549,9 +597,10 @@ func _generate_hulls() -> void:
 
 	# SUPERCRUISER — the first true capital hull (SUPER_HEAVY), the Galean Navy's
 	# line-of-battle ship and the reason the Orivel drydocks exist. Two size bands
-	# above anything else (Vulture/Dowager top out at MEDIUM). Marks capped at 3
-	# (user, 2026-07-24); its bite is HULL + numbers, not the highest-tier slots.
-	# Mixed-mark batteries: Mk3 mains punch, Mk1 point-defense (traverse 360/mark =
+	# above anything else (Vulture/Dowager top out at MEDIUM). A Mk4 CRUISER
+	# (user, 2026-07-24) — the first Galean Confederacy capital tier (their navy runs
+	# a whole line: scouts/fighters -> bombers/gunships -> supercruisers/carriers).
+	# Mixed-mark batteries: Mk4 mains punch, Mk1 point-defense (traverse 360/mark =
 	# 360 deg/s) actually swats fighters — lethal solo, better with escorts. NPC
 	# fleet for now (price 0, not for sale until the capital shipyard opens); level
 	# 35 is a display seam until level-scaling lands in main. Aligns with the
@@ -574,12 +623,12 @@ func _generate_hulls() -> void:
 		Vector2(-100, -20), Vector2(-110, 0), Vector2(-100, 20), Vector2(-60, 32),
 		Vector2(20, 30), Vector2(80, 18)])
 	var cruiser_hps: Array = [
-		_hardpoint("Spinal Lance", Vector2(100, 0), T.WEAPON, 3, 45.0),
-		_hardpoint("Dorsal Main Battery", Vector2(35, -16), T.WEAPON, 3, 360.0),
-		_hardpoint("Ventral Main Battery", Vector2(35, 16), T.WEAPON, 3, 360.0),
+		_hardpoint("Spinal Lance", Vector2(100, 0), T.WEAPON, 4, 45.0),
+		_hardpoint("Dorsal Main Battery", Vector2(35, -16), T.WEAPON, 4, 360.0),
+		_hardpoint("Ventral Main Battery", Vector2(35, 16), T.WEAPON, 4, 360.0),
 		_hardpoint("Port Point-Defense", Vector2(-15, -30), T.WEAPON, 1, 360.0),
 		_hardpoint("Starboard Point-Defense", Vector2(-15, 30), T.WEAPON, 1, 360.0),
-		_hardpoint("Secondary Battery", Vector2(-45, 0), T.WEAPON, 2, 360.0),
+		_hardpoint("Secondary Battery", Vector2(-45, 0), T.WEAPON, 3, 360.0),
 		_hardpoint("Main Drive", Vector2(-100, -12), T.ENGINE, 3),
 		_hardpoint("Auxiliary Drive", Vector2(-100, 12), T.ENGINE, 3),
 		_hardpoint("Capital Reactor", Vector2(-60, 0), T.REACTOR, 3),

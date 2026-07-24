@@ -189,18 +189,19 @@ static func guardian_vulture() -> ShipBuild:
 	})
 
 
-## Galean Navy line-of-battle capital ship — the first SUPER_HEAVY, the fleet that
-## makes the Orivel drydocks matter. Mk3 heavy batteries + a spinal pulse for the
-## punch; skeet arrays on the Mk1 point-defense mounts (traverse 360/mark = fast)
-## to swat the fighters the big guns can't track. NPC fleet for now.
+## Galean Navy line-of-battle capital ship — the first Mk4 SUPER_HEAVY, the fleet
+## that makes the Orivel drydocks matter. Armed with the NAVY set (not fringe
+## junk): Mk4 Aegis Lance lasers on the mains + spinal, a Mk3 Naval Autocannon
+## secondary, skeet arrays on the Mk1 point-defense mounts (traverse 360/mark =
+## fast) to swat the fighters the slow lances can't track. NPC fleet.
 static func galean_supercruiser() -> ShipBuild:
 	return _make("res://data/hulls/supercruiser.tres", {
-		0: "res://data/components/weapons/twinlance_pulse.tres",       # Spinal Lance
-		1: "res://data/components/weapons/bastion_heavy_battery.tres", # Dorsal Main
-		2: "res://data/components/weapons/bastion_heavy_battery.tres", # Ventral Main
+		0: "res://data/components/weapons/aegis_lance_battery.tres",   # Spinal Lance
+		1: "res://data/components/weapons/aegis_lance_battery.tres",   # Dorsal Main
+		2: "res://data/components/weapons/aegis_lance_battery.tres",   # Ventral Main
 		3: "res://data/components/weapons/skeet_pd_array.tres",        # Port PD
 		4: "res://data/components/weapons/skeet_pd_array.tres",        # Starboard PD
-		5: "res://data/components/weapons/vk2_autocannon.tres",        # Secondary
+		5: "res://data/components/weapons/naval_autocannon.tres",      # Secondary
 		6: "res://data/components/engines/afterjet_sprint.tres",       # Main Drive
 		7: "res://data/components/engines/afterjet_sprint.tres",       # Aux Drive
 		8: "res://data/components/reactors/overdrive_bottle.tres",     # Capital Reactor
@@ -209,6 +210,15 @@ static func galean_supercruiser() -> ShipBuild:
 		11: "res://data/components/systems/wayfarer_sensors.tres",     # Command Deck
 		12: "res://data/components/couplings/standard_coupling.tres",  # Coupling
 	})
+
+
+## Elite variant: the base line ship with the EXPERIMENTAL (purple) Sentinel Radar
+## Battery swapped onto a main mount — the reach-and-blast piece the fleet only
+## hands to its best crews. The "one or two purple weapons on variants" (user).
+static func galean_supercruiser_elite() -> ShipBuild:
+	var b := galean_supercruiser()
+	b.slots[1] = load("res://data/components/weapons/sentinel_radar_battery.tres")
+	return b
 
 
 static func _make(hull_path: String, fits: Dictionary) -> ShipBuild:

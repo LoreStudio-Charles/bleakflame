@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_sentinel"]
+
+[resource]
+script = ExtResource("1_sentinel")
+damage = 95.0
+fire_interval = 1.2
+projectile_speed = 900.0
+weapon_range = 1300.0
+bolt_color = Color(0.6, 0.85, 1, 1)
+bolt_scale = 1.7
+blast_radius = 34.0
+blast_falloff = 0.7
+homing = 120.0
+homing_by_band = PackedFloat32Array(2.6, 2.6, 2.4, 2.2, 2.0)
+seek_nearest = false
+magazine = 6
+ammo_price = 40
+display_name = "Sentinel Radar Battery"
+description = "Command-guided capital ordnance: heavy warheads ride the ship's targeting radar to whatever it has locked. Reaches where the lances can't — and the fleet doesn't hand these out."
+grade = 4
+mark = 4
+mass = 14.0
+power_draw = 8.0
+affix_ids = PackedStringArray()
