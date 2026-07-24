@@ -1229,10 +1229,16 @@ func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
 		center + Vector2(-r, 0.0), center + Vector2(0.0, -r)]
 	var cap := GuardianShip.spawn_lane_patrol(self, center,
 		SampleBuilds.galean_supercruiser(), route)
+	# These are the GALEAN CONFEDERATE NAVY, not the Guardians — strip the guardian
+	# blue tint so the hull shows its own livery. (GuardianShip is only borrowed here
+	# for its friendly-patrol behaviour; the real fix is a Galean Confederacy faction
+	# with its own team/colours/standing — deferred.)
+	cap.set_hull_tint(Color.WHITE)
 	# A fighter screen flying formation on the capital — the "a capital wants a
 	# screen" fiction, and it reads as a real fleet element.
 	for i in 3:
-		GuardianShip.spawn_protector(self, SampleBuilds.guardian_kestrel(), cap, i, 3)
+		var esc := GuardianShip.spawn_protector(self, SampleBuilds.guardian_kestrel(), cap, i, 3)
+		esc.set_hull_tint(Color.WHITE)
 	return cap
 
 

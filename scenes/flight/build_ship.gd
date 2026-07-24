@@ -141,6 +141,15 @@ func _rebuild_visuals() -> void:
 	if ResourceLoader.exists(sprite_path):
 		var sprite := Sprite2D.new()
 		sprite.texture = load(sprite_path)
+		# Scale the sprite to its SIZE-BAND world budget so art authored at any
+		# resolution renders at the right in-world size. Canvases are conventionally
+		# 2x the band px (LIGHT 32, MEDIUM 64, HEAVY 128, SUPER_HEAVY 256), so a
+		# correctly-sized sprite scales by 1.0 (no change); an undersized capital
+		# (e.g. a 128px SUPER_HEAVY) scales up to fill its band. Fixes "the
+		# Supercruiser is barely bigger than a Vulture".
+		var tw := sprite.texture.get_width()
+		if tw > 0:
+			sprite.scale = Vector2.ONE * (HullDef.world_budget(build.hull.size_band) / float(tw))
 		# Stencil behavior: decal children (stripes, logos, liveries) are
 		# clipped to the hull's alpha silhouette.
 		sprite.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
@@ -191,8 +200,8 @@ func _rebuild_visuals() -> void:
 			var plume := CPUParticles2D.new()
 			plume.position = hp.offset
 			plume.emitting = false
-			plume.amount = 48
-			plume.lifetime = 0.45
+			plume.amount = 40
+			plume.lifetime = 0.38
 			plume.local_coords = false
 			plume.direction = Vector2(1, 0)
 			plume.spread = comp.trail_spread_deg
@@ -201,8 +210,8 @@ func _rebuild_visuals() -> void:
 			plume.initial_velocity_max = 160.0 * comp.trail_scale
 			plume.damping_min = 60.0
 			plume.damping_max = 120.0
-			plume.scale_amount_min = 0.8 * comp.trail_scale
-			plume.scale_amount_max = 1.8 * comp.trail_scale
+			plume.scale_amount_min = 0.45 * comp.trail_scale
+			plume.scale_amount_max = 0.9 * comp.trail_scale
 			# COLORED SPRITES IN ADDITIVE LAYERS (user, 2026-07-24): a soft radial-glow
 			# texture per particle + additive blend so they stack into light instead of
 			# reading as flat dots, and a lifetime ramp — hot white core -> the engine's
