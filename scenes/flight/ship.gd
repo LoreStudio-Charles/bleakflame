@@ -47,6 +47,11 @@ var _scan_time := 3.2
 var _scan_progress := -1.0    # < 0 = idle
 var scan_note := ""
 var scan_note_t := 0.0
+## A PERSISTENT, center-screen contextual prompt (NOT a fading flash): set every frame
+## by the flight scene while the ship sits in an interact range, cleared to "" the frame
+## you leave it. Shown by the HUD as a standing center-screen line, so a prompt you must
+## act on (open the WayGate) can never be missed or scroll away like a flash note.
+var interact_prompt := ""
 ## True while the current center note is an ABILITY FAILURE (drawn red by the HUD,
 ## so a refused skill reads unmistakably as failed, not as any other flash).
 var scan_note_fail := false

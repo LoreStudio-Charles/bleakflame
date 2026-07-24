@@ -40,6 +40,7 @@ var _missions: Label
 var _group: GroupOverlay
 var _target_info: Label
 var _center_note: Label
+var _prompt: Label          # standing center-screen interact prompt (ship.interact_prompt)
 var _hold_label: Label
 var _loot_tip: Label
 
@@ -200,10 +201,34 @@ func _ready() -> void:
 	note_settings.outline_color = Color(0, 0, 0, 0.85)
 	_center_note = Label.new()
 	_center_note.label_settings = note_settings
-	_center_note.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_center_note.offset_bottom = -40
+	# PRESET_CENTER_BOTTOM + a negative offset put this label's text BELOW the bottom edge
+	# (verified by tools/test_prompt_onscreen: its rect landed at y = viewport bottom,
+	# off-screen), which is why flash notes, docking/landing prompts, and ability-fail cues
+	# were never visible. Use the proven top-anchored + positive-offset pattern (like the
+	# threat _banner) so it sits reliably on-screen, low but clear of the bottom trim.
+	_center_note.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_center_note.offset_top = 900
 	_center_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_center_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center_note)
+
+	# STANDING PROMPT (user, 2026-07-24): a persistent, center-screen line for something
+	# the player must ACT on (open the WayGate) — never a fading flash that scrolls away.
+	# Positioned the PROVEN way (PRESET_CENTER_TOP + a positive offset, exactly like the
+	# threat _banner, which renders reliably) — NOT the _center_note's bottom-anchor combo.
+	# Full-width + centered so the text sits dead-center horizontally at any resolution.
+	var prompt_settings := LabelSettings.new()
+	prompt_settings.font_size = 22
+	prompt_settings.font_color = UiTheme.AMBER
+	prompt_settings.outline_size = 5
+	prompt_settings.outline_color = Color(0, 0, 0, 0.9)
+	_prompt = Label.new()
+	_prompt.label_settings = prompt_settings
+	_prompt.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_prompt.offset_top = 620          # lower-middle of the 1080 base — clear of the ship
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_prompt)
 
 	# TOP-RIGHT STACK (no overlap): comms badge (comms_inbox, at the very top) ->
 	# tracked MISSIONS (capped at 3) -> FRIENDLIES roster, in that order. The
@@ -359,6 +384,9 @@ func _process(_delta: float) -> void:
 	_left.visible = flying
 	_right.visible = flying
 	_center_note.visible = flying
+	# Standing interact prompt: shown whenever the ship publishes one and we're flying.
+	_prompt.text = ship.interact_prompt if flying else ""
+	_prompt.visible = flying and ship.interact_prompt != ""
 	_missions.visible = flying
 	_group.visible = flying
 	_target_effigy.visible = flying
@@ -501,14 +529,8 @@ func _hold_block() -> String:
 
 
 func _approach_line() -> String:
-	# THE WAYGATE — a persistent prompt while near it (the old one-shot flash was
-	# too easy to fly past, so the finale gate read as un-interactable).
-	for gate in get_tree().get_nodes_in_group("waygate"):
-		var gd := ship.global_position.distance_to(gate.global_position)
-		if gate.phase == WayGate.Phase.CLOSED and gd < 460.0:
-			return "◆ THE WAYGATE IS DORMANT  —  [E] to enter Krayt's waking sequence"
-		if gate.phase == WayGate.Phase.OPEN and gd < 340.0:
-			return "◆ THE WAYGATE IS OPEN  —  fly into the light"
+	# (The WayGate now uses the standing center-screen _prompt, driven by ship.interact_
+	# prompt from the flight scene's direct gate ref — see flight_test._update_gate_prompt.)
 	for pad in get_tree().get_nodes_in_group("dock_pads"):
 		if ship.global_position.distance_to(pad.global_position) < pad.UI_RANGE:
 			var s: Dictionary = pad.status_for(ship)
