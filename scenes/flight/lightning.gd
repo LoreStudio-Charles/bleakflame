@@ -27,6 +27,8 @@ extends Node2D
 @export var flicker_hz := 32.0     # re-roll rate for a sustained bolt (0 = draw once, static)
 @export var texture: Texture2D = null   # optional pixel-art arc strip (tiles on X) laid along
 	# the core so the bolt reads as pixel art. See random_arc() for the drop-in cycle.
+@export var cycle_texture := false      # swap in a fresh arc strip on each re-roll -> the bolt
+	# ANIMATES (arc-1 -> arc-2 -> ... as frames). Pair with flicker_hz for a crackling strike.
 
 var rng := RandomNumberGenerator.new()
 
@@ -70,6 +72,11 @@ func _process(delta: float) -> void:
 func regenerate() -> void:
 	if not _built:
 		return
+	if cycle_texture:                  # animate: swap in a fresh arc strip on each re-roll
+		var nt := random_arc(rng)
+		if nt != null:
+			texture = nt
+			_core.texture = nt
 	var pts := fractal_path(from_point, to_point, generations, chaos, rng)
 	_core.points = pts
 	_glow.points = pts
@@ -203,7 +210,7 @@ static func _make(from: Vector2, to: Vector2, opts: Dictionary) -> Node2D:
 	lb.from_point = from
 	lb.to_point = to
 	for k in ["color", "core_width", "glow_width", "glow_alpha", "chaos", "generations",
-			"branch_chance", "branch_scale", "flicker_hz", "texture"]:
+			"branch_chance", "branch_scale", "flicker_hz", "texture", "cycle_texture"]:
 		if opts.has(k):
 			lb.set(k, opts[k])
 	return lb

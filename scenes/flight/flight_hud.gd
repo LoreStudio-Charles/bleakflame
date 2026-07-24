@@ -41,12 +41,22 @@ var _group: GroupOverlay
 var _target_info: Label
 var _center_note: Label
 var _prompt: Label          # standing center-screen interact prompt (ship.interact_prompt)
+var _veil: ColorRect        # held world veil (blackout / whiteout / dim) BEHIND the HUD
+var _veil_flash: ColorRect  # transient bright pulse over the world (lightning, blooms)
 var _hold_label: Label
 var _loot_tip: Label
 
 
 func _ready() -> void:
 	ship = get_tree().get_first_node_in_group("player_ship")
+	add_to_group("flight_hud")
+	# WORLD VEIL: full-screen rects UNDER every HUD element but OVER the game world, so an
+	# effect can black out / white out / dim the VIEW while the cockpit HUD stays readable.
+	# Reused by Going Dark, sensor-blind enemy fx, and the WayGate opening — see veil().
+	_veil = _make_veil(Color(0, 0, 0, 0))
+	_veil_flash = _make_veil(Color(1, 1, 1, 0))
+	move_child(_veil, 0)         # held dim: bottom of the HUD, just above the world
+	move_child(_veil_flash, 1)   # transient flash: above the dim, still under all HUD elements
 	_legacy_info.visible = false
 	if FileAccess.file_exists(LAYOUT_PATH):
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(LAYOUT_PATH))
@@ -481,6 +491,40 @@ func _center_text() -> String:
 	if ship.scan_note_t > 0.0:
 		return ship.scan_note
 	return _approach_line()
+
+
+func _make_veil(c: Color) -> ColorRect:
+	var r := ColorRect.new()
+	r.color = c
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(r)
+	return r
+
+
+## Hold a full-screen veil OVER THE WORLD but UNDER the HUD — blackout (Color.BLACK),
+## whiteout (Color.WHITE), or a coloured dim. alpha 0 = clear .. 1 = opaque. Caller-owned:
+## set it, then clear it when the effect ends. Used by Going Dark, sensor-blind enemy fx,
+## and the WayGate opening, so those blind the VIEW while the cockpit HUD stays readable.
+func veil(color: Color, alpha: float, dur: float) -> void:
+	if _veil == null:
+		return
+	_veil.color = Color(color.r, color.g, color.b, _veil.color.a)
+	create_tween().tween_property(_veil, "color:a", alpha, maxf(0.01, dur))
+
+
+func veil_clear(dur: float) -> void:
+	if _veil != null:
+		create_tween().tween_property(_veil, "color:a", 0.0, maxf(0.01, dur))
+
+
+## A brief bright pulse over the world (lightning flash, muzzle bloom): snaps to `intensity`
+## then fades to 0 over `dur`. Sits above the held veil, still below every HUD element.
+func world_flash(color: Color, intensity: float, dur: float) -> void:
+	if _veil_flash == null:
+		return
+	_veil_flash.color = Color(color.r, color.g, color.b, intensity)
+	create_tween().tween_property(_veil_flash, "color:a", 0.0, maxf(0.01, dur)).set_trans(Tween.TRANS_QUAD)
 
 
 ## THE OBJECTIVE TRACKER, in the corner under COMMS. The player curates which
