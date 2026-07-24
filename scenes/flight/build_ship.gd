@@ -52,7 +52,7 @@ var _trail_color := Color(0.55, 0.75, 1.0)
 var _hull_visual: Polygon2D
 var _hull_sprite: Sprite2D
 var _livery_node: Node2D
-var _plumes: Array[CPUParticles2D] = []
+var _plumes: Array[Node2D] = []   # code-built CPUParticles2D OR an authored trail_scene root
 var _mounts: Array[WeaponMount] = []
 var _regen_blocked := 0.0
 var energy := 0.0
@@ -198,6 +198,17 @@ func _rebuild_visuals() -> void:
 			mount.group = 2 if comp.magazine > 0 else 1
 			_mounts.append(mount)
 		elif comp is EngineDef:
+			# AUTHORED-OR-PROCEDURAL: an artist's trail_scene (built in the Godot
+			# particle editor) wins; else the code-built default below. Either way the
+			# code only drives emitting + facing (_update_plumes) — an authored scene
+			# owns its entire look.
+			if comp.trail_scene != null:
+				var authored: Node2D = comp.trail_scene.instantiate()
+				authored.position = hp.offset
+				authored.z_index = -1
+				add_child(authored)
+				_plumes.append(authored)
+				continue
 			var plume := CPUParticles2D.new()
 			plume.position = hp.offset
 			plume.z_index = -1   # draw the exhaust trail BEHIND the ship, not over it
@@ -717,12 +728,15 @@ func _explode() -> void:
 func _update_plumes(thrust: Vector2, boosting: bool) -> void:
 	var thrusting := thrust.length_squared() > 1.0
 	for plume in _plumes:
-		plume.emitting = thrusting
-		if thrusting:
-			plume.rotation = thrust.angle() - rotation + PI
-			# Boost widens the plume RELATIVE to its tuned base — this used to
-			# OVERWRITE scale_amount_max outright, so every setup-time width edit
-			# (build_ship's scale_amount_min/max) silently did nothing.
+		plume.set("emitting", thrusting)   # duck-typed: code-built CPU or authored GPU/CPU
+		if not thrusting:
+			continue
+		plume.rotation = thrust.angle() - rotation + PI
+		# The code-built default (CPUParticles2D) carries the width knob; boost widens
+		# it RELATIVE to the tuned base (it used to OVERWRITE scale_amount_max, so every
+		# setup-time width edit silently did nothing). An AUTHORED trail_scene owns its
+		# own scale — left untouched.
+		if plume is CPUParticles2D:
 			var boost := 1.45 if boosting else 1.0
 			plume.scale_amount_min = float(plume.get_meta("base_scale_min", 0.5)) * boost
 			plume.scale_amount_max = float(plume.get_meta("base_scale_max", 1.1)) * boost
