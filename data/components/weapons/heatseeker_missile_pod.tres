@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_heat")
-damage = 90.0
+damage = 150.0
 fire_interval = 1.1
 projectile_speed = 682.0
 weapon_range = 1860.0
@@ -14,6 +14,7 @@ magazine = 5
 ammo_price = 12
 hit_bonus = 6.0
 blast_radius = 26.0
+blast_falloff = 0.7
 homing = 100.0
 homing_by_band = PackedFloat32Array(4.0, 3.2, 2.4, 1.8, 1.4)
 seek_nearest = true

@@ -87,7 +87,12 @@ func _generate_components() -> void:
 	# HOMING ORDNANCE (the Dowager's escape tools): missiles that TRACK, hit hard,
 	# and run dry fast — a way out of a scrap, never a weapon for a long hunt.
 	# HEAT = fire-and-forget, re-seeks the nearest target every frame.
-	var heat := _weapon("Heat-Seeker Missile Pod", G.ADVANCED, 2, 7.0, 4.0, 90.0, 1.1,
+	# A blast weapon ALWAYS proximity-detonates near the rim, so its bite is
+	# damage * blast_falloff-at-0.7-radius. With blast_falloff 0.7 that's ~0.79, so
+	# 150 lands ~118 — one-shots a wasp (55) / raider (80) / cutlass (90), while a
+	# 120-hull brawler and up survive. A five-round pod should make a fighter regret
+	# the intercept. (Default 0.45 falloff had it landing only ~55 — "barely tickled".)
+	var heat := _weapon("Heat-Seeker Missile Pod", G.ADVANCED, 2, 7.0, 4.0, 150.0, 1.1,
 		"Fire and forget — the warhead chases the hottest engine in the sky. Five rounds that hit like a grudge; enough to break a fight you didn't start, never enough for a long hunt.")
 	heat.weapon_range = 1860.0   # 3x reach (user, 2026-07-23) — it was hopeless up close only
 	heat.projectile_speed = 682.0   # +10%
@@ -95,6 +100,7 @@ func _generate_components() -> void:
 	heat.ammo_price = 12
 	heat.hit_bonus = 6.0
 	heat.blast_radius = 26.0
+	heat.blast_falloff = 0.7   # reliable even on a near miss (default 0.45 was too soft)
 	heat.homing = 100.0   # on-switch + fallback rate vs a size-less mark (a station)
 	# Turn rate in DEGREES PER 10 UNITS travelled (WeaponDef.homing_by_band), by
 	# target size band. Guided ordnance deliberately does NOT get the guns' lead-aim
@@ -111,14 +117,17 @@ func _generate_components() -> void:
 
 	# RADIO = command-guided: locks the shooter's SELECTED target and commits to
 	# it. Hits harder, tracks tighter, but goes dumb if the mark slips the leash.
-	var radio := _weapon("Radio-Guided Missile Rack", G.ADVANCED, 2, 8.0, 6.0, 120.0, 1.3,
+	var radio := _weapon("Radio-Guided Missile Rack", G.ADVANCED, 2, 8.0, 6.0, 150.0, 1.3,
 		"Command-guided to whatever you've got locked — pick a target, and four heavy warheads WILL find it. The reload's dear and it goes dumb if your mark slips the leash. Use them to leave, not to hunt.")
 	radio.weapon_range = 780.0
-	radio.projectile_speed = 680.0
+	radio.projectile_speed = 1200.0   # fast striker: short range (780) needs to CLOSE
+	# quick or the mark leaves the window. Per-10u homing keeps the turn radius, so
+	# faster = harder to dodge, not wider.
 	radio.magazine = 4
 	radio.ammo_price = 16
 	radio.hit_bonus = 5.0
 	radio.blast_radius = 20.0
+	radio.blast_falloff = 0.7
 	radio.homing = 150.0   # on-switch + fallback rate vs a size-less mark (a station)
 	# Beefed turn rate to compensate for pure-pursuit (no gunnery lead), like the
 	# heat-seeker — but FLAT across sizes, not small-biased: the RGM commits to

@@ -28,6 +28,8 @@ var grace := 0.0
 var mining := 0.0
 ## Proximity-fuzed blast radius (0 = plain bolt). Near a target = boom.
 var blast := 0.0
+## Damage kept at the blast rim (0..1); centre is always full. See WeaponDef.
+var blast_falloff := 0.45
 ## The ship that fired this — never hit your own shooter (matters once a ship can
 ## share a target group with its own bolts, e.g. a WANTED player in hostile_team).
 var shooter: Node = null
@@ -73,6 +75,7 @@ static func spawn(parent: Node, pos: Vector2, dir: Vector2, def: WeaponDef,
 	p.bolt_scale = def.bolt_scale
 	p.beam_tail = def.beam_tail
 	p.blast = def.blast_radius
+	p.blast_falloff = def.blast_falloff
 	p.homing = def.homing
 	p.homing_by_band = def.homing_by_band
 	p.seek_nearest = def.seek_nearest
@@ -256,13 +259,13 @@ func _detonate() -> void:
 		var r: float = target.get("hit_radius") if target.get("hit_radius") != null else 12.0
 		var d := maxf(global_position.distance_to(target.global_position) - r, 0.0)
 		if d <= blast:
-			target.take_damage(damage * lerpf(1.0, 0.45, d / blast), src)
+			target.take_damage(damage * lerpf(1.0, blast_falloff, d / blast), src)
 	for rock in get_tree().get_nodes_in_group("asteroids"):
 		if not is_instance_valid(rock):
 			continue
 		var d := maxf(global_position.distance_to(rock.global_position) - rock.hit_radius, 0.0)
 		if d <= blast:
-			rock.hit(damage * lerpf(1.0, 0.45, d / blast), mining)
+			rock.hit(damage * lerpf(1.0, blast_falloff, d / blast), mining)
 	queue_free()
 
 
