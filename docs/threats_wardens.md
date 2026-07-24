@@ -22,10 +22,13 @@ just can't out-fly them.
 
 ## THE WARDENS OF THE FOLD (Wraithlight)
 
-The alien antagonist. Working species name TBD — candidates: **the Vael · the
-Sidereal · the Wane · the Threnody · the Silvine · the Pale Choir**. ("Eldar"
-is the *vibe reference* — graceful, ancient, impossibly superior, space-folding.
-The Wardens are an ORIGINAL species, not a copy of anyone's IP.)
+The alien antagonist. **SPECIES NAME: the AZITAIRE** (chosen 2026-07-24, user).
+The soft, luminous, air-and-light sound is deliberate — say it beside the hard,
+hooked, guttural **Dhakar** (their sundered dark mirror, the_convergence.md #8)
+and you hear the whole schism: one name grieves, the other reaches. (Possible
+canon: both names diverged from one elder root when the two factions split.)
+"Eldar" is the *vibe reference* — graceful, ancient, impossibly superior,
+space-folding. The Azitaire are an ORIGINAL species, not a copy of anyone's IP.
 
 ### Fiction — masters of folding space
 The unifying idea that ties them to what the game already has: **the elders are
@@ -74,13 +77,32 @@ within the translucent crystal, gemlike inner glow, no bolted guns."
   light, half-there.
 - Silhouettes: crescents, blades, **heron-necked swept prows**. Asymmetric,
   serene, lethal.
-- Pilots (glimpsed rarely): tall, elongated, smooth featureless masks. Grace with
-  no face. NOTE they must stay KNOWABLE, not faceless-dread — that lane belongs
-  to the Cinderweb.
+- The Azitaire themselves (glimpsed rarely): living golden energy in a humanoid
+  form with a crystalline HOUND head — see "The Azitaire themselves" below
+  (supersedes the earlier "smooth featureless mask" placeholder). They must stay
+  KNOWABLE, not faceless-dread — that lane belongs to the Cinderweb.
 - With a touch of **Iris** menace grafted on (from the runner-up direction): a
   mirror-cold killing edge under the grace — they can reflect your own ship back
   at you a half-second before they fire.
 - Palette: bone-white / pearl / **gold light-veins** / cold white lance-fire.
+
+### The Azitaire themselves — LIVING ENERGY, CRYSTAL-HOUND ELDERS (LOCKED 2026-07-24, user)
+Not flesh: an Azitaire IS living golden energy given a tall, serene humanoid form.
+Their ships are "sung from crystal" (above) and so are THEY — the head is an
+elegant **translucent-crystal hound**: a NOBLE GERMAN SHEPHERD skull (long strong
+muzzle, broad regal head, erect *proportional* ears, a thick crystalline MANE/ruff)
+with **forked GOLDEN LIGHTNING caged and arcing WITHIN the clear crystal** and gold
+energy-veins glowing through a pale translucent body. Warm, radiant, regal,
+ancient, calm — a light-forged Anubis, not a grey alien.
+- **Art note:** prompt "German shepherd," NOT "wolf" — PixelLab renders "wolf" as a
+  generic fox; the named breed reads noble. Watch the proportions or it goes
+  toy-dog (big ears + tiny face = chihuahua); a big head + thick mane fixes it.
+- **THE THEMATIC RHYME (user):** the Azitaire and the **Quarn** (docs/the_quarn.md)
+  are BOTH "lightning in a bottle" — energy caged in a vessel — but OPPOSITE souls:
+  Azitaire = WARM GOLD light held CALM in crystal (grace at rest); Quarn = COLD
+  VIOLENT lightning caged in war-plating (a weapon straining its bottle).
+- Portrait concept: `docs/concepts/wardens/azitaire_portrait.png` (lead, maned) +
+  `azitaire_portrait_alt_statue.png`.
 
 ### Mechanics — the "outplay" enemy
 The signature is **BLINK**, and it exists specifically to break the game's
