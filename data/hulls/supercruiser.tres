@@ -98,6 +98,7 @@ mark = 5
 script = ExtResource("2_hull")
 display_name = "Supercruiser"
 category = "Cruiser"
+art_path = "res://assets/ships/galean-navy/cruiser-1.png"
 size_band = 3
 mass = 780.0
 hull_hp = 1800.0

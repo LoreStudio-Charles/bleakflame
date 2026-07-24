@@ -52,6 +52,8 @@ func _case_supercruiser_is_the_first_capital() -> void:
 	_ok(h.size_band == SB.SUPER_HEAVY, "Supercruiser is SUPER_HEAVY (got band %d)" % h.size_band)
 	_ok(h.hull_hp >= 1000.0, "capital-scale hull (%d hp)" % int(h.hull_hp))
 	_ok(h.silhouette.size() > 0 and h.fits_art_budget(), "silhouette + hardpoints fit the 256u SUPER_HEAVY canvas")
+	# Faction-folder art convention: art_path is set and the file resolves.
+	_ok(h.art_path != "" and ResourceLoader.exists(h.art_path), "hull art resolves via art_path (%s)" % h.art_path)
 	# A Mk4 cruiser: combat slots cap at Mk4 (the coupling is always Mk5, exempt),
 	# with the mixed battery present — a Mk1 turret that CAN track fighters (traverse
 	# 360/mark = 360 deg/s) alongside Mk4 mains.

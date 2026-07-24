@@ -607,6 +607,7 @@ func _generate_hulls() -> void:
 	# GALEAN CONFEDERACY faction when that's built.
 	var cruiser := HullDefS.new()
 	cruiser.display_name = "Supercruiser"
+	cruiser.art_path = "res://assets/ships/galean-navy/cruiser-1.png"   # faction-folder convention
 	cruiser.grade = GradesS.Grade.STANDARD   # Galean Navy line ship, not salvage
 	cruiser.level = 35
 	cruiser.category = "Cruiser"

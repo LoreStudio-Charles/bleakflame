@@ -126,7 +126,10 @@ func _rebuild_visuals() -> void:
 	# res://assets/ships/<hullname>.png replaces the placeholder polygon.
 	# Player hull art is weaponless — mounted components draw the guns.
 	var hull_name := build.hull.display_name.to_snake_case()
-	var sprite_path := "res://assets/ships/%s.png" % hull_name
+	# art_path (the FACTION-FOLDER convention: assets/ships/<faction>/<class>-<n>.png,
+	# e.g. galean-navy/cruiser-1) wins when set; else the display-name file. An AI
+	# variant skin still overrides below.
+	var sprite_path: String = build.hull.art_path if build.hull.art_path != "" else "res://assets/ships/%s.png" % hull_name
 	if use_variant_skin:
 		var variant := _random_variant(hull_name)
 		if variant != "":

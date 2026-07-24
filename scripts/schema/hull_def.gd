@@ -26,6 +26,11 @@ static func world_budget(band: SizeBand) -> float:
 
 @export var display_name := ""
 @export var category := ""
+## Explicit hull sprite path — overrides the assets/ships/<snake_name>.png default.
+## This is the FACTION/COMPANY art convention: ships are organized by their maker as
+## assets/ships/<faction>/<class>-<n>.png (galean-navy/cruiser-1, and later
+## guardian/…, pirate/…, unaligned/…). Empty = fall back to the display-name file.
+@export var art_path := ""
 @export var size_band := SizeBand.LIGHT
 @export var mass := 40.0                 # dry mass; components add to it
 @export var hull_hp := 100.0
