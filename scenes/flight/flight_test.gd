@@ -1344,12 +1344,15 @@ func _grant_kill_xp(pirate: Node, kind: String) -> void:
 			_break_shoal_truce()
 
 
-## Vyper revokes the banner. shoal_invited off + a hard standing drop makes
-## Standing.shoal_open() false, so AIShip._prey_valid stops treating the player as
-## safe passage — the Shoal hunts again.
+## Vyper revokes the banner. Breaking Krayt's OWN truce is the one true betrayal,
+## so it isn't a slap — it SPIKES privateer standing straight to the floor (-100,
+## KoS with the Shoal) in a single stroke. shoal_invited flips off, which both makes
+## Standing.shoal_open() false (the Shoal hunts again) AND disarms the counter in
+## _grant_kill_xp, so the spike can only ever land ONCE.
 func _break_shoal_truce() -> void:
 	Pilot.shoal_invited = false
-	Standing.add("privateer", -80)   # from sheltered guest to marked enemy
+	# Land exactly at -100 no matter the current standing (add() clamps to MIN).
+	Standing.add("privateer", -100 - Standing.get_points("privateer"))
 	var line := "Vyper's voice comes back, and every trace of the grief is gone from it. "
 	line += "\"You spilled our blood under our OWN banner. That was Krayt's name you fouled "
 	line += "— his memory, his last promise. It's void. There's no truce. Fly careful now, "
