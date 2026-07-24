@@ -215,8 +215,12 @@ func _rebuild_visuals() -> void:
 			# PIXEL-ART plume: crisp texture means THIS is the real width knob now.
 			# (Reset from ~0.008 — that was invisible-tiny for the hard sprite; the old
 			# soft gradient hid every change, which is why nothing seemed to move.)
-			plume.scale_amount_min = 0.35 * comp.trail_scale
-			plume.scale_amount_max = 0.7 * comp.trail_scale
+			plume.scale_amount_min = 0.5 * comp.trail_scale
+			plume.scale_amount_max = 1.1 * comp.trail_scale
+			# Stash the tuned base so _update_plumes multiplies it (boost) instead of
+			# overwriting it. THIS pair is the width knob; edit here.
+			plume.set_meta("base_scale_min", plume.scale_amount_min)
+			plume.set_meta("base_scale_max", plume.scale_amount_max)
 			# Crisp pixel sprite per particle + additive blend so they stack into light,
 			# and a lifetime ramp — hot white core -> the engine's trail colour ->
 			# transparent tail. NEAREST filter keeps the pixels blocky.
@@ -716,5 +720,9 @@ func _update_plumes(thrust: Vector2, boosting: bool) -> void:
 		plume.emitting = thrusting
 		if thrusting:
 			plume.rotation = thrust.angle() - rotation + PI
-			var trail_scale: float = plume.get_meta("trail_scale", 1.0)
-			plume.scale_amount_max = (2.6 if boosting else 1.8) * trail_scale
+			# Boost widens the plume RELATIVE to its tuned base — this used to
+			# OVERWRITE scale_amount_max outright, so every setup-time width edit
+			# (build_ship's scale_amount_min/max) silently did nothing.
+			var boost := 1.45 if boosting else 1.0
+			plume.scale_amount_min = float(plume.get_meta("base_scale_min", 0.5)) * boost
+			plume.scale_amount_max = float(plume.get_meta("base_scale_max", 1.1)) * boost
