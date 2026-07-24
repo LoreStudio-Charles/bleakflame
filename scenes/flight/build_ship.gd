@@ -51,7 +51,7 @@ var _turn_speed := 0.0
 var _trail_color := Color(0.55, 0.75, 1.0)
 var _hull_visual: Polygon2D
 var _hull_sprite: Sprite2D
-var _livery_node: Polygon2D
+var _livery_node: Node2D
 var _plumes: Array[CPUParticles2D] = []
 var _mounts: Array[WeaponMount] = []
 var _regen_blocked := 0.0
@@ -212,8 +212,8 @@ func _rebuild_visuals() -> void:
 			plume.initial_velocity_max = 160.0 * comp.trail_scale
 			plume.damping_min = 60.0
 			plume.damping_max = 120.0
-			plume.scale_amount_min = 0.11 * comp.trail_scale
-			plume.scale_amount_max = 0.24 * comp.trail_scale
+			plume.scale_amount_min = 0.055 * comp.trail_scale
+			plume.scale_amount_max = 0.12 * comp.trail_scale
 			# COLORED SPRITES IN ADDITIVE LAYERS (user, 2026-07-24): a soft radial-glow
 			# texture per particle + additive blend so they stack into light instead of
 			# reading as flat dots, and a lifetime ramp — hot white core -> the engine's
@@ -264,17 +264,35 @@ func apply_livery(color: Color) -> void:
 	if _livery_node != null and is_instance_valid(_livery_node):
 		_livery_node.queue_free()
 	var h := 0.5 * float(_hull_sprite.texture.get_width())   # half-width, sprite-local
-	var chevron := Polygon2D.new()
-	chevron.polygon = PackedVector2Array([
+	# Half-thick chevron band (~0.06h), forward-pointing.
+	var pts := PackedVector2Array([
 		Vector2(0.28 * h, 0.0),
 		Vector2(-0.06 * h, -0.38 * h),
-		Vector2(-0.18 * h, -0.38 * h),
-		Vector2(0.16 * h, 0.0),
-		Vector2(-0.18 * h, 0.38 * h),
+		Vector2(-0.12 * h, -0.38 * h),
+		Vector2(0.22 * h, 0.0),
+		Vector2(-0.12 * h, 0.38 * h),
 		Vector2(-0.06 * h, 0.38 * h)])
-	chevron.color = Color(color.r, color.g, color.b, 0.9)
-	_hull_sprite.add_child(chevron)
-	_livery_node = chevron
+	var root := Node2D.new()
+	# Thin BLACK BORDER first: a closed stroke on the chevron edge. The fill covers
+	# its inner half, leaving a hair of black outline for definition.
+	var loop := PackedVector2Array(pts)
+	loop.append(pts[0])
+	var border := Line2D.new()
+	border.points = loop
+	border.width = 0.035 * h
+	border.default_color = Color(0.0, 0.0, 0.0, 0.9)
+	border.joint_mode = Line2D.LINE_JOINT_ROUND
+	root.add_child(border)
+	# FILL at ~60% alpha so the hull's panelling reads THROUGH it — the "50-70%
+	# layer" look (a see-through tint, not a flat decal). NOTE: alpha, not a true
+	# multiply/overlay — those need a shader or baking into the sprite; this plays
+	# clean with the hull's clip stencil and reads the same on the white hull.
+	var fill := Polygon2D.new()
+	fill.polygon = pts
+	fill.color = Color(color.r, color.g, color.b, 0.6)
+	root.add_child(fill)
+	_hull_sprite.add_child(root)
+	_livery_node = root
 
 
 ## Shared soft radial-glow sprite for engine particles — a white dot fading to

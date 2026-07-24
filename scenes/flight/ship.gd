@@ -681,14 +681,18 @@ func note_hold_full() -> void:
 func _select_target_at(point: Vector2) -> void:
 	Tutor.note("radar")   # RIGHT-CLICK targeting learned by doing it
 	var best: Node2D = null
-	var best_d := TARGET_CLICK_RADIUS
-	# Hostiles and scannables (rocks) are both clickable targets.
-	for group in [enemy_group, "scannable"]:
+	var best_d := INF
+	# Click-select any ship you point at — foes, FRIENDLIES (Navy/guardians), or a
+	# scannable rock. Reach scales with the hull's hit_radius, so a big capital is
+	# clickable anywhere on it, not just dead-centre.
+	for group in [enemy_group, "friendly_targets", "scannable"]:
 		for node in get_tree().get_nodes_in_group(group):
-			if node.get("dead") == true:
+			if node == self or node.get("dead") == true:
 				continue
+			var hr: float = float(node.get("hit_radius")) if node.get("hit_radius") != null else 0.0
+			var reach: float = maxf(TARGET_CLICK_RADIUS, hr)
 			var d: float = point.distance_to(node.global_position)
-			if d < best_d:
+			if d < reach and d < best_d:
 				best_d = d
 				best = node
 	target = best
