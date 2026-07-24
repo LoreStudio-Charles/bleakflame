@@ -125,7 +125,7 @@ func _ready() -> void:
 	_energy_gauge = EnergyGauge.new()
 	_energy_gauge.ship = ship
 	add_child(_energy_gauge)
-	_center_rect(_energy_gauge, {}, [-150, -250, 14, 92])
+	_center_rect(_energy_gauge, {}, [-150, -380, 14, 92])
 	_gem_bar = GemBar.new()
 	_gem_bar.ship = ship
 	_left.add_child(_gem_bar)
@@ -135,7 +135,7 @@ func _ready() -> void:
 	_ord_gauge = OrdnanceGauge.new()
 	_ord_gauge.ship = ship
 	add_child(_ord_gauge)
-	_center_rect(_ord_gauge, {}, [180, -168, 130, 90])
+	_center_rect(_ord_gauge, {}, [180, -380, 130, 90])
 	Tutor.register("ord_gauge", _ord_gauge)
 	# Keybind hints moved to the Esc menu -> Controls (they were a near-invisible
 	# dim line on the dash). The dash is instruments now, not a cheat-sheet.

@@ -87,7 +87,7 @@ func _generate_components() -> void:
 	# HOMING ORDNANCE (the Dowager's escape tools): missiles that TRACK, hit hard,
 	# and run dry fast — a way out of a scrap, never a weapon for a long hunt.
 	# HEAT = fire-and-forget, re-seeks the nearest target every frame.
-	var heat := _weapon("Heat-Seeker Missile Pod", G.ADVANCED, 2, 7.0, 4.0, 42.0, 1.1,
+	var heat := _weapon("Heat-Seeker Missile Pod", G.ADVANCED, 2, 7.0, 4.0, 90.0, 1.1,
 		"Fire and forget — the warhead chases the hottest engine in the sky. Five rounds that hit like a grudge; enough to break a fight you didn't start, never enough for a long hunt.")
 	heat.weapon_range = 1860.0   # 3x reach (user, 2026-07-23) — it was hopeless up close only
 	heat.projectile_speed = 682.0   # +10%
@@ -111,7 +111,7 @@ func _generate_components() -> void:
 
 	# RADIO = command-guided: locks the shooter's SELECTED target and commits to
 	# it. Hits harder, tracks tighter, but goes dumb if the mark slips the leash.
-	var radio := _weapon("Radio-Guided Missile Rack", G.ADVANCED, 2, 8.0, 6.0, 58.0, 1.3,
+	var radio := _weapon("Radio-Guided Missile Rack", G.ADVANCED, 2, 8.0, 6.0, 120.0, 1.3,
 		"Command-guided to whatever you've got locked — pick a target, and four heavy warheads WILL find it. The reload's dear and it goes dumb if your mark slips the leash. Use them to leave, not to hunt.")
 	radio.weapon_range = 780.0
 	radio.projectile_speed = 680.0
@@ -120,9 +120,11 @@ func _generate_components() -> void:
 	radio.hit_bonus = 5.0
 	radio.blast_radius = 20.0
 	radio.homing = 150.0   # on-switch + fallback rate vs a size-less mark (a station)
-	# Flat 2.2 deg / 10 units == the old 150 deg/s at speed 680 (150*10/680) — same
-	# turn radius, now on the per-10-units system so it's speed-independent to tune.
-	radio.homing_by_band = PackedFloat32Array([2.2, 2.2, 2.2, 2.2, 2.2])
+	# Beefed turn rate to compensate for pure-pursuit (no gunnery lead), like the
+	# heat-seeker — but FLAT across sizes, not small-biased: the RGM commits to
+	# whatever YOU lock, fighter or cruiser, so it plays no size favourites. 3.0 was
+	# 2.2 (the behaviour-preserving conversion).
+	radio.homing_by_band = PackedFloat32Array([3.0, 3.0, 3.0, 3.0, 3.0])
 	radio.seek_nearest = false
 	radio.bolt_color = Color(0.5, 0.8, 1.0)
 	radio.bolt_scale = 1.6
