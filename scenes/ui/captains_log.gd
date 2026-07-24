@@ -62,7 +62,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event.keycode == KEY_L and not ship.dead and ship.docked_at == null:
 		visible = not visible
 		if visible:
-			Tutor.note("missions_hud")   # they found the log themselves
+			Tutor.did("log_opened")   # they found the log themselves
 			_refresh()
 		_esc_capture(visible)
 		Sfx.play("click", -10.0, 1.3 if visible else 0.9)

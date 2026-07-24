@@ -13,10 +13,8 @@ static var messages: Array[Dictionary] = []
 static func post(from: String, title: String, body: String) -> void:
 	messages.append({"from": from, "name": Npcs.display_name(from),
 		"title": title, "body": body, "read": false})
-	# Teach the inbox on ANY transmission, not just the first. Gating on
-	# `messages.size() == 1` meant a save that already had comms could never
-	# arm it again — and the lesson is once-ever anyway, guarded by Tutor.seen.
-	Tutor.arm("comms")
+	# The "comms" lesson arms itself off `comms_any` (any message present) via the
+	# declarative tutor — no arm() call needed here.
 
 
 static func unread() -> int:

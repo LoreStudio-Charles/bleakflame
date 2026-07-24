@@ -100,7 +100,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
 	if event.keycode == KEY_C and not ship.dead and ship.docked_at == null:
-		Tutor.note("comms_badge")   # they opened the archive themselves
+		Tutor.did("comms_opened")   # they opened the archive themselves
 		_toggle()
 	elif event.keycode == KEY_ESCAPE and _open:
 		_toggle()

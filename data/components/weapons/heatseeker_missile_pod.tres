@@ -4,17 +4,19 @@
 
 [resource]
 script = ExtResource("1_heat")
-damage = 42.0
+damage = 150.0
 fire_interval = 1.1
-projectile_speed = 620.0
-weapon_range = 620.0
+projectile_speed = 682.0
+weapon_range = 1860.0
 bolt_color = Color(1, 0.5, 0.28, 1)
 bolt_scale = 1.5
 magazine = 5
 ammo_price = 12
 hit_bonus = 6.0
 blast_radius = 26.0
+blast_falloff = 0.7
 homing = 100.0
+homing_by_band = PackedFloat32Array(4.0, 3.2, 2.4, 1.8, 1.4)
 seek_nearest = true
 display_name = "Heat-Seeker Missile Pod"
 description = "Fire and forget — the warhead chases the hottest engine in the sky. Five rounds that hit like a grudge; enough to break a fight you didn't start, never enough for a long hunt."

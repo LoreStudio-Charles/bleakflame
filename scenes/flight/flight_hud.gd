@@ -33,6 +33,7 @@ var _sys: Label
 var comm: CommTerminal
 var _speed_gauge: SpeedGauge
 var _cargo_gauge: CargoGauge
+var _energy_gauge: EnergyGauge
 var _ord_gauge: OrdnanceGauge
 var _gem_bar: GemBar
 var _missions: Label
@@ -90,6 +91,9 @@ func _ready() -> void:
 	_status.subject = ship
 	_left.add_child(_status)
 	_place(_status, "left", "effigy", [18, 52, 100, 100])
+	# The effigy carries HULL/SHIELD/ARMOR (health) AND the reactor pill (energy),
+	# so the "vitals" lesson points here to teach both at once.
+	Tutor.register("effigy", _status)
 
 	# Slim identity/credits/gems readout (the numeric stats are gauges now).
 	# A CRT set into the dash, not a caption floating on it: black screen, green
@@ -114,14 +118,24 @@ func _ready() -> void:
 	_left.add_child(_cargo_gauge)
 	_place(_cargo_gauge, "left", "cargo", [164, 58, 36, 96])
 	Tutor.register("cargo_gauge", _cargo_gauge)
+	# ENERGY floats near the SHIP (bottom-centre, LEFT of the crosshair) so it's read
+	# without looking away mid-fight — energy is the resource abilities live on now.
+	# (Ordnance mirrors it on the RIGHT below; guns that drain their own charge will
+	# join it there.) Child of the HUD, not the dash panel, for screen-centre anchor.
+	_energy_gauge = EnergyGauge.new()
+	_energy_gauge.ship = ship
+	add_child(_energy_gauge)
+	_center_rect(_energy_gauge, {}, [-150, -380, 14, 92])
 	_gem_bar = GemBar.new()
 	_gem_bar.ship = ship
 	_left.add_child(_gem_bar)
 	_place(_gem_bar, "left", "gems", [524, 76, 190, 56])
+	# ORDNANCE mirrors energy on the RIGHT of the crosshair, same combat-readable
+	# band. (Guns that spend their own charge will sit here too, per the layout.)
 	_ord_gauge = OrdnanceGauge.new()
 	_ord_gauge.ship = ship
-	_left.add_child(_ord_gauge)
-	_place(_ord_gauge, "left", "ordnance", [726, 58, 130, 96])
+	add_child(_ord_gauge)
+	_center_rect(_ord_gauge, {}, [180, -380, 130, 90])
 	Tutor.register("ord_gauge", _ord_gauge)
 	# Keybind hints moved to the Esc menu -> Controls (they were a near-invisible
 	# dim line on the dash). The dash is instruments now, not a cheat-sheet.
@@ -220,6 +234,14 @@ func _ready() -> void:
 	_group.offset_top = 40   # repositioned each frame under the missions block
 	_group.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	add_child(_group)
+
+	# Screen-edge bearing to the current target when it's OFF-SCREEN — so a
+	# Y-cycled ally (or any target you can't see) tells you which way to turn.
+	var bearing := TargetBearing.new()
+	bearing.ship = ship
+	bearing.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bearing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bearing)
 
 	var hold_settings := LabelSettings.new()
 	hold_settings.font_size = 12
@@ -341,6 +363,8 @@ func _process(_delta: float) -> void:
 	_group.visible = flying
 	_target_effigy.visible = flying
 	_target_info.visible = flying
+	_energy_gauge.visible = flying
+	_ord_gauge.visible = flying
 	_update_loot_tip(flying)
 	_hold_label.visible = flying and show_hold
 	if ship.dead:
@@ -391,6 +415,10 @@ func _process(_delta: float) -> void:
 	_target_effigy.subject = ship.target if is_instance_valid(ship.target) else null
 	_target_info.text = _target_text()
 	_center_note.text = _center_text()
+	# A refused ability flashes RED so it reads unmistakably as a failure; every
+	# other center note keeps the amber. (label_settings here is _center_note's own.)
+	_center_note.label_settings.font_color = UiTheme.DANGER \
+		if (ship.scan_note_t > 0.0 and ship.scan_note_fail) else UiTheme.AMBER
 	_hold_label.text = _hold_block() if show_hold else ""
 
 
@@ -506,6 +534,52 @@ func _approach_line() -> String:
 				pickup.payload_name(), pickup.payload_mass(),
 				ship.stats.cargo - ship.cargo_used()]
 	return ""
+
+
+## Screen-edge bearing arrow to the CURRENT target when it's off-screen. The world
+## target marker (ship._target_marker, teal/orange corner arcs) shows an on-screen
+## target fine, but a Y-cycled ally is often far out of view — this points the way.
+## Full-rect, screen-space (CanvasLayer), so it converts the target's WORLD position
+## with the viewport's canvas transform and clamps a chevron to the screen edge.
+class TargetBearing:
+	extends Control
+
+	var ship: TestShip
+	const MARGIN := 56.0
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if ship == null or ship.dead or ship.docked_at != null:
+			return
+		var t: Node2D = ship.target
+		if not is_instance_valid(t) or t.get("dead") == true:
+			return
+		var sp: Vector2 = get_viewport().get_canvas_transform() * t.global_position
+		var inner := Rect2(Vector2.ZERO, size).grow(-MARGIN)
+		if inner.has_point(sp):
+			return   # on-screen — the world marker is enough
+		var center := size * 0.5
+		var dir := sp - center
+		if dir.length() < 1.0:
+			return
+		# Clamp the projected position into the inner rect: the chevron rides the
+		# edge nearest the target, pointing outward toward it.
+		var at := Vector2(clampf(sp.x, inner.position.x, inner.end.x),
+			clampf(sp.y, inner.position.y, inner.end.y))
+		var hostile: bool = t.is_in_group(ship.enemy_group)
+		var col := Color(0.95, 0.45, 0.3) if hostile else Color(0.45, 0.9, 0.75)
+		var fwd := dir.normalized()
+		var perp := Vector2(-fwd.y, fwd.x)
+		var tip := at + fwd * 12.0
+		var b1 := at - fwd * 8.0 + perp * 9.0
+		var b2 := at - fwd * 8.0 - perp * 9.0
+		draw_colored_polygon(PackedVector2Array([tip, b1, b2]), col)
+		draw_polyline(PackedVector2Array([tip, b1, b2, tip]), Color(0, 0, 0, 0.65), 1.0)
+		var dist := int(ship.global_position.distance_to(t.global_position))
+		draw_string(get_theme_default_font(), at - fwd * 8.0 + Vector2(-16, 20),
+			"%du" % dist, HORIZONTAL_ALIGNMENT_CENTER, 60, 12, col)
 
 
 ## Top-right roster: the nearest friendlies within COMM RANGE — right-click a
@@ -1175,6 +1249,53 @@ class CargoGauge:
 		draw_string(f, Vector2(0, size.y - 1), "%d/%d" % [int(used), int(cap)],
 			HORIZONTAL_ALIGNMENT_CENTER, w, 11,
 			Color(0.95, 0.6, 0.55) if full else Color(0.72, 0.78, 0.88))
+
+
+## REACTOR ENERGY — a slatted vertical gauge beside speed + cargo, because energy
+## is a real resource now (abilities spend it, it recharges over time) and the
+## effigy pill alone was too small to read. Cyan when healthy, amber when low, red
+## when nearly dry; a bolt glyph + the current value so it can't be mistaken for
+## the cargo bar next to it.
+class EnergyGauge:
+	extends Control
+	var ship: TestShip
+	const SLATS := 16
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if ship == null or ship.build == null or ship.energy_max <= 0.0:
+			return
+		var frac: float = clampf(ship.energy / ship.energy_max, 0.0, 1.0)
+		var w := size.x
+		var body_h := size.y - 13.0
+		var lit := 0
+		if frac > 0.0:
+			lit = maxi(1, int(ceil(frac * SLATS)))
+		var on_col := Color(0.35, 0.85, 1.0)          # energy cyan
+		if frac < 0.15:
+			on_col = Color(0.95, 0.42, 0.36)          # critical — can't cast
+		elif frac < 0.35:
+			on_col = Color(0.95, 0.78, 0.36)          # low
+		var off_col := Color(0.12, 0.18, 0.26, 0.85)
+		draw_rect(Rect2(0, 0, w, body_h), Color(0.05, 0.09, 0.14, 0.9))
+		var step := body_h / float(SLATS)
+		for i in SLATS:
+			var y := body_h - float(i + 1) * step   # fills deck-up like a charge
+			draw_rect(Rect2(2.0, y + 0.5, w - 4.0, step - 1.0), on_col if i < lit else off_col)
+		# A lightning bolt across the top so it reads ENERGY, not a second hold.
+		var cx := w * 0.5
+		draw_polyline(PackedVector2Array([
+			Vector2(cx + 3, 2), Vector2(cx - 3, body_h * 0.42),
+			Vector2(cx + 1, body_h * 0.42), Vector2(cx - 3, body_h - 3)]),
+			Color(on_col, 0.9), 1.6)
+		var f := get_theme_default_font()
+		draw_string(f, Vector2(0, size.y - 1), "%d" % int(round(ship.energy)),
+			HORIZONTAL_ALIGNMENT_CENTER, w, 11, on_col)
 
 
 ## Ordnance readout: for each magazine weapon, a HOT (colour) / COLD (grey) box

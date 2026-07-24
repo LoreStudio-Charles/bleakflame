@@ -47,6 +47,9 @@ var _scan_time := 3.2
 var _scan_progress := -1.0    # < 0 = idle
 var scan_note := ""
 var scan_note_t := 0.0
+## True while the current center note is an ABILITY FAILURE (drawn red by the HUD,
+## so a refused skill reads unmistakably as failed, not as any other flash).
+var scan_note_fail := false
 ## Ensnared timer (kept alive by BreathCloud while inside one): heavy drag
 ## comes from the cloud; thrust gutters here. Burn free or be devoured.
 var snared := 0.0
@@ -137,9 +140,14 @@ var _blight_energy := 6.0   # seam: drains while attached once energy exists
 var _lance_cd := 0.0
 var _lance_cd_max := 6.0
 var _lance_damage := 120.0
-var _lance_speed := 1450.0
+var _lance_speed := 3600.0  # a FAST rail strike — a skill shot you aim by flying
 var _lance_range := 1500.0
-var _lance_homing := 40.0   # deg/s of bend — "slightly tracks", never a seeker
+var _lance_homing := 40.0   # non-ship fallback bend (deg/SEC); the table drives ships
+## Homing by the MARK's size band [light..super+], in DEGREES PER 10 UNITS TRAVELLED
+## (speed-independent; see Projectile). User rule (2026-07-23): MORE bend against the
+## small nimble hulls that are hard to hit, LESS against the big slow ones a straight
+## lead already lands — so the hit rate evens across sizes. Starting numbers, tune freely.
+const LANCE_HOMING_BY_BAND := [0.5, 0.4, 0.3, 0.2, 0.1]
 var _lance_energy := 8.0    # seam: charged from the reactor once energy exists
 var _drone_cd := 0.0
 var _drone_cd_max := 36.0
@@ -251,14 +259,11 @@ func apply_build(new_build: ShipBuild) -> void:
 	# exactly "knows scan", so read it from there.
 	scanner_fitted = _known_abilities.has("scan")
 	# This file IS the player ship, so no ownership guard is needed here.
-	Pilot.autowire(_known_abilities)   # a granted ability lands on [1] if the bar is bare
-	_arm_memorize_lesson()
-	# Ordnance is finite and costs credits to restock — a pilot who never learns
-	# [Z] burns rockets on wasps. Armed the moment a magazine weapon is aboard.
-	for m in _mounts:
-		if m.def != null and m.def.magazine > 0:
-			Tutor.arm("ordnance")
-			break
+	Pilot.autowire(_known_abilities)   # reconcile the bus: equip wires to next open slot, unequip drops it
+	# (buy_scanner + memorize now arm themselves off the dock/flight context via the
+	# declarative tutor — needs_scan and has_wired_ability — no arm() call here.)
+	# ("ordnance" lesson now arms itself off `carrying_ordnance` via the declarative
+	# tutor — a magazine weapon aboard — and completes when they first press [Z].)
 	_cloak_dur = 6.0
 	_cloak_cd_max = 14.0
 	for comp in _ability_sources():
@@ -292,7 +297,7 @@ func apply_build(new_build: ShipBuild) -> void:
 	_blackout_cd_max = 16.0; _blackout_dur = 3.0
 	_drone_cd_max = 36.0; _drone_life = 30.0; _drone_pulse = 3.0
 	_drone_heal = 14.0; _drone_range = 900.0
-	_lance_cd_max = 6.0; _lance_damage = 120.0; _lance_speed = 1450.0
+	_lance_cd_max = 6.0; _lance_damage = 120.0; _lance_speed = 3600.0
 	_lance_range = 1500.0; _lance_homing = 40.0; _lance_energy = 8.0
 	_blight_cd_max = 20.0; _blight_life = 30.0; _blight_pulse = 6.0
 	_blight_damage = 30.0; _blight_range = 900.0; _blight_energy = 6.0
@@ -559,6 +564,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_activate_gem(4)
 			KEY_Z:
 				_toggle_array(1, "ORDNANCE")   # guns stay hot; [Z] holds ordnance
+				Tutor.did("held_ordnance")     # completes the "ordnance" lesson
 
 
 ## Cycle sensor-range contacts in a group, nearest first, wrapping. The
@@ -669,7 +675,7 @@ func note_hold_full() -> void:
 	_hold_full_cd = 2.5
 	_flash_note("HOLD FULL %d/%.0f — [B] to manage cargo & jettison" % [
 		int(cargo_used()), stats.cargo])
-	Tutor.arm("salvage")   # the moment it first matters, and not before
+	# ("salvage" lesson arms itself off `hold_full` via the declarative tutor.)
 
 
 func _select_target_at(point: Vector2) -> void:
@@ -702,13 +708,13 @@ func on_collision_impact(dmg: float, impact_speed: float) -> void:
 
 func _try_start_scan() -> void:
 	if not scanner_fitted:
-		_flash_note("NO SCAN ABILITY — buy the Survey Routine chip (Armory), fit it in the Coupling")
+		_ability_fail("NO SCAN ABILITY — buy the Survey Routine chip (Armory), fit it in the Coupling")
 		return
 	if not _target_valid():
-		_flash_note("SCAN: no target selected (RMB / T)")
+		_ability_fail("SCAN: no target selected (RMB / T)")
 		return
 	if global_position.distance_to(target.global_position) > _scan_range:
-		_flash_note("SCAN: out of range — close to %.0f" % _scan_range)
+		_ability_fail("SCAN: out of range — close to %du" % int(_scan_range))
 		return
 	_scan_progress = 0.0
 	Sfx.play("click", -8.0, 0.8)
@@ -717,6 +723,18 @@ func _try_start_scan() -> void:
 func _flash_note(text: String) -> void:
 	scan_note = text
 	scan_note_t = 2.5
+	scan_note_fail = false
+
+
+## An ability that CANNOT fire aborts through here (user, 2026-07-23): an
+## unmistakable FAILURE cue — a red "✕" note that lingers a beat longer + a distinct
+## low thunk, NOT the soft nav click — so a skill that does nothing SAYS so, and
+## why. Callers abort BEFORE spending energy/cooldown, so a refused ability is free.
+func _ability_fail(reason: String) -> void:
+	scan_note = "✕ " + reason
+	scan_note_t = 3.2
+	scan_note_fail = true
+	Sfx.play("click", -6.0, 0.32)
 
 
 func _tick_scan(delta: float) -> void:
@@ -795,16 +813,16 @@ func _grant_scan_data(units: int) -> void:
 func _activate_gem(i: int) -> void:
 	var aid := Pilot.gem_at(i)
 	if aid == "":
-		Sfx.play("click", -16.0, 0.7)
+		_ability_fail("BUS SLOT %d EMPTY — wire an ability at dock (Pilot tab)" % (i + 1))
 		return
 	if not _known_abilities.has(aid):
-		_flash_note("%s — module not fitted" % Abilities.display_name(aid))
+		_ability_fail("%s — MODULE NOT FITTED (fit its chip in Engineering)" % Abilities.display_name(aid))
 		return
 	# Firing a wired ability in flight completes the "memorize" lesson's last step
 	# ("SYSTEM LIVE — press its key"). Without this the step had NO completion hook
 	# and hung 50s until the watchdog killed it — the most satisfying beat in the
 	# ability tutorial landed on a shrug. (Found in the stall log, 2026-07-23.)
-	Tutor.note("gem_bar")
+	Tutor.did("fired_ability")   # completes the "memorize" (now: firing) lesson
 	match aid:
 		"scan":
 			_try_start_scan()
@@ -845,8 +863,7 @@ func _engage_cloak() -> void:
 	if _cloak_t > 0.0:
 		return   # already running
 	if _cloak_cd > 0.0:
-		_flash_note("Cloak recharging — %.0fs" % ceil(_cloak_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("CLOAK COOLING — %.0fs" % ceil(_cloak_cd))
 		return
 	_cloak_t = _cloak_dur
 	_hidden = true
@@ -873,8 +890,7 @@ func _drop_cloak(reason: String) -> void:
 ## _bulwark_dur, and throw up the blue dome. A boss-burst cooldown, no offense.
 func _engage_bulwark() -> void:
 	if _bulwark_cd > 0.0:
-		_flash_note("Bulwark recharging — %.0fs" % ceil(_bulwark_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("BULWARK COOLING — %.0fs" % ceil(_bulwark_cd))
 		return
 	if not _spend(_bulwark_energy, "Bulwark"):
 		return
@@ -1086,8 +1102,7 @@ func _engage_decoy() -> void:
 	if _decoy_t > 0.0:
 		return
 	if _decoy_cd > 0.0:
-		_flash_note("Decoy recharging — %.0fs" % ceil(_decoy_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("DECOY COOLING — %.0fs" % ceil(_decoy_cd))
 		return
 	if not _spend(_decoy_energy, "Decoy"):
 		return
@@ -1109,8 +1124,7 @@ func _engage_repair() -> void:
 	if _repair_t > 0.0:
 		return
 	if _repair_cd > 0.0:
-		_flash_note("Repair Field recharging — %.0fs" % ceil(_repair_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("REPAIR FIELD COOLING — %.0fs" % ceil(_repair_cd))
 		return
 	if not _spend(_repair_energy, "Repair Field"):
 		return
@@ -1135,9 +1149,8 @@ func _spend(cost: float, label: String) -> bool:
 	if cost <= 0.0:
 		return true
 	if energy < cost:
-		_flash_note("NOT ENOUGH ENERGY — %s NEEDS %d (%d)" % [
+		_ability_fail("NOT ENOUGH ENERGY — %s needs %d, have %d" % [
 			label.to_upper(), int(ceil(cost)), int(floor(energy))])
-		Sfx.play("click", -16.0, 0.5)
 		Telemetry.note("energy", "%s starved (had %d, needed %d)" % [
 			label, int(floor(energy)), int(ceil(cost))])
 		return false
@@ -1244,8 +1257,7 @@ func energy_cost(aid: String) -> float:
 ## seven-second invulnerability bubble.
 func _engage_crystal() -> void:
 	if _crystal_cd > 0.0:
-		_flash_note("Lattice regrowing — %.0fs" % ceil(_crystal_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("POINT-DEFENSE LATTICE REGROWING — %.0fs" % ceil(_crystal_cd))
 		return
 
 	# Clamp a far cursor to the placement limit rather than refusing the press —
@@ -1265,7 +1277,11 @@ func _engage_crystal() -> void:
 	screen.shield_group = "player_team"   # cuts what is aimed at OUR side
 	get_parent().add_child(screen)
 	screen.global_position = global_position + offset
-	_flash_note("ARRAY DEPLOYED — AT MAX RANGE" if clamped else "ARRAY DEPLOYED")
+	# Name the FUNCTION at point of use — the ability is anti-ordnance point
+	# defence, and with nothing firing missiles at you it otherwise reads as "did
+	# nothing". This tells the pilot exactly what the screen is for.
+	_flash_note(("POINT-DEFENSE SCREEN — shreds incoming missiles (max range)" if clamped \
+		else "POINT-DEFENSE SCREEN — shreds incoming missiles"))
 	Sfx.play("click", -4.0, 1.6)
 
 
@@ -1282,25 +1298,20 @@ func _engage_crystal() -> void:
 ## shields on release.
 func _engage_overload() -> void:
 	if _overload_cd > 0.0:
-		_flash_note("Pulse capacitors charging — %.0fs" % ceil(_overload_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("OVERLOAD CHARGING — %.0fs" % ceil(_overload_cd))
 		return
 	if not is_instance_valid(target) or target is not BuildShip or target.dead:
-		_flash_note("NO TARGET FOR THE PULSE")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("OVERLOAD NEEDS A TARGET (RMB / T)")
 		return
 	if _is_ally(target):
-		_flash_note("THAT'S ONE OF OURS")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("OVERLOAD: that's one of ours")
 		return
 	if global_position.distance_to(target.global_position) > _overload_range:
-		_flash_note("TARGET OUT OF PULSE RANGE")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("OVERLOAD: target out of range (max %du)" % int(_overload_range))
 		return
 	for node in get_parent().get_children():
 		if node is ShieldOverload and node.target == target:
-			_flash_note("SHIELDS ALREADY DOWN")
-			Sfx.play("click", -16.0, 0.6)
+			_ability_fail("OVERLOAD: that target's shields are already down")
 			return
 
 	if not _spend(_overload_energy, "Pulse"):
@@ -1328,8 +1339,7 @@ func _engage_jinx() -> void:
 	if _jinx_t > 0.0:
 		return   # already running
 	if _jinx_cd > 0.0:
-		_flash_note("JINX tables reloading — %.0fs" % ceil(_jinx_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("JINX RELOADING — %.0fs" % ceil(_jinx_cd))
 		return
 	if not _spend(_jinx_energy, "JINX"):
 		return
@@ -1359,32 +1369,26 @@ func _engage_jinx() -> void:
 ## different mistakes and the pilot has to know which one they made.
 func _engage_killshot() -> void:
 	if _killshot_cd > 0.0:
-		_flash_note("Coilgun cycling — %.0fs" % ceil(_killshot_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("KILLSHOT COOLING — %.0fs" % ceil(_killshot_cd))
 		return
 	if not is_instance_valid(target) or target is not BuildShip or target.dead:
-		_flash_note("KILLSHOT NEEDS A MARK")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("KILLSHOT NEEDS A MARK — select a target (RMB / T)")
 		return
 	if _is_ally(target):
-		_flash_note("THAT'S ONE OF OURS")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("KILLSHOT: that's one of ours")
 		return
 
 	var to_target: Vector2 = target.global_position - global_position
 	var dist := to_target.length()
 	if dist < _killshot_min_range:
-		_flash_note("TOO CLOSE FOR THE COILGUN — OPEN THE RANGE")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("KILLSHOT: TOO CLOSE — open the range past %du" % int(_killshot_min_range))
 		return
 	if dist > _killshot_max_range:
-		_flash_note("MARK BEYOND COILGUN REACH")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("KILLSHOT: mark beyond reach (max %du)" % int(_killshot_max_range))
 		return
 	var off_axis := absf(rad_to_deg(Vector2.RIGHT.rotated(rotation).angle_to(to_target)))
 	if off_axis > _killshot_cone * 0.5:
-		_flash_note("MARK OUT OF ARC — PUT THE NOSE ON IT")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("KILLSHOT: mark out of arc — put the nose on it")
 		return
 
 	if not _spend(_killshot_energy, "Killshot"):
@@ -1428,20 +1432,16 @@ func _engage_killshot() -> void:
 ## mashing the gem can never multiply the damage.
 func _engage_blight() -> void:
 	if _blight_cd > 0.0:
-		_flash_note("Timbers culturing — %.0fs" % ceil(_blight_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("BLIGHT CULTURING — %.0fs" % ceil(_blight_cd))
 		return
 	if not is_instance_valid(target) or target is not BuildShip or target.dead:
-		_flash_note("NO TARGET FOR THE TIMBERS")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("BLIGHT NEEDS A TARGET (RMB / T)")
 		return
 	if _is_ally(target):
-		_flash_note("THE BLIGHT DOESN'T KNOW FRIENDS — PICK A FOE")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("BLIGHT: pick a foe, not one of ours")
 		return
 	if global_position.distance_to(target.global_position) > _blight_range:
-		_flash_note("TARGET OUT OF BLIGHT RANGE")
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("BLIGHT: target out of range (max %du)" % int(_blight_range))
 		return
 
 	if not _spend(_blight_energy, "Timbers"):
@@ -1477,8 +1477,7 @@ func _engage_blight() -> void:
 ## rendering, blast, grace and the damage_mult path for free.
 func _engage_lance() -> void:
 	if _lance_cd > 0.0:
-		_flash_note("Lance charging — %.0fs" % ceil(_lance_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("LANCE CHARGING — %.0fs" % ceil(_lance_cd))
 		return
 	if not _spend(_lance_energy, "Lance"):
 		return
@@ -1488,15 +1487,22 @@ func _engage_lance() -> void:
 	def.damage = _lance_damage
 	def.projectile_speed = _lance_speed
 	def.weapon_range = _lance_range
+	# Tracking scales to the MARK's size via the reusable per-band table (Projectile
+	# resolves it each frame): a nimble fighter gets the most bend, a capital the
+	# least. `homing` stays the base rate + the gate (non-ship marks fall back to it).
 	def.homing = _lance_homing
+	def.homing_by_band = PackedFloat32Array(LANCE_HOMING_BY_BAND)
 	def.seek_nearest = false        # it bends toward YOUR mark, never picks one
 	def.bolt_color = Color(0.62, 0.88, 1.0)
 	def.bolt_scale = 2.4
 	def.beam_tail = 26.0            # the javelin shape — a long drawn bolt
 
+	# A skill shot, but a landable one: give it the same forgiving hit radius the
+	# player's guns get (mount.shot_grace = 5) and a touch more, since the lance is a
+	# fat javelin (bolt_scale 2.4) and reading a near-miss as a miss feels unfair.
 	var nose := global_position + Vector2.RIGHT.rotated(rotation) * 26.0
 	Projectile.spawn(get_parent(), nose, Vector2.RIGHT.rotated(rotation), def,
-		enemy_group, 0.0, Pilot.damage_mult(), self)
+		enemy_group, 7.0, Pilot.damage_mult(), self)
 	_flash_note("LANCE AWAY")
 	Sfx.play("shot", -2.0, 0.55)
 
@@ -1508,21 +1514,18 @@ func _engage_lance() -> void:
 ## trickle that follows one ship anywhere.
 func _engage_drone() -> void:
 	if _drone_cd > 0.0:
-		_flash_note("Tender Drone rebuilding — %.0fs" % ceil(_drone_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("TENDER DRONE REBUILDING — %.0fs" % ceil(_drone_cd))
 		return
 
 	var patient: Node2D = self
 	if is_instance_valid(target) and target is BuildShip and not target.dead:
 		if _is_ally(target):
 			if global_position.distance_to(target.global_position) > _drone_range:
-				_flash_note("TARGET OUT OF TENDER RANGE")
-				Sfx.play("click", -16.0, 0.6)
+				_ability_fail("TENDER DRONE: ally out of range (max %du)" % int(_drone_range))
 				return
 			patient = target
 		else:
-			_flash_note("TENDER DRONE WON'T SERVICE A HOSTILE")
-			Sfx.play("click", -16.0, 0.6)
+			_ability_fail("TENDER DRONE won't service a hostile — it patches self/allies")
 			return
 
 	if not _spend(_drone_energy, "Tender Drone"):
@@ -1558,16 +1561,13 @@ func _run_repair(delta: float) -> void:
 ## Miner Tangle Shot: clamp a selected target's speed for a few seconds.
 func _engage_tangle() -> void:
 	if _tangle_cd > 0.0:
-		_flash_note("Tangle recharging — %.0fs" % ceil(_tangle_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("TANGLE COOLING — %.0fs" % ceil(_tangle_cd))
 		return
 	if target == null or not is_instance_valid(target) or target.get("dead") == true:
-		_flash_note("Tangle Shot — no target selected")
-		Sfx.play("click", -16.0, 0.7)
+		_ability_fail("TANGLE SHOT needs a target (RMB / T)")
 		return
 	if global_position.distance_to(target.global_position) > _tangle_range:
-		_flash_note("Tangle Shot — target out of range")
-		Sfx.play("click", -16.0, 0.7)
+		_ability_fail("TANGLE SHOT: target out of range")
 		return
 	if not _spend(_tangle_energy, "Tangle"):
 		return
@@ -1584,8 +1584,7 @@ func _engage_tangle() -> void:
 ## with none), stopping short of the target.
 func _engage_warp() -> void:
 	if _warp_cd > 0.0:
-		_flash_note("Warp recharging — %.0fs" % ceil(_warp_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("MICRO-WARP COOLING — %.0fs" % ceil(_warp_cd))
 		return
 	var dir := Vector2.RIGHT.rotated(rotation)
 	var dist := _warp_dist
@@ -1610,8 +1609,7 @@ func _engage_blackout() -> void:
 	if _blackout_t > 0.0:
 		return
 	if _blackout_cd > 0.0:
-		_flash_note("Blackout recharging — %.0fs" % ceil(_blackout_cd))
-		Sfx.play("click", -16.0, 0.6)
+		_ability_fail("BLACKOUT COOLING — %.0fs" % ceil(_blackout_cd))
 		return
 	if not _spend(_blackout_energy, "Blackout"):
 		return

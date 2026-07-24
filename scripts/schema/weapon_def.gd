@@ -36,13 +36,29 @@ extends ComponentDef
 ## near (AA-style) and splash-damages everything inside this radius, with
 ## falloff toward the rim. The splash is what kills — near enough IS a hit.
 @export var blast_radius := 0.0
+## Splash damage retained at the RIM of the blast, 0..1 (the centre is always full).
+## Since a fuzed blast detonates at ~0.7*radius, this is what really sets a missile's
+## bite: 0.45 (default) lands ~62% of `damage`, 0.7 lands ~79%. Lower = a tight,
+## centre-only weapon; higher = a reliable one even on a near miss.
+@export var blast_falloff := 0.45
 ## HOMING: > 0 = the shot STEERS toward a target, this many degrees/sec of turn
-## (0 = a straight bolt). Missiles track; guns don't.
+## (0 = a straight bolt). Missiles track; guns don't. Also the ON-SWITCH: >0
+## means "this homes" even when `homing_by_band` supplies the actual turn rate,
+## and it's the fallback deg/second rate against a size-less mark (station, rock).
 @export var homing := 0.0
 ## Seeker type (homing only): true = HEAT, fire-and-forget, re-acquires the
 ## nearest target every frame (hard to lose). false = RADIO, locks the shooter's
 ## SELECTED target at launch and commits to it (precise, but dumb if it's lost).
 @export var seek_nearest := false
+## PER-SIZE homing table (homing only): bend in DEGREES PER 10 UNITS TRAVELLED,
+## indexed by the TARGET's size band [LIGHT, MEDIUM, HEAVY, SUPER_HEAVY,
+## SUPER_HEAVY_PLUS]. Per-DISTANCE, not per-second, so it's speed-independent and
+## easy to tune (a fast bolt and a slow one bend the same over the same ground).
+## Empty = flat deg/second `homing` for everyone. This is how one weapon tracks the
+## small nimble hulls harder (a lance) while another tracks only the big ones (a
+## proton torpedo: ~0 vs a fighter, high vs a capital — "murder on a cruiser,
+## dodged by a swarm"). Needs exactly 5 entries; a non-ship mark falls back to `homing`.
+@export var homing_by_band: PackedFloat32Array = PackedFloat32Array()
 
 
 func traverse_speed() -> float:

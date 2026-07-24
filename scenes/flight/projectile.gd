@@ -28,11 +28,16 @@ var grace := 0.0
 var mining := 0.0
 ## Proximity-fuzed blast radius (0 = plain bolt). Near a target = boom.
 var blast := 0.0
+## Damage kept at the blast rim (0..1); centre is always full. See WeaponDef.
+var blast_falloff := 0.45
 ## The ship that fired this — never hit your own shooter (matters once a ship can
 ## share a target group with its own bolts, e.g. a WANTED player in hostile_team).
 var shooter: Node = null
 ## Homing (missiles): turn rate deg/s toward the tracked target (0 = straight).
 var homing := 0.0
+## Per-size homing override (5 entries = deg/s by target size band; empty = flat
+## `homing`). Lets a weapon track small hulls harder or only big ones. See WeaponDef.
+var homing_by_band := PackedFloat32Array()
 ## true = HEAT seeker (re-acquire nearest each frame); false = RADIO (locked target).
 var seek_nearest := false
 var target_ref: Node = null   # RADIO's locked target (or HEAT's current pick)
@@ -70,7 +75,9 @@ static func spawn(parent: Node, pos: Vector2, dir: Vector2, def: WeaponDef,
 	p.bolt_scale = def.bolt_scale
 	p.beam_tail = def.beam_tail
 	p.blast = def.blast_radius
+	p.blast_falloff = def.blast_falloff
 	p.homing = def.homing
+	p.homing_by_band = def.homing_by_band
 	p.seek_nearest = def.seek_nearest
 	p.ordnance = def.magazine > 0   # the game's own definition of ordnance
 	if def.homing > 0.0 and p_shooter != null:
@@ -128,9 +135,18 @@ func _physics_process(delta: float) -> void:
 		if tgt != null:
 			var to_t: Vector2 = tgt.global_position - global_position
 			if to_t.length() > 1.0:
+				# The per-size table is DEG PER 10 UNITS TRAVELLED — speed-independent
+				# (a fast bolt and a slow one bend the same amount over the same ground),
+				# so it's tunable without re-deriving against projectile speed. A weapon
+				# with no table (or a non-ship mark) uses the legacy flat deg/SECOND.
+				var band := _band_of(tgt) if homing_by_band.size() >= 5 else -1
+				var max_turn: float
+				if band >= 0:
+					max_turn = deg_to_rad(homing_by_band[band]) * (velocity.length() * delta / 10.0)
+				else:
+					max_turn = deg_to_rad(homing) * delta
 				var cur := velocity.normalized()
-				var turn := clampf(cur.angle_to(to_t.normalized()),
-					-deg_to_rad(homing) * delta, deg_to_rad(homing) * delta)
+				var turn := clampf(cur.angle_to(to_t.normalized()), -max_turn, max_turn)
 				velocity = cur.rotated(turn) * velocity.length()
 				rotation = velocity.angle()
 	position += velocity * delta
@@ -202,6 +218,15 @@ func _homing_target() -> Node:
 	return null
 
 
+## The target's size band [0..4] for the per-size homing table, or -1 if it isn't a
+## ship with a hull (a leviathan / anomaly falls back to the flat homing rate).
+func _band_of(node: Node) -> int:
+	var build = node.get("build")
+	if build != null and build.get("hull") != null:
+		return int(build.hull.size_band)
+	return -1
+
+
 func _nearest_in_group() -> Node:
 	var best: Node = null
 	var best_d := INF
@@ -234,13 +259,13 @@ func _detonate() -> void:
 		var r: float = target.get("hit_radius") if target.get("hit_radius") != null else 12.0
 		var d := maxf(global_position.distance_to(target.global_position) - r, 0.0)
 		if d <= blast:
-			target.take_damage(damage * lerpf(1.0, 0.45, d / blast), src)
+			target.take_damage(damage * lerpf(1.0, blast_falloff, d / blast), src)
 	for rock in get_tree().get_nodes_in_group("asteroids"):
 		if not is_instance_valid(rock):
 			continue
 		var d := maxf(global_position.distance_to(rock.global_position) - rock.hit_radius, 0.0)
 		if d <= blast:
-			rock.hit(damage * lerpf(1.0, 0.45, d / blast), mining)
+			rock.hit(damage * lerpf(1.0, blast_falloff, d / blast), mining)
 	queue_free()
 
 

@@ -290,7 +290,57 @@ func _init() -> void:
 		print("FAIL: corrupt save entries accepted")
 		failures += 1
 
+	# EPHEMERAL QUEST POIs (user rule, 2026-07-23): a quest-only marker must NEVER be
+	# revealed by flying past, must appear only while its stage is live, and vanish
+	# the instant it isn't — no orphaned map clutter, no spoiler.
 	Quests.reset()
+	PoiMap.reset()
+	PoiMap.register("cold_patch_site", "Anomalous Return", Vector2(4200, -1600), "signal", false, true)
+	# 1. Proximity must NOT chart it (this is the whole bug).
+	PoiMap.tick_discovery(Vector2(4200, -1600), 5000.0)
+	if PoiMap.is_discovered("cold_patch_site"):
+		print("FAIL: ephemeral POI was proximity-charted by flying near it")
+		failures += 1
+	# 2. It reveals only while its stage is the live objective.
+	Quests.active["cold_patch"] = {"stage": 0, "count": 0}
+	Quests.refresh_pois()
+	if not PoiMap.is_discovered("cold_patch_site"):
+		print("FAIL: ephemeral POI not revealed while its stage is active")
+		failures += 1
+	# 3. And it disappears the moment that stage is no longer active.
+	Quests.active.erase("cold_patch")
+	Quests.refresh_pois()
+	if PoiMap.is_discovered("cold_patch_site"):
+		print("FAIL: ephemeral POI lingered after its quest ended")
+		failures += 1
+
+	# ENTERING A STAGE RE-POINTS THE AUTO-WAYPOINT (the "Ask the Only One Who Ran"
+	# bug, 2026-07-23): a lingering diamond from the previous beat must NOT block the
+	# new objective's mark — but a MANUAL chart tag is still respected.
+	Quests.reset()
+	PoiMap.reset()
+	PoiMap.register("planetoid", "Epharon", Vector2(500, 0), "planet", true)
+	PoiMap.register("rust_shoal", "The Rust Shoal", Vector2(2600, -7600), "den")
+	PoiMap.set_waypoint("planetoid", false)          # a lingering AUTO mark
+	Quests.active["rust_shoal"] = {"stage": 0, "count": 0}
+	Quests._enter_stage("rust_shoal")
+	if PoiMap.waypoint_id != "rust_shoal":
+		print("FAIL: entering a stage did not re-point the auto-waypoint (got %s)" % PoiMap.waypoint_id)
+		failures += 1
+	# A hand-tagged waypoint wins over the auto re-point.
+	Quests.reset()
+	PoiMap.reset()
+	PoiMap.register("planetoid", "Epharon", Vector2(500, 0), "planet", true)
+	PoiMap.register("rust_shoal", "The Rust Shoal", Vector2(2600, -7600), "den")
+	PoiMap.set_waypoint("planetoid", true)           # player hand-tagged
+	Quests.active["rust_shoal"] = {"stage": 0, "count": 0}
+	Quests._enter_stage("rust_shoal")
+	if PoiMap.waypoint_id != "planetoid":
+		print("FAIL: a manual waypoint was clobbered by a stage entry")
+		failures += 1
+
+	Quests.reset()
+	PoiMap.reset()
 	Research.reset()
 	Wallet.credits = 0
 	Wallet.xp = 0

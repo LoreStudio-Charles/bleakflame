@@ -36,6 +36,9 @@ const ORIVEL_ORBITAL := Vector2(-84000, -52000) + Vector2(8200, -3600)
 const ORIVEL_ORBITAL_OFFSET := Vector2(8200, -3600)
 
 const DRONE_COUNT := 2
+## Pirate kills that break Vyper's truce (Pilot.shoal_truce_kills). A promise, not
+## a suicide pact — betray it this many times and the Shoal hunts you again.
+const SHOAL_TRUCE_BREAK := 10
 
 @onready var ship: TestShip = $Ship
 ## Untyped: flight_hud.gd has no class_name, so this is duck-typed (we only
@@ -156,10 +159,13 @@ func _ready() -> void:
 	# Just off the lane, planet-side — and well OUTSIDE the planetoid's
 	# 2080-unit gravity well: a quest diamond must never drag a new pilot
 	# into a gravity check they didn't sign up for.
-	PoiMap.register("meridian_fix", "Last Fix: Long Meridian", Vector2(6950, 3400), "signal")
-	PoiMap.register("cold_patch_site", "Anomalous Return", Vector2(4200, -1600), "signal")
-	PoiMap.register("ambush_site", "Plotted Intercept", Vector2(2800, -2800), "signal")
-	PoiMap.register("tendril_site", "Severed Tendril", Vector2(3400, -3300), "signal")
+	# EPHEMERAL (ephemeral=true): quest-ONLY markers — nothing is there unless the
+	# beat places it. They never proximity-chart, and Quests.refresh_pois shows them
+	# ONLY while their stage is live, then hides them (no orphaned map clutter).
+	PoiMap.register("meridian_fix", "Last Fix: Long Meridian", Vector2(6950, 3400), "signal", false, true)
+	PoiMap.register("cold_patch_site", "Anomalous Return", Vector2(4200, -1600), "signal", false, true)
+	PoiMap.register("ambush_site", "Plotted Intercept", Vector2(2800, -2800), "signal", false, true)
+	PoiMap.register("tendril_site", "Severed Tendril", Vector2(3400, -3300), "signal", false, true)
 	PoiMap.register("waygate", "The Ancient Gate", Vector2(-6800, 8200), "gate")
 	if PoiMap.waypoint_id == "":
 		PoiMap.waypoint_id = "station"   # a new pilot can always find home
@@ -197,7 +203,10 @@ func _populate_world() -> void:
 	for i in DRONE_COUNT:
 		_spawn_drone(_drone_spot())
 	_spawn_guard_wing()
-	for kind in ["raider", "raider", "brawler", "wasp", "wasp"]:
+	# Denser lanes (user, 2026-07-23): more raiders + wasps, the LIGHT harassers, so
+	# the sky feels busier without stacking heavies on a new pilot. 4 raider / 1
+	# brawler / 5 wasp on the trade lane (+ 1 vulture + the Verge prowler elsewhere).
+	for kind in ["raider", "raider", "raider", "raider", "brawler", "wasp", "wasp", "wasp", "wasp", "wasp"]:
 		var route := _patrol_route(kind)
 		# Start mid-route: the world is already in motion, not queued at home.
 		_spawn_pirate(route[randi() % route.size()] + _jitter(500.0), kind, route)
@@ -205,17 +214,26 @@ func _populate_world() -> void:
 	_spawn_pirate(vulture_route[0] + _jitter(700.0), "vulture", vulture_route)
 	_spawn_belt(BELT_CENTER, BELT_COUNT, BELT_SEED, 4)
 	_spawn_belt(VERGE_CENTER, VERGE_COUNT, VERGE_SEED, 6)
-	# Trader-guild lane traffic: civilian haulers running the trade routes and
-	# the gate road. World-anchored like the pirates — you meet them en route.
+	# Trader-guild lane traffic: civilian haulers running the trade lane (east) and
+	# the Verge run (west). World-anchored like the pirates — you meet them en route.
 	var trade_lane: Array[Vector2] = [Vector2(1300, 850), LANE_A, LANE_B, Vector2(7500, 4650)]
-	var gate_run: Array[Vector2] = [Vector2(-900, 700), Vector2(-3800, 4400), Vector2(-6200, 7600)]
 	_spawn_trader(trade_lane[randi() % trade_lane.size()] + _jitter(400.0), trade_lane)
 	_spawn_trader(trade_lane[randi() % trade_lane.size()] + _jitter(400.0), trade_lane)
-	_spawn_trader(gate_run[randi() % gate_run.size()] + _jitter(400.0), gate_run)
 	# One Guardian patrol per lane: flying the road, gunning pirates it meets —
 	# and exposed out there, so the Cinderweb's hunger can take them too.
 	_spawn_lane_guardian(trade_lane[1] + _jitter(300.0), trade_lane)
-	_spawn_lane_guardian(gate_run[0] + _jitter(300.0), gate_run)
+	# Western lane -> the Verge (user, 2026-07-23): the gate road is dead now (the
+	# WayGate is closed), so the hauler + Guardian that used to run it work the Verge
+	# instead, and a lone raider prowls the APPROACH
+	# — deliberately short of VERGE_CENTER, so the Verge stays the safer field vs the
+	# Shoal (just no longer risk-free to reach). A Guardian rides the run too.
+	var verge_run: Array[Vector2] = [Vector2(-1400, 1200), Vector2(-4200, 2600),
+		VERGE_CENTER + _jitter(500.0)]
+	_spawn_trader(verge_run[randi() % verge_run.size()] + _jitter(400.0), verge_run)
+	var verge_prowl: Array[Vector2] = [Vector2(-1900, 900), Vector2(-4600, 2200),
+		Vector2(-5400, 3900)]
+	_spawn_pirate(verge_prowl[randi() % verge_prowl.size()] + _jitter(400.0), "raider", verge_prowl)
+	_spawn_lane_guardian(verge_run[1] + _jitter(300.0), verge_run)
 
 
 ## Fixed-seed scatter: a Belt is a charted place; its rocks stay put. Each
@@ -471,33 +489,42 @@ func _tick_flight_lessons() -> void:
 			hunted = true
 			break
 	Tutor.safe = not hunted and (sheltered or nearest > TEACH_THREAT_R)
-	Tutor.pump()
 
-	# Doug exists the moment ore does. Told in FLIGHT, because the answer is a
-	# place to fly to, not a screen to open.
-	if not Pilot.has_met("doug"):
-		for key in ship.commodities:
-			if str(key).ends_with("_ore") and int(ship.commodities[key]) > 0:
-				Tutor.arm("meet_doug")
-				break
-	# The log, once there is anything IN it worth reading.
-	if not Research.journal.is_empty():
-		Tutor.arm("log")
-	# Running Dark: taught the moment the pilot has SPENT energy on an ability
-	# (pool below full) AND still has a live one gemmed — so "recharge fast + swap
-	# safely" both apply right now. Shows at the next safe beat.
-	if ship.energy_max > 0.0 and ship.energy < ship.energy_max * 0.6:
-		for i in Pilot.GEM_SLOTS:
-			var aid := Pilot.gem_at(i)
-			if aid != "" and ship._known_abilities.has(aid):
-				Tutor.arm("running_dark")
-				break
-	# Targeting: taught on CONTACT, not in the melee — something is on sensors
-	# but still far enough out that reading a callout costs nothing.
-	if ship.target == null and nearest > TEACH_THREAT_R:
-		var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
-		if nearest < reach:
-			Tutor.arm("targeting")
+	# DECLARATIVE TUTOR (2026-07-23): hand the tutor a snapshot of what's true right
+	# now and let each migrated lesson's own predicate decide arming + completion
+	# (Tutor.observe -> Tutor._build_preds). These flight lessons — vitals, meet_doug,
+	# log, running_dark, targeting — used to be scattered arm() calls here.
+	var has_ore := false
+	for key in ship.commodities:
+		if str(key).ends_with("_ore") and int(ship.commodities[key]) > 0:
+			has_ore = true
+			break
+	var live_ability := false
+	for i in Pilot.GEM_SLOTS:
+		var aid := Pilot.gem_at(i)
+		if aid != "" and ship._known_abilities.has(aid):
+			live_ability = true
+			break
+	var carrying_ordnance := false
+	for m in ship._mounts:
+		if m.def != null and m.def.magazine > 0:
+			carrying_ordnance = true
+			break
+	var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
+	Tutor.observe({
+		"flying": true,
+		"has_ore": has_ore,
+		"met_doug": Pilot.has_met("doug"),
+		"journal": not Research.journal.is_empty(),
+		"energy_spent": ship.energy_max > 0.0 and ship.energy < ship.energy_max * 0.6 and live_ability,
+		"has_wired_ability": live_ability,
+		"has_target": ship.target != null and is_instance_valid(ship.target),
+		"contact_far": nearest > TEACH_THREAT_R and nearest < reach,
+		"waypoint_set": PoiMap.waypoint_id != "",
+		"comms_any": not Comms.messages.is_empty(),
+		"hold_full": ship.cargo_used() >= float(ship.stats.cargo),
+		"carrying_ordnance": carrying_ordnance,
+	})
 
 
 func _tick_distress(delta: float) -> void:
@@ -772,9 +799,8 @@ func _tick_chart_hint() -> void:
 	var line := "\"Colony's already on your chart. Press [G] for the nav map, set it as your waypoint, and follow the diamond. The Reach is bigger than it looks.\""
 	ship._flash_note("RUEL: %s" % line)
 	Comms.post("ruel", "Dirtside Run", line)
-	# Ruel SAYS it; the ping SHOWS it. The comm scrolls away in seconds — the
-	# bracket on the scope stays until they actually open the chart.
-	Tutor.arm("chart")
+	# Ruel SAYS it; the ping SHOWS it. The "chart" lesson arms itself off a set
+	# waypoint via the declarative tutor and completes when they open the chart.
 	Sfx.play("click", -10.0, 1.1)
 
 
@@ -1432,6 +1458,33 @@ func _grant_kill_xp(pirate: Node, kind: String) -> void:
 	Standing.add("privateer", -1)   # ...and the Shoal remembers who guns down their own
 	if not ship.dead:
 		ship._flash_note("+%d XP" % xp)
+	# Vyper's truce is a PROMISE, not immunity (user, 2026-07-23 — "kill ten and
+	# it's: No truce. That was her promise."). Gun down enough of the Shoal's own
+	# under their own banner and they revoke it — you become prey again. This also
+	# closes the exploit of farming pirates who won't fire back while the truce holds.
+	if Pilot.shoal_invited:
+		Pilot.shoal_truce_kills += 1
+		if Pilot.shoal_truce_kills >= SHOAL_TRUCE_BREAK:
+			_break_shoal_truce()
+
+
+## Vyper revokes the banner. Breaking Krayt's OWN truce is the one true betrayal,
+## so it isn't a slap — it SPIKES privateer standing straight to the floor (-100,
+## KoS with the Shoal) in a single stroke. shoal_invited flips off, which both makes
+## Standing.shoal_open() false (the Shoal hunts again) AND disarms the counter in
+## _grant_kill_xp, so the spike can only ever land ONCE.
+func _break_shoal_truce() -> void:
+	Pilot.shoal_invited = false
+	# Land exactly at -100 no matter the current standing (add() clamps to MIN).
+	Standing.add("privateer", -100 - Standing.get_points("privateer"))
+	var line := "Vyper's voice comes back, and every trace of the grief is gone from it. "
+	line += "\"You spilled our blood under our OWN banner. That was Krayt's name you fouled "
+	line += "— his memory, his last promise. It's void. There's no truce. Fly careful now, "
+	line += "pilot. We remember faces.\""
+	Comms.post("vyper", "Rust Shoal", line)
+	if not ship.dead:
+		ship._flash_note("TRUCE BROKEN — the Rust Shoal hunts you now")
+	Sfx.play("static", -8.0)
 
 
 func _respawn_pirate_later(kind: String) -> void:

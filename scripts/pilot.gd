@@ -65,6 +65,10 @@ static var skills := {}          # skill id -> ranks bought
 ## Krayt's invitation (from the hermit) is your first key to the Rust Shoal — the
 ## campaign grants access to the outlaw haven, before any standing is earned.
 static var shoal_invited := false
+## Pirates killed WHILE the truce holds. Vyper's banner is a promise, not a
+## suicide pact: gun down enough of the Shoal's own and they revoke it (see
+## flight_test SHOAL_TRUCE_BREAK). Persisted so the tally survives a save.
+static var shoal_truce_kills := 0
 
 ## The ABILITY GEMS: the [1]-[5] active bar. Each slot holds an ability id (from
 ## Abilities) or "" (empty). You MEMORIZE abilities into gems at dock; only a
@@ -376,6 +380,7 @@ static func to_dict() -> Dictionary:
 		"portrait": portrait_path, "background": background, "bio": bio,
 		"profession": profession, "skills": skills.duplicate(),
 		"gems": gems.duplicate(), "shoal_invited": shoal_invited,
+		"shoal_truce_kills": shoal_truce_kills,
 		"met": met.duplicate()}
 
 
@@ -394,6 +399,7 @@ static func from_dict(data: Dictionary) -> void:
 	if profession != "" and Professions.def(profession).is_empty():
 		profession = ""
 	shoal_invited = bool(data.get("shoal_invited", false))
+	shoal_truce_kills = int(data.get("shoal_truce_kills", 0))
 	met.clear()
 	for who in data.get("met", []):
 		met.append(str(who))
@@ -417,13 +423,28 @@ static func from_dict(data: Dictionary) -> void:
 ## completely empty. This is what "the bar works out of the box" was meant to
 ## do: it fires when a fit actually GRANTS something, instead of pre-wiring an
 ## ability the hull cannot use and rendering it crossed out.
+## Reconcile the bus with what the current fit KNOWS (called every apply_build, i.e.
+## on every fit/unfit/board). UNEQUIP a chip -> its ability drops off the bus; EQUIP
+## a chip -> its ability is wired into the first open slot (user, 2026-07-23). Gems
+## for abilities that are STILL fitted stay exactly where the pilot placed them —
+## only unfitted ones are removed, only not-yet-wired ones are added, and only while
+## there's room. The starter grants nothing, so the bus honestly stays empty.
 static func autowire(known: Array) -> void:
-	if known.is_empty():
-		return
-	for g in gems:
-		if str(g) != "":
-			return
-	set_gem(0, str(known[0]))
+	_ensure_gems()
+	# 1. Drop any wired ability the fit no longer knows (chip unequipped).
+	for i in GEM_SLOTS:
+		if str(gems[i]) != "" and not known.has(str(gems[i])):
+			gems[i] = ""
+	# 2. Wire any known ability not already on the bus into the first open slot
+	#    (chip equipped). Stop when the bus is full — no room, no overwrite.
+	for aid in known:
+		var id := str(aid)
+		if id == "" or gems.has(id):
+			continue
+		var slot := first_empty_gem()
+		if slot < 0:
+			break
+		gems[slot] = id
 
 
 static func reset() -> void:
@@ -437,3 +458,4 @@ static func reset() -> void:
 	skills = {}
 	gems = ["", "", "", "", ""]   # empty until a fit grants something
 	shoal_invited = false
+	shoal_truce_kills = 0
