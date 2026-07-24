@@ -1199,9 +1199,9 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			_dev_rearm_tutorials()
 			return true
 		"fleet", "navy":
-			var ahead := ship.global_position + Vector2.RIGHT.rotated(ship.rotation) * 2200.0
+			var ahead := ship.global_position + Vector2.RIGHT.rotated(ship.rotation) * 900.0
 			_spawn_galean_fleet(ahead)
-			_dev_feedback("Galean Navy Supercruiser + fighter screen spawned ahead (slow patrol)")
+			_dev_feedback("Galean Navy fleet spawned ~900u DEAD AHEAD (fly forward; it's on radar)")
 			return true
 	return false
 
@@ -1221,11 +1221,13 @@ func _dev_feedback(msg: String) -> void:
 ## capital armour), kills from range with its Aegis lances. Presence, not a
 ## dogfighter: it holds space and lets nothing threaten it.
 func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
-	var r := 2400.0   # wide route so the capital cruises, never has to turn sharp
+	# The capital SPAWNS AT `center` (right where you're pointed) and patrols a modest
+	# ring around it — it's slow, so it lingers on-screen instead of vanishing.
+	var r := 1100.0
 	var route: Array[Vector2] = [
 		center + Vector2(r, 0.0), center + Vector2(0.0, r),
 		center + Vector2(-r, 0.0), center + Vector2(0.0, -r)]
-	var cap := GuardianShip.spawn_lane_patrol(self, center + Vector2(r, 0.0),
+	var cap := GuardianShip.spawn_lane_patrol(self, center,
 		SampleBuilds.galean_supercruiser(), route)
 	# A fighter screen flying formation on the capital — the "a capital wants a
 	# screen" fiction, and it reads as a real fleet element.
