@@ -220,7 +220,9 @@ func _rebuild_visuals() -> void:
 			# Crisp pixel sprite per particle + additive blend so they stack into light,
 			# and a lifetime ramp — hot white core -> the engine's trail colour ->
 			# transparent tail. NEAREST filter keeps the pixels blocky.
-			plume.texture = _soft_dot()
+			# Sprite comes from the THRUSTER when it supplies one (alien tech drops in
+			# its own here); else the shared default pixel spark.
+			plume.texture = comp.trail_texture if comp.trail_texture != null else _soft_dot()
 			plume.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			plume.material = _additive_plume_mat()
 			var ramp := Gradient.new()
