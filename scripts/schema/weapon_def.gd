@@ -37,7 +37,9 @@ extends ComponentDef
 ## falloff toward the rim. The splash is what kills — near enough IS a hit.
 @export var blast_radius := 0.0
 ## HOMING: > 0 = the shot STEERS toward a target, this many degrees/sec of turn
-## (0 = a straight bolt). Missiles track; guns don't.
+## (0 = a straight bolt). Missiles track; guns don't. Also the ON-SWITCH: >0
+## means "this homes" even when `homing_by_band` supplies the actual turn rate,
+## and it's the fallback deg/second rate against a size-less mark (station, rock).
 @export var homing := 0.0
 ## Seeker type (homing only): true = HEAT, fire-and-forget, re-acquires the
 ## nearest target every frame (hard to lose). false = RADIO, locks the shooter's

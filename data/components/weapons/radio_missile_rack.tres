@@ -15,6 +15,7 @@ ammo_price = 16
 hit_bonus = 5.0
 blast_radius = 20.0
 homing = 150.0
+homing_by_band = PackedFloat32Array(2.2, 2.2, 2.2, 2.2, 2.2)
 seek_nearest = false
 display_name = "Radio-Guided Missile Rack"
 description = "Command-guided to whatever you've got locked — pick a target, and four heavy warheads WILL find it. The reload's dear and it goes dumb if your mark slips the leash. Use them to leave, not to hunt."

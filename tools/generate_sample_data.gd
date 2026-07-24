@@ -95,7 +95,11 @@ func _generate_components() -> void:
 	heat.ammo_price = 12
 	heat.hit_bonus = 6.0
 	heat.blast_radius = 26.0
-	heat.homing = 100.0
+	heat.homing = 100.0   # on-switch + fallback rate vs a size-less mark (a station)
+	# Turn rate in DEGREES PER 10 UNITS travelled (WeaponDef.homing_by_band). Flat
+	# 1.6 == the old 100 deg/s at speed 620 (100*10/620), so behaviour is unchanged
+	# — this just moves it onto the lance's speed-independent, per-band-tunable system.
+	heat.homing_by_band = PackedFloat32Array([1.6, 1.6, 1.6, 1.6, 1.6])
 	heat.seek_nearest = true
 	heat.bolt_color = Color(1.0, 0.5, 0.28)
 	heat.bolt_scale = 1.5
@@ -111,7 +115,10 @@ func _generate_components() -> void:
 	radio.ammo_price = 16
 	radio.hit_bonus = 5.0
 	radio.blast_radius = 20.0
-	radio.homing = 150.0
+	radio.homing = 150.0   # on-switch + fallback rate vs a size-less mark (a station)
+	# Flat 2.2 deg / 10 units == the old 150 deg/s at speed 680 (150*10/680) — same
+	# turn radius, now on the per-10-units system so it's speed-independent to tune.
+	radio.homing_by_band = PackedFloat32Array([2.2, 2.2, 2.2, 2.2, 2.2])
 	radio.seek_nearest = false
 	radio.bolt_color = Color(0.5, 0.8, 1.0)
 	radio.bolt_scale = 1.6
