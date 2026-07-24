@@ -208,17 +208,20 @@ func _rebuild_visuals() -> void:
 			plume.direction = Vector2(1, 0)
 			plume.spread = comp.trail_spread_deg * 0.5   # narrower cone (was too wide)
 			plume.gravity = Vector2.ZERO
-			plume.initial_velocity_min = 90.0 * comp.trail_scale
-			plume.initial_velocity_max = 160.0 * comp.trail_scale
+			plume.initial_velocity_min = 40.0 * comp.trail_scale
+			plume.initial_velocity_max = 90.0 * comp.trail_scale
 			plume.damping_min = 60.0
 			plume.damping_max = 120.0
-			plume.scale_amount_min = 0.055 * comp.trail_scale
-			plume.scale_amount_max = 0.12 * comp.trail_scale
-			# COLORED SPRITES IN ADDITIVE LAYERS (user, 2026-07-24): a soft radial-glow
-			# texture per particle + additive blend so they stack into light instead of
-			# reading as flat dots, and a lifetime ramp — hot white core -> the engine's
-			# trail colour -> transparent tail. Per-engine trail_color still drives it.
+			# PIXEL-ART plume: crisp texture means THIS is the real width knob now.
+			# (Reset from ~0.008 — that was invisible-tiny for the hard sprite; the old
+			# soft gradient hid every change, which is why nothing seemed to move.)
+			plume.scale_amount_min = 0.35 * comp.trail_scale
+			plume.scale_amount_max = 0.7 * comp.trail_scale
+			# Crisp pixel sprite per particle + additive blend so they stack into light,
+			# and a lifetime ramp — hot white core -> the engine's trail colour ->
+			# transparent tail. NEAREST filter keeps the pixels blocky.
 			plume.texture = _soft_dot()
+			plume.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			plume.material = _additive_plume_mat()
 			var ramp := Gradient.new()
 			ramp.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
@@ -295,21 +298,27 @@ func apply_livery(color: Color) -> void:
 	_livery_node = root
 
 
-## Shared soft radial-glow sprite for engine particles — a white dot fading to
-## transparent, tinted per-particle by each plume's color_ramp. Built once.
-static var _plume_dot: GradientTexture2D
-static func _soft_dot() -> GradientTexture2D:
+## Per-particle sprite for engine plumes. PIXEL-ART + CRISP (was a soft radial
+## gradient, whose fuzzy falloff hid every scale change — so scale_amount now
+## actually controls the visible width). Drop a pixel-art flame at
+## res://assets/fx/plume.png to override; else a small procedural diamond spark.
+## Rendered NEAREST (set on the plume) to stay blocky; tinted per-particle by the
+## color_ramp and additive-blended into a trail.
+static var _plume_dot: Texture2D
+static func _soft_dot() -> Texture2D:
 	if _plume_dot == null:
-		var g := Gradient.new()
-		g.set_color(0, Color(1, 1, 1, 1))
-		g.set_color(1, Color(1, 1, 1, 0))
-		_plume_dot = GradientTexture2D.new()
-		_plume_dot.gradient = g
-		_plume_dot.fill = GradientTexture2D.FILL_RADIAL
-		_plume_dot.fill_from = Vector2(0.5, 0.5)
-		_plume_dot.fill_to = Vector2(1.0, 0.5)
-		_plume_dot.width = 16
-		_plume_dot.height = 16
+		if ResourceLoader.exists("res://assets/fx/plume.png"):
+			_plume_dot = load("res://assets/fx/plume.png")
+		else:
+			var s := 8
+			var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+			img.fill(Color(0, 0, 0, 0))
+			var c := (s - 1) * 0.5
+			for y in s:
+				for x in s:
+					if absf(x - c) + absf(y - c) <= c:   # crisp diamond, hard pixels
+						img.set_pixel(x, y, Color(1, 1, 1, 1))
+			_plume_dot = ImageTexture.create_from_image(img)
 	return _plume_dot
 
 
