@@ -587,16 +587,16 @@ func _cycle_target(group: String) -> void:
 ## grabbable, fall back to selecting a target.
 func _rmb_at(point: Vector2) -> void:
 	var loot := _loot_near(point, SALVAGE_RADIUS)
-	if loot.size() == 1:
-		grab_loot(loot[0])
-	elif loot.size() > 1:
+	if loot.is_empty():
+		_select_target_at(point)
+		return
+	# Right-click just grabs the CLOSEST pickup (user, 2026-07-24) — no more opening a
+	# panel to pick. Only if it won't fit does grab_loot flash the hold-full warning;
+	# then open the hold so they can jettison to make room.
+	if not grab_loot(loot[0]):
 		var panel := get_tree().get_first_node_in_group("salvage_panel")
 		if panel != null:
 			panel.open()
-		else:
-			grab_loot(loot[0])   # no window available — take the nearest
-	else:
-		_select_target_at(point)
 
 
 ## Loot within `radius` of a world point, nearest first.
