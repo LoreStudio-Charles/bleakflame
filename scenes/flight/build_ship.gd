@@ -196,7 +196,17 @@ func _rebuild_visuals() -> void:
 			plume.damping_max = 120.0
 			plume.scale_amount_min = 0.8 * comp.trail_scale
 			plume.scale_amount_max = 1.8 * comp.trail_scale
-			plume.color = _trail_color
+			# COLORED SPRITES IN ADDITIVE LAYERS (user, 2026-07-24): a soft radial-glow
+			# texture per particle + additive blend so they stack into light instead of
+			# reading as flat dots, and a lifetime ramp — hot white core -> the engine's
+			# trail colour -> transparent tail. Per-engine trail_color still drives it.
+			plume.texture = _soft_dot()
+			plume.material = _additive_plume_mat()
+			var ramp := Gradient.new()
+			ramp.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
+			ramp.set_color(1, Color(_trail_color.r, _trail_color.g, _trail_color.b, 0.0))
+			ramp.add_point(0.35, _trail_color)
+			plume.color_ramp = ramp
 			plume.set_meta("trail_scale", comp.trail_scale)
 			add_child(plume)
 			_plumes.append(plume)
@@ -224,6 +234,33 @@ func set_hull_tint(tint: Color) -> void:
 		_hull_sprite.modulate = tint
 	else:
 		_hull_visual.color = tint
+
+
+## Shared soft radial-glow sprite for engine particles — a white dot fading to
+## transparent, tinted per-particle by each plume's color_ramp. Built once.
+static var _plume_dot: GradientTexture2D
+static func _soft_dot() -> GradientTexture2D:
+	if _plume_dot == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		_plume_dot = GradientTexture2D.new()
+		_plume_dot.gradient = g
+		_plume_dot.fill = GradientTexture2D.FILL_RADIAL
+		_plume_dot.fill_from = Vector2(0.5, 0.5)
+		_plume_dot.fill_to = Vector2(1.0, 0.5)
+		_plume_dot.width = 16
+		_plume_dot.height = 16
+	return _plume_dot
+
+
+## Shared additive blend material so overlapping plume particles stack as light.
+static var _plume_mat: CanvasItemMaterial
+static func _additive_plume_mat() -> CanvasItemMaterial:
+	if _plume_mat == null:
+		_plume_mat = CanvasItemMaterial.new()
+		_plume_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return _plume_mat
 
 
 ## Shared per-frame upkeep: shield regeneration and energy recharge.
