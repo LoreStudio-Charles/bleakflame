@@ -48,6 +48,10 @@ var specialty: int = Specialty.NONE
 var _spec_cd := 0.0
 
 const AGGRO_RANGE := 950.0
+## Once locked on, a hunter HOLDS the mark far past the range it would first
+## acquire at — so a fast strafing pass that overshoots doesn't make it "forget"
+## the prey and wander back to patrol (the old 10k fly-away). Acquire close, leash far.
+const LEASH_RANGE := 1700.0
 const PATROL_CRUISE := 0.55    # of combat accel: pirates loiter, prey sprints
 const PATROL_ARRIVE := 260.0
 
@@ -232,7 +236,7 @@ func _physics_process(delta: float) -> void:
 	# Prey = the nearest EXPOSED target — the player OR a Trader-guild hauler
 	# (both ride "player_team"). Held stable so the pirate doesn't flap between
 	# marks mid-strafe; ships under the station's guns are never prey.
-	if _prey == null or not _prey_valid(_prey):
+	if _prey == null or not _prey_valid(_prey, LEASH_RANGE):
 		_prey = _pick_prey()
 	var prey: BuildShip = _prey
 	var engaged := prey != null
@@ -289,18 +293,31 @@ func _physics_process(delta: float) -> void:
 
 		match tactic:
 			Tactic.ORBIT:
-				rotation = rotate_toward(rotation, to_prey.angle(), _turn_speed * delta)
-				if dist > preferred_range * 1.9:
-					thrust = to_prey.normalized() * _accel
+				# STRAFING PASS, not a nose-glued orbit (user, 2026-07-23 — "strafe
+				# past me, turn and strafe back from the other direction"). Circling a
+				# slow/stationary mark can't work: at preferred_range the orbit rate
+				# (speed/radius) outruns _turn_speed, so the nose never lines up and
+				# turning tighter risks a collision. The fix: keep the NOSE ON THE
+				# mark and fly THROUGH it — nose on the travel line, gimbal guns tracking
+				# the mark as it sweeps the arc — then extend out and come back the other way.
+				if dist > preferred_range * 2.2:
+					# Too far to strafe: close the gap head-on first.
+					rotation = rotate_toward(rotation, to_prey.angle(), _turn_speed * delta)
+					thrust = Vector2.RIGHT.rotated(rotation) * _accel
+				elif _extend_timer > 0.0:
+					# Blew past — keep running out, then turn back the OTHER way.
+					_extend_timer -= delta
+					thrust = Vector2.RIGHT.rotated(rotation) * _accel
+					if _extend_timer <= 0.0:
+						_orbit_dir *= -1.0
 				else:
-					# Circle-strafe: mostly tangential, with a radial correction
-					# that holds the orbit at preferred_range.
-					var tangent := to_prey.normalized().orthogonal() * _orbit_dir
-					var radial := to_prey.normalized() \
-						* clampf((dist - preferred_range) / preferred_range, -1.0, 1.0)
-					# 80% thrust while strafing: orbiters stay slippery but a
-					# tracked nose can walk fire onto them — fights converge.
-					thrust = (tangent + radial).normalized() * _accel * 0.8
+					# Run the pass: nose tracks the mark (guns on target), thrust
+					# leans off-axis so we slide past its flank, not into it.
+					rotation = rotate_toward(rotation, to_prey.angle(), _turn_speed * delta)
+					var fwd := Vector2.RIGHT.rotated(rotation)
+					thrust = (fwd + fwd.orthogonal() * _orbit_dir * 0.6).normalized() * _accel
+					if dist < preferred_range:
+						_extend_timer = randf_range(0.5, 0.9)   # abreast — extend past
 			Tactic.BOOM_ZOOM:
 				if _extend_timer > 0.0:
 					# Blow through and keep running before turning back.
@@ -340,12 +357,12 @@ func _physics_process(delta: float) -> void:
 ## A valid mark: alive, exposed (not cloaked, not docked), in aggro range, and
 ## OUTSIDE the station sanctuary. Traders and the player both qualify — pirates
 ## prey on whoever's caught in the open on the lanes.
-func _prey_valid(node: BuildShip) -> bool:
+func _prey_valid(node: BuildShip, base_reach := AGGRO_RANGE) -> bool:
 	if node.is_in_group("player_ship") and (parley or Standing.shoal_open()):
 		return false   # safe passage: the Krayt parley, or you're the Shoal's now
 	# Signature drop: a ship running dark is seen only up close — distant hunters
 	# lose the contact (but anything on top of it still has eyes).
-	var reach := AGGRO_RANGE
+	var reach := base_reach
 	if node.has_method("is_dark") and node.is_dark():
 		reach *= 0.4
 	return node != null and is_instance_valid(node) and not node.dead \

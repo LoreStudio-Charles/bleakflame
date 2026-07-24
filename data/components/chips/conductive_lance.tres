@@ -12,7 +12,7 @@ extra = {
 "lance_energy": 10.0,
 "lance_homing": 40.0,
 "lance_range": 1500.0,
-"lance_speed": 1450.0
+"lance_speed": 3600.0
 }
 display_name = "Hyper-Conductive Lance"
 description = "Guardian tech. Charges the capacitors and throws a javelin of raw energy that bends slightly toward your mark. Hits like a falling girder; brief recharge between throws."

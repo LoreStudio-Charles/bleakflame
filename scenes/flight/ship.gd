@@ -140,9 +140,14 @@ var _blight_energy := 6.0   # seam: drains while attached once energy exists
 var _lance_cd := 0.0
 var _lance_cd_max := 6.0
 var _lance_damage := 120.0
-var _lance_speed := 1450.0
+var _lance_speed := 3600.0  # a FAST rail strike — a skill shot you aim by flying
 var _lance_range := 1500.0
-var _lance_homing := 40.0   # deg/s of bend — "slightly tracks", never a seeker
+var _lance_homing := 40.0   # non-ship fallback bend (deg/SEC); the table drives ships
+## Homing by the MARK's size band [light..super+], in DEGREES PER 10 UNITS TRAVELLED
+## (speed-independent; see Projectile). User rule (2026-07-23): MORE bend against the
+## small nimble hulls that are hard to hit, LESS against the big slow ones a straight
+## lead already lands — so the hit rate evens across sizes. Starting numbers, tune freely.
+const LANCE_HOMING_BY_BAND := [0.5, 0.4, 0.3, 0.2, 0.1]
 var _lance_energy := 8.0    # seam: charged from the reactor once energy exists
 var _drone_cd := 0.0
 var _drone_cd_max := 36.0
@@ -292,7 +297,7 @@ func apply_build(new_build: ShipBuild) -> void:
 	_blackout_cd_max = 16.0; _blackout_dur = 3.0
 	_drone_cd_max = 36.0; _drone_life = 30.0; _drone_pulse = 3.0
 	_drone_heal = 14.0; _drone_range = 900.0
-	_lance_cd_max = 6.0; _lance_damage = 120.0; _lance_speed = 1450.0
+	_lance_cd_max = 6.0; _lance_damage = 120.0; _lance_speed = 3600.0
 	_lance_range = 1500.0; _lance_homing = 40.0; _lance_energy = 8.0
 	_blight_cd_max = 20.0; _blight_life = 30.0; _blight_pulse = 6.0
 	_blight_damage = 30.0; _blight_range = 900.0; _blight_energy = 6.0
@@ -1477,15 +1482,22 @@ func _engage_lance() -> void:
 	def.damage = _lance_damage
 	def.projectile_speed = _lance_speed
 	def.weapon_range = _lance_range
+	# Tracking scales to the MARK's size via the reusable per-band table (Projectile
+	# resolves it each frame): a nimble fighter gets the most bend, a capital the
+	# least. `homing` stays the base rate + the gate (non-ship marks fall back to it).
 	def.homing = _lance_homing
+	def.homing_by_band = PackedFloat32Array(LANCE_HOMING_BY_BAND)
 	def.seek_nearest = false        # it bends toward YOUR mark, never picks one
 	def.bolt_color = Color(0.62, 0.88, 1.0)
 	def.bolt_scale = 2.4
 	def.beam_tail = 26.0            # the javelin shape — a long drawn bolt
 
+	# A skill shot, but a landable one: give it the same forgiving hit radius the
+	# player's guns get (mount.shot_grace = 5) and a touch more, since the lance is a
+	# fat javelin (bolt_scale 2.4) and reading a near-miss as a miss feels unfair.
 	var nose := global_position + Vector2.RIGHT.rotated(rotation) * 26.0
 	Projectile.spawn(get_parent(), nose, Vector2.RIGHT.rotated(rotation), def,
-		enemy_group, 0.0, Pilot.damage_mult(), self)
+		enemy_group, 7.0, Pilot.damage_mult(), self)
 	_flash_note("LANCE AWAY")
 	Sfx.play("shot", -2.0, 0.55)
 

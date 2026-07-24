@@ -65,6 +65,10 @@ static var skills := {}          # skill id -> ranks bought
 ## Krayt's invitation (from the hermit) is your first key to the Rust Shoal — the
 ## campaign grants access to the outlaw haven, before any standing is earned.
 static var shoal_invited := false
+## Pirates killed WHILE the truce holds. Vyper's banner is a promise, not a
+## suicide pact: gun down enough of the Shoal's own and they revoke it (see
+## flight_test SHOAL_TRUCE_BREAK). Persisted so the tally survives a save.
+static var shoal_truce_kills := 0
 
 ## The ABILITY GEMS: the [1]-[5] active bar. Each slot holds an ability id (from
 ## Abilities) or "" (empty). You MEMORIZE abilities into gems at dock; only a
@@ -376,6 +380,7 @@ static func to_dict() -> Dictionary:
 		"portrait": portrait_path, "background": background, "bio": bio,
 		"profession": profession, "skills": skills.duplicate(),
 		"gems": gems.duplicate(), "shoal_invited": shoal_invited,
+		"shoal_truce_kills": shoal_truce_kills,
 		"met": met.duplicate()}
 
 
@@ -394,6 +399,7 @@ static func from_dict(data: Dictionary) -> void:
 	if profession != "" and Professions.def(profession).is_empty():
 		profession = ""
 	shoal_invited = bool(data.get("shoal_invited", false))
+	shoal_truce_kills = int(data.get("shoal_truce_kills", 0))
 	met.clear()
 	for who in data.get("met", []):
 		met.append(str(who))
@@ -452,3 +458,4 @@ static func reset() -> void:
 	skills = {}
 	gems = ["", "", "", "", ""]   # empty until a fit grants something
 	shoal_invited = false
+	shoal_truce_kills = 0

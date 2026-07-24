@@ -32,6 +32,9 @@ const VERGE_SEED := 0x5A17E
 const ORIVEL := Vector2(-84000, -52000)
 
 const DRONE_COUNT := 2
+## Pirate kills that break Vyper's truce (Pilot.shoal_truce_kills). A promise, not
+## a suicide pact — betray it this many times and the Shoal hunts you again.
+const SHOAL_TRUCE_BREAK := 10
 
 @onready var ship: TestShip = $Ship
 ## Untyped: flight_hud.gd has no class_name, so this is duck-typed (we only
@@ -175,7 +178,9 @@ func _populate_world() -> void:
 	for i in DRONE_COUNT:
 		_spawn_drone(_drone_spot())
 	_spawn_guard_wing()
-	for kind in ["raider", "raider", "brawler", "wasp", "wasp"]:
+	# +25%-ish density (user, 2026-07-23): one more raider + wasp — the light
+	# harassers, so the lanes feel busier without stacking heavies on a new pilot.
+	for kind in ["raider", "raider", "raider", "brawler", "wasp", "wasp", "wasp"]:
 		var route := _patrol_route(kind)
 		# Start mid-route: the world is already in motion, not queued at home.
 		_spawn_pirate(route[randi() % route.size()] + _jitter(500.0), kind, route)
@@ -183,17 +188,26 @@ func _populate_world() -> void:
 	_spawn_pirate(vulture_route[0] + _jitter(700.0), "vulture", vulture_route)
 	_spawn_belt(BELT_CENTER, BELT_COUNT, BELT_SEED, 4)
 	_spawn_belt(VERGE_CENTER, VERGE_COUNT, VERGE_SEED, 6)
-	# Trader-guild lane traffic: civilian haulers running the trade routes and
-	# the gate road. World-anchored like the pirates — you meet them en route.
+	# Trader-guild lane traffic: civilian haulers running the trade lane (east) and
+	# the Verge run (west). World-anchored like the pirates — you meet them en route.
 	var trade_lane: Array[Vector2] = [Vector2(1300, 850), LANE_A, LANE_B, Vector2(7500, 4650)]
-	var gate_run: Array[Vector2] = [Vector2(-900, 700), Vector2(-3800, 4400), Vector2(-6200, 7600)]
 	_spawn_trader(trade_lane[randi() % trade_lane.size()] + _jitter(400.0), trade_lane)
 	_spawn_trader(trade_lane[randi() % trade_lane.size()] + _jitter(400.0), trade_lane)
-	_spawn_trader(gate_run[randi() % gate_run.size()] + _jitter(400.0), gate_run)
 	# One Guardian patrol per lane: flying the road, gunning pirates it meets —
 	# and exposed out there, so the Cinderweb's hunger can take them too.
 	_spawn_lane_guardian(trade_lane[1] + _jitter(300.0), trade_lane)
-	_spawn_lane_guardian(gate_run[0] + _jitter(300.0), gate_run)
+	# Western lane -> the Verge (user, 2026-07-23): the gate road is dead now (the
+	# WayGate is closed), so the hauler + Guardian that used to run it work the Verge
+	# instead, and a lone raider prowls the APPROACH
+	# — deliberately short of VERGE_CENTER, so the Verge stays the safer field vs the
+	# Shoal (just no longer risk-free to reach). A Guardian rides the run too.
+	var verge_run: Array[Vector2] = [Vector2(-1400, 1200), Vector2(-4200, 2600),
+		VERGE_CENTER + _jitter(500.0)]
+	_spawn_trader(verge_run[randi() % verge_run.size()] + _jitter(400.0), verge_run)
+	var verge_prowl: Array[Vector2] = [Vector2(-1900, 900), Vector2(-4600, 2200),
+		Vector2(-5400, 3900)]
+	_spawn_pirate(verge_prowl[randi() % verge_prowl.size()] + _jitter(400.0), "raider", verge_prowl)
+	_spawn_lane_guardian(verge_run[1] + _jitter(300.0), verge_run)
 
 
 ## Fixed-seed scatter: a Belt is a charted place; its rocks stay put. Each
@@ -1320,6 +1334,30 @@ func _grant_kill_xp(pirate: Node, kind: String) -> void:
 	Standing.add("privateer", -1)   # ...and the Shoal remembers who guns down their own
 	if not ship.dead:
 		ship._flash_note("+%d XP" % xp)
+	# Vyper's truce is a PROMISE, not immunity (user, 2026-07-23 — "kill ten and
+	# it's: No truce. That was her promise."). Gun down enough of the Shoal's own
+	# under their own banner and they revoke it — you become prey again. This also
+	# closes the exploit of farming pirates who won't fire back while the truce holds.
+	if Pilot.shoal_invited:
+		Pilot.shoal_truce_kills += 1
+		if Pilot.shoal_truce_kills >= SHOAL_TRUCE_BREAK:
+			_break_shoal_truce()
+
+
+## Vyper revokes the banner. shoal_invited off + a hard standing drop makes
+## Standing.shoal_open() false, so AIShip._prey_valid stops treating the player as
+## safe passage — the Shoal hunts again.
+func _break_shoal_truce() -> void:
+	Pilot.shoal_invited = false
+	Standing.add("privateer", -80)   # from sheltered guest to marked enemy
+	var line := "Vyper's voice comes back, and every trace of the grief is gone from it. "
+	line += "\"You spilled our blood under our OWN banner. That was Krayt's name you fouled "
+	line += "— his memory, his last promise. It's void. There's no truce. Fly careful now, "
+	line += "pilot. We remember faces.\""
+	Comms.post("vyper", "Rust Shoal", line)
+	if not ship.dead:
+		ship._flash_note("TRUCE BROKEN — the Rust Shoal hunts you now")
+	Sfx.play("static", -8.0)
 
 
 func _respawn_pirate_later(kind: String) -> void:

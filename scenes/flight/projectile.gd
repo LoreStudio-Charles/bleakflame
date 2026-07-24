@@ -33,6 +33,9 @@ var blast := 0.0
 var shooter: Node = null
 ## Homing (missiles): turn rate deg/s toward the tracked target (0 = straight).
 var homing := 0.0
+## Per-size homing override (5 entries = deg/s by target size band; empty = flat
+## `homing`). Lets a weapon track small hulls harder or only big ones. See WeaponDef.
+var homing_by_band := PackedFloat32Array()
 ## true = HEAT seeker (re-acquire nearest each frame); false = RADIO (locked target).
 var seek_nearest := false
 var target_ref: Node = null   # RADIO's locked target (or HEAT's current pick)
@@ -71,6 +74,7 @@ static func spawn(parent: Node, pos: Vector2, dir: Vector2, def: WeaponDef,
 	p.beam_tail = def.beam_tail
 	p.blast = def.blast_radius
 	p.homing = def.homing
+	p.homing_by_band = def.homing_by_band
 	p.seek_nearest = def.seek_nearest
 	p.ordnance = def.magazine > 0   # the game's own definition of ordnance
 	if def.homing > 0.0 and p_shooter != null:
@@ -128,9 +132,18 @@ func _physics_process(delta: float) -> void:
 		if tgt != null:
 			var to_t: Vector2 = tgt.global_position - global_position
 			if to_t.length() > 1.0:
+				# The per-size table is DEG PER 10 UNITS TRAVELLED — speed-independent
+				# (a fast bolt and a slow one bend the same amount over the same ground),
+				# so it's tunable without re-deriving against projectile speed. A weapon
+				# with no table (or a non-ship mark) uses the legacy flat deg/SECOND.
+				var band := _band_of(tgt) if homing_by_band.size() >= 5 else -1
+				var max_turn: float
+				if band >= 0:
+					max_turn = deg_to_rad(homing_by_band[band]) * (velocity.length() * delta / 10.0)
+				else:
+					max_turn = deg_to_rad(homing) * delta
 				var cur := velocity.normalized()
-				var turn := clampf(cur.angle_to(to_t.normalized()),
-					-deg_to_rad(homing) * delta, deg_to_rad(homing) * delta)
+				var turn := clampf(cur.angle_to(to_t.normalized()), -max_turn, max_turn)
 				velocity = cur.rotated(turn) * velocity.length()
 				rotation = velocity.angle()
 	position += velocity * delta
@@ -200,6 +213,15 @@ func _homing_target() -> Node:
 	if is_instance_valid(target_ref) and target_ref.get("dead") != true:
 		return target_ref
 	return null
+
+
+## The target's size band [0..4] for the per-size homing table, or -1 if it isn't a
+## ship with a hull (a leviathan / anomaly falls back to the flat homing rate).
+func _band_of(node: Node) -> int:
+	var build = node.get("build")
+	if build != null and build.get("hull") != null:
+		return int(build.hull.size_band)
+	return -1
 
 
 func _nearest_in_group() -> Node:

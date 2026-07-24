@@ -43,6 +43,15 @@ extends ComponentDef
 ## nearest target every frame (hard to lose). false = RADIO, locks the shooter's
 ## SELECTED target at launch and commits to it (precise, but dumb if it's lost).
 @export var seek_nearest := false
+## PER-SIZE homing table (homing only): bend in DEGREES PER 10 UNITS TRAVELLED,
+## indexed by the TARGET's size band [LIGHT, MEDIUM, HEAVY, SUPER_HEAVY,
+## SUPER_HEAVY_PLUS]. Per-DISTANCE, not per-second, so it's speed-independent and
+## easy to tune (a fast bolt and a slow one bend the same over the same ground).
+## Empty = flat deg/second `homing` for everyone. This is how one weapon tracks the
+## small nimble hulls harder (a lance) while another tracks only the big ones (a
+## proton torpedo: ~0 vs a fighter, high vs a capital — "murder on a cruiser,
+## dodged by a swarm"). Needs exactly 5 entries; a non-ship mark falls back to `homing`.
+@export var homing_by_band: PackedFloat32Array = PackedFloat32Array()
 
 
 func traverse_speed() -> float:
