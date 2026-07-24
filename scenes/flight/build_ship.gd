@@ -200,12 +200,13 @@ func _rebuild_visuals() -> void:
 		elif comp is EngineDef:
 			var plume := CPUParticles2D.new()
 			plume.position = hp.offset
+			plume.z_index = -1   # draw the exhaust trail BEHIND the ship, not over it
 			plume.emitting = false
 			plume.amount = 40
 			plume.lifetime = 0.38
 			plume.local_coords = false
 			plume.direction = Vector2(1, 0)
-			plume.spread = comp.trail_spread_deg
+			plume.spread = comp.trail_spread_deg * 0.5   # narrower cone (was too wide)
 			plume.gravity = Vector2.ZERO
 			plume.initial_velocity_min = 90.0 * comp.trail_scale
 			plume.initial_velocity_max = 160.0 * comp.trail_scale
