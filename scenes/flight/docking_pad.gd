@@ -25,6 +25,13 @@ var max_size_band: int = HullDef.SizeBand.SUPER_HEAVY_PLUS
 ## fighter is waved off to a bay. The band boundary IS the 64px split (HullDef
 ## BAND_PX: HEAVY 64, SUPER_HEAVY 128).
 var min_size_band: int = HullDef.SizeBand.LIGHT
+
+
+## True if a hull of this size band may berth here (within [min, max]). Pure and
+## save-free, so the whole size gate is testable without a real docking attempt
+## (try_dock() routes its cap/floor refusals through this).
+func size_permitted(size_band: int) -> bool:
+	return size_band >= min_size_band and size_band <= max_size_band
 ## False for a bare berth (Orivel's capital pads for now): still repairs + saves +
 ## checkpoints like any dock, but runs NO station economy (no research calendar,
 ## no contract board, no auto-started quests) — the "no services yet" fiction.
@@ -74,18 +81,14 @@ func try_dock(ship: TestShip) -> void:
 	# SIZE LIMIT: the berth is only so big. A hull too large for it never gets a
 	# clearance — bounced gently at the mouth. This is why the Reach is all small
 	# ships: its one station can't take a heavy. (Land a big hull on the planet.)
+	# SIZE FLOOR/CAP: a berth is only so big, and a DRYDOCK is only for the big hulls
+	# a bay can't take. Both refusals share one gate (size_permitted) so it stays
+	# testable; the message just names which way you missed.
 	if ship.build != null and ship.build.hull != null \
-			and ship.build.hull.size_band > max_size_band:
-		ship._flash_note("TOO LARGE TO BERTH — this station can't dock a hull this size. Heavies need a bigger port.")
-		ship.velocity = -approach_dir() * 90.0 + ship.velocity.bounce(approach_dir()) * 0.2
-		Sfx.play_at("scrape", ship.global_position, -8.0, 0.5)
-		return
-	# SIZE FLOOR: a DRYDOCK is for the big hulls a bay can't take. A craft small
-	# enough for a landing bay is turned away — go use one. (The opposite of the
-	# cap above; only drydocks set a floor.)
-	if ship.build != null and ship.build.hull != null \
-			and ship.build.hull.size_band < min_size_band:
-		ship._flash_note("TOO SMALL FOR A DRYDOCK — take a landing bay; the cradles are for capital hulls.")
+			and not size_permitted(ship.build.hull.size_band):
+		ship._flash_note("TOO LARGE TO BERTH — this station can't dock a hull this size. Heavies need a bigger port." \
+			if ship.build.hull.size_band > max_size_band \
+			else "TOO SMALL FOR A DRYDOCK — take a landing bay; the cradles are for capital hulls.")
 		ship.velocity = -approach_dir() * 90.0 + ship.velocity.bounce(approach_dir()) * 0.2
 		Sfx.play_at("scrape", ship.global_position, -8.0, 0.5)
 		return

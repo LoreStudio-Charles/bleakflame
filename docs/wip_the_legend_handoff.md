@@ -58,9 +58,28 @@ the **firing hosts** (a friendly turret host + a DefenseSatellite node).
 - Drydock size rule → IMPLEMENTED (this handoff).
 
 ## Next up (in rough priority)
-1. **The fleet** — Supercruiser + Carrier (SUPER_HEAVY/_PLUS hulls) + modernized
-   escorts. These are what actually exercises the drydocks (nothing >HEAVY exists
-   yet, so the drydock ACCEPT path is currently untestable — only refusal is).
+1. **The fleet** — IN PROGRESS.
+   - ✅ **Supercruiser** built (2026-07-24) — the first SUPER_HEAVY hull, Galean
+     Navy line-of-battle ship (`data/hulls/supercruiser.tres` + seed-gen +
+     `SampleBuilds.galean_supercruiser`). 1800 hp, mass 780, marks capped at 3
+     (user), mixed-mark batteries: Mk3 mains + Mk2 secondary + Mk1 point-defense
+     (traverse 360/mark = 360°/s, so it swats fighters — lethal solo, better
+     escorted). `level = 35` (display seam). Silhouette until art. The drydock
+     ACCEPT path is now validated: `DockingPad.size_permitted()` extracted (pure,
+     save-free) + `tools/test_capital_berth.tscn` (37 checks — accept/refuse/every
+     band has a home; sabotage this by widening a bay's max_size_band).
+   - ⬜ **Carrier** (SUPER_HEAVY_PLUS, drone/fighter host) + modernized escorts.
+   - ⬜ **Fleet at Orivel** — spawn Galean Navy ships near the capital so it feels
+     defended, + capital-appropriate AI (the slow, escort-screened cruiser
+     shouldn't fly fighter tactics). A dev spawn/board command would let us fly a
+     super-heavy INTO a drydock and see the accept path in-engine (test covers the
+     logic; nothing exercises it live yet).
+   - **DESIGN DEBT surfaced here:** (a) **Level as a real stat** — give `level`
+     (already on HullDef/components, display-only) mechanical weight so it scales
+     hull_hp / component power; capital ships sit ~L35. This is a cross-cutting
+     BALANCE feature for **main**, not the-legend. (b) **Galean Confederacy** — a
+     new FACTION to align the fleet with (Standing entry + colours + AI team);
+     "when the time comes" (user).
 2. **Capital weapon platforms** — build per `docs/capital_defenses.md` (turret host
    + satellites + the 3 weapon `.tres`).
 3. **Capital services** — flesh out `orivel_dock.gd` (shipyard for super-heavies,

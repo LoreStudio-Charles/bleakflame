@@ -546,3 +546,47 @@ func _generate_hulls() -> void:
 	]
 	dowager.hardpoints.assign(dowager_hps)
 	_save(dowager, "res://data/hulls/dowager.tres")
+
+	# SUPERCRUISER — the first true capital hull (SUPER_HEAVY), the Galean Navy's
+	# line-of-battle ship and the reason the Orivel drydocks exist. Two size bands
+	# above anything else (Vulture/Dowager top out at MEDIUM). Marks capped at 3
+	# (user, 2026-07-24); its bite is HULL + numbers, not the highest-tier slots.
+	# Mixed-mark batteries: Mk3 mains punch, Mk1 point-defense (traverse 360/mark =
+	# 360 deg/s) actually swats fighters — lethal solo, better with escorts. NPC
+	# fleet for now (price 0, not for sale until the capital shipyard opens); level
+	# 35 is a display seam until level-scaling lands in main. Aligns with the
+	# GALEAN CONFEDERACY faction when that's built.
+	var cruiser := HullDefS.new()
+	cruiser.display_name = "Supercruiser"
+	cruiser.grade = GradesS.Grade.STANDARD   # Galean Navy line ship, not salvage
+	cruiser.level = 35
+	cruiser.category = "Cruiser"
+	cruiser.size_band = HullDefS.SizeBand.SUPER_HEAVY
+	cruiser.mass = 780.0
+	cruiser.hull_hp = 1800.0
+	cruiser.cargo_base = 40.0
+	cruiser.price = 0   # not for sale yet — the MEDIUM-capped station can't; Orivel's shipyard is "coming"
+	cruiser.trait_id = "line_of_battle"
+	cruiser.trait_description = "Line of Battle: a wall of the Reach — built to stand in the lane and trade fire. The main batteries gut a cruiser; its point-defense turrets swat the gnats the big guns can't track. Escorts extend the screen, but it dies hard alone."
+	# SUPER_HEAVY band: 128px art canvas = 256 world units max extent.
+	cruiser.silhouette = PackedVector2Array([
+		Vector2(115, 0), Vector2(80, -18), Vector2(20, -30), Vector2(-60, -32),
+		Vector2(-100, -20), Vector2(-110, 0), Vector2(-100, 20), Vector2(-60, 32),
+		Vector2(20, 30), Vector2(80, 18)])
+	var cruiser_hps: Array = [
+		_hardpoint("Spinal Lance", Vector2(100, 0), T.WEAPON, 3, 45.0),
+		_hardpoint("Dorsal Main Battery", Vector2(35, -16), T.WEAPON, 3, 360.0),
+		_hardpoint("Ventral Main Battery", Vector2(35, 16), T.WEAPON, 3, 360.0),
+		_hardpoint("Port Point-Defense", Vector2(-15, -30), T.WEAPON, 1, 360.0),
+		_hardpoint("Starboard Point-Defense", Vector2(-15, 30), T.WEAPON, 1, 360.0),
+		_hardpoint("Secondary Battery", Vector2(-45, 0), T.WEAPON, 2, 360.0),
+		_hardpoint("Main Drive", Vector2(-100, -12), T.ENGINE, 3),
+		_hardpoint("Auxiliary Drive", Vector2(-100, 12), T.ENGINE, 3),
+		_hardpoint("Capital Reactor", Vector2(-60, 0), T.REACTOR, 3),
+		_hardpoint("Armor Belt Port", Vector2(5, -22), T.DEFENSE, 3),
+		_hardpoint("Armor Belt Starboard", Vector2(5, 22), T.DEFENSE, 3),
+		_hardpoint("Command Deck", Vector2(60, 0), T.SYSTEM, 3),
+		_hardpoint("Universal Coupling", Vector2(-35, 0), T.COUPLING, 5),
+	]
+	cruiser.hardpoints.assign(cruiser_hps)
+	_save(cruiser, "res://data/hulls/supercruiser.tres")

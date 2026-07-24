@@ -189,6 +189,28 @@ static func guardian_vulture() -> ShipBuild:
 	})
 
 
+## Galean Navy line-of-battle capital ship — the first SUPER_HEAVY, the fleet that
+## makes the Orivel drydocks matter. Mk3 heavy batteries + a spinal pulse for the
+## punch; skeet arrays on the Mk1 point-defense mounts (traverse 360/mark = fast)
+## to swat the fighters the big guns can't track. NPC fleet for now.
+static func galean_supercruiser() -> ShipBuild:
+	return _make("res://data/hulls/supercruiser.tres", {
+		0: "res://data/components/weapons/twinlance_pulse.tres",       # Spinal Lance
+		1: "res://data/components/weapons/bastion_heavy_battery.tres", # Dorsal Main
+		2: "res://data/components/weapons/bastion_heavy_battery.tres", # Ventral Main
+		3: "res://data/components/weapons/skeet_pd_array.tres",        # Port PD
+		4: "res://data/components/weapons/skeet_pd_array.tres",        # Starboard PD
+		5: "res://data/components/weapons/vk2_autocannon.tres",        # Secondary
+		6: "res://data/components/engines/afterjet_sprint.tres",       # Main Drive
+		7: "res://data/components/engines/afterjet_sprint.tres",       # Aux Drive
+		8: "res://data/components/reactors/overdrive_bottle.tres",     # Capital Reactor
+		9: "res://data/components/defense/bulwark_plating.tres",       # Armor Belt Port
+		10: "res://data/components/defense/aegis_composite.tres",      # Armor Belt Starboard
+		11: "res://data/components/systems/wayfarer_sensors.tres",     # Command Deck
+		12: "res://data/components/couplings/standard_coupling.tres",  # Coupling
+	})
+
+
 static func _make(hull_path: String, fits: Dictionary) -> ShipBuild:
 	var b := ShipBuild.new()
 	b.hull = load(hull_path)
