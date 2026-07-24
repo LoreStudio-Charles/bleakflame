@@ -1452,6 +1452,11 @@ func _dock_context() -> Dictionary:
 		"cargo_circuits": int(ship.commodities.get("circuits", 0)),
 		"cargo_food": int(ship.commodities.get("food", 0)),
 		"needs_scan": ship._needs_scan_ability(),
+		# Safety net (user, 2026-07-24): never march a BROKE pilot to the Armory. The
+		# flight-training payout (150c) normally lands first, but gate buy_scanner on
+		# actually affording the chip so no path ever strands them there.
+		"can_afford_scanner": Wallet.credits >= _comp_buy_price(
+			load("res://data/components/chips/survey_scan_chip.tres")),
 		"knows_scan": ship._known_abilities.has("scan"),
 		"has_wired_ability": has_wired,
 		"dirtside_active": Quests.active.has("dirtside_run"),

@@ -679,7 +679,7 @@ static func _build_preds() -> void:
 	# buy_scanner: a live scan need but no scan ability — walk buy (Armory) -> fit
 	# (Engineering). Each step is a level poll of tab/inventory; auto-skips if the
 	# pilot is already ahead.
-	_arm_pred["buy_scanner"] = func(c): return c.get("needs_scan", false)
+	_arm_pred["buy_scanner"] = func(c): return c.get("needs_scan", false) and c.get("can_afford_scanner", false)
 	_done_pred["buy_scanner"] = [
 		func(c): return str(c.get("tab", "")) == "Armory",
 		func(c): return c.get("armory_bought", false) or c.get("knows_scan", false),
