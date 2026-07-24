@@ -192,7 +192,7 @@ func _ready() -> void:
 		# the hook is itself the dev gate — a release export skips this whole block,
 		# so /cash & friends are simply unknown commands there.
 		Chat.dev_command = _run_dev_command
-		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /ruler /heartbeat /rearm"
+		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /ruler /heartbeat /rearm"
 
 	_populate_world()
 
@@ -1198,6 +1198,11 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 		"rearm", "tutorials":
 			_dev_rearm_tutorials()
 			return true
+		"fleet", "navy":
+			var ahead := ship.global_position + Vector2.RIGHT.rotated(ship.rotation) * 2200.0
+			_spawn_galean_fleet(ahead)
+			_dev_feedback("Galean Navy Supercruiser + fighter screen spawned ahead (slow patrol)")
+			return true
 	return false
 
 
@@ -1206,6 +1211,27 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 func _dev_feedback(msg: String) -> void:
 	ship._flash_note("%s [dev]" % msg)
 	Chat.notice("[dev] " + msg)
+
+
+## GALEAN NAVY CAPITAL PRESENCE — dev-summonable via /fleet. A PACED REVEAL, kept
+## OUT of the early world on purpose (user, 2026-07-24): the "there are bigger things
+## out there" surprise is saved until players think they can take a heavy, so it's
+## never a fringe landmark. A Supercruiser on a slow, wide patrol with a fighter
+## screen — ponderous (mass + the lowered turn floor), soaks damage (1800 hp +
+## capital armour), kills from range with its Aegis lances. Presence, not a
+## dogfighter: it holds space and lets nothing threaten it.
+func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
+	var r := 2400.0   # wide route so the capital cruises, never has to turn sharp
+	var route: Array[Vector2] = [
+		center + Vector2(r, 0.0), center + Vector2(0.0, r),
+		center + Vector2(-r, 0.0), center + Vector2(0.0, -r)]
+	var cap := GuardianShip.spawn_lane_patrol(self, center + Vector2(r, 0.0),
+		SampleBuilds.galean_supercruiser(), route)
+	# A fighter screen flying formation on the capital — the "a capital wants a
+	# screen" fiction, and it reads as a real fleet element.
+	for i in 3:
+		GuardianShip.spawn_protector(self, SampleBuilds.guardian_kestrel(), cap, i, 3)
+	return cap
 
 
 ## /warp <x> <y>  ·  /warp <x>,<y>  ·  /warp <poi>  — teleport the ship. Orivel is

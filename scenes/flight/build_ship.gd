@@ -83,7 +83,11 @@ func apply_build(new_build: ShipBuild) -> void:
 
 	_accel = stats.accel * ACCEL_SCALE
 	_max_speed = stats.accel * SPEED_SCALE
-	_turn_speed = clampf(220.0 / stats.mass, 1.2, 4.5)
+	# Turn rate falls off with mass. The floor is 0.3 (was 1.2) so a CAPITAL hull is
+	# genuinely ponderous — a Supercruiser (~780+ mass) turns at ~0.28 rad/s (~16 deg/s),
+	# "can't maneuver fast, holds space" (user). No fringe hull is heavy enough to hit
+	# the old floor (the Vulture at mass 150 turns at 1.47), so this only slows super-heavies.
+	_turn_speed = clampf(220.0 / stats.mass, 0.3, 4.5)
 
 	shield = stats.shield_hp
 	armor = stats.armor_hp
