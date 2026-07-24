@@ -96,11 +96,14 @@ func _generate_components() -> void:
 	heat.hit_bonus = 6.0
 	heat.blast_radius = 26.0
 	heat.homing = 100.0   # on-switch + fallback rate vs a size-less mark (a station)
-	# Turn rate in DEGREES PER 10 UNITS travelled (WeaponDef.homing_by_band). Flat
-	# 1.6 was the old 100 deg/s at the old speed 620 (100*10/620); it stays 1.6
-	# through the +10% speed bump ON PURPOSE — per-10-units is speed-independent, so
-	# a faster missile keeps the same turn radius instead of suddenly flying wide.
-	heat.homing_by_band = PackedFloat32Array([1.6, 1.6, 1.6, 1.6, 1.6])
+	# Turn rate in DEGREES PER 10 UNITS travelled (WeaponDef.homing_by_band), by
+	# target size band. Guided ordnance deliberately does NOT get the guns' lead-aim
+	# (that's gunnery — a trained skill; guided weapons are the no-training path:
+	# "guns for gunners, guided for those who don't"). So it PURE-PURSUES, which
+	# tail-chases, and we pay for that with a beefier turn rate instead — biased to
+	# SMALL, since a heat-seeker's job is chasing fighters, not cruisers. (Flat 1.6
+	# was the behaviour-preserving conversion; this is the tuned-up feel.)
+	heat.homing_by_band = PackedFloat32Array([4.0, 3.2, 2.4, 1.8, 1.4])
 	heat.seek_nearest = true
 	heat.bolt_color = Color(1.0, 0.5, 0.28)
 	heat.bolt_scale = 1.5
