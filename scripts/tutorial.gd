@@ -1,114 +1,85 @@
 class_name Tutorial
-extends CanvasLayer
-## Pilot license tutorial — runs once on a fresh save. A gold instruction bar
-## walks launching, thrust, vectoring, boost/brake, then activates practice
-## drones and pays out on returning to dock.
-## Future variant (noted, not built): an ambush on the return leg when the
-## player picked the fighter.
-
-const SYSTEM_NAME := "Cinder Reach"
-
-enum Step { WELCOME, THRUST, ROTATE, BOOST_BRAKE, DRONES, RETURN, DONE }
+extends Node
+## Flight-control training CONTROLLER. The old gold top-bar is gone — the TEXT now
+## lives in the Tutor as the "flight_training" lesson (centred captions, one system),
+## and this node just drives the MECHANICS: input tracking, the 3 practice drones,
+## and the 150c/50xp payout that kicks off the campaign. It reads the active Tutor
+## step's `id` and calls Tutor.did() to complete each one. Runs once on a fresh save.
 
 const REWARD_CREDITS := 150
 const REWARD_XP := 50
 const DRONE_COUNT := 3
 
+## Step id -> VO clip. The controller plays it when a step first becomes active
+## (the Tutor owns the caption; VO stays here since it's step-timed).
+const VO_LINES := {
+	"tut_launch": "tut_welcome", "tut_thrust": "tut_thrust", "tut_rotate": "tut_rotate",
+	"tut_boostbrake": "tut_boost", "tut_drones": "tut_drones", "tut_dock": "tut_return",
+}
+
 var ship: TestShip
-var step := Step.WELCOME
 var _seen := {}
 var _kills := 0
-var _label: Label
+var _drones_spawned := false
+var _paid := false
+var _last_id := ""
 
 
 func _init(p_ship: TestShip) -> void:
 	ship = p_ship
-	layer = 6
 
 
 func _ready() -> void:
 	add_to_group("tutorial")   # ambient drone kills report here too
-	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	panel.offset_top = 6
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.09, 0.08, 0.04, 0.92)
-	style.border_color = Color(0.85, 0.72, 0.3)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(4)
-	style.set_content_margin_all(10)
-	panel.add_theme_stylebox_override("panel", style)
-	add_child(panel)
-	_label = Label.new()
-	_label.add_theme_color_override("font_color", Color(0.95, 0.88, 0.6))
-	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	panel.add_child(_label)
-	_enter(Step.WELCOME)
+	Tutor.arm("flight_training")
 
 
 func _process(_delta: float) -> void:
-	if ship == null or ship.dead:
+	if ship == null or ship.dead or _paid:
 		return
-	match step:
-		Step.WELCOME:
+	# The whole lesson finished (last step done) → pay out + kick the campaign.
+	if Tutor.seen.has("flight_training"):
+		_finish()
+		return
+	if Tutor.active != "flight_training":
+		return
+	var id := str(Tutor.current().get("id", ""))
+	if id != _last_id and id != "":
+		_last_id = id
+		Sfx.play_voice(VO_LINES.get(id, ""))
+	match id:
+		"tut_launch":
 			if ship.docked_at == null:
-				_enter(Step.THRUST)
-		Step.THRUST:
+				Tutor.did("tut_launched")
+		"tut_thrust":
 			_mark("fore", "thrust_forward")
 			_mark("aft", "thrust_back")
 			if _seen.has("fore") and _seen.has("aft"):
-				_enter(Step.ROTATE)
-		Step.ROTATE:
+				Tutor.did("tut_thrust")
+		"tut_rotate":
 			_mark("left", "thrust_left")
 			_mark("right", "thrust_right")
 			if _seen.has("left") and _seen.has("right"):
-				_enter(Step.BOOST_BRAKE)
-		Step.BOOST_BRAKE:
+				Tutor.did("tut_rotate")
+		"tut_boostbrake":
 			_mark("boost", "boost")
 			_mark("brake", "brake")
 			if _seen.has("boost") and _seen.has("brake"):
-				_enter(Step.DRONES)
-		Step.RETURN:
+				Tutor.did("tut_boostbrake")
+		"tut_drones":
+			if not _drones_spawned:
+				_drones_spawned = true
+				_spawn_drones()
+			if _kills >= DRONE_COUNT:
+				Tutor.did("tut_drones")
+		"tut_dock":
 			if ship.docked_at is DockingPad:
-				_finish()
+				Tutor.did("tut_docked")
 
 
 func _mark(key: String, action: String) -> void:
 	if Input.is_action_pressed(action):
 		_seen[key] = true
-
-
-const VO_LINES := {
-	Step.WELCOME: "tut_welcome", Step.THRUST: "tut_thrust", Step.ROTATE: "tut_rotate",
-	Step.BOOST_BRAKE: "tut_boost", Step.DRONES: "tut_drones", Step.RETURN: "tut_return",
-}
-
-
-func _enter(new_step: Step) -> void:
-	step = new_step
-	# Interruptible: finishing a step fast cuts its narration before the next
-	# line starts, so tutorial VO never stacks on itself.
-	Sfx.play_voice(VO_LINES[step] if VO_LINES.has(step) else "")
-	match step:
-		Step.WELCOME:
-			_label.text = "Hello, Pilot. Welcome to %s. Let's make sure you've earned that pilot license.\nPress E to launch." % SYSTEM_NAME
-		Step.THRUST:
-			_label.text = "Fore and aft thrust — burn forward with W, then check your aft thrust with S.\n(Reverse burn is weak on every hull. Engines point backward.)"
-		Step.ROTATE:
-			_label.text = "Rotational vectoring — swing the nose with A and D.\nYour velocity keeps its heading until you burn against it."
-		Step.BOOST_BRAKE:
-			_label.text = "Hold SHIFT to boost. Hold SPACE to brake to a stop."
-		Step.DRONES:
-			_label.text = "Weapons online. Practice drones inbound — destroy %d of them. (0/%d)" % [DRONE_COUNT, DRONE_COUNT]
-			_spawn_drones()
-		Step.RETURN:
-			# DOCKING LESSON. The old one-line hint ("green means clean") never
-			# said there were TWO variables, nor that creeping is always safe —
-			# which is exactly what made berthing read as confusing, not hard.
-			_label.text = "Well flown, Pilot. Now bring her home and dock.\n" \
-				+ "Two things matter: line up ALONG the approach lane, and ease off the throttle. " \
-				+ "The chevrons grade you live — green is clean, amber scrapes the paint, red wrecks her.\n" \
-				+ "When in doubt, CRAWL her in. A slow approach is always safe. Press E in range."
 
 
 func _spawn_drones() -> void:
@@ -121,38 +92,23 @@ func _spawn_drones() -> void:
 
 
 func _on_drone_killed() -> void:
-	if step != Step.DRONES:
-		return
 	_kills += 1
-	if _kills >= DRONE_COUNT:
-		_enter(Step.RETURN)
-	else:
-		_label.text = "Weapons online. Practice drones inbound — destroy %d of them. (%d/%d)" % [
-			DRONE_COUNT, _kills, DRONE_COUNT]
 
 
+## License earned: pay out, flag the save, and re-run the dock hook so the first
+## campaign quest fires on THIS landing (the docking's inline on_dock ran a beat ago
+## with tutorial_done still false, so Ruel never spoke — this un-sticks it).
 func _finish() -> void:
+	_paid = true
 	Wallet.credits += REWARD_CREDITS
 	Wallet.xp += REWARD_XP
 	SaveGame.tutorial_done = true
 	SaveGame.save_game(ship)
-	# This tutorial-completing dock ALREADY ran Quests.on_dock() a beat ago with
-	# tutorial_done still false (ship.dock() fires it inline; _finish sets the
-	# flag afterward). So the first campaign quest ("Standing With the Board")
-	# never started and Ruel never spoke — you'd have had to undock and redock.
-	# Now the licence is earned, re-run the dock hook so his briefing fires on
-	# THIS landing; the refresh below presents the freshly-queued talk.
 	if ship.docked_at is DockingPad:
 		Quests.on_dock(true, ship, true)
-	# The dock screen refreshed before the payout landed — update it so the
-	# credits the bar promises are the credits the header shows (and so the
-	# briefing just queued above is presented).
 	for screen in get_tree().get_nodes_in_group("dock_screens"):
 		if screen.visible:
 			screen.refresh()
 	Sfx.play("jingle", -5.0)
-	_label.text = "License earned. +%d credits, +%d XP. %s is yours, Pilot." % [
-		REWARD_CREDITS, REWARD_XP, SYSTEM_NAME]
-	step = Step.DONE
-	await get_tree().create_timer(7.0).timeout
+	ship._flash_note("License earned. +%d credits, +%d XP." % [REWARD_CREDITS, REWARD_XP])
 	queue_free()

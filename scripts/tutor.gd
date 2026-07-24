@@ -18,6 +18,20 @@ class_name Tutor
 ## Screens only have to call `register()` for the controls they own.
 
 const LESSONS := {
+	# FLIGHT TRAINING — the old pre-Tutor "flight control" tutorial, folded in as
+	# the FIRST lesson (user, 2026-07-24) so it runs first, pays the 150c/50xp that
+	# funds everything after, and wears the Tutor's centred captions instead of a
+	# top bar. Unpinned (centred) captions; a slim controller (Tutorial) drives the
+	# mechanics — input tracking, the 3 practice drones, the payout — and calls
+	# Tutor.did() to complete each step. Steps carry `id`s the controller reads.
+	"flight_training": [
+		{"id": "tut_launch", "anchor": "effigy", "pin": false, "text": "Welcome, Pilot — let's earn that license. Press [E] to launch."},
+		{"id": "tut_thrust", "anchor": "effigy", "pin": false, "where": "flight", "text": "Fore and aft thrust: burn forward with [W], feel the weak reverse with [S]. Engines point back, so reverse is soft on every hull."},
+		{"id": "tut_rotate", "anchor": "effigy", "pin": false, "where": "flight", "text": "Vector the nose with [A] and [D]. Your velocity holds its heading until you burn against it."},
+		{"id": "tut_boostbrake", "anchor": "effigy", "pin": false, "where": "flight", "text": "Hold [SHIFT] to boost. Hold [SPACE] to brake to a full stop."},
+		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Weapons hot — practice drones inbound. Destroy them all."},
+		{"id": "tut_dock", "anchor": "effigy", "pin": false, "text": "Well flown. Now bring her home and dock: line up ALONG the lane, ease the throttle, green is clean. Crawl her in when you're unsure."},
+	],
 	# WHERE YOUR VITALS LIVE — the first thing a new pilot needs to be able to
 	# read: the effigy carries HULL/SHIELD/ARMOR and the reactor ENERGY pill, all
 	# in one place. Pinned at the effigy with a dwell so it points, teaches, and
@@ -638,6 +652,18 @@ static func _build_preds() -> void:
 	if _preds_built:
 		return
 	_preds_built = true
+
+	# FLIGHT TRAINING: armed explicitly by the Tutorial controller (no arm_pred — it
+	# runs once on a fresh save). The controller sets each did() flag as the pilot
+	# finishes that step's action; the flags are sticky so completion never misses.
+	_done_pred["flight_training"] = [
+		func(c): return c.get("tut_launched", false),
+		func(c): return c.get("tut_thrust", false),
+		func(c): return c.get("tut_rotate", false),
+		func(c): return c.get("tut_boostbrake", false),
+		func(c): return c.get("tut_drones", false),
+		func(c): return c.get("tut_docked", false),
+	]
 
 	# --- Flight lessons (context "flight"): arm on a live condition, complete on a
 	# poll or a dwell. The flight scene feeds the snapshot each frame (flight_test).
