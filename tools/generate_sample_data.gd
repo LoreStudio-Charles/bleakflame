@@ -89,16 +89,17 @@ func _generate_components() -> void:
 	# HEAT = fire-and-forget, re-seeks the nearest target every frame.
 	var heat := _weapon("Heat-Seeker Missile Pod", G.ADVANCED, 2, 7.0, 4.0, 42.0, 1.1,
 		"Fire and forget — the warhead chases the hottest engine in the sky. Five rounds that hit like a grudge; enough to break a fight you didn't start, never enough for a long hunt.")
-	heat.weapon_range = 620.0
-	heat.projectile_speed = 620.0
+	heat.weapon_range = 1860.0   # 3x reach (user, 2026-07-23) — it was hopeless up close only
+	heat.projectile_speed = 682.0   # +10%
 	heat.magazine = 5
 	heat.ammo_price = 12
 	heat.hit_bonus = 6.0
 	heat.blast_radius = 26.0
 	heat.homing = 100.0   # on-switch + fallback rate vs a size-less mark (a station)
 	# Turn rate in DEGREES PER 10 UNITS travelled (WeaponDef.homing_by_band). Flat
-	# 1.6 == the old 100 deg/s at speed 620 (100*10/620), so behaviour is unchanged
-	# — this just moves it onto the lance's speed-independent, per-band-tunable system.
+	# 1.6 was the old 100 deg/s at the old speed 620 (100*10/620); it stays 1.6
+	# through the +10% speed bump ON PURPOSE — per-10-units is speed-independent, so
+	# a faster missile keeps the same turn radius instead of suddenly flying wide.
 	heat.homing_by_band = PackedFloat32Array([1.6, 1.6, 1.6, 1.6, 1.6])
 	heat.seek_nearest = true
 	heat.bolt_color = Color(1.0, 0.5, 0.28)
