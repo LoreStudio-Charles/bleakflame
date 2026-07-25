@@ -142,7 +142,7 @@ func _ready() -> void:
 	_energy_gauge = EnergyGauge.new()
 	_energy_gauge.ship = ship
 	add_child(_energy_gauge)
-	_center_rect(_energy_gauge, {}, [-150, -380, 14, 92])
+	_center_rect(_energy_gauge, {}, [-100, -560, 10, 60])
 	_gem_bar = GemBar.new()
 	_gem_bar.ship = ship
 	_left.add_child(_gem_bar)
@@ -152,7 +152,7 @@ func _ready() -> void:
 	_ord_gauge = OrdnanceGauge.new()
 	_ord_gauge.ship = ship
 	add_child(_ord_gauge)
-	_center_rect(_ord_gauge, {}, [180, -380, 130, 90])
+	_center_rect(_ord_gauge, {}, [100, -620, 130, 90])
 	Tutor.register("ord_gauge", _ord_gauge)
 	# Keybind hints moved to the Esc menu -> Controls (they were a near-invisible
 	# dim line on the dash). The dash is instruments now, not a cheat-sheet.
@@ -1331,7 +1331,7 @@ class CargoGauge:
 class EnergyGauge:
 	extends Control
 	var ship: TestShip
-	const SLATS := 16
+	const SLATS := 8
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1366,8 +1366,8 @@ class EnergyGauge:
 			Vector2(cx + 1, body_h * 0.42), Vector2(cx - 3, body_h - 3)]),
 			Color(on_col, 0.9), 1.6)
 		var f := get_theme_default_font()
-		draw_string(f, Vector2(0, size.y - 1), "%d" % int(round(ship.energy)),
-			HORIZONTAL_ALIGNMENT_CENTER, w, 11, on_col)
+		#draw_string(f, Vector2(0, size.y - 1), "%d" % int(round(ship.energy)),
+			#HORIZONTAL_ALIGNMENT_CENTER, w, 11, on_col)
 
 
 ## Ordnance readout: for each magazine weapon, a HOT (colour) / COLD (grey) box
