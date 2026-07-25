@@ -761,7 +761,8 @@ func _tick_tutor() -> void:
 	# One caption for the ONE dirtside objective (onboarding step / a held quest talk / a dock
 	# tutorial redirected to its building) — and the chevron in _draw_town points at the same spot.
 	var obj := _dirtside_objective()
-	_tutor_cap.text = str(obj.get("text", ""))
+	# {TOKEN}s -> live bindings (Keys.expand), same as the flight ping's captions.
+	_tutor_cap.text = Keys.expand(str(obj.get("text", "")))
 	_tutor_cap.visible = not obj.is_empty()
 
 

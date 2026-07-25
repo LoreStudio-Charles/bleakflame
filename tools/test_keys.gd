@@ -10,6 +10,34 @@ extends SceneTree
 var _fails := 0
 
 
+## LESSON COPY MUST NOT HARDCODE A REBINDABLE KEY (user, 2026-07-25). Copy writes
+## {TOKEN}s and Keys.expand() resolves them against the LIVE binding, so a rebind
+## re-words every lesson instead of turning it into a lie. This is the guard: it scans
+## every step of every lesson for a bracketed letter that Keys actually owns.
+##
+## [W]/[A]/[S]/[D] are ALLOWED literals — raw movement is polled, not bound through
+## Keys, so there is no binding to go stale. The day movement becomes rebindable, this
+## list is the thing to shorten.
+func _check_lesson_copy(fail_fn: Callable) -> void:
+	var allowed := ["[W]", "[A]", "[S]", "[D]"]
+	var owned := {}
+	for token in Keys.TOKENS:
+		owned[Keys.label(token)] = token          # e.g. "[P]" -> "DOSSIER"
+	for lid in Tutor.LESSONS:
+		for i in (Tutor.LESSONS[lid] as Array).size():
+			var st: Dictionary = Tutor.LESSONS[lid][i]
+			var text := str(st.get("text", ""))
+			for literal in owned:
+				if allowed.has(literal):
+					continue
+				if text.contains(literal):
+					fail_fn.call("%s[%d] hardcodes %s — write {%s} instead" % [
+						lid, i, literal, owned[literal]])
+			# A token that Keys cannot resolve renders as itself on screen.
+			if text.contains("{") and Keys.expand(text).contains("{"):
+				fail_fn.call("%s[%d] has an UNRESOLVED token: %s" % [lid, i, text])
+
+
 func _init() -> void:
 	# 1) NO TWO ACTIONS ON ONE KEY. Q is deliberately dual (cancel in menus / weapons-free
 	#    in the world) and those contexts never overlap, so it's declared once here.
@@ -75,6 +103,21 @@ func _init() -> void:
 	_chk(Keys.name_of(Keys.MAP) == "M", "name_of reports the map key as 'M'")
 	_chk(Keys.name_of(Keys.MENU) == "Esc", "name_of spells Esc")
 	_chk(Keys.name_of(Keys.COMM_TERMINAL) == "ENTER", "name_of spells ENTER")
+
+	# 7) Tokens resolve, and NO lesson hardcodes a key Keys owns.
+	_chk(Keys.expand("press {DOSSIER} now") == "press [P] now", "expand resolves a token")
+	_chk(Keys.expand("{ABILITIES}") == "[1]-[5]", "the ability bus expands as a range")
+	_chk(Keys.expand("no tokens here") == "no tokens here", "plain copy passes through")
+	# COUNTER IN AN ARRAY, not a plain int: a GDScript lambda captures by VALUE, so
+	# `copy_fails += 1` inside the callable incremented a COPY and the suite reported
+	# PASS while printing failures — a test that cannot fail is worse than no test.
+	# An Array is a reference, so the increment survives.
+	var copy_fails := [0]
+	_check_lesson_copy(func(msg: String) -> void:
+		copy_fails[0] += 1
+		print("  FAIL " + msg))
+	_fails += int(copy_fails[0])
+	_chk(int(copy_fails[0]) == 0, "every lesson writes {TOKEN}s, never a hardcoded key")
 
 	print("test_keys: ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	quit(1 if _fails > 0 else 0)

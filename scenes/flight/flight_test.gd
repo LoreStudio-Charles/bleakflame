@@ -592,7 +592,22 @@ func _tick_flight_lessons() -> void:
 		"comms_any": not Comms.messages.is_empty(),
 		"hold_full": ship.cargo_used() >= float(ship.stats.cargo),
 		"carrying_ordnance": carrying_ordnance,
+		# A ROCK you could be chipping: the one moment "guns hot with NO target" is
+		# worth explaining, since every other lesson teaches firing AT something.
+		"rock_near": _nearest_rock_dist(ship) < 900.0,
+		"weapons_tight": not ship.weapons_free,
+		"skill_points": Pilot.skill_points_available(),
 	})
+
+
+## Distance to the nearest mineable rock, or INF. Only the tutor needs this, and only to
+## answer "is there something here worth shooting that will never shoot back".
+func _nearest_rock_dist(ship) -> float:
+	var best := INF
+	for r in get_tree().get_nodes_in_group("asteroids"):
+		if is_instance_valid(r):
+			best = minf(best, ship.global_position.distance_to(r.global_position))
+	return best
 
 
 func _tick_distress(delta: float) -> void:

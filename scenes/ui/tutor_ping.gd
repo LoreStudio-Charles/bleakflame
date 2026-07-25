@@ -101,7 +101,9 @@ func _target_rect(node: Control) -> Rect2:
 ## "buy 4" is a guess until you can see you're at 2.
 func _caption() -> String:
 	var step := Tutor.current()
-	var text := str(step.get("text", ""))
+	# Lesson copy writes {TOKEN}s, never letters — expanded here against the LIVE
+	# bindings so a rebind re-words every lesson instead of making it lie.
+	var text := Keys.expand(str(step.get("text", "")))
 	var need := int(step.get("need", 0))
 	var good := str(step.get("good", ""))
 	if need <= 0 or good.is_empty() or text.is_empty():

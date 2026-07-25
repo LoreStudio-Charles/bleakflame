@@ -107,9 +107,16 @@ Still unbuilt, still untaught: grenade [R], sprint [SHIFT].
 - **test_dock_ui's authoring validator** exempts `where:"ground"` steps from anchors;
   ground steps need `text` (+ optional `target`). Keep the validator in lockstep when
   the lesson set changes — it is the thing that catches a typo'd lesson before a player.
-- **Copy rule:** use `Keys.name_of()`-style thinking — never hardcode a letter a rebind
-  would make a lie (today copy hardcodes letters; acceptable until a rebind UI exists,
-  but the final pass should consider generating key names).
+- **Copy rule — DONE 2026-07-25.** Lesson copy writes `{TOKEN}`s (`{DOSSIER}`,
+  `{CANCEL}`, `{ABILITIES}`, `{MOVE}`…) and `Keys.expand()` resolves them against the
+  LIVE binding at render time, in both surfaces (TutorPing captions and the town's
+  ground caption). Rebind a key and every lesson re-words itself. `Keys.TOKENS` is the
+  registry; add a binding there the same moment you add the const, or the token renders
+  as itself — visible nonsense, which is the failure mode we want.
+  GUARDED by test_keys `_check_lesson_copy`: it scans every step of every lesson for a
+  bracketed literal Keys owns and fails the build. `[W]/[A]/[S]/[D]` stay literal on
+  purpose (raw polled movement, no binding to go stale) and are the allow-list to
+  shorten the day movement becomes rebindable.
 - **The "launch" lesson stays imperative** (transient countdown modal) — the one
   sanctioned exception.
 

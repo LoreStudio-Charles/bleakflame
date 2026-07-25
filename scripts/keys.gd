@@ -112,6 +112,51 @@ static func party_index(keycode: int) -> int:
 
 ## Human-readable name, for HUD prompts and the tutor — so copy never hardcodes a letter
 ## that a rebind would make a lie.
+## ---- COPY THAT CANNOT GO STALE ----
+##
+## Player-facing text NEVER hardcodes a letter (user, 2026-07-25). Tutorial copy writes
+## a TOKEN — "press {DOSSIER}" — and `expand()` turns it into "press [P]" using the
+## binding that is actually live. Rebind the key and every lesson, prompt and caption
+## re-words itself; hardcoded letters would quietly become lies the day a rebind UI
+## ships, and there is no way to grep for a lie.
+##
+## Add a binding here the moment you add it above, or the token renders as itself —
+## visible nonsense, which is the failure mode we want (loud, not silent).
+const TOKENS := {
+	"CONFIRM": CONFIRM, "CANCEL": CANCEL, "WEAPONS_FREE": WEAPONS_FREE,
+	"ORDNANCE": ORDNANCE, "CYCLE_FOE": CYCLE_FOE, "BOOST": BOOST, "BRAKE": BRAKE,
+	"MAP": MAP, "HOLD": HOLD, "BAGS": BAGS, "DOSSIER": DOSSIER, "FACTIONS": FACTIONS,
+	"SOCIAL": SOCIAL, "DARK": DARK, "LOG": LOG, "COMMS": COMMS,
+	"COMM_TERMINAL": COMM_TERMINAL, "COMMAND": COMMAND, "MENU": MENU,
+	"SCREENSHOT": SCREENSHOT, "TARGET_SELF": TARGET_SELF,
+}
+
+
+## "[P]" for a token, ready to drop into a sentence. Unknown token -> "" so the caller
+## can notice; expand() leaves the raw token in place instead, which shows up on screen.
+static func label(token: String) -> String:
+	if TOKENS.has(token):
+		return "[%s]" % name_of(int(TOKENS[token]))
+	match token:
+		"SELECT": return "LEFT-CLICK"
+		"INTERACT": return "RIGHT-CLICK"
+		"ABILITIES": return "[%s]-[%s]" % [name_of(ABILITY_1), name_of(ABILITY_1 + ABILITY_COUNT - 1)]
+		"MOVE": return "[WASD]"
+	return ""
+
+
+## Replace every {TOKEN} in `text` with its live binding.
+static func expand(text: String) -> String:
+	if not text.contains("{"):
+		return text
+	var out := text
+	for token in TOKENS:
+		out = out.replace("{%s}" % token, label(token))
+	for token in ["SELECT", "INTERACT", "ABILITIES", "MOVE"]:
+		out = out.replace("{%s}" % token, label(token))
+	return out
+
+
 static func name_of(keycode: int) -> String:
 	match keycode:
 		KEY_ENTER, KEY_KP_ENTER: return "ENTER"

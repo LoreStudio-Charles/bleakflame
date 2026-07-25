@@ -25,11 +25,11 @@ const LESSONS := {
 	# mechanics — input tracking, the 3 practice drones, the payout — and calls
 	# Tutor.did() to complete each step. Steps carry `id`s the controller reads.
 	"flight_training": [
-		{"id": "tut_launch", "anchor": "launch_hint", "pin": false, "text": "Welcome, Pilot — let's earn that license. Press [E] to launch."},
+		{"id": "tut_launch", "anchor": "launch_hint", "pin": false, "text": "Welcome, Pilot — let's earn that license. Press {CONFIRM} to launch."},
 		{"id": "tut_thrust", "anchor": "effigy", "pin": false, "where": "flight", "text": "Fore and aft thrust: burn forward with [W], feel the weak reverse with [S]. Engines point back, so reverse is soft on every hull."},
 		{"id": "tut_rotate", "anchor": "effigy", "pin": false, "where": "flight", "text": "Vector the nose with [A] and [D]. Your velocity holds its heading until you burn against it."},
-		{"id": "tut_boostbrake", "anchor": "effigy", "pin": false, "where": "flight", "text": "Hold [SHIFT] to boost. Hold [SPACE] to brake to a full stop."},
-		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Practice drones inbound. RIGHT-CLICK a drone: that targets it AND switches your guns ON. When your target dies the guns switch OFF — right-click the next one. [Q] toggles your guns by hand. Clear all three."},
+		{"id": "tut_boostbrake", "anchor": "effigy", "pin": false, "where": "flight", "text": "Hold {BOOST} to boost. Hold {BRAKE} to brake to a full stop."},
+		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Practice drones inbound. RIGHT-CLICK a drone: that targets it AND switches your guns ON. When your target dies the guns switch OFF — right-click the next one. {CANCEL} toggles your guns by hand. Clear all three."},
 		{"id": "tut_dock", "anchor": "effigy", "pin": false, "text": "Well flown. Now bring her home and dock: line up ALONG the lane, ease the throttle, green is clean. Crawl her in when you're unsure."},
 	],
 	# WHERE YOUR VITALS LIVE — the first thing a new pilot needs to be able to
@@ -57,13 +57,13 @@ const LESSONS := {
 	# and cannot restart (once fired, seen). This is the 2026-07-23 fix for the
 	# "ability tutorial restarts every time the survey scan is equipped" bug.
 	"memorize": [
-		{"anchor": "gem_bar", "where": "flight", "text": "SYSTEM WIRED — your new ability sits on the [1]-[5] bus. Press its number key in flight to run it. (Rewire the bus any time from the Pilot tab at dock.)"},
+		{"anchor": "gem_bar", "where": "flight", "text": "SYSTEM WIRED — your new ability sits on the {ABILITIES} bus. Press its number key in flight to run it. (Rewire the bus any time from the Pilot tab at dock.)"},
 	],
 	# Taught the moment they undock for the planet: a first-timer has no idea
 	# where the colony IS, and hunting for it is the confusing part — not the
 	# flying. Anchored to the RADAR, because that is where navigation lives.
 	"chart": [
-		{"anchor": "radar", "where": "flight", "text": "Press [M] for the map — your destination is marked on it."},
+		{"anchor": "radar", "where": "flight", "text": "Press {MAP} for the map — your destination is marked on it."},
 	],
 	# Fired by the FIRST transmission a pilot ever receives. Comms scroll away,
 	# and nothing tells you they were kept — so the one thing worth teaching is
@@ -74,14 +74,14 @@ const LESSONS := {
 	# can re-flash your Processor Bus — change which abilities are loaded —
 	# without frying yourself, and (2) the reactor is no longer feeding systems,
 	# so it dumps everything into refilling Capacity, far faster than in flight.
-	# Unpinned + dwell: [K] is a key, not a widget, and this can never starve.
+	# Unpinned + dwell: {DARK} is a key, not a widget, and this can never starve.
 	"running_dark": [
 		{"anchor": "gem_bar", "where": "flight", "pin": false, "dwell": 13.0,
-			"text": "Reserves down? Press [K] to run DARK — every system offline. The reactor stops feeding them and floods your energy Capacity back instead. Cold circuits are also safe to re-flash: swap which abilities are loaded, right there in the black. Reboot when you're ready."},
+			"text": "Reserves down? Press {DARK} to run DARK — every system offline. The reactor stops feeding them and floods your energy Capacity back instead. Cold circuits are also safe to re-flash: swap which abilities are loaded, right there in the black. Reboot when you're ready."},
 	],
 
 	"comms": [
-		{"anchor": "comms_badge", "where": "flight", "text": "Every transmission is archived — press [C] to re-read anything you missed."},
+		{"anchor": "comms_badge", "where": "flight", "text": "Every transmission is archived — press {COMMS} to re-read anything you missed."},
 	],
 	# THE TRADE LOOP, taught across two venues in one lesson: buy where a good
 	# is MADE, sell where it is WANTED. Armed when the pilot is about to fly to
@@ -134,23 +134,23 @@ const LESSONS := {
 	# moment to teach it — and any launch at all satisfies the whole thing, so a
 	# pilot who just flies is never nagged about a branch they skipped.
 	"launch": [
-		{"anchor": "launch_window", "text": "Launch window open. [E] goes NOW, [Q] scrubs it — try scrubbing, you can always stand down."},
-		{"anchor": "launch_hint", "where": "dock", "pin": false, "text": "Stood down, no harm done. Press [E] again when you're ready to fly."},
+		{"anchor": "launch_window", "text": "Launch window open. {CONFIRM} goes NOW, {CANCEL} scrubs it — try scrubbing, you can always stand down."},
+		{"anchor": "launch_hint", "where": "dock", "pin": false, "text": "Stood down, no harm done. Press {CONFIRM} again when you're ready to fly."},
 	],
 
 	# --- Flight keybinds. Each is armed at the moment it first MATTERS, never
 	# on a timer, so the game only ever explains a thing you are already doing.
 	"log": [
-		{"anchor": "missions_hud", "where": "flight", "text": "Press [L] for the captain's log — every lead, order and discovery is kept there."},
+		{"anchor": "missions_hud", "where": "flight", "text": "Press {LOG} for the captain's log — every lead, order and discovery is kept there."},
 	],
 	"salvage": [
-		{"anchor": "cargo_gauge", "where": "flight", "text": "Hold's full. Press [H] to manage cargo — grab what's nearby, jettison what isn't worth the mass."},
+		{"anchor": "cargo_gauge", "where": "flight", "text": "Hold's full. Press {HOLD} to manage cargo — grab what's nearby, jettison what isn't worth the mass."},
 	],
 	"ordnance": [
-		{"anchor": "ord_gauge", "where": "flight", "text": "You're carrying ORDNANCE. Guns fire themselves once weapons are free, but rounds are finite and cost credits at dock — press [R] to launch them when it counts."},
+		{"anchor": "ord_gauge", "where": "flight", "text": "You're carrying ORDNANCE. Guns fire themselves once weapons are free, but rounds are finite and cost credits at dock — press {ORDNANCE} to launch them when it counts."},
 	],
 	"targeting": [
-		{"anchor": "radar", "where": "flight", "text": "LEFT-CLICK targets without shooting — a rock to scan, an ally to help. RIGHT-CLICK a hostile to target it AND switch your guns on. [TAB] cycles hostiles. Most systems need a target."},
+		{"anchor": "radar", "where": "flight", "text": "LEFT-CLICK targets without shooting — a rock to scan, an ally to help. RIGHT-CLICK a hostile to target it AND switch your guns on. {CYCLE_FOE} cycles hostiles. Most systems need a target."},
 	],
 
 	# THE PIP ITSELF. Taught the first time one ever appears, because the whole
@@ -196,7 +196,7 @@ const LESSONS := {
 	],
 	"meet_doug": [
 		{"anchor": "radar", "where": "flight", "dwell": 12.0,
-			"text": "You're carrying ore. Doug Diggs buys it at THE DIG, out in the Verge — better than station rate. It's on your chart [M]."},
+			"text": "You're carrying ore. Doug Diggs buys it at THE DIG, out in the Verge — better than station rate. It's on your chart {MAP}."},
 	],
 
 	# --- FIRST VISIT to each dock tab. Self-paced by design: these arm when the
@@ -239,12 +239,12 @@ const LESSONS := {
 	# `where: "ground"` means the caption + a soft direction nudge live in the TOWN (not a
 	# TutorPing on a Control), and `target` names the NPC or building to point at. Completion
 	# is an IN-WORLD action folded in as a did() event: reaching the NPC (they notice +
-	# approach) or [E]-ing the place. Watchdog treats "ground" steps as player-paced.
+	# approach) or {CONFIRM}-ing the place. Watchdog treats "ground" steps as player-paced.
 	# THE COLONY VISIT — the user's canonical order (2026-07-25): land -> Imari ->
 	# contract board -> Sella -> market prices -> buy food -> spaceport -> launch.
 	# (The station sell that closes the route is trade_return, at the station.)
 	"ground_intro": [
-		{"where": "ground", "target": "Imari", "anchor": "", "text": "Welcome to Epharon. Elder Imari keeps this place running — find her out by the Starport and see what she needs. [WASD] or hold the mouse to walk."},
+		{"where": "ground", "target": "Imari", "anchor": "", "text": "Welcome to Epharon. Elder Imari keeps this place running — find her out by the Starport and see what she needs. {MOVE} or hold the mouse to walk."},
 		{"where": "ground", "target": "CONTRACTS", "anchor": "", "text": "Work gets settled at the colony's CONTRACT BOARD — walk over and turn in what you're carrying."},
 		{"where": "ground", "target": "EXPLORERS GUILD", "anchor": "", "text": "Cartographer Sella maps the Reach from the Explorer's Union. Step inside and introduce yourself — she pays for the far dark."},
 		{"where": "ground", "target": "MARKET", "anchor": "", "text": "Check the prices at Bram's MARKET — GREEN means a local bargain."},
@@ -258,21 +258,21 @@ const LESSONS := {
 	# view, a spent cell — never on landing, because a caption about killing things is
 	# noise to someone who came down to sell food.
 	"ground_fight": [
-		{"where": "ground", "anchor": "", "text": "Something's out there. RIGHT-CLICK it to target AND open fire — [TAB] cycles what's near. Left-click only ever LOOKS."},
-		{"where": "ground", "anchor": "", "text": "[Q] switches your weapon on and off by hand, and it switches off by itself when your target drops. [SPACE] kneels for cover — you take far less while you're down."},
+		{"where": "ground", "anchor": "", "text": "Something's out there. RIGHT-CLICK it to target AND open fire — {CYCLE_FOE} cycles what's near. Left-click only ever LOOKS."},
+		{"where": "ground", "anchor": "", "text": "{CANCEL} switches your weapon on and off by hand, and it switches off by itself when your target drops. {BRAKE} kneels for cover — you take far less while you're down."},
 	],
 
 	# The character's own bus. Taught apart from the fight lesson on purpose: knowing
 	# WHERE abilities come from (training, prepared at the dossier) is a different idea
 	# from knowing how to shoot, and cramming both into one caption taught neither.
 	"techniques": [
-		{"where": "ground", "anchor": "", "text": "You know a few TECHNIQUES on foot — [1] to [5] along the bottom. Try one."},
-		{"where": "ground", "anchor": "", "text": "Techniques are training, not hardware: press [P] and open TECHNIQUES to choose which five you carry. Your ship's abilities are a separate set."},
+		{"where": "ground", "anchor": "", "text": "You know a few TECHNIQUES on foot — {ABILITIES} along the bottom. Try one."},
+		{"where": "ground", "anchor": "", "text": "Techniques are training, not hardware: press {DOSSIER} and open TECHNIQUES to choose which five you carry. Your ship's abilities are a separate set."},
 	],
 
 	# Armed by a SPENT CELL, which is the only moment the answer is interesting.
 	"meditate": [
-		{"where": "ground", "anchor": "", "text": "Cell's low. Press [K] to MEDITATE — it floods back fast, but you're defenceless while you're down. Never in the open with something hunting."},
+		{"where": "ground", "anchor": "", "text": "Cell's low. Press {DARK} to MEDITATE — it floods back fast, but you're defenceless while you're down. Never in the open with something hunting."},
 	],
 
 	# The dossier is where levels, skills, standing, cargo and now equipment live, and
@@ -284,7 +284,36 @@ const LESSONS := {
 	# (rightly) insists must point at something real.
 	"dossier": [
 		{"where": "flight", "anchor": "effigy", "pin": false,
-			"text": "You've earned a skill point. Press [P] for your dossier — level, skills, standing, what you're carrying, and the gear you wear on foot."},
+			"text": "You've earned a skill point. Press {DOSSIER} for your dossier — level, skills, standing, what you're carrying, and the gear you wear on foot."},
+	],
+
+	# WHO IS KEEPING SCORE. Armed the first time the player MOVES a faction's needle,
+	# which is the only moment the sheet has anything to say.
+	"factions": [
+		{"where": "flight", "anchor": "effigy", "pin": false, "dwell": 11.0,
+			"text": "Somebody noticed that. Press {FACTIONS} for the faction sheet — who trusts you, who doesn't, and what it takes to change their mind."},
+	],
+
+	# GUNS HOT WITH NOTHING TO SHOOT AT. Every other lesson teaches firing AT a target,
+	# so the state reads as "attack that" rather than "weapons on". Rock is the honest
+	# example: it never shoots back, and any gun chips it.
+	"guns_free": [
+		{"where": "flight", "anchor": "gem_bar", "pin": false, "dwell": 11.0,
+			"text": "Weapons are a STATE, not a trigger: {CANCEL} switches them on with no target at all. Handy on rock — any gun chips ore loose, though a mining beam does it properly."},
+	],
+
+	# THE GROUND SHOP IDIOM. It is right-click on both sides of the counter, which is
+	# fast once known and invisible until then.
+	"shop_idiom": [
+		{"where": "ground", "anchor": "", "pin": false, "dwell": 11.0,
+			"text": "A counter works by RIGHT-CLICK, both ways: right-click the shelf to BUY, right-click your own hold to SELL. Green is a good price here, red is dear."},
+	],
+
+	# THE MAP HAS LEVELS. Taught ON THE GROUND, the one place where zooming out is
+	# visibly a change of scale (surface → system) rather than just a bigger view.
+	"map_zoom": [
+		{"where": "ground", "anchor": "", "pin": false, "dwell": 11.0,
+			"text": "That map has depth: RIGHT-CLICK to pull back a level — surface, system, and further out — and click a mark to dive back in."},
 	],
 }
 
@@ -884,6 +913,16 @@ static func _build_preds() -> void:
 	# opens anywhere, and the moment you earn a point is the moment to say so.
 	_arm_pred["dossier"] = func(c): return int(c.get("skill_points", 0)) > 0
 	_done_pred["dossier"] = [func(c): return c.get("dossier_opened", false)]
+	# The faction sheet, the first time the player MOVES a needle (Standing fires the flag).
+	_arm_pred["factions"] = func(c): return c.get("standing_changed", false)
+	# Weapons-free with nothing to shoot: taught beside a rock, guns currently tight.
+	_arm_pred["guns_free"] = func(c): return c.get("flying", false) \
+		and c.get("rock_near", false) and c.get("weapons_tight", false) \
+		and not c.get("has_target", false)
+	# The counter idiom, once a ground shop is actually open in front of them.
+	_arm_pred["shop_idiom"] = func(c): return c.get("on_ground", false) and c.get("used_market", false)
+	# Map depth, taught on the GROUND where a zoom-out visibly changes scale.
+	_arm_pred["map_zoom"] = func(c): return c.get("on_ground", false) and c.get("chart_opened", false)
 
 
 ## The stall log as plain data for the save. NOT cleared by reset(): a fresh
