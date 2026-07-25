@@ -175,8 +175,13 @@ func _ready() -> void:
 ## One-time population. (This used to run on every dock-state change — every
 ## dock AND undock quietly spawned a full extra wave. The gauntlet was a bug.)
 func _populate_world() -> void:
-	for i in DRONE_COUNT:
-		_spawn_drone(_drone_spot())
+	# NO ambient practice drones during flight training: they're indistinguishable from
+	# the tutorial's own three targets, and their deaths — to a Guardian, or on respawn —
+	# falsely ticked the license count (the tutorial's own drones are enough). They return
+	# once training is done. (user, 2026-07-24)
+	if SaveGame.tutorial_done:
+		for i in DRONE_COUNT:
+			_spawn_drone(_drone_spot())
 	_spawn_guard_wing()
 	# Denser lanes (user, 2026-07-23): more raiders + wasps, the LIGHT harassers, so
 	# the sky feels busier without stacking heavies on a new pilot. 4 raider / 1
@@ -1257,11 +1262,8 @@ func _spawn_drone(pos: Vector2) -> void:
 	var drone := TargetDrone.new()
 	drone.position = pos
 	drone.destroyed.connect(_respawn_drone_later)
-	# Any drone counts for the license test — players can't tell them apart.
-	drone.destroyed.connect(func() -> void:
-		var tut := get_tree().get_first_node_in_group("tutorial")
-		if tut != null:
-			tut._on_drone_killed())
+	# (These ambient drones no longer count toward the license test — the tutorial counts
+	# only its OWN three targets, and ambient ones are suppressed during training anyway.)
 	add_child(drone)
 
 
