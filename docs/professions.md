@@ -533,3 +533,21 @@ Drone **pets**, energy and health **drains**, **terror**, slow unrelenting damag
   coop lands. Everything else here is an effect on a seam that already exists.
   Sequence pets LAST, or scope v1 to a timed drone (like Tender Drone) rather
   than a true persistent pet.
+
+---
+
+## Banked — the 7th commission: THE BOUNTY HUNTER (NOT built)
+
+Designed 2026-07-24 (user); full write-up in `docs/the_ooshu.md`. Led by the
+**Ooshu** (masked alien trackers-for-hire), introduced as an antagonist HUNTER in
+the Cinder Reach Campaign ("The Legend") — the commission LEADER is a later reveal.
+
+- **EQ touchstone:** the **Ranger** (its irreplaceable claim: TRACKING).
+- **Role:** Damage + single-target **CONTROL** (lockdown) — NOT Support, NOT
+  Healing. Distinct from Miner's *area* control.
+- **Signature — THE MARK:** tag one target; it can't cloak, out-run, or shake your
+  lock (see it through dark/distance). Controls the prey's *options*, not its
+  incoming damage.
+- **Capture, not kill:** subdue to low hull, then tag for the (higher) live
+  bounty — hooks the existing bounty board (MissionLog) and the Ooshu mask-breach.
+- **Coop:** locks + reveals the mark ("it can't run — converge"), control not buff.
