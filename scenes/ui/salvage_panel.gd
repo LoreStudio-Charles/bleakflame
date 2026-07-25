@@ -43,16 +43,31 @@ func _ready() -> void:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	_panel.add_child(col)
+	var header_row := HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 12)
+	col.add_child(header_row)
 	_header = Label.new()
 	_header.add_theme_color_override("font_color", UiTheme.AMBER)
 	_header.add_theme_font_size_override("font_size", 15)
-	col.add_child(_header)
+	_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(_header)
+	var all_btn := Button.new()
+	all_btn.text = "Salvage All"
+	all_btn.pressed.connect(_salvage_all)
+	header_row.add_child(all_btn)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 20)
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(row)
 	_salvage_box = _side(row, "NEARBY SALVAGE — click to pull aboard")
 	_hold_box = _side(row, "SHIP HOLD — click to jettison")
+	# Explainer footer (user, 2026-07-24): make the click-to-move idiom obvious.
+	var footer := Label.new()
+	footer.text = "Click an item on the LEFT to pull it aboard   ·   click one on the RIGHT to jettison it and make room"
+	footer.add_theme_font_size_override("font_size", 11)
+	footer.add_theme_color_override("font_color", UiTheme.ACCENT)
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(footer)
 
 
 func _side(parent: Node, title: String) -> VBoxContainer:
@@ -160,6 +175,22 @@ func _rebuild() -> void:
 
 func _grab(loot) -> void:
 	ship.grab_loot(loot)
+	_rebuild()
+
+
+## Salvage All: pull everything in reach aboard, nearest first, until the hold is
+## full (grab_loot flashes the hold-full warning if it fills). One press, whole field.
+func _salvage_all() -> void:
+	var loot: Array = []
+	for n in get_tree().get_nodes_in_group("loot"):
+		if is_instance_valid(n) and ship.global_position.distance_to(n.global_position) <= REACH:
+			loot.append(n)
+	loot.sort_custom(func(a, b) -> bool:
+		return ship.global_position.distance_squared_to(a.global_position) \
+			< ship.global_position.distance_squared_to(b.global_position))
+	for l in loot:
+		if not ship.grab_loot(l):
+			break   # hold full — grab_loot already warned
 	_rebuild()
 
 

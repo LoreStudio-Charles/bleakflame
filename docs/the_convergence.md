@@ -79,6 +79,14 @@ and must unite against three fronts to prove it deserves to exist.
      sharp, hooked, barbed, all edge and intent. A Warden ship looks like it is
      grieving; a Dhakar ship looks like it is REACHING FOR YOU. Concept art:
      docs/concepts/dhakar/.
+   - THE DHAKAR THEMSELVES — ROBED VULTURE-ASSASSINS (portrait LOCKED 2026-07-24,
+     user): where the ships are CLAWS, the beings are hooded, gaunt figures draped
+     in tattered dark robes; the head is a gnarled vulture-visage with a long
+     twisted hooked beak; deep-set eyes burn cold VIOLET, leaking from the sockets
+     like a wound. Carrion-patient killers — death that circles. The exact dark
+     mirror of the Azitaire's radiant crystal-HOUND grace (threats_wardens.md): one
+     wears light, the other wears robes; one is a noble beast of gold, the other a
+     beaked scavenger of violet rot. Portrait: docs/concepts/dhakar/dhakar_portrait.png.
    - THEIR MOTIVE — HUBRIS, NOT NIHILISM. They believe they can TRAP the
      Leviathans at the instant of Convergence and HARNESS the dark matter for
      INFINITE ENERGY. It is all POWER to them — to fuel their society and their

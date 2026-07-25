@@ -20,6 +20,18 @@ func _ready() -> void:
 		var override = _find_audio("res://audio/sfx/" + sound)
 		if override != null:
 			_streams[sound] = override
+	# Fully drop-in NEW sounds: any audio/sfx/<name>.(ogg|wav|mp3) NOT in the synth table
+	# above registers itself under <name>, so a generated one-off (e.g. "electric") plays
+	# via Sfx.play("electric") with zero code — same philosophy as the art seams.
+	var dir := DirAccess.open("res://audio/sfx")
+	if dir != null:
+		for f in dir.get_files():
+			if f.get_extension() in ["ogg", "wav", "mp3"]:
+				var base := f.get_basename()
+				if not _streams.has(base):
+					var extra = _find_audio("res://audio/sfx/" + base)
+					if extra != null:
+						_streams[base] = extra
 	# Bus routing (default_bus_layout.tres): SFX pools + world audio on "SFX",
 	# music on "Music", voice on Master — so the Options sliders control each.
 	for i in 12:

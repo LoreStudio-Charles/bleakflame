@@ -18,6 +18,20 @@ class_name Tutor
 ## Screens only have to call `register()` for the controls they own.
 
 const LESSONS := {
+	# FLIGHT TRAINING — the old pre-Tutor "flight control" tutorial, folded in as
+	# the FIRST lesson (user, 2026-07-24) so it runs first, pays the 150c/50xp that
+	# funds everything after, and wears the Tutor's centred captions instead of a
+	# top bar. Unpinned (centred) captions; a slim controller (Tutorial) drives the
+	# mechanics — input tracking, the 3 practice drones, the payout — and calls
+	# Tutor.did() to complete each step. Steps carry `id`s the controller reads.
+	"flight_training": [
+		{"id": "tut_launch", "anchor": "launch_hint", "pin": false, "text": "Welcome, Pilot — let's earn that license. Press [E] to launch."},
+		{"id": "tut_thrust", "anchor": "effigy", "pin": false, "where": "flight", "text": "Fore and aft thrust: burn forward with [W], feel the weak reverse with [S]. Engines point back, so reverse is soft on every hull."},
+		{"id": "tut_rotate", "anchor": "effigy", "pin": false, "where": "flight", "text": "Vector the nose with [A] and [D]. Your velocity holds its heading until you burn against it."},
+		{"id": "tut_boostbrake", "anchor": "effigy", "pin": false, "where": "flight", "text": "Hold [SHIFT] to boost. Hold [SPACE] to brake to a full stop."},
+		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Weapons hot — practice drones inbound. RIGHT-CLICK to lock a target, hold LEFT-CLICK to squeeze the trigger. Clear them all."},
+		{"id": "tut_dock", "anchor": "effigy", "pin": false, "text": "Well flown. Now bring her home and dock: line up ALONG the lane, ease the throttle, green is clean. Crawl her in when you're unsure."},
+	],
 	# WHERE YOUR VITALS LIVE — the first thing a new pilot needs to be able to
 	# read: the effigy carries HULL/SHIELD/ARMOR and the reactor ENERGY pill, all
 	# in one place. Pinned at the effigy with a dwell so it points, teaches, and
@@ -177,6 +191,14 @@ const LESSONS := {
 	"meet_sella": [
 		{"venue": "planet", "anchor": "tab_explorers", "where": "dock", "tab": "Explorer's Union", "dwell": 10.0,
 			"text": "You haven't met the colony's cartographer. Sella pays credits for scan data — and posts survey work the lab can't match."},
+	],
+	# The FIRST hand-off after flight training: point the new pilot at Ruel, who holds
+	# the first job (dirtside_run). Persists until they talk to him (done pred) and is
+	# PATIENT so it never times out — without it, new pilots followed the ambient Ember
+	# Row rumour nudge to Odessa instead, whose real quest is beats away (user, 2026-07-24).
+	"meet_ruel": [
+		{"venue": "station", "anchor": "panel_bay", "where": "dock", "pin": false,
+			"text": "Harbormaster Ruel has your first job — talk to him here at the Landing Bay."},
 	],
 	"meet_dex": [
 		{"venue": "station", "anchor": "tab_pilot", "where": "dock", "pin": false, "dwell": 10.0,
@@ -375,6 +397,11 @@ static func is_filler(id: String) -> bool:
 ## right venue) and still on screen doing nothing. A pilot reading slowly is not
 ## stalled; a lesson pointing at something that does not exist is.
 const STALL_LIMIT := 50.0
+## Lessons the watchdog NEVER retires — player-paced onboarding that must not "move it
+## or lose it" (user, 2026-07-24): the caption WAITS as long as it takes. Safe because
+## every step still completes on the ACTION (launch / thrust / dock), so it can't jam
+## forever; and a stuck step here is the player reading, not a bug the watchdog must clear.
+const PATIENT := ["flight_training", "meet_ruel"]
 
 static var _stall := 0.0
 static var _stall_key := ""
@@ -412,6 +439,9 @@ static func tick(delta: float) -> void:
 	if active == "":
 		_stall = 0.0
 		_stall_key = ""
+		return
+	if PATIENT.has(active):
+		_stall = 0.0            # player-paced: this lesson waits forever, never times out
 		return
 	if not safe or not _fits(active, step):
 		return                      # not its moment; that is waiting, not stalling
@@ -534,6 +564,19 @@ static func skip(anchors: Array) -> void:
 			return
 
 
+## Force a lesson DONE by id — mark it seen and drop it from the active/pending queues.
+## Used to end the flight tutorial the instant the pilot docks, from whatever step they
+## were on (it's PATIENT now, so without this an early dock would hang it forever).
+static func complete(id: String) -> void:
+	if not seen.has(id):
+		seen.append(id)
+	if active == id:
+		active = ""
+		step = 0
+	pending.erase(id)
+	_progress.erase(id)
+
+
 static func finish() -> void:
 	if active != "" and not seen.has(active):
 		seen.append(active)
@@ -639,6 +682,18 @@ static func _build_preds() -> void:
 		return
 	_preds_built = true
 
+	# FLIGHT TRAINING: armed explicitly by the Tutorial controller (no arm_pred — it
+	# runs once on a fresh save). The controller sets each did() flag as the pilot
+	# finishes that step's action; the flags are sticky so completion never misses.
+	_done_pred["flight_training"] = [
+		func(c): return c.get("tut_launched", false),
+		func(c): return c.get("tut_thrust", false),
+		func(c): return c.get("tut_rotate", false),
+		func(c): return c.get("tut_boostbrake", false),
+		func(c): return c.get("tut_drones", false),
+		func(c): return c.get("tut_docked", false),
+	]
+
 	# --- Flight lessons (context "flight"): arm on a live condition, complete on a
 	# poll or a dwell. The flight scene feeds the snapshot each frame (flight_test).
 	# WHERE HULL/SHIELD/ARMOR/ENERGY live — foundational, shown on the first flight.
@@ -679,7 +734,7 @@ static func _build_preds() -> void:
 	# buy_scanner: a live scan need but no scan ability — walk buy (Armory) -> fit
 	# (Engineering). Each step is a level poll of tab/inventory; auto-skips if the
 	# pilot is already ahead.
-	_arm_pred["buy_scanner"] = func(c): return c.get("needs_scan", false)
+	_arm_pred["buy_scanner"] = func(c): return c.get("needs_scan", false) and c.get("can_afford_scanner", false)
 	_done_pred["buy_scanner"] = [
 		func(c): return str(c.get("tab", "")) == "Armory",
 		func(c): return c.get("armory_bought", false) or c.get("knows_scan", false),
@@ -699,7 +754,9 @@ static func _build_preds() -> void:
 		func(c): return c.get("turned_in", false),
 	]
 	# trade_return: the colony half of the reciprocal route.
-	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "planet"
+	# Buy-food waits until the crate is DELIVERED — otherwise it jumped ahead of turning the
+	# contract in to Imari, the actual reason you flew down (user, 2026-07-24).
+	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("turn_in_here", false)
 	_done_pred["trade_return"] = [
 		func(c): return str(c.get("tab", "")) == "Market" and str(c.get("venue", "")) == "planet",
 		func(c): return int(c.get("cargo_food", 0)) >= 4,
@@ -710,8 +767,14 @@ static func _build_preds() -> void:
 	# turn_in: a contract can be closed at this venue.
 	_arm_pred["turn_in"] = func(c): return c.get("turn_in_here", false)
 	# Introductions the campaign never makes.
-	_arm_pred["meet_sella"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("met_sella", false)
-	_arm_pred["meet_dex"] = func(c): return str(c.get("venue", "")) == "station" and not c.get("met_dex", false)
+	# Meeting Sella waits behind the turn-in so the colony visit leads with the actual
+	# objective (deliver the crate), not a cartographer intro (user, 2026-07-24). She's a
+	# dwell nudge, so buy-food (an actionable lesson) naturally takes the slot first.
+	_arm_pred["meet_sella"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("met_sella", false) and not c.get("turn_in_here", false)
+	_arm_pred["meet_dex"] = func(c): return c.get("dirtside_done", false) and str(c.get("venue", "")) == "station" and not c.get("met_dex", false)
+	# meet_ruel: landed post-tutorial with Ruel holding the first job; done when you talk to him.
+	_arm_pred["meet_ruel"] = func(c): return str(c.get("venue", "")) == "station" and c.get("dirtside_active", false) and c.get("ruel_pending", false)
+	_done_pred["meet_ruel"] = [func(c): return not c.get("ruel_pending", true)]
 	# The pip itself, the first time anyone is waiting.
 	_arm_pred["pips"] = func(c): return c.get("pip_showing", false)
 	# A commission door has been drawn (earned).

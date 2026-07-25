@@ -10,6 +10,12 @@ extends CanvasLayer
 ## Threat banner stays big and top-center. [Tab] raises the hold manifest
 ## above the left console. The old top-left text block is retired.
 
+## Every anchor a FLIGHT lesson points at needs a ping here, or its caption silently never
+## renders (the effigy-tutorial bug). SINGLE SOURCE OF TRUTH: _ready spins up one ping per
+## entry, and test_dock_ui asserts every flight-lesson anchor is in this list.
+const TUTOR_PING_ANCHORS := ["effigy", "gem_bar", "radar", "comm_term", "missions_hud",
+	"cargo_gauge", "ord_gauge", "comms_badge"]
+
 ## Layout lives in DATA (user decision): edit data/cockpits/default.json to
 ## rearrange the dashboard — future hulls/cockpit components point at their
 ## own layout file. Values below are only the fallback defaults.
@@ -40,12 +46,23 @@ var _missions: Label
 var _group: GroupOverlay
 var _target_info: Label
 var _center_note: Label
+var _prompt: Label          # standing center-screen interact prompt (ship.interact_prompt)
+var _veil: ColorRect        # held world veil (blackout / whiteout / dim) BEHIND the HUD
+var _veil_flash: ColorRect  # transient bright pulse over the world (lightning, blooms)
 var _hold_label: Label
 var _loot_tip: Label
 
 
 func _ready() -> void:
 	ship = get_tree().get_first_node_in_group("player_ship")
+	add_to_group("flight_hud")
+	# WORLD VEIL: full-screen rects UNDER every HUD element but OVER the game world, so an
+	# effect can black out / white out / dim the VIEW while the cockpit HUD stays readable.
+	# Reused by Going Dark, sensor-blind enemy fx, and the WayGate opening — see veil().
+	_veil = _make_veil(Color(0, 0, 0, 0))
+	_veil_flash = _make_veil(Color(1, 1, 1, 0))
+	move_child(_veil, 0)         # held dim: bottom of the HUD, just above the world
+	move_child(_veil_flash, 1)   # transient flash: above the dim, still under all HUD elements
 	_legacy_info.visible = false
 	if FileAccess.file_exists(LAYOUT_PATH):
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(LAYOUT_PATH))
@@ -125,7 +142,7 @@ func _ready() -> void:
 	_energy_gauge = EnergyGauge.new()
 	_energy_gauge.ship = ship
 	add_child(_energy_gauge)
-	_center_rect(_energy_gauge, {}, [-150, -380, 14, 92])
+	_center_rect(_energy_gauge, {}, [-100, -560, 10, 60])
 	_gem_bar = GemBar.new()
 	_gem_bar.ship = ship
 	_left.add_child(_gem_bar)
@@ -135,7 +152,7 @@ func _ready() -> void:
 	_ord_gauge = OrdnanceGauge.new()
 	_ord_gauge.ship = ship
 	add_child(_ord_gauge)
-	_center_rect(_ord_gauge, {}, [180, -380, 130, 90])
+	_center_rect(_ord_gauge, {}, [100, -620, 130, 90])
 	Tutor.register("ord_gauge", _ord_gauge)
 	# Keybind hints moved to the Esc menu -> Controls (they were a near-invisible
 	# dim line on the dash). The dash is instruments now, not a cheat-sheet.
@@ -153,8 +170,12 @@ func _ready() -> void:
 	# of the same instrument rather than a new UI.
 	# Tutor: the last step of "memorize" points at the gem bar in flight, so the
 	# pilot sees WHERE the thing they just slotted actually lives.
-	for a in ["gem_bar", "radar", "comm_term", "missions_hud",
-			"cargo_gauge", "ord_gauge"]:
+	# "effigy" carries the whole FLIGHT-TRAINING tutorial + the running_dark lesson;
+	# "comms_badge" carries the comms-archive lesson. Both were MISSING here, so those
+	# flight captions had no ping to draw them (the authoring validator only checks
+	# DOCK steps, so it never caught it). Every anchor a FLIGHT lesson names needs a
+	# ping in this list or its caption silently never renders.
+	for a in TUTOR_PING_ANCHORS:
 		var ping := TutorPing.new()
 		ping.anchor = a
 		add_child(ping)
@@ -200,10 +221,34 @@ func _ready() -> void:
 	note_settings.outline_color = Color(0, 0, 0, 0.85)
 	_center_note = Label.new()
 	_center_note.label_settings = note_settings
-	_center_note.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_center_note.offset_bottom = -40
+	# PRESET_CENTER_BOTTOM + a negative offset put this label's text BELOW the bottom edge
+	# (verified by tools/test_prompt_onscreen: its rect landed at y = viewport bottom,
+	# off-screen), which is why flash notes, docking/landing prompts, and ability-fail cues
+	# were never visible. Use the proven top-anchored + positive-offset pattern (like the
+	# threat _banner) so it sits reliably on-screen, low but clear of the bottom trim.
+	_center_note.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_center_note.offset_top = 900
 	_center_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_center_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center_note)
+
+	# STANDING PROMPT (user, 2026-07-24): a persistent, center-screen line for something
+	# the player must ACT on (open the WayGate) — never a fading flash that scrolls away.
+	# Positioned the PROVEN way (PRESET_CENTER_TOP + a positive offset, exactly like the
+	# threat _banner, which renders reliably) — NOT the _center_note's bottom-anchor combo.
+	# Full-width + centered so the text sits dead-center horizontally at any resolution.
+	var prompt_settings := LabelSettings.new()
+	prompt_settings.font_size = 22
+	prompt_settings.font_color = UiTheme.AMBER
+	prompt_settings.outline_size = 5
+	prompt_settings.outline_color = Color(0, 0, 0, 0.9)
+	_prompt = Label.new()
+	_prompt.label_settings = prompt_settings
+	_prompt.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_prompt.offset_top = 620          # lower-middle of the 1080 base — clear of the ship
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_prompt)
 
 	# TOP-RIGHT STACK (no overlap): comms badge (comms_inbox, at the very top) ->
 	# tracked MISSIONS (capped at 3) -> FRIENDLIES roster, in that order. The
@@ -359,6 +404,9 @@ func _process(_delta: float) -> void:
 	_left.visible = flying
 	_right.visible = flying
 	_center_note.visible = flying
+	# Standing interact prompt: shown whenever the ship publishes one and we're flying.
+	_prompt.text = ship.interact_prompt if flying else ""
+	_prompt.visible = flying and ship.interact_prompt != ""
 	_missions.visible = flying
 	_group.visible = flying
 	_target_effigy.visible = flying
@@ -455,6 +503,40 @@ func _center_text() -> String:
 	return _approach_line()
 
 
+func _make_veil(c: Color) -> ColorRect:
+	var r := ColorRect.new()
+	r.color = c
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(r)
+	return r
+
+
+## Hold a full-screen veil OVER THE WORLD but UNDER the HUD — blackout (Color.BLACK),
+## whiteout (Color.WHITE), or a coloured dim. alpha 0 = clear .. 1 = opaque. Caller-owned:
+## set it, then clear it when the effect ends. Used by Going Dark, sensor-blind enemy fx,
+## and the WayGate opening, so those blind the VIEW while the cockpit HUD stays readable.
+func veil(color: Color, alpha: float, dur: float) -> void:
+	if _veil == null:
+		return
+	_veil.color = Color(color.r, color.g, color.b, _veil.color.a)
+	create_tween().tween_property(_veil, "color:a", alpha, maxf(0.01, dur))
+
+
+func veil_clear(dur: float) -> void:
+	if _veil != null:
+		create_tween().tween_property(_veil, "color:a", 0.0, maxf(0.01, dur))
+
+
+## A brief bright pulse over the world (lightning flash, muzzle bloom): snaps to `intensity`
+## then fades to 0 over `dur`. Sits above the held veil, still below every HUD element.
+func world_flash(color: Color, intensity: float, dur: float) -> void:
+	if _veil_flash == null:
+		return
+	_veil_flash.color = Color(color.r, color.g, color.b, intensity)
+	create_tween().tween_property(_veil_flash, "color:a", 0.0, maxf(0.01, dur)).set_trans(Tween.TRANS_QUAD)
+
+
 ## THE OBJECTIVE TRACKER, in the corner under COMMS. The player curates which
 ## objectives show and in what order (MissionTracker); TOP is current and wears a
 ## ▶ plus its next step, the rest are one glyph-tagged line each so campaign,
@@ -501,14 +583,8 @@ func _hold_block() -> String:
 
 
 func _approach_line() -> String:
-	# THE WAYGATE — a persistent prompt while near it (the old one-shot flash was
-	# too easy to fly past, so the finale gate read as un-interactable).
-	for gate in get_tree().get_nodes_in_group("waygate"):
-		var gd := ship.global_position.distance_to(gate.global_position)
-		if gate.phase == WayGate.Phase.CLOSED and gd < 460.0:
-			return "◆ THE WAYGATE IS DORMANT  —  [E] to enter Krayt's waking sequence"
-		if gate.phase == WayGate.Phase.OPEN and gd < 340.0:
-			return "◆ THE WAYGATE IS OPEN  —  fly into the light"
+	# (The WayGate now uses the standing center-screen _prompt, driven by ship.interact_
+	# prompt from the flight scene's direct gate ref — see flight_test._update_gate_prompt.)
 	for pad in get_tree().get_nodes_in_group("dock_pads"):
 		if ship.global_position.distance_to(pad.global_position) < pad.UI_RANGE:
 			var s: Dictionary = pad.status_for(ship)
@@ -1259,7 +1335,7 @@ class CargoGauge:
 class EnergyGauge:
 	extends Control
 	var ship: TestShip
-	const SLATS := 16
+	const SLATS := 8
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1294,8 +1370,8 @@ class EnergyGauge:
 			Vector2(cx + 1, body_h * 0.42), Vector2(cx - 3, body_h - 3)]),
 			Color(on_col, 0.9), 1.6)
 		var f := get_theme_default_font()
-		draw_string(f, Vector2(0, size.y - 1), "%d" % int(round(ship.energy)),
-			HORIZONTAL_ALIGNMENT_CENTER, w, 11, on_col)
+		#draw_string(f, Vector2(0, size.y - 1), "%d" % int(round(ship.energy)),
+			#HORIZONTAL_ALIGNMENT_CENTER, w, 11, on_col)
 
 
 ## Ordnance readout: for each magazine weapon, a HOT (colour) / COLD (grey) box

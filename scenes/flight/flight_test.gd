@@ -200,8 +200,13 @@ func _ready() -> void:
 ## One-time population. (This used to run on every dock-state change — every
 ## dock AND undock quietly spawned a full extra wave. The gauntlet was a bug.)
 func _populate_world() -> void:
-	for i in DRONE_COUNT:
-		_spawn_drone(_drone_spot())
+	# NO ambient practice drones during flight training: they're indistinguishable from
+	# the tutorial's own three targets, and their deaths — to a Guardian, or on respawn —
+	# falsely ticked the license count (the tutorial's own drones are enough). They return
+	# once training is done. (user, 2026-07-24)
+	if SaveGame.tutorial_done:
+		for i in DRONE_COUNT:
+			_spawn_drone(_drone_spot())
 	_spawn_guard_wing()
 	# Denser lanes (user, 2026-07-23): more raiders + wasps, the LIGHT harassers, so
 	# the sky feels busier without stacking heavies on a new pilot. 4 raider / 1
@@ -1001,6 +1006,11 @@ var _dev_gate := false          # a dev-summoned gate ([;]); drives the full flo
 func _tick_gate() -> void:
 	if _left_system:
 		return
+	# The standing [E] prompt is keyed to the live gate NODE, not the quest stage, so it
+	# runs even when this func early-returns below (no active reach_gate stage / a charted
+	# gate). _handle_interact works off the same _waygate ref with no quest check, so the
+	# prompt was skipped EXACTLY when [E] still worked — no prompt, no feedback.
+	_update_gate_prompt()
 	# The finale charts the gate; a dev summon ([;]) stands one in with no quest.
 	var site := Quests.gate_site()
 	var pos: Vector2
@@ -1017,18 +1027,28 @@ func _tick_gate() -> void:
 		add_child(_waygate)
 	if ship.dead or ship.docked_at != null or _traversing:
 		return
-	var d := ship.global_position.distance_to(pos)
+	# Fly into the OPEN throat to leave the Reach (needs quest_id for the finale hand-off).
+	if _waygate.is_open() and ship.global_position.distance_to(pos) < 190.0:
+		_traverse_gate(quest_id)
+
+
+## The STANDING center-screen prompt for the WayGate — a persistent line (not a flash),
+## keyed to the live gate node so it shows whenever the gate exists and mirrors exactly
+## when [E] will act (_handle_interact uses the same _waygate ref + 900u range). Range is
+## generous because the gate art alone is ~345u across, so "at the gate" is ~600u+ from
+## its center. Runs BEFORE _tick_gate's quest-gated early return.
+func _update_gate_prompt() -> void:
+	ship.interact_prompt = ""
+	if _waygate == null or not is_instance_valid(_waygate) \
+			or ship.dead or ship.docked_at != null or _traversing:
+		return
+	var d := ship.global_position.distance_to(_waygate.position)
+	if d >= 900.0:
+		return
 	if _waygate.is_open():
-		# The ring is a doorway now — fly into the throat to leave the Reach.
-		if d < 190.0:
-			_traverse_gate(quest_id)
+		ship.interact_prompt = "THE WAYGATE IS OPEN — fly into the light"
 	elif _waygate.phase == WayGate.Phase.CLOSED and _gate_console == null:
-		# Dormant: nudge the pilot to use it, once per approach.
-		if d < 460.0 and not _gate_prompted:
-			_gate_prompted = true
-			ship._flash_note("THE WAYGATE IS DORMANT — press [E] to use it")
-		elif d >= 460.0:
-			_gate_prompted = false
+		ship.interact_prompt = "THE WAYGATE IS DORMANT — press [E] to open the gate controls"
 
 
 ## Open the alien console. Freeze the pilot so they don't drift off the ring while
@@ -1438,11 +1458,8 @@ func _spawn_drone(pos: Vector2) -> void:
 	var drone := TargetDrone.new()
 	drone.position = pos
 	drone.destroyed.connect(_respawn_drone_later)
-	# Any drone counts for the license test — players can't tell them apart.
-	drone.destroyed.connect(func() -> void:
-		var tut := get_tree().get_first_node_in_group("tutorial")
-		if tut != null:
-			tut._on_drone_killed())
+	# (These ambient drones no longer count toward the license test — the tutorial counts
+	# only its OWN three targets, and ambient ones are suppressed during training anyway.)
 	add_child(drone)
 
 

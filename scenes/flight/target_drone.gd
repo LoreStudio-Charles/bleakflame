@@ -8,11 +8,21 @@ var hp := 30.0
 var hit_radius := 10.0
 var _drift := Vector2.ZERO
 var _flash := 0.0
+var _sprite: Sprite2D = null   # drop-in art: assets/ships/drone.png (else the procedural mark)
 
 
 func _ready() -> void:
 	add_to_group("hostile_team")
 	_drift = Vector2.RIGHT.rotated(randf() * TAU) * randf_range(6.0, 22.0)
+	# Drop-in art: use assets/ships/drone.png if it exists, else fall back to the diamond.
+	var path := "res://assets/ships/drone.png"
+	if ResourceLoader.exists(path):
+		_sprite = Sprite2D.new()
+		_sprite.texture = load(path)
+		# Native scale: the ~19px of content inside the 32px canvas matches the procedural
+		# diamond (~18px). If a replacement sprite has different margins, retune here.
+		_sprite.scale = Vector2.ONE
+		add_child(_sprite)
 
 
 func _physics_process(delta: float) -> void:
@@ -20,9 +30,17 @@ func _physics_process(delta: float) -> void:
 	if _flash > 0.0:
 		_flash -= delta
 		queue_redraw()
+	if _sprite != null:
+		_sprite.modulate = Color(1.9, 1.9, 1.9) if _flash > 0.0 else Color.WHITE
 
 
 func take_damage(amount: float, _source: Node = null) -> void:
+	# Practice drones die ONLY to the player. A stray Guardian bolt clearing one advanced
+	# the drones step before the pilot had killed all three themselves — telling them
+	# "bring her home" while targets still drifted out there. Guardians may shoot; they
+	# just can't score it. (The damage source existed; the port to lessons never used it.)
+	if _source == null or not _source.is_in_group("player_ship"):
+		return
 	hp -= amount
 	_flash = 0.1
 	Sfx.play_at("hit", global_position, -12.0, 1.2)
@@ -54,6 +72,8 @@ func _explode() -> void:
 
 
 func _draw() -> void:
+	if _sprite != null:
+		return   # the sprite carries the visual; flash is handled via its modulate
 	var color := Color(0.75, 0.35, 0.35) if _flash <= 0.0 else Color(1, 1, 1)
 	draw_colored_polygon(PackedVector2Array([
 		Vector2(9, 0), Vector2(0, -7), Vector2(-9, 0), Vector2(0, 7)]), color)

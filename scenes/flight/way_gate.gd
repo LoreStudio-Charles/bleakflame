@@ -19,7 +19,9 @@ extends Node2D
 ## waygate.png, then pure procedural rings.
 
 const R := 150.0
+const LightningFx := preload("res://scenes/flight/lightning.gd")   # reusable branching bolt
 const SHAKE_MAG := 5.0
+const CAM_SHAKE_DECAY := 15.0   # px/s the camera-shake magnitude bleeds off after each jolt
 const IDLE_SPIN := 0.12         # rad/s — the dormant ring turning slowly
 const OPEN_SPIN := 0.30         # a steadier, faster turn once it's an active doorway
 ## Warden crystal DORMANT: the gate art is the AWAKENED ring (gold veins blazing);
@@ -38,7 +40,11 @@ var _aperture := 0.0            # 0 closed -> 1 fully dilated (drives the portal
 var _ring: Line2D
 var _throat: Polygon2D
 var _portal: Polygon2D
-var _fog: Polygon2D
+var _smoke: CPUParticles2D      # billowing pixel-smoke puffs that bury the ring as it opens
+var _cam_shake := 0.0           # camera-shake magnitude, jolted on wake + big strikes
+var _dark: Polygon2D            # world-space sky-darken BEHIND the gate (z -5) so lightning pops
+var _skyflash: Polygon2D        # world-space additive sky flash (z -4), pulsed by big strikes
+var _crack_cd := 0.0            # throttle so the electric crack SFX punctuates, not machine-guns
 var _sprite: Sprite2D
 var _anim: AnimatedSprite2D
 var _art: Node2D                # the gate visual (whichever of _sprite / _anim exists)
@@ -167,16 +173,18 @@ func _run_opening() -> void:
 	Sfx.play("claxon", -3.0)
 	Sfx.play("dread", -10.0, 1.4)
 	_shaking = true
+	_cam_shake = 10.0                     # the gate wakes with a jolt
+	_dark = _make_dark()
+	_tween_dark(0.62, 1.5)                # the light drains from the sky BEHIND the gate
 	_spawn_debris()
-	_fog = _make_fog()
-	_tween_fog(0.25, 0.7)
-	# The aperture dilates (01->08); more and more fog pours out as it opens, until
-	# the ring is completely hidden.
+	_smoke = _make_smoke()
+	_smoke.emitting = true
+	# The aperture dilates (01->08); more and more smoke pours out as it opens, layering
+	# up until the ring is buried under it.
 	Sfx.play("explosion", -12.0, 0.5)
 	Sfx.play("shield_hit", -6.0, 0.5)   # the first crack of discharge
 	_crackling = true                    # lightning storms off the ring as it ignites
 	_open_aperture()
-	_tween_fog(0.99, 3.4)
 	await get_tree().create_timer(3.6).timeout
 	if not is_inside_tree():
 		return
@@ -188,8 +196,10 @@ func _run_opening() -> void:
 	await get_tree().create_timer(0.8).timeout
 	if not is_inside_tree():
 		return
-	# The fog clears — the open gate, looping forever. A doorway now.
-	_tween_fog(0.0, 2.2)
+	# The smoke clears — the open gate, looping forever. A doorway now.
+	if _smoke != null and is_instance_valid(_smoke):
+		_smoke.emitting = false   # stop pouring; the puffs already out fade on their own
+	_tween_dark(0.0, 2.4)         # the storm passes; the sky returns behind the open doorway
 	await get_tree().create_timer(2.2).timeout
 	if not is_inside_tree():
 		return
@@ -220,21 +230,85 @@ func _show_open_loop() -> void:
 		_anim.play("open")
 
 
-func _make_fog() -> Polygon2D:
-	# NORMAL blend (not additive) so heavy fog OBSCURES the ring rather than just
-	# brightening it — cold smoke rolling out of the aperture.
-	var f := Polygon2D.new()
-	f.polygon = _disc(R * 1.95, 48)
-	f.color = Color(0.60, 0.70, 0.85, 0.0)
-	f.z_index = 3               # above the gate art and the portal glow
-	add_child(f)
-	return f
+## Billowing pixel-smoke pouring out of the aperture — the whole fog effect now (the old
+## flat obscuring disc is gone). Each puff is FAINT; density comes from many overlapping,
+## so it reads as layered smoke that thickens over the ring, not a solid blob. Drop-in art:
+## assets/fx/gate-smoke-1.png (add gate-smoke-2..N.png to vary). Puffs are born across the
+## ring, drift gently outward with NO gravity, grow, spin, and fade in then out.
+## The SKY darkening — a huge disc BEHIND the gate art (z -5, over the z -10 starfield), so
+## the gate, smoke, and lightning all render ON TOP and pop bright against it. Deliberately
+## WORLD-space, not the HUD veil, precisely so the lightning is never dimmed by it. (The HUD
+## veil stays for Going Dark / enemy sensor blinds, which DO black out the whole view.)
+func _make_dark() -> Polygon2D:
+	var d := Polygon2D.new()
+	d.polygon = _disc(3600.0, 44)      # huge: covers the view from the player's vantage at the gate
+	d.color = Color(0.01, 0.02, 0.05, 0.0)
+	d.z_index = -5
+	add_child(d)
+	return d
 
 
-func _tween_fog(target_a: float, dur: float) -> void:
-	if _fog == null or not is_instance_valid(_fog):
-		return
-	create_tween().tween_property(_fog, "color:a", target_a, dur)
+func _tween_dark(a: float, dur: float) -> void:
+	if _dark != null and is_instance_valid(_dark):
+		create_tween().tween_property(_dark, "color:a", a, dur)
+
+
+## An ADDITIVE sky flash (z -4, just above the darken, still behind the gate), pulsed on big
+## strikes so the darkened sky lights gold with the lightning — gate + bolts stay crisp on top.
+func _sky_flash(intensity: float) -> void:
+	if _skyflash == null or not is_instance_valid(_skyflash):
+		_skyflash = Polygon2D.new()
+		_skyflash.polygon = _disc(3600.0, 44)
+		_skyflash.color = Color(0.95, 0.86, 0.6, 0.0)   # gold-white, matching the discharge
+		_skyflash.z_index = -4
+		var add := CanvasItemMaterial.new()
+		add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		_skyflash.material = add
+		add_child(_skyflash)
+	_skyflash.color.a = intensity
+	create_tween().tween_property(_skyflash, "color:a", 0.0, 0.22).set_trans(Tween.TRANS_QUAD)
+
+
+func _make_smoke() -> CPUParticles2D:
+	var p := CPUParticles2D.new()
+	var tex := "res://assets/fx/gate-smoke-1.png"
+	if ResourceLoader.exists(tex):
+		p.texture = load(tex)
+	p.emitting = false
+	p.amount = 90                 # many faint puffs LAYER into density
+	p.lifetime = 3.2
+	p.preprocess = 1.0            # start already billowing, not from an empty ring
+	p.randomness = 0.8
+	p.gravity = Vector2.ZERO      # smoke doesn't fall — it hangs and drifts
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	p.emission_sphere_radius = R * 0.75   # born ACROSS the ring so the center stays covered
+	p.direction = Vector2.RIGHT
+	p.spread = 180.0
+	p.initial_velocity_min = 6.0
+	p.initial_velocity_max = 26.0
+	p.radial_accel_min = 10.0     # a gentle outward roll, not a fast blast
+	p.radial_accel_max = 34.0
+	p.damping_min = 6.0
+	p.damping_max = 16.0
+	p.angle_min = -180.0
+	p.angle_max = 180.0
+	p.angular_velocity_min = -22.0
+	p.angular_velocity_max = 22.0
+	p.scale_amount_min = 1.8
+	p.scale_amount_max = 4.0      # big soft puffs overlap heavily -> coverage
+	var grow := Curve.new()       # small at birth, swelling as it rolls out
+	grow.add_point(Vector2(0.0, 0.5))
+	grow.add_point(Vector2(1.0, 1.0))
+	p.scale_amount_curve = grow
+	var ramp := Gradient.new()    # cold tint, VERY faint per puff, fading in then out
+	ramp.offsets = PackedFloat32Array([0.0, 0.25, 0.7, 1.0])
+	ramp.colors = PackedColorArray([
+		Color(0.66, 0.74, 0.90, 0.0), Color(0.72, 0.79, 0.94, 0.18),
+		Color(0.60, 0.68, 0.85, 0.14), Color(0.54, 0.62, 0.82, 0.0)])
+	p.color_ramp = ramp
+	p.z_index = 3                 # above the ring art
+	add_child(p)
+	return p
 
 
 func _spawn_debris() -> void:
@@ -260,30 +334,32 @@ func _spawn_debris() -> void:
 ## One jagged, short-lived energy arc flung off the ring — gold-white Warden
 ## discharge. Several a second while _crackling reads as a storm of lightning.
 func _spawn_arc() -> void:
+	# A branching Warden discharge flung off the ring, drawn by the reusable Lightning fx
+	# with a pixel-art arc strip tiled along it (cycles assets/fx/lightning-arc-#.png).
 	var ang := randf() * TAU
 	var start := Vector2.RIGHT.rotated(ang) * (R * 0.9)
 	var end := Vector2.RIGHT.rotated(ang + randf_range(-0.45, 0.45)) * (R + R * randf_range(0.6, 1.7))
-	var perp := (end - start).orthogonal().normalized()
-	var pts := PackedVector2Array()
-	var steps := 7
-	for i in steps + 1:
-		var base := start.lerp(end, float(i) / steps)
-		var jitter := 0.0 if (i == 0 or i == steps) else randf_range(-1.0, 1.0) * R * 0.16
-		pts.append(base + perp * jitter)
-	var arc := Line2D.new()
-	arc.points = pts
-	arc.width = randf_range(1.5, 3.2)
-	arc.default_color = Color(1.0, 0.92, 0.62)     # gold-white
-	arc.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	arc.end_cap_mode = Line2D.LINE_CAP_ROUND
-	var add := CanvasItemMaterial.new()
-	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	arc.material = add
-	arc.z_index = 2
-	add_child(arc)
-	var tw := create_tween()
-	tw.tween_property(arc, "modulate:a", 0.0, randf_range(0.12, 0.26))
-	tw.tween_callback(arc.queue_free)
+	var bolt := LightningFx.flash(self, start, end, {
+		"color": Color(1.0, 0.92, 0.62),      # gold-white Warden discharge
+		"texture": LightningFx.random_arc(),  # a pixel-art strip; falls back to a glow line
+		"cycle_texture": true,                # swap arc strips as it flickers = animated crackle
+		"flicker_hz": 11.0,                   # ~3-5 frames over its life
+		"core_width": 11.0,                   # thin + electric (was 18 = fat rope)
+		"glow_width": 22.0,                   # tighter halo to match the thinner core
+		"glow_alpha": 0.42,
+		"generations": 5,                     # deep fractal detail = a jagged, tightly-crackling path
+		"chaos": 0.24,
+		"branch_chance": 0.34,                # forks stay sparse now that the path itself is busier
+		"life": randf_range(0.24, 0.46),      # linger so consecutive strikes OVERLAP into a glow
+	})
+	bolt.z_index = 4        # ABOVE the smoke (z 3) so the discharge flashes through the fog
+	# Some strikes light the whole sky + kick the camera — a thunderstorm, not a sparkler.
+	if randf() < 0.4:
+		_cam_shake = maxf(_cam_shake, 6.0)
+		_sky_flash(randf_range(0.4, 0.8))
+		if _crack_cd <= 0.0:              # throttled so cracks punctuate the storm, not blur
+			_crack_cd = randf_range(0.26, 0.5)
+			Sfx.play("electric", -5.0, randf_range(0.9, 1.18))
 
 
 func _process(delta: float) -> void:
@@ -309,9 +385,18 @@ func _process(delta: float) -> void:
 	# Lightning: while igniting, fling an energy arc off the ring every so often.
 	if _crackling:
 		_arc_t -= delta
+		_crack_cd = maxf(0.0, _crack_cd - delta)
 		if _arc_t <= 0.0:
 			_spawn_arc()
 			_arc_t = randf_range(0.05, 0.15)
+	# CAMERA SHAKE: jolted on the wake and re-punched by big strikes, bleeding off between.
+	# Rides the active camera's offset (nothing else drives it) and settles back to zero.
+	if _cam_shake > 0.0:
+		var cam := get_viewport().get_camera_2d()
+		if cam != null:
+			cam.offset = (Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _cam_shake) \
+				if _cam_shake > 0.06 else Vector2.ZERO
+		_cam_shake = maxf(0.0, _cam_shake - CAM_SHAKE_DECAY * delta)
 
 
 ## Build one SpriteFrames from whichever frame folders exist: "open" (the open loop)

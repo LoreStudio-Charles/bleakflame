@@ -826,7 +826,12 @@ func _case_every_lesson_is_completable() -> void:
 
 	# Anchors that register the moment their widget is DRAWN rather than when the
 	# screen is built — the office door only exists once you have an invitation.
-	var lazy := {"office_door": true}
+	# Anchors owned by TRANSIENT UI a bare build can't stand up: the office door registers
+	# only once you have an invitation; the launch-countdown modal creates its own ping.
+	var lazy := {"office_door": true, "launch_window": true}
+	# FLIGHT-lesson captions draw from the flight HUD's pings, not the dock's — the dock-only
+	# check below never saw them, which is the exact hole the effigy tutorial fell through.
+	var flight_pings: Array = load("res://scenes/flight/flight_hud.gd").TUTOR_PING_ANCHORS
 
 	for lid in Tutor.LESSONS:
 		var steps: Array = Tutor.LESSONS[lid]
@@ -843,7 +848,20 @@ func _case_every_lesson_is_completable() -> void:
 			_ok(venue in ["", "station", "planet", "verge"],
 				"%s has a legal venue ('%s')" % [label, venue])
 
+			if lazy.has(anchor):
+				continue          # transient UI owns its ping (office door / launch modal)
+			# FLIGHT captions need a ping on the flight HUD (single source of truth in
+			# FlightHud). This is what would have caught the effigy tutorial rendering nothing.
+			if where == "flight":
+				_ok(flight_pings.has(anchor),
+					"%s (flight) anchor '%s' has a flight-HUD ping" % [label, anchor])
+				continue
 			if where != "dock":
+				# any-context ("") — must draw SOMEWHERE: a flight ping or a dock ping.
+				_ok(flight_pings.has(anchor)
+						or (ping["station"] as Dictionary).has(anchor)
+						or (ping["planet"] as Dictionary).has(anchor),
+					"%s (any-context) anchor '%s' draws in flight or at a dock" % [label, anchor])
 				continue
 			if lazy.has(anchor):
 				continue          # registers on draw; can't see it from a bare build
