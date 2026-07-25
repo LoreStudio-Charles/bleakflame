@@ -45,24 +45,13 @@ func _process(delta: float) -> void:
 		# the whole trade lesson.) Tick whenever the step is actually ON SCREEN.
 		var pinned := bool(step.get("pin", true))
 		var node := Tutor.anchor_node(anchor)
-		var on_screen: bool = not pinned or (node != null and node.is_visible_in_tree() and not _tab_hidden(node))
+		var on_screen: bool = not pinned or (node != null and node.is_visible_in_tree())
 		if on_screen:
 			_read += delta
 			if _read >= dwell:
 				_read = 0.0
 				Tutor.note(anchor)
 	queue_redraw()
-
-
-## A `tab` step points at a tab HEADER in the strip. When that strip is HIDDEN — the
-## spatialized planet dock, opened over the walkable town, shows one room and no tab
-## strip — there's no header to point at, so the leader line just shoots at the empty
-## top corner (the diagonal-line bug). Suppress it entirely; the TOWN directs the player
-## to the relevant building instead. Only affects the spatial dock; the station's menu
-## dock keeps its tabs visible and its pings.
-func _tab_hidden(node: Control) -> bool:
-	var step := Tutor.current()
-	return str(step.get("tab", "")) != "" and node is TabContainer and not (node as TabContainer).tabs_visible
 
 
 ## Where the brackets actually go. For a TabContainer the whole control is the
@@ -205,7 +194,7 @@ func _draw() -> void:
 	# while you're docked at the station, and falling back showed "Down safe,
 	# still carrying their freight" to a pilot who hadn't left yet.
 	var node := Tutor.anchor_node(anchor)
-	if node == null or not node.is_visible_in_tree() or _tab_hidden(node):
+	if node == null or not node.is_visible_in_tree():
 		return
 
 	# Target rect in OUR space, padded so the brackets sit outside the control.

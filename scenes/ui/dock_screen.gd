@@ -2971,13 +2971,6 @@ class TabPips extends Control:
 	func _draw() -> void:
 		if tabs == null or not is_instance_valid(tabs):
 			return
-		# NO STRIP, NO PIPS. The spatialized planet dock (raised over the walkable town)
-		# hides the tab strip and shows one room, so a pip drawn at a tab's corner floats
-		# in dead space pointing at a control the player cannot see or click — the same
-		# phantom-tab bug the tutor ping had (TutorPing._tab_hidden). On the ground the
-		# TOWN does the pointing: you walk to the person or the building.
-		if not tabs.tabs_visible:
-			return
 		var bar: TabBar = tabs.get_tab_bar()
 		if bar == null:
 			return

@@ -913,8 +913,13 @@ static func _build_preds() -> void:
 	# opens anywhere, and the moment you earn a point is the moment to say so.
 	_arm_pred["dossier"] = func(c): return int(c.get("skill_points", 0)) > 0
 	_done_pred["dossier"] = [func(c): return c.get("dossier_opened", false)]
-	# The faction sheet, the first time the player MOVES a needle (Standing fires the flag).
-	_arm_pred["factions"] = func(c): return c.get("standing_changed", false)
+	# The faction sheet, once the player has ANY standing at all.
+	#
+	# READ AS STATE, NOT FIRED AS AN EVENT. The first version had Standing.add() call
+	# Tutor.did() — which quietly made the model layer depend on Tutor, and Tutor pulls
+	# in Sfx, which does not exist under `--script` (no autoloads). Three model-only
+	# suites stopped compiling. Standing stays UI-free; the flight snapshot reports it.
+	_arm_pred["factions"] = func(c): return c.get("has_standing", false)
 	# Weapons-free with nothing to shoot: taught beside a rock, guns currently tight.
 	_arm_pred["guns_free"] = func(c): return c.get("flying", false) \
 		and c.get("rock_near", false) and c.get("weapons_tight", false) \

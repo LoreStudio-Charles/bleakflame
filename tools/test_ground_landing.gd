@@ -29,18 +29,19 @@ func _ready() -> void:
 			ok = _chk(p.global_position.distance_to(Vector2(0, 780)) < 6.0,
 				"enter_town put the pilot on the pad (%s)" % p.global_position) and ok
 
-	# THE GROUND NEVER RAISES THE DOCK (user, 2026-07-25): the spatialized dock panel was
-	# transition scaffolding and is DELETED — every planetside service is ground-native
-	# (ShopView / BoardView / StarportView / DialoguePanel talks). While the town is up,
-	# the planet dock screen stays hidden, whatever happens.
-	var pscr: Variant = scene.get("planet_screen")
+	# THE PLANET DOCK SCREEN IS DELETED (cleanup, 2026-07-25). It was the tabbed menu a
+	# landing used to raise; planetside is ground-native now, so it could not become
+	# visible at all (Epharon raises the town, and the only other planetoid is unlandable)
+	# while still costing a full DockScreen build every boot. Asserted GONE rather than
+	# hidden, the same way the town→dock service route is.
+	ok = _chk(scene.get("planet_screen") == null,
+		"the planet DOCK SCREEN is gone (planets hand you a town, not a tab deck)") and ok
 	ok = _chk(not scene.has_method("_on_town_service"),
 		"the town→dock service route is GONE (no _on_town_service)") and ok
 	if town != null:
 		for s in town.get("_spots"):
 			ok = _chk(not str(s.get("action", "")).begins_with("svc:"),
 				"no town spot routes to a dock panel ('%s')" % s.get("action", "")) and ok
-	ok = _chk(not pscr.visible, "the planet dock screen stays hidden while grounded") and ok
 
 	# THE LANDING APRON (2026-07-25): your actual hull is parked south of the Starport and
 	# the launch prompt lives ON it — you board the thing you can see. Guarded because the

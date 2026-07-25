@@ -61,8 +61,6 @@ static func set_peace(faction: String, on: bool) -> bool:
 static func add(faction: String, n: int) -> void:
 	var was_hostile := is_hostile(faction)
 	points[faction] = clampi(int(points.get(faction, 0)) + n, MIN, MAX)
-	if n != 0:
-		Tutor.did("standing_changed")   # arms the one-time [I] faction-sheet lesson
 	# Guard the fragile mend: the instant a faction climbs out of hostile, revert
 	# to PEACE so a stray shot can't undo the work. War is re-declared by hand.
 	if was_hostile and not is_hostile(faction):

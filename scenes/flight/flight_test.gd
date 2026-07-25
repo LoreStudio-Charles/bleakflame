@@ -49,7 +49,6 @@ var station: Station
 var planetoid: Planetoid
 var shoal: PirateDen
 var station_screen: DockScreen
-var planet_screen: DockScreen
 var orivel_screen: OrivelDock
 var _outpost: OrivelOutpost
 var shoal_screen: SpeakEasy
@@ -136,8 +135,6 @@ func _ready() -> void:
 	MissionLog.ensure_offers()
 	station_screen = DockScreen.new(ship, true)
 	add_child(station_screen)
-	planet_screen = DockScreen.new(ship, false)
-	add_child(planet_screen)
 	orivel_screen = OrivelDock.new(ship)
 	add_child(orivel_screen)
 	shoal_screen = SpeakEasy.new(ship)
@@ -340,15 +337,12 @@ func _process(_delta: float) -> void:
 	# The descent from space is unchanged — only what the landing hands you differs.
 	var at_epharon: bool = ship.docked_at == planetoid
 	station_screen.visible = ship.docked_at == station.pad
-	planet_screen.visible = ship.docked_at is Planetoid and not at_epharon
 	shoal_screen.visible = ship.docked_at == shoal.pad
 	diggs_screen.visible = ship.docked_at == diggs.pad
 	orivel_screen.visible = _outpost != null and _outpost.pads.has(ship.docked_at)
 	_set_ground_visible(at_epharon)
 	if station_screen.visible:
 		station_screen.refresh()
-	if planet_screen.visible:
-		planet_screen.refresh()
 	if shoal_screen.visible:
 		shoal_screen.refresh()
 	if diggs_screen.visible:
@@ -597,6 +591,7 @@ func _tick_flight_lessons() -> void:
 		"rock_near": _nearest_rock_dist(ship) < 900.0,
 		"weapons_tight": not ship.weapons_free,
 		"skill_points": Pilot.skill_points_available(),
+		"has_standing": not Standing.points.is_empty(),
 	})
 
 
@@ -1528,7 +1523,7 @@ func _handle_interact() -> void:
 		elif _outpost != null and _outpost.pads.has(ship.docked_at):
 			orivel_screen.refresh()
 		elif ship.docked_at is Planetoid:
-			planet_screen.refresh()
+			pass   # a planet hands you the WALKABLE TOWN, which refreshes itself
 		else:
 			station_screen.refresh()
 	elif _waygate != null and is_instance_valid(_waygate) \
