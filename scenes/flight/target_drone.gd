@@ -23,6 +23,12 @@ func _physics_process(delta: float) -> void:
 
 
 func take_damage(amount: float, _source: Node = null) -> void:
+	# Practice drones die ONLY to the player. A stray Guardian bolt clearing one advanced
+	# the drones step before the pilot had killed all three themselves — telling them
+	# "bring her home" while targets still drifted out there. Guardians may shoot; they
+	# just can't score it. (The damage source existed; the port to lessons never used it.)
+	if _source == null or not _source.is_in_group("player_ship"):
+		return
 	hp -= amount
 	_flash = 0.1
 	Sfx.play_at("hit", global_position, -12.0, 1.2)

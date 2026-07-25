@@ -22,6 +22,7 @@ var _seen := {}
 var _kills := 0
 var _drones_spawned := false
 var _paid := false
+var _has_launched := false   # true once undocked; gates "dock ends training"
 var _last_id := ""
 
 
@@ -39,6 +40,17 @@ func _process(_delta: float) -> void:
 		return
 	# The whole lesson finished (last step done) → pay out + kick the campaign.
 	if Tutor.seen.has("flight_training"):
+		_finish()
+		return
+	# Docking AFTER you've launched ends training from whatever step you're on — the
+	# final step is to come home, and a pilot who docks is done flying. Guarded on
+	# _has_launched so starting docked doesn't insta-complete. Without this an early
+	# dock hangs the (now PATIENT, never-timing-out) tutorial forever, with no reward
+	# and no first job from Ruel.
+	if ship.docked_at == null:
+		_has_launched = true
+	elif _has_launched:
+		Tutor.complete("flight_training")
 		_finish()
 		return
 	if Tutor.active != "flight_training":

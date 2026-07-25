@@ -1460,6 +1460,8 @@ func _dock_context() -> Dictionary:
 		"knows_scan": ship._known_abilities.has("scan"),
 		"has_wired_ability": has_wired,
 		"dirtside_active": Quests.active.has("dirtside_run"),
+		"dirtside_done": Quests.completed.has("dirtside_run"),   # first job done — later nudges wake after this
+		"tutorial_done": SaveGame.tutorial_done,   # gate secondary onboarding nudges until flight training is done
 		# Ruel's briefing is "unheard" while it still waits on his desk. By the time
 		# this snapshot is taken (end of refresh) _collect_talks has moved it out of
 		# Quests' queue into _held_talks, so THAT is where "still pending" lives.
@@ -1614,7 +1616,10 @@ func _refresh_overview() -> void:
 	txt += "dps %.1f   shield %.0f (+%.1f/s)   armor %.0f\nhold %.0f / %.0f   sensors %.0f\n\n" % [
 		s.dps, s.shield_hp, s.shield_regen, s.armor_hp, ship.cargo_used(), s.cargo, s.sensor_range]
 	if is_station:
-		if Research.rumor_ready():
+		# Hold the Ember Row rumour nudge until the pilot is PAST their first job — during
+		# onboarding it competes with "talk to Ruel" and pulls new pilots to Odessa, whose
+		# actual quest is several beats away (user, 2026-07-24).
+		if Research.rumor_ready() and Quests.completed.has("dirtside_run"):
 			txt += "[color=#73bff2]Dockhands keep glancing toward Ember Row — someone in there wants to talk.[/color]\n\n"
 		txt += "[color=#f2b859]DOCKSIDE TALK:[/color] [i][color=#a8b0c2]%s[/color][/i]\n\n" % _dockside_talk()
 	else:

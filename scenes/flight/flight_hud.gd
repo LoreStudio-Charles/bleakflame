@@ -10,6 +10,12 @@ extends CanvasLayer
 ## Threat banner stays big and top-center. [Tab] raises the hold manifest
 ## above the left console. The old top-left text block is retired.
 
+## Every anchor a FLIGHT lesson points at needs a ping here, or its caption silently never
+## renders (the effigy-tutorial bug). SINGLE SOURCE OF TRUTH: _ready spins up one ping per
+## entry, and test_dock_ui asserts every flight-lesson anchor is in this list.
+const TUTOR_PING_ANCHORS := ["effigy", "gem_bar", "radar", "comm_term", "missions_hud",
+	"cargo_gauge", "ord_gauge", "comms_badge"]
+
 ## Layout lives in DATA (user decision): edit data/cockpits/default.json to
 ## rearrange the dashboard — future hulls/cockpit components point at their
 ## own layout file. Values below are only the fallback defaults.
@@ -164,8 +170,12 @@ func _ready() -> void:
 	# of the same instrument rather than a new UI.
 	# Tutor: the last step of "memorize" points at the gem bar in flight, so the
 	# pilot sees WHERE the thing they just slotted actually lives.
-	for a in ["gem_bar", "radar", "comm_term", "missions_hud",
-			"cargo_gauge", "ord_gauge"]:
+	# "effigy" carries the whole FLIGHT-TRAINING tutorial + the running_dark lesson;
+	# "comms_badge" carries the comms-archive lesson. Both were MISSING here, so those
+	# flight captions had no ping to draw them (the authoring validator only checks
+	# DOCK steps, so it never caught it). Every anchor a FLIGHT lesson names needs a
+	# ping in this list or its caption silently never renders.
+	for a in TUTOR_PING_ANCHORS:
 		var ping := TutorPing.new()
 		ping.anchor = a
 		add_child(ping)
