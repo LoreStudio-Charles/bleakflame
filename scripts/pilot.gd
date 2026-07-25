@@ -426,7 +426,7 @@ static func autoprepare() -> void:
 
 
 ## The starter kit — once, on first landfall: rags and a scrap pistol, so the first
-## goblin is beatable and the paperdoll teaches itself. Never re-granted.
+## scrit is beatable and the paperdoll teaches itself. Never re-granted.
 static var ground_kit_granted := false
 static func ensure_ground_kit() -> void:
 	if ground_kit_granted:

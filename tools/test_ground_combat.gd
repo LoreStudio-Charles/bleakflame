@@ -1,5 +1,5 @@
 extends Node
-## GROUND COMBAT v1 (docs/ground_combat.md): the damage order, cover, the goblin's
+## GROUND COMBAT v1 (docs/ground_combat.md): the damage order, cover, the scrit's
 ## scavenger AI (flee, pack courage, TOWN SANCTUARY), target-locked attacks, and the
 ## death seam. Run as a SCENE:
 ##   <godot> --headless --path . res://tools/test_ground_combat.tscn
@@ -38,10 +38,10 @@ func _ready() -> void:
 	w.set_pose("")
 
 	# ---- 3) TARGET-LOCKED attack: in range + off cooldown = the hit lands ----
-	var g := DustGoblin.new()
+	var g := Scrit.new()
 	add_child(g)
-	g.setup_goblin(Vector2(3000, 1500))
-	w.add_to_group("player_walker")           # the goblin's brain hunts this group
+	g.setup_scrit(Vector2(3000, 1500))
+	w.add_to_group("player_walker")           # the scrit's brain hunts this group
 	w.team = "player_team"
 	w.global_position = Vector2(3000, 1520)   # inside claw reach
 	w.max_health = 100.0
@@ -50,7 +50,7 @@ func _ready() -> void:
 	g.engage(w)
 	for _i in 12:
 		await get_tree().physics_frame
-	_chk(w.health < 100.0, "the goblin's swipe landed (target-locked resolution)")
+	_chk(w.health < 100.0, "the scrit's swipe landed (target-locked resolution)")
 
 	# ---- 3b) THE KILL STANDS YOU DOWN: auto-attack clears when the target dies ----
 	var victim := GroundCharacter.new()
@@ -86,18 +86,18 @@ func _ready() -> void:
 	g.health = g.max_health * 0.2
 	for _i in 6:
 		await get_tree().physics_frame
-	_chk(not g.auto_attack, "a wounded goblin stops fighting")
+	_chk(not g.auto_attack, "a wounded scrit stops fighting")
 	_chk(g.is_moving(), "...and bolts for home")
 
 	# ---- 5) THE TOWN IS SANCTUARY ----
-	var g2 := DustGoblin.new()
+	var g2 := Scrit.new()
 	add_child(g2)
-	g2.setup_goblin(Vector2(1600, 300))
+	g2.setup_scrit(Vector2(1600, 300))
 	w.global_position = Vector2(400, 200)     # deep inside the colony's light
 	w.health = 100.0
 	for _i in 6:
 		await get_tree().physics_frame
-	_chk(not g2.auto_attack, "a goblin never attacks prey inside the town's light")
+	_chk(not g2.auto_attack, "a scrit never attacks prey inside the town's light")
 
 	# ---- 6) DEATH routes through THE seam ----
 	var hold := preload("res://tools/fake_hold.gd").new()
@@ -108,13 +108,13 @@ func _ready() -> void:
 	_chk((result.get("dropped", []) as Array).size() == 1, "the seam reports what fell")
 	_chk(str(result.get("wake", "")) == "starport", "you wake at the Starport")
 
-	# ---- 7) Goblin death: XP is the ONE spine ----
+	# ---- 7) Scrit death: XP is the ONE spine ----
 	var xp0 := Wallet.xp
-	var g3 := DustGoblin.new()
+	var g3 := Scrit.new()
 	add_child(g3)
-	g3.setup_goblin(Vector2(3200, 1800))
+	g3.setup_scrit(Vector2(3200, 1800))
 	g3.take_damage(500.0)
-	_chk(g3.dead, "enough damage kills a goblin")
+	_chk(g3.dead, "enough damage kills a scrit")
 	# (The town pays the XP via its died hook; here we just assert the signal fired
 	# by checking dead-state cleanup.)
 	_chk(not g3.auto_attack and g3.combat_target == null, "death clears its fight state")
@@ -132,29 +132,29 @@ func _ready() -> void:
 	add_child(pv)
 	pv.team = "player_team"
 	pv.global_position = Vector2(7000, 7000)
-	var gob := DustGoblin.new()
+	var gob := Scrit.new()
 	add_child(gob)
-	gob.setup_goblin(Vector2(7000, 7040))
+	gob.setup_scrit(Vector2(7000, 7040))
 	pv.take_damage(3.0, gob)
 	_chk(pv.combat_target == gob, "an unprovoked hit acquires the attacker as target")
 	_chk(not pv.auto_attack, "...but never pulls the trigger for you (target, not engage)")
-	var gob2 := DustGoblin.new()
+	var gob2 := Scrit.new()
 	add_child(gob2)
-	gob2.setup_goblin(Vector2(7040, 7000))
+	gob2.setup_scrit(Vector2(7040, 7000))
 	pv.take_damage(3.0, gob2)
 	_chk(pv.combat_target == gob, "a flank hit NEVER re-aims a fight in progress")
 
-	# ---- 9) GOBLIN GEAR DROPS: every pool path is real, and the pool matches the
+	# ---- 9) SCRIT GEAR DROPS: every pool path is real, and the pool matches the
 	# mirror test_ground_gear.gd asserts in --script mode (which can't name this class).
-	for path in DustGoblin.DROP_POOL:
+	for path in Scrit.DROP_POOL:
 		_chk(ResourceLoader.exists(path), "drop pool resource exists: " + path)
-	_chk(DustGoblin.DROP_POOL == ["res://data/ground/scrap_shiv.tres",
+	_chk(Scrit.DROP_POOL == ["res://data/ground/scrap_shiv.tres",
 		"res://data/ground/rag_hood.tres", "res://data/ground/work_gloves.tres"],
 		"DROP_POOL matches the mirrored list in test_ground_gear.gd")
 	# The clutched find is a real, affix-capable item.
-	var corpse := DustGoblin.new()
+	var corpse := Scrit.new()
 	add_child(corpse)
-	corpse.setup_goblin(Vector2(9000, 9000))
+	corpse.setup_scrit(Vector2(9000, 9000))
 	corpse.die()
 	var found_gear := false
 	for _i in 60:   # 22% a roll — 60 corpses miss all three ~3-in-a-million
@@ -169,10 +169,10 @@ func _ready() -> void:
 	# ---- 10) THE DUNE AMBUSH: hidden, inert, and unfindable until it springs ----
 	# The whole point is that you get no tell, so "dormant" has to mean ALL of it: not
 	# drawn, not thinking, and NOT IN THE HOSTILE GROUP — otherwise TAB-cycle or a radar
-	# sweep names three goblins standing in empty sand before they've moved.
-	var lurker := DustGoblin.new()
+	# sweep names three scrits standing in empty sand before they've moved.
+	var lurker := Scrit.new()
 	add_child(lurker)
-	lurker.setup_goblin(Vector2(20000, 20000))
+	lurker.setup_scrit(Vector2(20000, 20000))
 	lurker.lie_in_wait()
 	_chk(not lurker.visible, "a waiting ambusher is invisible")
 	_chk(not lurker.is_in_group("ground_hostiles"), "...and cannot be targeted or cycled")

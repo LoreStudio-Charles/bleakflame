@@ -16,9 +16,9 @@ func _ready() -> void:
 		"PilotM's authored anchor scene loads (4 frames per direction)")
 	var nobody := WeaponAnchors.load_set("NoSuchCharacter", "Walking", 68)
 	_chk(nobody.has("south"), "an unauthored character gets the fallback table")
-	var goblin := WeaponAnchors.load_set("DustGoblin", "Walking", 56)
-	var gpos: Vector2 = goblin["south"][0]["one"]["pos"]
-	_chk(gpos.x < 56 and gpos.y < 56, "goblin anchors live on ITS canvas (56px), not the mannequin's")
+	var scrit := WeaponAnchors.load_set("Scrit", "Walking", 56)
+	var gpos: Vector2 = scrit["south"][0]["one"]["pos"]
+	_chk(gpos.x < 56 and gpos.y < 56, "scrit anchors live on ITS canvas (56px), not the mannequin's")
 
 	# 2) Equip on a real walking character.
 	var walker := GroundCharacter.new()

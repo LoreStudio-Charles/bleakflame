@@ -1,24 +1,25 @@
-class_name DustGoblin
+class_name Scrit
 extends GroundCharacter
-## The DUST GOBLIN (docs/ground_combat.md; user: "akin to jawa") — a small hooded
+## The SCRIT (docs/ground_combat.md; user: "akin to jawa", renamed from "dust goblin"
+## 2026-07-25 — one syllable, and it sounds like the noise they make) — a small hooded
 ## scavenger of the open roam. Pack-brave, alone-cowardly, and a scavenger to the bone:
 ## it BREAKS AND RUNS at low health rather than dying proudly. The first ground enemy.
 ##
 ## Lives in AUTHORED PLACES (the warren the town spawns), never on-player spawns —
 ## the living-world rule, same as pirates. THE TOWN IS SANCTUARY (the station-sanctuary
-## mirror): a goblin never crosses the colony's light, however hungry.
+## mirror): a scrit never crosses the colony's light, however hungry.
 
 const NOTICE_RANGE := 420.0
 const LEASH_RANGE := 950.0        # gives up beyond this from home and skulks back
 const FLEE_HEALTH := 0.3          # break-and-run below 30% — scavengers, not soldiers
-const PACK_RANGE := 260.0         # a goblin with a friend this close is BRAVE
-## The colony's light. Goblins stop dead at this radius from town center — the ground
+const PACK_RANGE := 260.0         # a scrit with a friend this close is BRAVE
+## The colony's light. Scrits stop dead at this radius from town center — the ground
 ## mirror of AIShip.SANCTUARY_R. Buildings sit within ~1000u of Vector2.ZERO.
 const TOWN_SANCTUARY_R := 1150.0
 
 var home := Vector2.ZERO
 var looted := false
-## LYING IN WAIT. A dormant goblin is invisible, inert and unfindable — it does not think,
+## LYING IN WAIT. A dormant scrit is invisible, inert and unfindable — it does not think,
 ## move, or answer a scan. The AMBUSH is the one authored exception to "enemies live in
 ## places you can see": these are hidden behind a dune on the road to the hermit, and the
 ## whole point is that the first you know of them is the moment they break cover.
@@ -27,8 +28,8 @@ var _wander_t := 0.0
 var _flee_t := 0.0
 
 
-func setup_goblin(spawn: Vector2) -> void:
-	setup("res://assets/characters/DustGoblin")
+func setup_scrit(spawn: Vector2) -> void:
+	setup("res://assets/characters/Scrit")
 	home = spawn
 	global_position = spawn
 	team = "hostile"
@@ -53,7 +54,7 @@ func _become_corpse() -> void:
 		add_to_group("ground_loot"))
 
 
-## What a goblin might be clutching — the ground drop pool. Rolled through the same
+## What a scrit might be clutching — the ground drop pool. Rolled through the same
 ## Affixes.roll_for_drop as ship salvage, so a "Hardened Rag Hood" is a real find.
 const DROP_POOL := ["res://data/ground/scrap_shiv.tres", "res://data/ground/rag_hood.tres",
 	"res://data/ground/work_gloves.tres"]

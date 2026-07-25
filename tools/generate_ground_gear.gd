@@ -1,5 +1,5 @@
 extends SceneTree
-## Seed generator for GROUND GEAR (data/ground/*.tres) — the starter kit, the goblin
+## Seed generator for GROUND GEAR (data/ground/*.tres) — the starter kit, the scrit
 ## drop pool, and the first shop tier. Same contract as generate_sample_data.gd: this is
 ## the SEED, it OVERWRITES hand-edits, and the ground-combat doc is the design authority.
 ##   <godot> --headless --path . --script res://tools/generate_ground_gear.gd
@@ -53,10 +53,10 @@ func _catalog() -> Array:
 		{"file": "scrap_shiv", "display_name": "Scrap Shiv", "ground_slot": S.MAIN,
 			"grade": G.FLOTSAM, "mark": 1, "mass": 0.6,
 			"damage": 7.0, "attack_range": 42.0, "cooldown": 0.45, "melee": true,
-			"description": "A goblin's answer to every question. Now it's yours."},
+			"description": "A scrit's answer to every question. Now it's yours."},
 		{"file": "rag_hood", "display_name": "Rag Hood", "ground_slot": S.HEAD,
 			"grade": G.FLOTSAM, "mark": 1, "mass": 0.5, "mitigation": 0.02,
-			"description": "Keeps the sun off and the dust out. Goblin-cut, human-sized."},
+			"description": "Keeps the sun off and the dust out. Scrit-cut, human-sized."},
 		{"file": "work_gloves", "display_name": "Work Gloves", "ground_slot": S.HANDS,
 			"grade": G.SALVAGE, "mark": 1, "mass": 0.4, "mitigation": 0.02,
 			"description": "Palm-worn smooth at the pump handles. Tam swears by them."},

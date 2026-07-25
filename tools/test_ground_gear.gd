@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless test for the GROUND GEAR schema (docs/ground_combat.md):
 ##   godot --headless --path . --script res://tools/test_ground_gear.gd
 ## Model layer only (no autoloads in --script mode): the paperdoll rules on Pilot,
-## the derived stat block, the starter kit, affix rolls, and the goblin drop pool.
+## the derived stat block, the starter kit, affix rolls, and the scrit drop pool.
 
 func _init() -> void:
 	var failures := 0
@@ -136,14 +136,14 @@ func _init() -> void:
 		print("FAIL: 40 Flotsam rolls produced no affixes (Flotsam always draws a drawback)")
 		failures += 1
 
-	# ---- goblin drop pool paths are real ----
-	# Mirrored from DustGoblin.DROP_POOL by hand: naming the class here would pull in
+	# ---- scrit drop pool paths are real ----
+	# Mirrored from Scrit.DROP_POOL by hand: naming the class here would pull in
 	# GroundCharacter, which touches autoloads — and --script mode has none.
 	# test_ground_combat (scene mode) asserts the constant agrees with this list.
 	for path in ["res://data/ground/scrap_shiv.tres", "res://data/ground/rag_hood.tres",
 			"res://data/ground/work_gloves.tres"]:
 		if not ResourceLoader.exists(path):
-			print("FAIL: goblin drop pool names a missing resource: ", path)
+			print("FAIL: scrit drop pool names a missing resource: ", path)
 			failures += 1
 
 	Pilot.reset()

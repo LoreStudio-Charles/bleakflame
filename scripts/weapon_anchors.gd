@@ -10,7 +10,7 @@ class_name WeaponAnchors
 ##   `one` — the ONE-HAND grip (drag it onto the palm; ROTATE the gizmo = weapon angle)
 ##   `two` — the TWO-HAND carry anchor (same controls)
 ## Marker meta `behind` (bool, in the Inspector) = draw the weapon behind the body.
-## Per-character on purpose: the goblin's chibi arms are nowhere near the mannequin's.
+## Per-character on purpose: the scrit's chibi arms are nowhere near the mannequin's.
 ##
 ## The code table below is only the SEED + fallback (estimated off PilotM's cuffs, the
 ## PoC values) — an authored scene always wins. Missing scene + missing direction =
@@ -41,7 +41,7 @@ static var _cache := {}
 
 ## The full anchor set for a character's animation group:
 ##   {dir: [{one: {pos, rot, behind}, two: {...}} x frames]}
-## `char_folder` = the assets/characters folder name ("PilotM", "DustGoblin"...).
+## `char_folder` = the assets/characters folder name ("PilotM", "Scrit"...).
 static func load_set(char_folder: String, group: String, canvas := 68) -> Dictionary:
 	var key := "%s/%s" % [char_folder, group]
 	if _cache.has(key):

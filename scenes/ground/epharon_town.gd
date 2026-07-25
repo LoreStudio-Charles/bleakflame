@@ -468,9 +468,9 @@ func _tick_npcs(delta: float) -> void:
 			node.move_to(home + Vector2(cos(ang), sin(ang)) * rad)
 
 
-## THE WARREN — the goblins' authored place, out past the east dunes (living-world rule:
+## THE WARREN — the scrits' authored place, out past the east dunes (living-world rule:
 ## enemies live somewhere, they don't spawn on you). Far enough out that a new pilot
-## meets them by CHOOSING to roam; the town's light (DustGoblin.TOWN_SANCTUARY_R) keeps
+## meets them by CHOOSING to roam; the town's light (Scrit.TOWN_SANCTUARY_R) keeps
 ## the streets safe regardless.
 const WARREN := Vector2(2300, 1500)
 const WARREN_PACK := 4
@@ -496,11 +496,11 @@ func _spawn_warren() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 909
 	for i in WARREN_PACK:
-		var g := DustGoblin.new()
+		var g := Scrit.new()
 		_world.add_child(g)
 		var a := rng.randf() * TAU
-		g.setup_goblin(WARREN + Vector2(cos(a), sin(a)) * rng.randf_range(30.0, 190.0))
-		g.died.connect(_on_goblin_down.bind(g))
+		g.setup_scrit(WARREN + Vector2(cos(a), sin(a)) * rng.randf_range(30.0, 190.0))
+		g.died.connect(_on_scrit_down.bind(g))
 
 
 ## Plant the ambush: an AUTHORED dune (not one of the scattered ones — the trap must not
@@ -514,16 +514,16 @@ func _spawn_ambush() -> void:
 		if pair.is_empty():
 			pass
 	for i in AMBUSH_PACK:
-		var g := DustGoblin.new()
+		var g := Scrit.new()
 		_world.add_child(g)
-		g.setup_goblin(AMBUSH_DUNE + AMBUSH_SPOTS[i % AMBUSH_SPOTS.size()])
+		g.setup_scrit(AMBUSH_DUNE + AMBUSH_SPOTS[i % AMBUSH_SPOTS.size()])
 		g.lie_in_wait()
-		g.died.connect(_on_goblin_down.bind(g))
+		g.died.connect(_on_scrit_down.bind(g))
 		_ambushers.append(g)
 
 
 ## Hold until the pilot is close, then break cover together. One-shot: once sprung they
-## are ordinary goblins with an ordinary leash, so a survivor never re-hides.
+## are ordinary scrits with an ordinary leash, so a survivor never re-hides.
 func _tick_ambush() -> void:
 	if _ambush_sprung or _ambushers.is_empty():
 		return
@@ -540,13 +540,13 @@ func _tick_ambush() -> void:
 		Sfx.play("dread", -8.0, 1.4)
 
 
-func _on_goblin_down(g: DustGoblin) -> void:
-	Wallet.xp += 6   # one spine: goblins pay the same currency as pirates (KILL_XP style)
-	_flash("Dust goblin down  ·  +6 XP", 1.6)
+func _on_scrit_down(g: Scrit) -> void:
+	Wallet.xp += 6   # one spine: scrits pay the same currency as pirates (KILL_XP style)
+	_flash("Scrit down  ·  +6 XP", 1.6)
 	if _player.combat_target == g:
 		_player.engage(null)
 	# The body stays: it settles into the DEAD state and becomes a loot container
-	# (DustGoblin._become_corpse) — scavenge it with [E], or leave it to the sand.
+	# (Scrit._become_corpse) — scavenge it with [E], or leave it to the sand.
 
 
 ## Ground death routes through THE seam (GroundDeath.apply — the open EQ-light policy
@@ -570,7 +570,7 @@ func _on_player_down() -> void:
 
 
 ## ---- combat verbs (the input scheme, on foot) ----
-## LMB = SELECT (a click on a goblin targets it; holding still walks). RMB on a hostile
+## LMB = SELECT (a click on a scrit targets it; holding still walks). RMB on a hostile
 ## = target AND engage (the soft interact). [Q] toggles weapons-free. [TAB] cycles
 ## hostiles. [SPACE] kneels — cover mitigation + the braced pose.
 func _poll_combat() -> void:
@@ -917,7 +917,7 @@ func _update_focus() -> void:
 			var c := n as Node2D
 			if c != null and _player.global_position.distance_to(c.global_position) < 70.0:
 				_current_action = "loot"
-				text = "[E] Scavenge the goblin"
+				text = "[E] Scavenge the scrit"
 				break
 	_prompt.text = text
 	_prompt.visible = text != ""
@@ -1132,10 +1132,10 @@ func _do_action(action: String) -> void:
 		"sealed":
 			_flash("The door is sealed tight. No handle, no panel. Nothing.", 2.0)
 		"loot":
-			var best: DustGoblin = null
+			var best: Scrit = null
 			var best_d := 80.0
 			for n in get_tree().get_nodes_in_group("ground_loot"):
-				var c := n as DustGoblin
+				var c := n as Scrit
 				if c != null:
 					var dd := _player.global_position.distance_to(c.global_position)
 					if dd < best_d:
@@ -1172,7 +1172,7 @@ func _do_action(action: String) -> void:
 ## contract as a dock panel) and thaws when it closes — the ShopView owns Esc itself.
 ## The trade RULES live in TradeGoods, shared with the station dock; this only hosts.
 ## BRAM'S SHELF — the colony's first ground-gear stock (SALVAGE tier, docs/ground_combat.md).
-## Clean factory pieces; the affixed versions come off goblins. Only his counter stocks
+## Clean factory pieces; the affixed versions come off scrits. Only his counter stocks
 ## equipment — Imari is the Elder, not a shopkeep.
 const BRAM_GEAR: Array = [
 	"res://data/ground/dune_rifle.tres",

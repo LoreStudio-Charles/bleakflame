@@ -133,7 +133,7 @@ func _ready() -> void:
 	_hold.material_price = func(key: String) -> int:
 		return TradeGoods.sell_price(market, key) if market.get("buys", {}).has(key) else -1
 	_hold.on_material = func(key: String, _s: String) -> void: _on_sell(key)
-	# EQUIPMENT sells here too (a counter that stocks gear also buys it) — how a goblin's
+	# EQUIPMENT sells here too (a counter that stocks gear also buys it) — how a scrit's
 	# clutched shiv turns into credits. Same price rule as the station Armory.
 	if not gear_stock.is_empty():
 		_hold.item_hint = func(c: ComponentDef) -> String:

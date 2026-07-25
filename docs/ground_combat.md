@@ -76,7 +76,7 @@ shops, salvage, stash — with new SLOT TYPES on a **SuitDef** frame:
 two-hand pose) so they animate correctly. See "Weapon display" below.
 
 Suits ladder like hulls (slot counts/trait vary; grades apply). Ground drops roll
-affixes exactly like ship drops — a goblin can drop a "Sharpened Scrap Shiv."
+affixes exactly like ship drops — a scrit can drop a "Sharpened Scrap Shiv."
 Personal gear lives in the pilot's **BAGS [B]** (the reserved key), distinct from the
 ship hold; bank at the stash like anything else.
 
@@ -91,7 +91,7 @@ Why this is cheap for us — THE TEMPLATE INSIGHT: every humanoid we generate sh
 the SAME PixelLab mannequin skeleton and the SAME walking-4-frames template, so the
 hand lands on the same pixel for every character. **ONE anchor table per animation
 template serves the entire cast** — authored once (4 dirs × 4 frames = 16 entries),
-reused by Imari, Tam, goblins, everyone. New animation template = one more table.
+reused by Imari, Tam, scrits, everyone. New animation template = one more table.
 - Two grip poses per the user's spec: ONE-HAND (hip-side grip) and TWO-HAND
   (cross-body carry) — separate anchor columns in the same table.
 - Draw order by direction: south/east/west = weapon over body; north = behind.
@@ -150,7 +150,7 @@ taking-punch, throw-object for the grenade).
   mirror: cell dumps into recharge, you're defenseless, cold circuits = safe to
   re-prepare).
 - Pre-commission characters get a small UNIVERSAL set (basic strike, patch-up) so the
-  first goblin fight works before joining anyone — the tutorial-safe floor.
+  first scrit fight works before joining anyone — the tutorial-safe floor.
 - The six profession identities ARE the ground kits (already locked in
   docs/professions.md): Guardian paladin (brace, taunt, self-mend), Privateer shadow
   knight (drains, terror), Miner (tangle), Scout (blink), Science (mend-field),
@@ -166,13 +166,13 @@ taking-punch, throw-object for the grenade).
 - Auto-attack resolves by weapon (melee closes to reach; ranged fires in range) — no
   aiming ever.
 
-## Enemies — v1: the DUST GOBLINS (user: "akin to jawa")
+## Enemies — v1: the SCRITS (user: "akin to jawa")
 
-Art banked: `assets/characters/DustGoblin` + `assets/portraits/dust_goblin.png`.
+Art banked: `assets/characters/Scrit` + `assets/portraits/scrit.png`.
 - Pack scavengers of the open roam: cowardly alone, brave in threes.
 - Live in authored PLACES (a warren past the heat-shimmer, spawned like the Rust
   Shoal pattern — never on-player). **The town is sanctuary** (mirror of the station
-  sanctuary rule): goblins never cross the colony's light.
+  sanctuary rule): scrits never cross the colony's light.
 - Behavior v1: skulk → pack up → rush → melee swipe → break-and-run at low HP
   (they're scavengers, not soldiers). They steal dropped loot if left alone (flavor
   hook, later).
@@ -205,11 +205,11 @@ Nothing else may hardcode death consequences.
    the walker + dresses the Main weapon (`fresh=false` keeps the health fraction — a
    vest swap is never a free heal). Dossier [P] gained an EQUIPMENT tab (9 rows,
    right-click unequip→hold, derived block alongside) and the Inventory tab's ONE
-   verb: right-click equips ground gear. Goblins clutch drops (22%,
-   `DustGoblin.DROP_POOL`, affix-rolled → ship hold). Tests: `tools/test_ground_gear.gd`
+   verb: right-click equips ground gear. Scrits clutch drops (22%,
+   `Scrit.DROP_POOL`, affix-rolled → ship hold). Tests: `tools/test_ground_gear.gd`
    (--script; two-hand rules sabotage-verified) + drop checks in test_ground_combat.
 2. GroundActor combat: health/barrier/mitigation, auto-attack, target/engage verbs — BUILT.
-3. DustGoblin AI (pack skulk/rush/flee) + warren spawner + town sanctuary — BUILT.
+3. Scrit AI (pack skulk/rush/flee) + warren spawner + town sanctuary — BUILT.
 4. Techniques — **BUILT 2026-07-25**: `scripts/ground/techniques.gd` (Techniques.LIST,
    `source` = "universal" or a profession id; `known()` = the floor + your commission's
    syllabus; drop-in art `assets/icons/techniques/<id>.png`; `tooltip_body` returns a
@@ -221,7 +221,7 @@ Nothing else may hardcode death consequences.
    THE CELL: `GroundGearDef.energy`/`energy_recharge` + `GroundStats.BASE_ENERGY 60` /
    `BASE_RECHARGE 1.4` so the floor set works in rags; `spend_energy` refuses without
    spending (the ship's invariant). EFFECTS LIVE ON GroundCharacter (`mend`,
-   `apply_stun`, `apply_haste`, `apply_brace`) so a future goblin shaman or ally uses
+   `apply_stun`, `apply_haste`, `apply_brace`) so a future scrit shaman or ally uses
    the identical call — the AI-specialist rule. Reeling and meditating root you in the
    ONE motion path, so no controller can walk out of it. `set_meditating` = [K], the
    Going-Dark mirror (MEDITATE_REGEN 9/s, stands you down, kneeling pose). Town owns
@@ -238,5 +238,5 @@ Nothing else may hardcode death consequences.
 - Final death penalty (EQ-light XP/corpse — user decides later).
 - Do ground skills reuse the 7 ship skills' seams or get ground-facing meanings?
 - Barrier emitter as ACCESSORY vs its own slot; mitigation cap value.
-- Goblin standing/faction (are they a Standing entry or vermin?).
+- Scrit standing/faction (are they a Standing entry or vermin?).
 - PvE only for now; coop targeting frames (F1-F4) when party exists.

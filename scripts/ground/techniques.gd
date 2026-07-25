@@ -10,7 +10,7 @@ class_name Techniques
 ##
 ## SOURCES:
 ##   "universal" — everybody knows it, from the first landfall. The tutorial-safe floor,
-##                 so the first goblin fight works before you have joined anyone.
+##                 so the first scrit fight works before you have joined anyone.
 ##   "<profession id>" — trained by that commission (Professions.LIST ids). Known once
 ##                 you hold that commission; the per-node standing/level gates come with
 ##                 the office syllabus pass.

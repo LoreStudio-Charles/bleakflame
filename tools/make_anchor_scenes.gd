@@ -16,7 +16,7 @@ extends SceneTree
 ## hands are bare skin, and skin pixels below the face can only be hands. Each character
 ## teaches us its own skin palette from its face band, so Imari's dark skin and Tam's
 ## tan seed as well as PilotM's. Characters where detection finds nothing (the hooded
-## goblin has no visible skin) seed from the scaled fallback — still fully editable.
+## scrit has no visible skin) seed from the scaled fallback — still fully editable.
 ##
 ## TRAILING-HAND RULE (found on the PoC's stride frames): when the detected hand sits
 ## on the BACK side relative to facing, the weapon would pierce the torso — those
@@ -155,7 +155,7 @@ func _skin_palette(img: Image) -> Dictionary:
 
 
 ## Largest skin cluster below the face = the near hand. INF if this character hides
-## its hands (gloves, a hood-shadowed goblin) — the caller keeps the fallback seed.
+## its hands (gloves, a hood-shadowed scrit) — the caller keeps the fallback seed.
 func _detect_hand(img: Image, skin: Dictionary, _d: String) -> Vector2:
 	if skin.is_empty():
 		return Vector2.INF

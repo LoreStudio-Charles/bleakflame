@@ -1303,7 +1303,7 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 				Pilot.equip_ground(item)
 				_town.apply_gear(false)
 				var views := item.weapon_views()
-				_dev_feedback("Armed: %s (%s-hand, %d view(s)) — RMB a goblin to engage" % [
+				_dev_feedback("Armed: %s (%s-hand, %d view(s)) — RMB a scrit to engage" % [
 					item.display_name, "two" if item.two_handed else "one", views.size()])
 			else:
 				var dropped := Pilot.unequip_ground("Main")

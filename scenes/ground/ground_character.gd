@@ -146,7 +146,7 @@ func set_melee(damage: float, reach: float, cooldown: float) -> void:
 
 ## ---- TECHNIQUE EFFECTS ----
 ## The effects themselves live HERE, on the character, not in the town's dispatch — so
-## a goblin shaman or an allied NPC applies the identical effect through the identical
+## a scrit shaman or an allied NPC applies the identical effect through the identical
 ## call, exactly the way AI ships reuse the player's bulwark/repair (never a divergent
 ## copy). The town only decides WHO gets one and pays the energy.
 
@@ -428,7 +428,7 @@ func _physics_process(_delta: float) -> void:
 	var moving := false
 	# REELING (Kick Sand) or MEDITATING roots you: the whole point of both is that the
 	# body is not available. Gated here, the ONE place motion happens, so no controller
-	# — player, goblin or future ally — can walk out of it.
+	# — player, scrit or future ally — can walk out of it.
 	var rooted := _stun_t > 0.0 or meditating
 	var spd := speed * (HASTE_MULT if _haste_t > 0.0 else 1.0)
 	if rooted:
