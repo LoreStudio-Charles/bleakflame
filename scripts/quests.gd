@@ -227,6 +227,63 @@ const QUESTS := [
 				"flash": ""},
 		],
 		"rewards": {"credits": 0, "xp": 100}},
+
+	# ================================================================================
+	# THE CINDER REACH CAMPAIGN — "The Legend" (docs/cinder_reach_campaign.md)
+	# ================================================================================
+	# The SYSTEM'S OWN story, not the Saga: a hunted war-legend, a noir client, and a
+	# secret that restarts a war if it gets out. Saga-independent for its whole length;
+	# it braids only at the gate finale.
+	#
+	# GATED ON `ember_word` — the Saga beat where you first walk into Ember Row and meet
+	# Odessa. That is a precondition of THIS quest (she has to know your face before she
+	# asks a personal favour), not a chain off the Saga: the Campaign never advances the
+	# Saga and never waits on it again after this.
+	#
+	# BREADCRUMB RULE: giver `odessa` stands at the STATION, and so does the giver of the
+	# prereq — so the lead is handed where you already are, and the DESTINATION (the
+	# colony) is charted by the talk stage's venue. No orphaned "go somewhere you have
+	# never been to start a quest you cannot see".
+	{"id": "legend_check_in", "title": "Look In On Him", "giver": "odessa",
+		"requires": "ember_word",
+		"body": "Odessa wants someone to look in on an old friend at the colony's edge — a favour, she says, and she is careful to say it is nothing more than that.",
+		"briefing": "She pours you something you did not order and does not charge for it. \"There's a man on Epharon. Lives out past the domes in a hole in the rock, counts things nobody asked him to count.\" A pause exactly long enough to notice. \"I'd take it kindly if somebody looked in on him. He's owed a bottle and he's owed a visit, and I can't leave this bar.\" She slides the bottle across. \"Don't make a thing of it. Just... see how he is.\"",
+		"debrief": "\"He's alive, then.\" She takes the empty glass you didn't drink from and turns it over in her hands a moment too long. \"Good. That's good.\" She doesn't ask what he said, which is its own kind of answer.",
+		"stages": [
+			{"kind": "talk", "npc": "hermit", "venue": "planet",
+				"step": "Land at Epharon and find the Counter in the cave past the domes.",
+				"flash": "The old man took the bottle without a word about who sent it. He knew.",
+				"dialogue": {
+					"start": {
+						"text": "The cave smells of cold rock and old machine oil. He's marking a wall that has no room left on it, and doesn't stop when your shadow falls across the marks.\n\n\"You're not the water run.\"",
+						"choices": [
+							{"text": "Odessa sent me. She sent this, too.", "next": "bottle"},
+							{"text": "Just looking in.", "next": "looking"},
+						]},
+					"looking": {
+						"text": "\"Nobody just looks in. Not out here.\" The marking stops. He still doesn't turn. \"Who sent you.\"",
+						"choices": [
+							{"text": "Odessa. She sent this, too.", "next": "bottle"},
+						]},
+					"bottle": {
+						"text": "He turns then. Older than the voice, and something in the way he stands is wrong for a hermit — squared off, weight on the back foot, hands where he can see yours.\n\nHe looks at the bottle for a long moment. \"She remembers the label.\" He takes it, sets it down unopened. \"She shouldn't have sent anybody. Tell her that. Kindly.\"",
+						"choices": [
+							{"text": "She's worried about you.", "next": "worried", "style": "primary"},
+							{"text": "What are you counting?", "next": "counting"},
+						]},
+					"counting": {
+						"text": "\"The thing that breathes out past the rim. Eight minutes, some seconds that drift.\" He almost smiles. \"Everyone assumes it's madness. It's arithmetic. Madness would be not counting.\"",
+						"choices": [
+							{"text": "She's worried about you.", "next": "worried", "style": "primary"},
+						]},
+					"worried": {
+						"text": "\"She's right to be.\" He says it plainly, the way a man reads a gauge. Then, catching himself, softer: \"Tell her I'm well. Tell her the rock is dry and the counting keeps.\"\n\nAt the mouth of the cave he says one more thing, not quite to you.\n\n\"If anybody else comes asking after an old man out here — anybody at all — you'd be doing me a kindness not to remember the way.\"",
+						"choices": [
+							{"text": "Understood.", "next": "end", "style": "primary"},
+						]},
+				}},
+		],
+		"rewards": {"credits": 150, "xp": 40}},
 ]
 
 static var active := {}                 # id -> {"stage": int, "count": int}
