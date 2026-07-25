@@ -1,6 +1,6 @@
 class_name FactionsView
 extends CanvasLayer
-## The FACTIONS & PEACE screen, toggled with [I] — open docked OR in flight
+## The FACTIONS & PEACE screen, toggled with [U] (Keys.FACTIONS) — open docked OR in flight
 ## (declaring war on the wing behind you is legal and inadvisable). Shows each
 ## combat faction's standing, its derived STATE, and the PEACE toggle: at peace
 ## a faction is a friendly you can't target; declare war and its ships become

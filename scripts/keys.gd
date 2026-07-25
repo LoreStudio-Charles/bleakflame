@@ -73,8 +73,11 @@ const MAP := KEY_M              # ground -> system -> galaxy -> universe (RMB ou
 const HOLD := KEY_H             # the SHIP's cargo hold
 const BAGS := KEY_B             # the PILOT's personal bags
 const DOSSIER := KEY_P          # pilot + ship sheet
-const FACTIONS := KEY_I
-const SOCIAL := KEY_U           # reserved — not built yet
+## FACTIONS is [U] (user, 2026-07-25 — an autocorrect had put Social here and the
+## correction never landed). Social takes the freed [I]; it is reserved and unbuilt, so
+## nothing player-facing moves except the faction sheet.
+const FACTIONS := KEY_U
+const SOCIAL := KEY_I           # reserved — not built yet
 const DARK := KEY_K             # going dark | meditate
 const LOG := KEY_L              # captain's log: quests + objectives
 const COMMS := KEY_C            # archive of past transmissions

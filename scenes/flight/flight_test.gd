@@ -180,7 +180,7 @@ func _ready() -> void:
 	add_child(CaptainsLog.new(ship))
 	add_child(CommsInbox.new(ship))
 	add_child(SalvagePanel.new(ship))
-	add_child(FactionsView.new(ship))   # [I] factions & peace (docked or flying)
+	add_child(FactionsView.new(ship))   # [U] factions & peace (docked or flying)
 	add_child(GoingDark.new(ship))      # [K] systems offline: re-flash the Bus in flight
 	# Last, so it receives Esc before the overlays above and can defer to any
 	# of them that's currently open (they join "esc_capture" while visible).
