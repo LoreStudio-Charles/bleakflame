@@ -1,6 +1,6 @@
 class_name FactionsView
 extends CanvasLayer
-## The FACTIONS & PEACE screen, toggled with [U] — open docked OR in flight
+## The FACTIONS & PEACE screen, toggled with [I] — open docked OR in flight
 ## (declaring war on the wing behind you is legal and inadvisable). Shows each
 ## combat faction's standing, its derived STATE, and the PEACE toggle: at peace
 ## a faction is a friendly you can't target; declare war and its ships become
@@ -59,7 +59,7 @@ func _ready() -> void:
 	col.add_child(_rows)
 
 	var note := Label.new()
-	note.text = "Declaring war makes a faction's ships targetable — and their allies remember it. Peace is locked while they'll kill you on sight. [U]/[Esc] to close."
+	note.text = "Declaring war makes a faction's ships targetable — and their allies remember it. Peace is locked while they'll kill you on sight. [I]/[Esc] to close."
 	note.add_theme_font_size_override("font_size", 11)
 	note.add_theme_color_override("font_color", UiTheme.DIM)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -193,7 +193,7 @@ func _sync_faction(fid: String) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
-	if event.keycode == KEY_U and not ship.dead:
+	if event.keycode == Keys.FACTIONS and not ship.dead:
 		visible = not visible
 		if visible:
 			_refresh()
@@ -201,7 +201,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else:
 			remove_from_group("esc_capture")
 		Sfx.play("click", -10.0, 1.3 if visible else 0.9)
-	elif event.keycode == KEY_ESCAPE and visible:
+	elif event.keycode == Keys.MENU and visible:
 		visible = false
 		remove_from_group("esc_capture")
 		Sfx.play("click", -10.0, 0.9)

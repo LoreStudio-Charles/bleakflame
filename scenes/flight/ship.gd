@@ -62,6 +62,11 @@ var snared := 0.0
 ## fires enabled arrays, so finite rockets never ride along with the guns
 ## unless you want them to.
 var array_enabled := [true, true]
+
+## WEAPONS FREE — the guns' on/off state, toggled with [Q] (or set by right-clicking an
+## enemy). While true the gun array engages anything it bears on. Ordnance is NOT included:
+## it burns ammo, so it fires only on [R]. Cleared on death/dock so you never undock hot.
+var weapons_free := false
 var _known_abilities: Array = []   # ability ids the current fit KNOWS (Abilities)
 var _cloak_t := 0.0        # remaining cloak duration (>0 = cloaked)
 var _cloak_cd := 0.0       # remaining cooldown
@@ -268,7 +273,7 @@ func apply_build(new_build: ShipBuild) -> void:
 	# (buy_scanner + memorize now arm themselves off the dock/flight context via the
 	# declarative tutor — needs_scan and has_wired_ability — no arm() call here.)
 	# ("ordnance" lesson now arms itself off `carrying_ordnance` via the declarative
-	# tutor — a magazine weapon aboard — and completes when they first press [Z].)
+	# tutor — a magazine weapon aboard — and completes when they first launch one [R].)
 	_cloak_dur = 6.0
 	_cloak_cd_max = 14.0
 	for comp in _ability_sources():
@@ -456,6 +461,7 @@ var approach_fault := ""
 func dock(target_host: Node) -> void:
 	docked_at = target_host
 	_scan_progress = -1.0
+	weapons_free = false   # never undock with the guns already hot (esp. in a sanctuary)
 	velocity = Vector2.ZERO
 	visible = false
 	shield = stats.shield_hp
@@ -549,27 +555,27 @@ func _unhandled_input(event: InputEvent) -> void:
 	if dead or docked_at != null or dark or cinematic:
 		return   # dark = systems offline: no gems, no targeting (the Bus is re-flashed in the overlay)
 	if event is InputEventMouseButton and event.pressed \
-			and event.button_index == MOUSE_BUTTON_RIGHT:
+			and event.button_index == Keys.SELECT:
+		# LEFT-CLICK SELECTS. Always, everywhere — including out here in the world, which
+		# is what makes "click an ally to target them" work without a cycle key. It NEVER
+		# arms anything: selecting a hostile this way picks it without opening fire, so you
+		# can inspect or scan something you don't want to shoot yet.
+		_select_target_at(get_global_mouse_position(), false)
+	elif event is InputEventMouseButton and event.pressed \
+			and event.button_index == Keys.INTERACT_AT_CURSOR:
 		_rmb_at(get_global_mouse_position())
 	elif event is InputEventKey and event.pressed and not event.echo:
+		var gem := Keys.ability_index(event.keycode)
+		if gem >= 0:
+			_activate_gem(gem)
+			return
 		match event.keycode:
-			KEY_T:
+			Keys.CYCLE_FOE:
 				_cycle_target(enemy_group)
-			KEY_Y:
-				_cycle_target("friendly_targets")
-			KEY_1:
-				_activate_gem(0)
-			KEY_2:
-				_activate_gem(1)
-			KEY_3:
-				_activate_gem(2)
-			KEY_4:
-				_activate_gem(3)
-			KEY_5:
-				_activate_gem(4)
-			KEY_Z:
-				_toggle_array(1, "ORDNANCE")   # guns stay hot; [Z] holds ordnance
-				Tutor.did("held_ordnance")     # completes the "ordnance" lesson
+			Keys.WEAPONS_FREE:
+				set_weapons_free(not weapons_free)
+			Keys.ORDNANCE:
+				_launch_ordnance()
 
 
 ## Cycle sensor-range contacts in a group, nearest first, wrapping. The
@@ -678,12 +684,16 @@ func note_hold_full() -> void:
 	if _hold_full_cd > 0.0:
 		return
 	_hold_full_cd = 2.5
-	_flash_note("HOLD FULL %d/%.0f — [B] to manage cargo & jettison" % [
+	_flash_note("HOLD FULL %d/%.0f — [H] to manage cargo & jettison" % [
 		int(cargo_used()), stats.cargo])
 	# ("salvage" lesson arms itself off `hold_full` via the declarative tutor.)
 
 
-func _select_target_at(point: Vector2) -> void:
+## Pick whatever is under `point`. `engage` is the difference between the two mouse
+## buttons: LEFT-CLICK just SELECTS (engage = false — target an ally to mend it, a rock to
+## scan it, a hostile to look at it), RIGHT-CLICK is the soft interact and declares weapons
+## free when what you clicked is a hostile.
+func _select_target_at(point: Vector2, engage := true) -> void:
 	Tutor.note("radar")   # RIGHT-CLICK targeting learned by doing it
 	var best: Node2D = null
 	var best_d := INF
@@ -703,6 +713,14 @@ func _select_target_at(point: Vector2) -> void:
 	target = best
 	if target != null:
 		Sfx.play("click", -6.0, 1.35)
+		# RIGHT-CLICKING A HOSTILE DECLARES WEAPONS FREE (user, 2026-07-25): picking a
+		# fight and starting it are one gesture, so you never sit next to a chosen enemy
+		# wondering why nothing is shooting. Selecting a FRIENDLY or a rock never arms
+		# anything — that would open fire inside the station sanctuary by accident. And a
+		# LEFT-click never arms either, whatever it lands on: that is the safe "just look
+		# at / just target this" gesture.
+		if engage and target.is_in_group(enemy_group):
+			set_weapons_free(true)
 
 
 ## The player feels a collision: a note whose words scale with the force, plus
@@ -1658,6 +1676,34 @@ func _toggle_array(index: int, label: String) -> void:
 	Sfx.play("click", -8.0, 1.5 if array_enabled[index] else 0.7)
 
 
+## WEAPONS FREE / WEAPONS TIGHT — the guns' state. Said out loud every time it changes,
+## because a state you can't see is a state that gets you killed (or gets you shot at for
+## opening fire in a sanctuary). Also set by right-clicking a hostile.
+func set_weapons_free(on: bool) -> void:
+	if weapons_free == on:
+		return
+	weapons_free = on
+	_flash_note("WEAPONS FREE" if on else "WEAPONS TIGHT")
+	Sfx.play("click", -8.0, 1.5 if on else 0.7)
+	Tutor.did("weapons_free" if on else "weapons_tight")
+
+
+## [R] — launch ordnance. A VERB, not a state: rounds are finite and cost credits to
+## restock, so the player spends them deliberately. Says why nothing happened rather than
+## clicking hollowly at a hull that never had a launcher.
+func _launch_ordnance() -> void:
+	if not has_ordnance():
+		_flash_note("NO ORDNANCE FITTED")
+		return
+	if not array_enabled[1]:
+		_flash_note("ORDNANCE ARRAY OFFLINE")
+		return
+	if _cloak_t > 0.0:
+		_drop_cloak("CLOAK BROKEN — WEAPONS HOT")
+	fire_ordnance()
+	Tutor.did("fired_ordnance")
+
+
 func _target_valid() -> bool:
 	return is_instance_valid(target) and target.is_inside_tree() \
 		and target.get("dead") != true
@@ -1723,10 +1769,15 @@ func _physics_process(delta: float) -> void:
 		update_mounts(aim_node.global_position, delta, _velocity_of(aim_node))
 	else:
 		update_mounts(global_position + Vector2.RIGHT.rotated(rotation) * 400.0, delta)
-	if Input.is_action_pressed("fire"):
+	# WEAPONS ARE A STATE, NOT A TRIGGER (user, 2026-07-25). The mouse never fires: LMB
+	# only ever selects. [Q] declares weapons free and the guns engage whatever they bear
+	# on, so the skill lives in FLYING the nose-locked guns onto a target rather than in
+	# holding a button. Ordnance is the exception — it costs ammo, so it stays a verb ([R],
+	# below). Guns run dry of nothing, which is exactly why they can be a toggle.
+	if weapons_free:
 		if _cloak_t > 0.0:
 			_drop_cloak("CLOAK BROKEN — WEAPONS HOT")
-		fire_mounts()
+		fire_guns()
 
 	_target_marker.visible = target != null
 	if target != null:

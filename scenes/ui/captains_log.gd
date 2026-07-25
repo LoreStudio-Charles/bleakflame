@@ -59,14 +59,14 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
-	if event.keycode == KEY_L and not ship.dead and ship.docked_at == null:
+	if event.keycode == Keys.LOG and not ship.dead and ship.docked_at == null:
 		visible = not visible
 		if visible:
 			Tutor.did("log_opened")   # they found the log themselves
 			_refresh()
 		_esc_capture(visible)
 		Sfx.play("click", -10.0, 1.3 if visible else 0.9)
-	elif event.keycode == KEY_ESCAPE and visible:
+	elif event.keycode == Keys.MENU and visible:
 		visible = false
 		_esc_capture(false)
 		Sfx.play("click", -10.0, 0.9)

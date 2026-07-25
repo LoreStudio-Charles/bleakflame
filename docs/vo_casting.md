@@ -36,6 +36,14 @@ generates VO on request; every clip bills the user's ElevenLabs account.
 | Vyper (Krayt's successor) | Vyper | `Dn7kKIhWpyzsRO4seY5g` |
 | Imari (Colony Elder) | Bleakflame — Imari | `75PBiQIpSB7d8JSNr8Un` |
 | Doug Diggs (Prospector) | Bleakflame — Doug Diggs | `CjUJRqqdMPoyBzlAkM5U` |
+| Tam (Farmhand, Sella's Aquaponics) | Bleakflame — Tam | `ZJr19FUsGguU6EsPUSkC` |
+| Bram (Colony Market Trader) | Bleakflame — Bram | `7fQqVaBQKwFngDyKRrtz` |
+
+Tam + Bram cast 2026-07-25 (the colony's working faces — enterable-interior
+residents on Epharon). Their spoken IDLE lines ship at `audio/vo/idle_tam.mp3`
+/ `audio/vo/idle_bram.mp3` — the town's `idle:<id>` action plays
+`idle_<id>` via Sfx.play_voice (drop-in; missing file = silent no-op), so any
+cast member gains a spoken hello by dropping `audio/vo/idle_<id>.mp3`.
 
 Vyper's grief-comm memorial line is written (docs/progression_professions.md,
 "Vyper's Truce") but the beat is POST-KRAYT / system-2 — generate her VO when

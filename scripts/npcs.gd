@@ -36,6 +36,15 @@ const CAST := {
 	"doug": {"home": "The Dig", "venue": "verge", "name": "Doug Diggs",
 		"role": "Prospector Guild, the Verge",
 		"flavor": "Old rock-hound who's chewed more vacuum than most pilots have flown. Haggard, gruff, honest about the work — the Reach's ore doesn't come easy, and neither does he. The Miner guild's first and last word."},
+	# The colony's WORKING faces (2026-07-25): Sella OWNS the aquaponics but lives in her
+	# charts — Tam runs the farm for her. Bram runs the market floor. Both are enterable-
+	# interior residents on Epharon; portraits drop in at assets/portraits/<id>.png as ever.
+	"tam": {"home": "Aquaponics", "venue": "planet", "ground": true, "name": "Tam", "role": "Farmhand, Sella's Aquaponics",
+		"flavor": "Keeps Sella's fish alive and the colony fed while she's buried in charts. Green thumbs, greener boots.",
+		"idle": "Sella's place, my fish. Mind the pumps on your way through."},
+	"bram": {"home": "Market", "venue": "planet", "ground": true, "name": "Bram", "role": "Colony Market Trader",
+		"flavor": "Runs the colony's market floor — every crate the Reach hauls down passes his ledger. Fair, but nobody's fool.",
+		"idle": "Buying or selling, pilot? Either way you're welcome at my counter."},
 	"sella": {"home": "Explorer's Union", "venue": "planet", "name": "Cartographer Sella", "role": "Colony Survey Office",
 		"flavor": "Runs the colony's dusty little map room and pays hard credits for sensor readings from anywhere in the Reach. Says the charts are 'embarrassingly incomplete.' The seed of the Scout / Explorer guild — she's already keeping a list of who brings her the far dark.",
 		"idle": "No new survey work posted. Bring me the far dark whenever you find it."},
@@ -72,6 +81,12 @@ static func portrait(id: String) -> Texture2D:
 ## (docs/npc_homes.md). "" = no home yet — Doug Diggs until his freighter exists.
 static func home(id: String) -> String:
 	return str(CAST.get(id, {}).get("home", ""))
+
+
+## Does this person hold court in the WALKABLE TOWN (a building you enter), rather than
+## behind a dock tab? Their `home` names a ground building, so dock-tab rules skip them.
+static func is_ground(id: String) -> bool:
+	return bool(CAST.get(id, {}).get("ground", false))
 
 
 ## Is this NPC standing at the dock the player is currently on?

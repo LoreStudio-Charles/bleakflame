@@ -36,11 +36,6 @@ var npc: String
 var prof: String
 var ship: TestShip
 
-## A DockScreen willing to lend its ArmoryTile rendering (icon lookup + tooltip).
-## Null on the bespoke screens (Doug's deck, the Speak's Easy), which fall back
-## to labelled buttons — the office works either way.
-var tiles_host: DockScreen
-
 var _on_buy: Callable          # host handles the purchase (prices/wallet/refresh)
 var _on_join: Callable
 var _body: VBoxContainer
@@ -282,11 +277,12 @@ func _build_quartermaster() -> void:
 	note.add_theme_color_override("font_color", UiTheme.DIM)
 	_body.add_child(note)
 
-	# SAME TILES AS THE ARMORY (user's rule): equipment is shown with its grade
-	# border, mark badge, quality pips and price wherever it appears, so a part
-	# reads identically on every screen. ArmoryTile lives on DockScreen; a
-	# `tiles_host` there lends it out, because the tile needs a DockScreen for
-	# its icon lookup and tooltip regardless of which screen is drawing it.
+	# SAME TILES AS THE ARMORY (user's rule): equipment is shown with its grade border,
+	# mark badge, quality pips and price wherever it appears, so a part reads identically
+	# on every screen. This used to need a `tiles_host` DockScreen to LEND us tiles, and
+	# fell back to plain labelled buttons where there wasn't one (Doug's deck, the Speak's
+	# Easy) — so the quartermaster's shelf looked different depending on who was standing
+	# behind it. ItemTile is host-free now: every counter gets the real thing.
 	var stock := Professions.wares(prof)
 	var shown := 0
 	var grid := HFlowContainer.new()
@@ -299,21 +295,13 @@ func _build_quartermaster() -> void:
 			continue
 		shown += 1
 		var comp: ComponentDef = load(sp)
-		if tiles_host != null:
-			var tile := DockScreen.ArmoryTile.new(comp, "shop", tiles_host, sp)
-			tile.traded.connect(refresh)
-			grid.add_child(tile)
-			continue
-		# No DockScreen to lend us tiles (Doug's deck, the Speak's Easy): a
-		# labelled button, still with the price on it.
-		var buy := Button.new()
-		buy.text = "%s — %dc" % [comp.display_name, int(comp.value() * DockScreen.BUY_MULT)]
-		buy.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		UiTheme.button_flavor(buy, "primary")
-		buy.pressed.connect(func() -> void:
+		var tile := ItemTile.new(comp, "shop", ItemTile.Style.SHOP)
+		tile.price = ItemVisuals.buy_price(comp)
+		tile.hint = "RIGHT-CLICK to buy (%dc)" % tile.price
+		tile.on_interact = func(_c: ComponentDef, _s: String) -> void:
 			_on_buy.call(sp)
-			refresh())
-		grid.add_child(buy)
+			refresh()
+		grid.add_child(tile)
 	if shown == 0:
 		var soon := Label.new()
 		soon.text = "Nothing on the shelf yet — modules land here as they are forged."

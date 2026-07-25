@@ -1,0 +1,1499 @@
+extends Node2D
+## Epharon ground-mode MVP — "film noir Tatooine". A walkable frontier colony that
+## REPLACES the planet dock menu with a place: click-to-move, dusk-noir grade, NPC
+## routines, your ship parked diegetically on the pad, a navigation spire, a heat
+## boundary you can't cross, and the hermit's hut as the one true interior (our small
+## first test of the enterable-building path). Buildings are placeholder geometry —
+## drop-in PixelLab art layers over them later, same as the WayGate/anomaly seams.
+##
+## Run standalone:
+##   <godot> --path . res://scenes/ground/epharon_town.tscn
+## Wiring: flight_test hosts this in a SubViewport overlay, shows it when the ship docks
+## at Epharon (the descent from space is UNCHANGED — only what touchdown raises), and
+## calls enter_town() to reset you onto the pad. Launching emits launch_requested, which
+## flight_test answers with the normal ship.undock() (pops you back above the planet).
+
+signal launch_requested
+
+const HEAT_LIMIT := 3300.0            # ~5 screen-widths from town center before the sun turns you back
+const CENTER := Vector2.ZERO
+const IROOM := Vector2(12000.0, 0.0)  # interiors live far off the town grid; camera hides the gap
+const IROOM_HALF := Vector2(430.0, 330.0)   # default room half-extent (a def may override)
+
+## ENTERABLE BUILDINGS — one room each, data-driven (the cave proved the pattern; the plan
+## has always been ALL buildings enterable, added room by room). A def gives the room its
+## size, its door (where you re-emerge), its flash line, its title bar, and its SPOTS.
+## `actor` names who is found inside: "hermit" = the dedicated cave actor, otherwise a
+## town NPC by name — they step in with you (visibility swap) and step back out after.
+const INTERIORS := {
+	"?": {
+		"half": Vector2(430.0, 330.0),
+		"exit_pos": Vector2(2100, -1720),
+		"flash": "You duck into the low mouth of the cave...",
+		"title": "THE COUNTER'S CAVE   ·   [Esc] leave",
+		"actor": "hermit",
+		"actor_pos": Vector2(0, -160),
+		"actor_spot": {"npc": "Counter", "prompt": "[E] Speak with the Counter", "action": "idle:hermit"},
+		"exit_prompt": "[E] Leave the cave",
+	},
+	# THE EXPLORER'S UNION — Sella's map room, the seed of the Scout guild. Unlike Tam and
+	# Bram (dedicated residents), Sella is a TOWN NPC: entering her Union finds her at the
+	# chart wall (she steps in with you), and she returns to her wander when you leave.
+	# Her survey POSTINGS live here now — walk in to read the board.
+	"EXPLORERS GUILD": {
+		"half": Vector2(410.0, 300.0),
+		"exit_pos": Vector2(-800, -60),
+		"flash": "Paper. Actual paper — charts on every wall, and half of them are holes.",
+		"title": "THE EXPLORER'S UNION   ·   [Esc] leave",
+		"actor": "Sella",
+		"actor_pos": Vector2(-40, -150),
+		"actor_spot": {"npc": "Sella", "prompt": "[E] Speak with Sella", "action": "idle:sella"},
+		"exit_prompt": "[E] Back out to the street",
+		"extra_spots": [
+			{"pos": Vector2(230, -140), "range": 130,
+				"prompt": "[E] Read the survey postings",
+				"action": "board:sella"},
+			{"pos": Vector2(-280, -150), "range": 140,
+				"prompt": "[E] Study the chart wall",
+				"action": "flavor:The Reach, in pencil and pins. Whole sectors are blank paper with a question mark — Sella pays for anything that fills one in."},
+		],
+	},
+	# SELLA'S FARM (user, 2026-07-25: the aquaponics BELONGS to Sella — but she's not the
+	# one standing in it; she's buried in charts at the Union. TAM, her farmhand, runs the
+	# place day to day). The one thing alive for a thousand miles — fish tanks under
+	# grow-racks, warm damp air on a desert rock.
+	# THE COLONY MARKET (user, 2026-07-25: a location you ENTER, run by its own trader).
+	# Bram keeps the floor; walking up to HIM is how you trade — the shop counter is a
+	# person, not a menu. Imari stays the colony's Elder (quests/turn-ins), not its shopkeep.
+	"MARKET": {
+		"half": Vector2(420.0, 300.0),
+		"exit_pos": Vector2(560, 470),
+		"flash": "Crates, coolers and net-slung produce under one roof — everything the colony hauls, buys or barters.",
+		"title": "COLONY MARKET   ·   [Esc] leave",
+		"actor": "trader",
+		"actor_pos": Vector2(60, -140),
+		"actor_spot": {"npc": "Bram", "prompt": "[E] Trade with Bram", "action": "shop:bram"},
+		"exit_prompt": "[E] Back out to the square",
+		"extra_spots": [
+			{"pos": Vector2(-230, -120), "range": 130,
+				"prompt": "[E] Poke through the crates",
+				"action": "flavor:Circuits stenciled STATION-SIDE, sacks of grown grain, a cooler of silverfin on ice. The route, sitting on shelves."},
+		],
+	},
+	"AQUAPONICS": {
+		"half": Vector2(390.0, 300.0),
+		"exit_pos": Vector2(-560, -290),
+		"flash": "Warm damp air, green light, the hum of pumps — the only growing thing on the rock.",
+		"title": "SELLA'S AQUAPONICS FARM   ·   [Esc] leave",
+		"actor": "farmhand",
+		"actor_pos": Vector2(90, -120),
+		"actor_spot": {"npc": "Tam", "prompt": "[E] Speak with Tam", "action": "idle:tam"},
+		"exit_prompt": "[E] Step back into the heat",
+		"extra_spots": [
+			{"pos": Vector2(-190, -150), "range": 130,
+				"prompt": "[E] Look into the tanks",
+				"action": "flavor:Silverfin circle under the greens — roots drinking the fish-water, fish breathing the root-water. A closed little world."},
+		],
+	},
+}
+const CAVE_MOUTH := Vector2(2100, -1790)   # the "?" cave's entrance spot — where a hermit beat points
+
+# building footprints (drawn, not nodes): pos = center, size = extent
+const BUILDINGS := [
+	{"pos": Vector2(0, 980), "size": Vector2(560, 240), "color": Color(0.50, 0.52, 0.58), "name": "STARPORT"},
+	{"pos": Vector2(-640, 380), "size": Vector2(260, 200), "color": Color(0.50, 0.46, 0.40), "name": "CONTRACTS"},
+	{"pos": Vector2(560, 320), "size": Vector2(240, 220), "color": Color(0.46, 0.44, 0.50), "name": "MARKET"},
+	{"pos": Vector2(-360, -80), "size": Vector2(220, 190), "color": Color(0.48, 0.47, 0.5), "name": "SEALED"},
+	{"pos": Vector2(-800, -240), "size": Vector2(300, 250), "color": Color(0.46, 0.5, 0.58), "name": "EXPLORERS GUILD"},
+	{"pos": Vector2(-560, -430), "size": Vector2(230, 180), "color": Color(0.30, 0.55, 0.34), "name": "AQUAPONICS"},
+	{"pos": Vector2(2100, -1880), "size": Vector2(210, 180), "color": Color(0.44, 0.37, 0.29), "name": "?"},
+]
+
+## Drop-in art: a building shows its PixelLab sprite (assets/ground/buildings/<key>.png)
+## when the file exists, else falls back to the procedural box. SEALED reuses the hab art.
+const BUILDING_ART := {
+	"STARPORT": "starport",
+	"EXPLORERS GUILD": "guild",
+	"AQUAPONICS": "aquaponics",
+	"MARKET": "market",
+	"CONTRACTS": "hab",
+	"SEALED": "hab",
+	"?": "cave",
+}
+
+var _font: Font
+var _player: GroundCharacter
+var _npcs: Array = []          # each: {node, name, home, radius, timer, tint}
+var _hermit: GroundCharacter   # interior-only actor (the Counter's cave)
+var _farmhand: GroundCharacter # interior-only actor (Tam, at Sella's aquaponics farm)
+var _trader: GroundCharacter   # interior-only actor (Bram, the colony market)
+var _world: Node2D             # y-sorted container: building sprites + actors sort by depth
+var _art := {}                 # building name -> true when a real sprite stands in for the box
+var _shadow_pairs := []        # [{spr, shd}] building sprite + its shadow, for the contact test
+var _dust_tex: Texture2D       # footstep-puff texture (sand cloud)
+var _puff_accum := 0.0         # distance walked since the last kicked-up puff
+var _walk_total := 0.0         # total distance walked this visit (for the "get out and walk" step)
+var _last_ppos := Vector2.ZERO
+var _spots: Array = []         # active interactables: {pos_fn/pos, range, prompt, action}
+var _interior_id := ""   # which INTERIORS room we're in ("" = outside)
+var _current_action := ""
+var _flash_t := 0.0
+var _flash_msg := ""
+var _e_was := false
+var _esc_was := false
+var _active := true   # frozen while a dock panel is open over the town (flight_test drives it)
+var _current_npc := ""   # name of the NPC under the [E] prompt (for the tutor's met-events)
+var _tutor_cap: Label    # ground-lesson caption (top-center)
+var _weather: CPUParticles2D   # the sandstorm — an OUTSIDE thing, hidden while indoors
+
+@onready var _prompt: Label = $HUD/Prompt
+@onready var _center: Label = $HUD/Center
+@onready var _title: Label = $HUD/Title
+
+
+func _ready() -> void:
+	add_to_group("ground_town")   # the character sheet freezes us by this group while open
+	_font = ThemeDB.fallback_font
+	_build_dusk()
+	_build_weather()
+	_world = Node2D.new()
+	_world.y_sort_enabled = true   # buildings + actors occlude by depth
+	add_child(_world)
+	_build_buildings()
+	_scatter_props()   # rocks + dunes in the open roam (drop-in art)
+
+	_player = _make_actor("res://assets/characters/PilotM", Color.WHITE)
+	_player.global_position = Vector2(0, 780)
+	_world.add_child(_player)
+	var cam := Camera2D.new()
+	cam.zoom = Vector2(1.3, 1.3)
+	_player.add_child(cam)
+	cam.make_current()
+	_dust_tex = _load_tex("res://assets/ground/fx/dust_cloud.png")
+	_last_ppos = _player.global_position
+
+	# wants_talk drives the notice reaction: TRUE = walk over + start the conversation, FALSE =
+	# a "huh?" glance. Driven each frame from QUEST business + the tutor target (_refresh_npc_business),
+	# so an NPC approaches exactly when a quest (or the onboarding) wants you to see them.
+	_spawn_npc("Imari", "res://assets/characters/Imari", Vector2(140, 700), 220, Color.WHITE, "idle:imari", false)
+	_spawn_npc("Sella", "res://assets/characters/Sella", Vector2(-700, -320), 200, Color.WHITE, "idle:sella", false)
+	_spawn_npc("Colonist", "res://assets/characters/Colonist", Vector2(0, 360), 300, Color(0.9, 0.85, 1.0), "talk_Colonist", false)
+
+	_hermit = _make_actor("res://assets/characters/Conall", Color.WHITE)
+	_hermit.global_position = IROOM + Vector2(0, -160)
+	_hermit.visible = false
+	_world.add_child(_hermit)
+	# Tam — Sella's farmhand, resident of the aquaponics interior.
+	_farmhand = _make_actor("res://assets/characters/Tam", Color.WHITE)
+	_farmhand.global_position = IROOM + Vector2(90, -120)
+	_farmhand.visible = false
+	_world.add_child(_farmhand)
+	# Bram — the colony market's trader, resident of the market interior.
+	_trader = _make_actor("res://assets/characters/Bram", Color.WHITE)
+	_trader.global_position = IROOM + Vector2(60, -140)
+	_trader.visible = false
+	_world.add_child(_trader)
+
+	_title.text = "EPHARON  ·  WASD or hold-mouse to move  ·  [E] interact"
+	_tutor_cap = Label.new()
+	_tutor_cap.anchor_right = 1.0
+	_tutor_cap.offset_left = 220.0
+	_tutor_cap.offset_right = -220.0
+	_tutor_cap.offset_top = 74.0
+	_tutor_cap.offset_bottom = 150.0
+	_tutor_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tutor_cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tutor_cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tutor_cap.add_theme_font_size_override("font_size", 22)
+	_tutor_cap.add_theme_color_override("font_color", Color(1.0, 0.9, 0.62))
+	_tutor_cap.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_tutor_cap.add_theme_constant_override("outline_size", 5)
+	_tutor_cap.visible = false
+	$HUD.add_child(_tutor_cap)
+	_rebuild_town_spots()
+
+
+func _make_actor(dir: String, tint: Color) -> GroundCharacter:
+	var a := GroundCharacter.new()
+	a.setup(dir)
+	a.modulate = tint
+	return a
+
+
+func _spawn_npc(nm: String, dir: String, home: Vector2, radius: float, tint: Color,
+		action := "", wants_talk := false) -> void:
+	var a := _make_actor(dir, tint)
+	a.global_position = home
+	_world.add_child(a)
+	_npcs.append({"node": a, "name": nm, "home": home, "radius": radius, "timer": randf() * 3.0,
+		"action": action, "wants_talk": wants_talk, "noticed": false, "approaching": false,
+		"delivered": false, "react_cd": 0.0, "look_t": 0.0})
+
+
+# ---------------------------------------------------------------- per-frame
+
+func _process(delta: float) -> void:
+	if not _active:
+		return   # a dock panel owns the screen; the town holds still behind it
+	_drive_player()
+	if _interior_id != "":
+		var half: Vector2 = INTERIORS[_interior_id].get("half", IROOM_HALF)
+		var lo := IROOM - half + Vector2(40, 40)
+		var hi := IROOM + half - Vector2(40, 40)
+		_player.global_position = _player.global_position.clamp(lo, hi)
+	else:
+		_tick_npcs(delta)
+		_enforce_heat()
+		_tick_footdust()
+		_tick_tutor()
+	_update_focus()
+	_poll_actions()
+	if _flash_t > 0.0:
+		_flash_t -= delta
+		_center.text = _flash_msg
+		_center.visible = true
+	else:
+		_center.visible = false
+	queue_redraw()
+
+
+## NPCs NOTICE the player. If one has business (wants_talk) it breaks its wander and walks
+## over to start the conversation; otherwise it just GLANCES — stops, faces you, and lets out
+## a "?" ("huh?"). Hostiles will snarl + attack off this same hook, later. Everyone else wanders.
+const NOTICE_RANGE := 340.0
+const TALK_RANGE := 118.0
+
+func _tick_npcs(delta: float) -> void:
+	_refresh_npc_business()
+	var pp: Vector2 = _player.global_position
+	for n in _npcs:
+		var node: GroundCharacter = n.node
+		var dist := node.global_position.distance_to(pp)
+		n.react_cd = maxf(0.0, n.react_cd - delta)
+		n.look_t = maxf(0.0, n.look_t - delta)
+
+		if n.approaching:
+			node.move_to(pp)                                 # walk over until close
+			if dist <= TALK_RANGE:
+				node.stop()
+				node.face(_cardinal(pp - node.global_position))
+				n.approaching = false
+				n.wants_talk = false
+				n.delivered = true                            # she's come to you — now she WAITS.
+				n.react_cd = 4.0
+				n.look_t = 1.6                                # hold facing you, don't robo-wander off
+				# She SAYS something (non-locking) but never opens a panel — the PLAYER opens every
+				# interaction ([E], in _poll_actions), and `met_<npc>` fires there, not on her arrival.
+				# TODO: promote this center-flash to a real chat BUBBLE over her head (user's idea) —
+				# then an NPC can hail you without ever grabbing the screen.
+				_flash("%s: \"Got a moment, pilot?\"" % n.name, 2.4)
+			continue
+
+		# Someone with BUSINESS (a quest talk, or the tutor's target) walks over the moment they
+		# clock you — even if they'd already glanced earlier with nothing to say. A plain
+		# passer-by only lets out a single "huh?" glance and goes back to their day.
+		if dist <= NOTICE_RANGE and n.wants_talk and str(n.action) != "":
+			n.noticed = true
+			node.stop()
+			node.face(_cardinal(pp - node.global_position))
+			n.approaching = true
+			continue
+		if dist <= NOTICE_RANGE and not n.noticed and n.react_cd <= 0.0:
+			n.noticed = true
+			n.react_cd = 3.0
+			node.stop()
+			node.face(_cardinal(pp - node.global_position))
+			n.look_t = 1.2                                    # hold a glance
+			_npc_notice(node)
+		elif dist > NOTICE_RANGE + 130.0:
+			n.noticed = false
+			n.delivered = false   # you walked off and came back — she may approach again
+
+		if n.look_t > 0.0:
+			continue                                          # holding the glance; don't wander yet
+		n.timer -= delta
+		if n.timer <= 0.0:
+			n.timer = randf_range(1.6, 4.2)
+			var ang := randf() * TAU
+			var rad: float = randf() * float(n.radius)
+			var home: Vector2 = n.home
+			node.move_to(home + Vector2(cos(ang), sin(ang)) * rad)
+
+
+func _cardinal(v: Vector2) -> String:
+	if absf(v.x) > absf(v.y):
+		return "east" if v.x > 0.0 else "west"
+	return "south" if v.y > 0.0 else "north"
+
+
+## Drive the declarative Tutor from the ground. The town is the tutor's authority while you're
+## on foot (flight_test yields — see its _tick_flight_lessons). Ground steps carry `target` +
+## `text`; we light the target NPC's wants_talk (so they approach) and show the caption. Step
+## completion is an IN-WORLD action fired as Tutor.did() (met_<npc> / used_<place>).
+func _tick_tutor() -> void:
+	Tutor.context = "ground"
+	Tutor.venue = "planet"
+	Tutor.safe = true
+	Tutor.observe({"on_ground": true, "tutorial_done": SaveGame.tutorial_done})
+	# One caption for the ONE dirtside objective (onboarding step / a held quest talk / a dock
+	# tutorial redirected to its building) — and the chevron in _draw_town points at the same spot.
+	var obj := _dirtside_objective()
+	_tutor_cap.text = str(obj.get("text", ""))
+	_tutor_cap.visible = not obj.is_empty()
+
+
+## Who has BUSINESS with you (so they break their wander and walk over): an NPC the QUEST
+## system has a pending talk queued for, OR the active ground-lesson's target. This is the
+## whole "tutorial ↔ quests" seam — when a campaign beat queues a talk for Imari/Sella/etc.
+## (Quests.on_dock, fired as you land), she now approaches you on the ground exactly as the
+## onboarding's scripted "meet Imari" does. Only turns wants_talk ON; delivering it (the
+## approach in _tick_npcs) turns it back off, and the [E] panel drains the quest talk.
+func _refresh_npc_business() -> void:
+	var tgt := str(_ground_step().get("target", ""))
+	for n in _npcs:
+		if n.delivered:
+			continue   # she already walked over this visit — don't re-summon her every frame
+		var nm := str(n.name)
+		if nm == tgt or not Quests.talks_for(nm.to_lower()).is_empty():
+			n.wants_talk = true
+
+
+## The active Tutor step IF it's a ground step (else {}).
+func _ground_step() -> Dictionary:
+	var c := Tutor.current()
+	if not c.is_empty() and str(c.get("where", "")) == "ground":
+		return c
+	return {}
+
+
+## World position of a ground target (an NPC name or a building name); INF if unknown.
+func _ground_target_pos(target: String) -> Vector2:
+	for n in _npcs:
+		if str(n.name) == target:
+			return n.node.global_position
+	for b in BUILDINGS:
+		if str(b.name) == target:
+			return b.pos
+	return Vector2.INF
+
+
+# A tabbed DOCK tutorial ("open the colony Market") mapped to the TOWN building it lives in,
+# so dirtside guidance points at a PLACE you can walk to, never a phantom tab.
+const TUTOR_BUILDING := {
+	"tab_market_planet": "MARKET", "market_goods_planet": "MARKET",
+	"tab_missions_planet": "CONTRACTS", "contracts_held": "CONTRACTS",
+	"tab_explorers": "EXPLORERS GUILD",
+}
+
+## The ONE thing to do dirtside right now, as a TOWN place + a line of copy — never a tab.
+## Priority: the active onboarding step, then whoever holds a quest talk for you, then a
+## tabbed dock tutorial redirected to its building (user: "direct toward the station or NPC,
+## not a tab that doesn't exist"). {} = nothing to guide toward.
+func _dirtside_objective() -> Dictionary:
+	var gs := _ground_step()
+	if not gs.is_empty():
+		var tp := _ground_target_pos(str(gs.get("target", "")))
+		if not is_inf(tp.x):
+			return {"pos": tp, "text": str(gs.get("text", ""))}
+	for n in _npcs:
+		if not Quests.talks_for(str(n.name).to_lower()).is_empty():
+			return {"pos": n.node.global_position,
+				"text": "%s has something for you — walk over and press [E]." % n.name}
+	# The Counter is a recluse, not a town NPC — a pending hermit beat points you to his cave.
+	if not Quests.talks_for("hermit").is_empty():
+		return {"pos": CAVE_MOUTH,
+			"text": "The Counter keeps to his cave on the colony's edge. Head out and hear him."}
+	return _tutor_dirtside()
+
+
+## A tabbed dock tutorial redirected to its building. Peeks the active lesson then the queue
+## (a dock lesson waits as PENDING while you're on foot — context is "ground"), skipping
+## informational dwell steps. So "Open the colony MARKET" becomes a chevron to the MARKET.
+func _tutor_dirtside() -> Dictionary:
+	var ids: Array = []
+	if Tutor.active != "":
+		ids.append(Tutor.active)
+	ids.append_array(Tutor.pending)
+	for id in ids:
+		var st: Dictionary = Tutor.step_for(str(id))
+		if st.has("dwell"):
+			continue   # an intro blurb, nothing to walk to
+		var anchor := str(st.get("anchor", ""))
+		if TUTOR_BUILDING.has(anchor):
+			var pos := _ground_target_pos(str(TUTOR_BUILDING[anchor]))
+			if not is_inf(pos.x):
+				return {"pos": pos, "text": str(st.get("text", ""))}
+	return {}
+
+
+## Where the on-screen guide points — the single dirtside objective's place (INF if none).
+func _current_objective_pos() -> Vector2:
+	return _dirtside_objective().get("pos", Vector2.INF)
+
+
+## A grounded guide at the pilot's FEET: a small ring marks the base, and a chevron orbits
+## that point on a flattened ground ellipse (3/4 perspective), pointing toward the objective —
+## so the cue reads as coming from where the character stands.
+func _draw_nudge(dir: Vector2) -> void:
+	var feet := _player.global_position
+	var col := Color(1.0, 0.86, 0.45, 0.95)
+	draw_arc(feet, 6.0, 0.0, TAU, 16, Color(1.0, 0.86, 0.45, 0.5), 2.0)   # the base marker
+	var radial := Vector2(dir.x * 46.0, dir.y * 26.0)                     # flattened onto the ground
+	var p := feet + radial
+	var ang := radial.angle()
+	draw_colored_polygon(PackedVector2Array([
+		p + Vector2(15, 0).rotated(ang),
+		p + Vector2(-9, 10).rotated(ang),
+		p + Vector2(-9, -10).rotated(ang)]), col)
+
+
+## The "huh?" glance: a "?" pops over the NPC + a blip. A real "huh?" VO drops in for the noise.
+func _npc_notice(node: GroundCharacter) -> void:
+	var lbl := Label.new()
+	lbl.text = "?"
+	lbl.add_theme_font_size_override("font_size", 24)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
+	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	lbl.add_theme_constant_override("outline_size", 4)
+	lbl.position = node.global_position + Vector2(-7, -84)
+	add_child(lbl)   # town root: world-space, drawn over the y-sorted world
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(lbl, "position:y", lbl.position.y - 22, 0.7)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.7)
+	tw.finished.connect(lbl.queue_free)
+	Sfx.play("click", -7.0, 1.6)   # placeholder blip; a "huh?" VO drops in
+
+
+## Let the tutor (or a quest) flip whether an NPC has business waiting — drives the approach.
+func set_wants_talk(nm: String, val: bool) -> void:
+	for n in _npcs:
+		if str(n.name) == nm:
+			n.wants_talk = val
+
+
+## Kick up a little sand every stride the pilot actually walks (measured by distance moved,
+## so it works for WASD and hold-mouse alike). Town only — no dust on the cave floor.
+func _tick_footdust() -> void:
+	var moved := _player.global_position.distance_to(_last_ppos)
+	_last_ppos = _player.global_position
+	if moved <= 0.5 or moved >= 100.0:
+		return   # standing still, or a teleport (arrival / warp)
+	_walk_total += moved
+	if _walk_total > 120.0:
+		Tutor.did("ground_moved")   # the "get out and walk" onboarding step completes
+	if _dust_tex != null:
+		_puff_accum += moved
+		if _puff_accum >= 30.0:
+			_puff_accum = 0.0
+			_spawn_puff(_player.global_position)
+
+
+func _spawn_puff(pos: Vector2) -> void:
+	var s := Sprite2D.new()
+	s.texture = _dust_tex
+	s.scale = Vector2(0.16, 0.16)
+	s.modulate = Color(0.86, 0.76, 0.56, 0.5)
+	s.position = pos + Vector2(0, -2)
+	s.z_index = -1   # behind the walker
+	_world.add_child(s)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(s, "scale", Vector2(0.40, 0.40), 0.5)
+	tw.tween_property(s, "modulate:a", 0.0, 0.5)
+	tw.tween_property(s, "position", pos + Vector2(-5, -12), 0.5)
+	tw.finished.connect(s.queue_free)
+
+
+func _enforce_heat() -> void:
+	var d := _player.global_position.length()
+	if d > HEAT_LIMIT:
+		_player.global_position = _player.global_position.normalized() * HEAT_LIMIT
+		_player.stop()
+		_flash("THE HEAT IS TOO MUCH — turn back toward town", 1.6)
+
+
+func _update_focus() -> void:
+	_current_action = ""
+	_current_npc = ""
+	var best := 1e9
+	var text := ""
+	for s in _spots:
+		var p: Vector2 = s.node.global_position if s.has("node") else s.pos
+		var dist := _player.global_position.distance_to(p)
+		if dist <= s.range and dist < best:
+			best = dist
+			text = s.prompt
+			_current_action = s.action
+			_current_npc = str(s.get("npc", ""))
+	_prompt.text = text
+	_prompt.visible = text != ""
+
+
+# ---------------------------------------------------------------- input
+
+func _drive_player() -> void:
+	# WASD / arrows take priority; else hold LEFT-MOUSE to walk toward the cursor.
+	var dir := Vector2.ZERO
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+		dir.y -= 1.0
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+		dir.y += 1.0
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		dir.x -= 1.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		dir.x += 1.0
+	if dir == Vector2.ZERO and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		var to := get_global_mouse_position() - _player.global_position
+		if to.length() > 16.0:
+			dir = to
+	_player.move_dir(dir)
+
+
+# Actions are polled (edge-detected) rather than event-driven so they work identically
+# whether the town runs standalone OR embedded in flight_test's SubViewport, where raw
+# InputEvent routing is unreliable. Movement is polled the same way (see _drive_player).
+func _poll_actions() -> void:
+	var e := Input.is_key_pressed(KEY_E)
+	if e and not _e_was:
+		_interact()
+	_e_was = e
+	var esc := Input.is_key_pressed(KEY_ESCAPE)
+	if esc and not _esc_was and _interior_id != "":
+		_exit_interior()
+	_esc_was = esc
+
+
+## Town NPC name -> campaign cast id (Npcs.CAST / quest givers). The Counter lives in the
+## cave interior; everyone else stands in the town.
+const NPC_IDS := {"Imari": "imari", "Sella": "sella", "Counter": "hermit", "Tam": "tam", "Bram": "bram"}
+
+
+## The PLAYER always initiates (user rule): [E] engages whatever is focused right now — an NPC,
+## a building, the ship. NPCs only ever WALK OVER to get your attention; they never open a panel
+## themselves. So `met_<npc>` and the action both fire HERE, on your button, never on her arrival.
+##
+## QUEST TALKS COME FIRST (the Saga beats, ground-native): if the person you pressed [E] on
+## holds a queued campaign conversation, it presents RIGHT HERE as a DialoguePanel over the
+## town — no dock panel in between. Only with nothing queued does [E] fall through to their
+## ordinary action (idle line, a shop, a door).
+func _interact() -> void:
+	if _current_action == "":
+		return
+	if _current_npc != "":
+		Tutor.did("met_" + _current_npc.to_lower())
+		if _try_quest_talks(str(NPC_IDS.get(_current_npc, ""))):
+			return
+	_do_action(_current_action)
+
+
+# ---------------------------------------------------------------- quest talks (ground-native)
+
+## Present every queued campaign talk this person holds, one DialoguePanel after another —
+## the same drain-the-chain rule as the dock (a giver commonly holds a finished quest's
+## debrief AND the next briefing; making the player re-press [E] between them read as the
+## conversation ending early). Returns false if they hold nothing.
+func _try_quest_talks(npc_id: String) -> bool:
+	if npc_id == "" or Quests.talks_for(npc_id).is_empty():
+		return false
+	_show_next_town_talk(npc_id)
+	return true
+
+
+func _show_next_town_talk(npc_id: String) -> void:
+	var talks := Quests.talks_for(npc_id)
+	if talks.is_empty():
+		set_active(true)   # chain done — hand the town back
+		return
+	set_active(false)      # the conversation owns the screen; the town holds still
+	var talk: Dictionary = talks[0]
+	Quests.take_talk(npc_id)
+	var nodes: Dictionary
+	if talk.has("nodes"):
+		# A full talk-stage conversation, authored in the quest def.
+		nodes = talk.nodes
+	else:
+		# A one-line briefing/debrief; append the reward stamp (same dress as the dock).
+		var reward_line := ""
+		if str(talk.get("rewards", "")) != "":
+			reward_line = "\n\n[color=#f2b859]▸ %s — %s[/color]" % [talk.quest, talk.rewards]
+		nodes = {"start": {
+			"text": str(talk.text) + reward_line,
+			"vo": str(talk.get("vo", "")),
+			"choices": [{"text": "Understood.", "next": "end", "style": "primary"}]}}
+	# Archive the moment it's shown, so dismissing never loses the beat.
+	Comms.post(str(talk.giver), str(talk.get("quest", "Conversation")),
+		str(nodes.get("start", {}).get("text", "")))
+	var panel := DialoguePanel.new(str(talk.giver), nodes, func(_a: String) -> String:
+		return "")
+	panel.vo_prefix = str(talk.get("advance", ""))
+	panel.closed.connect(func() -> void:
+		# Finishing a talk STAGE advances that quest, which may queue the debrief and
+		# make the NEXT quest eligible — check here so the campaign flows on without a
+		# re-landing (the same rule the dock follows).
+		if talk.has("advance"):
+			Quests.advance_talk(str(talk.advance))
+		Quests.check_new_work(false, SaveGame.tutorial_done)
+		_show_next_town_talk(npc_id))
+	add_child(panel)
+
+
+## WHAT THE GROUND MAP DRAWS for this place. The map asks; it never reaches into our
+## internals — so a second colony later answers the same call and the map needs no edit.
+func map_data() -> Dictionary:
+	var features: Array = []
+	for b in BUILDINGS:
+		features.append({"name": str(b.name), "pos": b.pos, "size": b.size,
+			"kind": "cave" if str(b.name) == "?" else "building"})
+	for n in _npcs:
+		features.append({"name": str(n.name), "pos": n.node.global_position,
+			"size": Vector2.ZERO, "kind": "person"})
+	return {
+		"name": "EPHARON — COLONY SURFACE",
+		"features": features,
+		"player": _player.global_position,
+		"extent": HEAT_LIMIT,          # the heat boundary IS the edge of the walkable world
+	}
+
+
+## Called by flight_test each time the ship touches down at Epharon: reset the pilot onto
+## the pad, clear any interior state from a prior visit. Standalone runs never call it.
+func enter_town() -> void:
+	_interior_id = ""
+	_hermit.visible = false
+	_farmhand.visible = false
+	_trader.visible = false
+	for n in _npcs:
+		n.node.visible = true
+		n.noticed = false        # fresh visit: nobody has clocked you or come over yet
+		n.approaching = false
+		n.delivered = false
+		n.wants_talk = false     # re-derived by _refresh_npc_business from live quest/tutor state
+	_player.move_dir(Vector2.ZERO)
+	_player.stop()
+	_player.global_position = Vector2(0, 780)
+	_player.face("south")
+	_last_ppos = _player.global_position
+	_walk_total = 0.0
+	_rebuild_town_spots()
+	_flash_t = 0.0
+	_active = true   # always thaw on arrival, whatever the sheet left it at
+
+
+## Launch refused (bad build) — say why, stay grounded.
+func reject_launch(msg: String) -> void:
+	_flash(msg, 2.6)
+
+
+## flight_test freezes the town while a dock panel is open over it, and thaws it on close.
+func set_active(on: bool) -> void:
+	_active = on
+	if not on:
+		_player.move_dir(Vector2.ZERO)
+		_player.stop()
+		for n in _npcs:
+			n.node.stop()
+
+
+func _clamp_target(t: Vector2) -> Vector2:
+	if _interior_id != "":
+		var half: Vector2 = INTERIORS[_interior_id].get("half", IROOM_HALF)
+		return Vector2(
+			clampf(t.x, IROOM.x - half.x + 40, IROOM.x + half.x - 40),
+			clampf(t.y, IROOM.y - half.y + 40, IROOM.y + half.y - 40))
+	if t.length() > HEAT_LIMIT:
+		_flash("THE HEAT IS TOO MUCH — turn back toward town", 1.4)
+		return t.normalized() * (HEAT_LIMIT * 0.98)
+	return t
+
+
+func _do_action(action: String) -> void:
+	# GROUND-NATIVE SERVICES, all of them (user, 2026-07-25): the spatialized dock panel
+	# was the scaffolding that let the ground exist; nothing routes through it any more.
+	# "shop:<npc>" = that person's counter, "board:<npc>" = a contract board, "starport" =
+	# the landing receipt. On the ground you deal with PEOPLE and PLACES, not tabs.
+	if action.begins_with("shop:"):
+		_open_shop(action.substr(5))
+		return
+	if action.begins_with("board:"):
+		_open_board(action.substr(6))
+		return
+	if action.begins_with("enter:"):
+		_enter_interior(action.substr(6))
+		return
+	if action.begins_with("flavor:"):
+		_flash(action.substr(7), 3.0)
+		return
+	match action:
+		"starport":
+			_open_starport()
+		"launch":
+			Tutor.did("launched")
+			_flash("Boarding your ship  ·  lifting off...", 1.2)
+			launch_requested.emit()
+		"leave":
+			_exit_interior()
+		"talk_Colonist":
+			_flash("Colonist: \"...you're not from the patrol, are you.\" (they look away)", 2.6)
+		"sealed":
+			_flash("The door is sealed tight. No handle, no panel. Nothing.", 2.0)
+		_:
+			# "idle:<id>" — nothing queued for this person; a spoken one-liner so saying
+			# hello is never a dead click (same rule as the dock's NPC desks).
+			if action.begins_with("idle:"):
+				var who := action.substr(5)
+				_flash("%s: \"%s\"" % [Npcs.display_name(who), Npcs.idle_line(who)], 3.0)
+				# Spoken where recorded: audio/vo/idle_<id>.* is a drop-in — a missing
+				# file is a silent no-op (Sfx.play_voice returns false), never an error.
+				Sfx.play_voice("idle_" + who)
+
+
+## Open an NPC's shop counter over the town. The town FREEZES while it's up (same
+## contract as a dock panel) and thaws when it closes — the ShopView owns Esc itself.
+## The trade RULES live in TradeGoods, shared with the station dock; this only hosts.
+func _open_shop(npc: String) -> void:
+	var ship := _player_ship()
+	if ship == null:
+		return
+	Tutor.did("used_market")   # a ground shop IS the market lesson, satisfied spatially
+	set_active(false)
+	var shop := ShopView.new(npc, TradeGoods.PLANET_MARKET, ship)
+	shop.closed.connect(func() -> void: set_active(true))
+	add_child(shop)
+
+
+## Open a contract board over the town. `npc` = whose board ("" for the colony kiosk).
+func _open_board(npc: String) -> void:
+	var ship := _player_ship()
+	if ship == null:
+		return
+	Tutor.did("used_mission_uplink")   # reaching the board spatially IS the lesson
+	set_active(false)
+	var board := BoardView.new(npc, "planet", ship)
+	board.closed.connect(func() -> void: set_active(true))
+	add_child(board)
+
+
+## The landing receipt + ship state — the ground-native Starport counter.
+func _open_starport() -> void:
+	var ship := _player_ship()
+	if ship == null:
+		return
+	Tutor.did("used_landing_pad")
+	set_active(false)
+	var view := StarportView.new(ship)
+	view.closed.connect(func() -> void: set_active(true))
+	add_child(view)
+
+
+## The hull whose hold/manifest these counters act on. Ground views are useless without
+## it, so say so rather than opening an empty panel.
+func _player_ship() -> Node:
+	var ship := get_tree().get_first_node_in_group("player_ship")
+	if ship == null:
+		_flash("Your ship's manifest is out of reach from here.", 2.0)
+	return ship
+
+
+# ---------------------------------------------------------------- interior
+
+func _rebuild_town_spots() -> void:
+	_spots = [
+		{"pos": Vector2(170, 860), "range": 150, "prompt": "[E] Board your ship and launch", "action": "launch"},
+		{"pos": Vector2(0, 900), "range": 165, "prompt": "[E] Starport services", "action": "starport"},
+		{"pos": Vector2(560, 430), "range": 160, "prompt": "[E] Enter the colony market", "action": "enter:MARKET"},
+		{"pos": Vector2(-640, 480), "range": 160, "prompt": "[E] Read the colony contract board", "action": "board:"},
+		{"pos": Vector2(-800, -110), "range": 170, "prompt": "[E] Enter the Explorer's Union", "action": "enter:EXPLORERS GUILD"},
+		{"pos": Vector2(-560, -340), "range": 150, "prompt": "[E] Enter the aquaponics farm", "action": "enter:AQUAPONICS"},
+		{"pos": Vector2(-360, 15), "range": 140, "prompt": "[E] Sealed hab", "action": "sealed"},
+		{"pos": Vector2(2100, -1790), "range": 175, "prompt": "[E] Enter the cave", "action": "enter:?"},
+	]
+	# NPCs point at their stored action (the same one the approach uses); unmapped = flavor line.
+	for n in _npcs:
+		var act: String = str(n.action) if str(n.action) != "" else "talk_" + str(n.name)
+		_spots.append({"node": n.node, "range": 130, "npc": str(n.name),
+			"prompt": "[E] Speak with %s" % n.name, "action": act})
+
+
+func _enter_interior(id: String) -> void:
+	if not INTERIORS.has(id):
+		return
+	var def: Dictionary = INTERIORS[id]
+	_interior_id = id
+	if _weather != null:
+		_weather.visible = false   # no sandstorm inside a greenhouse
+	var half: Vector2 = def.get("half", IROOM_HALF)
+	for n in _npcs:
+		n.node.visible = false
+	_player.stop()
+	_player.global_position = IROOM + Vector2(0, half.y - 70)
+	_player.face("north")
+	_spots = []
+	# Who's home — a room may have its own resident actor (the hermit, Tam the farmhand).
+	var actor := _interior_actor(def)
+	if actor != null:
+		actor.visible = true
+		actor.stop()
+		actor.global_position = IROOM + def.get("actor_pos", Vector2.ZERO)
+		actor.face("south")
+		var aspot: Dictionary = def.get("actor_spot", {}).duplicate()
+		aspot["node"] = actor
+		aspot["range"] = 150
+		_spots.append(aspot)
+	for extra in def.get("extra_spots", []):
+		var e: Dictionary = extra.duplicate()
+		e["pos"] = IROOM + e["pos"]
+		_spots.append(e)
+	_spots.append({"pos": IROOM + Vector2(0, half.y - 30), "range": 150,
+		"prompt": str(def.get("exit_prompt", "[E] Leave")), "action": "leave"})
+	_flash(str(def.get("flash", "")), 1.8)
+
+
+## The resident of the current room (null = an empty room). "hermit"/"farmhand"/"trader"
+## are DEDICATED interior actors; any other name is a TOWN NPC who steps inside with you
+## (Sella at her Union) — _exit_interior returns them to their street haunt.
+func _interior_actor(def: Dictionary) -> GroundCharacter:
+	match str(def.get("actor", "")):
+		"hermit":
+			return _hermit
+		"farmhand":
+			return _farmhand
+		"trader":
+			return _trader
+	for n in _npcs:
+		if str(n.name) == str(def.get("actor", "")):
+			return n.node
+	return null
+
+
+func _exit_interior() -> void:
+	var def: Dictionary = INTERIORS.get(_interior_id, {})
+	_interior_id = ""
+	if _weather != null:
+		_weather.visible = true
+	_hermit.visible = false
+	_farmhand.visible = false
+	_trader.visible = false
+	for n in _npcs:
+		n.node.visible = true
+		# A town NPC who hosted you inside steps back out to their street haunt —
+		# without this, Sella would be left standing in the far-off room space.
+		if str(def.get("actor", "")) == str(n.name):
+			n.node.global_position = n.home
+			n.node.stop()
+	_player.stop()
+	_player.global_position = def.get("exit_pos", Vector2(2100, -1720))
+	_player.face("south")
+	_rebuild_town_spots()
+
+
+func _flash(msg: String, secs: float) -> void:
+	_flash_msg = msg
+	_flash_t = secs
+
+
+# ---------------------------------------------------------------- rendering
+## Film-noir dusk: a low SW sun, so everything throws a long shadow to the NE. Procedural
+## for now (drop-in PixelLab sprites layer over this later, per the WayGate/anomaly seam).
+
+const SHADOW_COL := Color(0.09, 0.06, 0.12, 0.22)   # cool shadow against warm sand
+const SAND := Color(0.70, 0.54, 0.38)
+const WINDOW := Color(1.0, 0.72, 0.34)               # lit at dusk
+const B_OFS := Vector2(34, -20)                      # building drop-shadow (small — a flat roof on sand)
+const A_OFS := Vector2(36, -22)                      # actor shadow offset
+
+
+func _build_dusk() -> void:
+	var cm := CanvasModulate.new()
+	cm.color = Color(0.93, 0.75, 0.60)   # warm golden-hour cast over everything
+	add_child(cm)
+	# Screen-space vignette for the noir framing — behind the HUD text, over the world.
+	var vig := TextureRect.new()
+	vig.texture = _vignette_tex()
+	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vig.stretch_mode = TextureRect.STRETCH_SCALE
+	$HUD.add_child(vig)
+	$HUD.move_child(vig, 0)
+
+
+## Ambient blowing sand: dust wisps drift across the screen on the wind. Screen-space (on
+## the HUD, behind the vignette) so it always reads regardless of where the camera is. A
+## full storm EVENT can crank amount/velocity/alpha off this same emitter later.
+func _build_weather() -> void:
+	var tex := _load_tex("res://assets/ground/fx/dust_wisp.png")
+	if tex == null:
+		return
+	var p := CPUParticles2D.new()
+	_weather = p
+	p.texture = tex
+	p.amount = 14
+	p.lifetime = 7.0
+	p.preprocess = 7.0            # start mid-stream so the screen isn't bare on arrival
+	p.local_coords = false
+	p.position = Vector2(-160, 540)
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	p.emission_rect_extents = Vector2(40, 720)
+	p.direction = Vector2(1, 0.15)
+	p.spread = 12.0
+	p.gravity = Vector2.ZERO
+	p.initial_velocity_min = 150.0
+	p.initial_velocity_max = 250.0
+	p.scale_amount_min = 0.8
+	p.scale_amount_max = 2.4
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	g.colors = PackedColorArray([
+		Color(0.86, 0.76, 0.56, 0.0), Color(0.86, 0.76, 0.56, 0.22), Color(0.86, 0.76, 0.56, 0.0)])
+	p.color_ramp = g
+	$HUD.add_child(p)
+	$HUD.move_child(p, 0)   # behind the vignette + labels
+
+
+func _vignette_tex() -> Texture2D:
+	var n := 128
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var c := (n - 1) * 0.5
+	for y in n:
+		for x in n:
+			var d := Vector2(x - c, y - c).length() / (c * 1.16)
+			img.set_pixel(x, y, Color(0.02, 0.01, 0.05, clampf((d - 0.55) / 0.45, 0.0, 1.0) * 0.6))
+	return ImageTexture.create_from_image(img)
+
+
+## Spawn a base-anchored sprite for every building that has drop-in art. The node sits at
+## the footprint's south edge, so y-sorting occludes the player correctly against a 3/4
+## building's height. Art-less buildings fall through to the procedural box in _draw.
+func _build_buildings() -> void:
+	for b in BUILDINGS:
+		var key: String = BUILDING_ART.get(b.name, "")
+		var tex := _load_tex("res://assets/ground/buildings/%s.png" % key) if key != "" else null
+		if tex == null:
+			_add_building_body(b, {})   # no art: the procedural box IS the footprint
+			continue
+		var base: Vector2 = b.pos + Vector2(0, b.size.y * 0.5)
+		var tint: Color = Color(0.55, 0.55, 0.62) if b.name == "SEALED" else Color.WHITE
+		var pair := _spawn_prop(tex, base, b.size.x * 1.25, tint, true)
+		pair["name"] = str(b.name)
+		_shadow_pairs.append(pair)
+		_art[b.name] = true
+		# THE COLLIDER IS MEASURED FROM THE ART, not the old procedural footprint — the
+		# two disagreed, which is why you bumped into nothing and walked through walls.
+		_add_building_body(b, pair)
+
+
+## Place a base-anchored art prop in the y-sorted world: pivots on its WIDEST base row so it
+## sits on the sand, and (if cast_shadow) drops the same projected shadow the buildings use —
+## which then touches at the base corners (see test_ground_shadow). Used by buildings AND the
+## scattered rocks/dunes. Returns the sprite/shadow pair + base-corner columns for the test.
+func _spawn_prop(tex: Texture2D, base_pos: Vector2, target_w: float, tint: Color, cast_shadow: bool) -> Dictionary:
+	var img := tex.get_image()
+	if img != null and img.is_compressed():
+		img.decompress()
+	var br: Dictionary = _base_row(img) if img != null else {
+		"y": tex.get_height(), "left": 0, "right": tex.get_width(), "center": tex.get_width() * 0.5}
+	var off := ArtAnchor.base_offset(br)
+	var sc: float = target_w / float(tex.get_width())
+	var shd: Sprite2D = null
+	if cast_shadow:
+		shd = Sprite2D.new()
+		shd.texture = tex
+		shd.centered = false
+		shd.offset = off
+		shd.position = base_pos
+		shd.scale = Vector2(sc * GroundCharacter.SHADOW_SCALE.x, sc * GroundCharacter.SHADOW_SCALE.y)
+		shd.skew = GroundCharacter.SHADOW_SKEW
+		shd.modulate = GroundCharacter.SHADOW_TINT
+		_world.add_child(shd)   # before the sprite -> drawn behind it
+	var spr := Sprite2D.new()
+	spr.texture = tex
+	spr.centered = false
+	spr.scale = Vector2(sc, sc)
+	spr.offset = off
+	spr.position = base_pos
+	spr.modulate = tint
+	_world.add_child(spr)
+	return {"spr": spr, "shd": shd, "y": int(br.y), "left": int(br.left), "right": int(br.right),
+		"scale": sc, "base": base_pos}
+
+
+## Scatter rocks + dunes across the OPEN ROAM (the ring of dust between the town and the heat
+## boundary), drop-in from assets/ground/props/<key>.png. Seeded, so the field is stable.
+func _scatter_props() -> void:
+	# `solid` = you bump into it. `spread` = how much elbow room it claims, as a fraction of
+	# its width: rock stands well apart (its shadow must not touch another's), while a dune
+	# is flat sand that can nestle close without reading as clutter.
+	var defs := [
+		{"key": "boulders", "w": 240.0, "shadow": true, "solid": true, "spread": 0.55,
+			"tint": Color.WHITE},
+		{"key": "mesa", "w": 380.0, "shadow": true, "solid": true, "spread": 0.55,
+			"tint": Color.WHITE},
+		# Dunes are just piled sand — tint them down toward the ground so they don't glare.
+		{"key": "dune", "w": 480.0, "shadow": false, "solid": false, "spread": 0.34,
+			"tint": Color(0.80, 0.70, 0.55)},
+	]
+	var avail: Array = []
+	for d in defs:
+		var t := _load_tex("res://assets/ground/props/%s.png" % d.key)
+		if t != null:
+			avail.append({"tex": t, "key": str(d.key), "w": float(d.w), "shadow": bool(d.shadow),
+				"solid": bool(d.get("solid", false)), "spread": float(d.spread),
+				"tint": d.tint})
+	if avail.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42317
+	for i in 30:
+		var d: Dictionary = avail[rng.randi() % avail.size()]
+		var w: float = float(d.w) * rng.randf_range(0.7, 1.35)
+		var pos := _prop_spot(rng, 1500.0, HEAT_LIMIT - 260.0, w * float(d.spread))
+		if is_inf(pos.x):
+			continue   # the field is full here; skip rather than stack one on another
+		var pair := _spawn_prop(d.tex, pos, w, d.tint, bool(d.shadow))
+		if bool(d.shadow):
+			pair["name"] = "prop"
+			_shadow_pairs.append(pair)
+		# Rock is SOLID (user: props had no colliders at all). Dunes are drifts you walk
+		# over, so they stay passable — `solid` says which is which.
+		if bool(d.get("solid", false)):
+			_add_prop_body(pair, str(d.key))
+
+	# Ambient small boulders across the mid + far field — these REPLACE the old procedural
+	# pebbles (whose fake ellipse shadow pointed the wrong way). Real pixel boulders with the
+	# correct projected shadow, kept clear of the town's buildings AND of each other.
+	var boulder := _load_tex("res://assets/ground/props/boulders.png")
+	if boulder != null:
+		var brng := RandomNumberGenerator.new()
+		brng.seed = 771
+		for i in 40:
+			var w: float = brng.randf_range(55.0, 130.0)
+			var pos := _prop_spot(brng, 1000.0, HEAT_LIMIT - 140.0, w * 0.55)
+			if is_inf(pos.x):
+				continue
+			_add_prop_body(_spawn_prop(boulder, pos, w, Color.WHITE, true), "boulders")
+
+
+## Breathing room between two props, on top of their own radii — touching art reads as one
+## clumsy blob even when it isn't overlapping.
+const PROP_GAP := 26.0
+## How many times to re-roll a position before giving up on a prop entirely.
+const PROP_TRIES := 24
+
+## Every prop already placed, as {pos, r} — the declutter pass tests against this.
+var _placed_props: Array = []
+
+
+## Find somewhere in the roam ring this prop actually FITS: clear of every prop already
+## placed and of every building. Vector2.INF if the field is too crowded to take it.
+##
+## WHY (user, 2026-07-25): the scatter placed props at pure random with NO checks at all —
+## so art overlapped art and, because each prop casts its own projected shadow, two
+## overlapping props stacked TWO darkenings into a confusing blot. It also let props sit on
+## top of buildings (only the boulder pass tested for that, and only against b.pos). One
+## helper now enforces both, for every prop.
+func _prop_spot(rng: RandomNumberGenerator, min_d: float, max_d: float, radius: float) -> Vector2:
+	for _try in PROP_TRIES:
+		var a := rng.randf() * TAU
+		var dist := rng.randf_range(min_d, max_d)
+		var pos := Vector2(cos(a), sin(a)) * dist
+		if _prop_clear(pos, radius):
+			_placed_props.append({"pos": pos, "r": radius})
+			return pos
+	return Vector2.INF
+
+
+func _prop_clear(pos: Vector2, radius: float) -> bool:
+	for p in _placed_props:
+		if pos.distance_to(p.pos) < radius + float(p.r) + PROP_GAP:
+			return false
+	for b in BUILDINGS:
+		# Buildings draw 1.25x their footprint, so clear the ART's half-width, not the box's.
+		var half: float = maxf(b.size.x, b.size.y) * 0.75
+		if pos.distance_to(b.pos) < radius + half + PROP_GAP:
+			return false
+	return true
+
+
+## How deep a building's ground footprint is, as a fraction of its drawn base width. A 3/4
+## sprite can't tell us how far "back" the building goes, so we assume a roughly square
+## footprint standing behind its front edge.
+const FOOTPRINT_DEPTH := 0.55
+## Shave the collider slightly inside the art so corners feel forgiving rather than sticky.
+const FOOTPRINT_INSET := 0.94
+
+
+## The solid a building presents to walkers.
+##
+## THE BUG THIS FIXES (user, 2026-07-25): the collider was built from the BUILDINGS
+## footprint (`pos` centred, `size` × 0.82/0.72) while the ART is spawned base-anchored at
+## the footprint's SOUTH edge and 1.25× as wide. So the solid was only ~66% of the drawn
+## width and sat ~14% of the height BEHIND the visible base — you bumped into nothing in
+## front of a wall and walked through its edges. Measuring the collider off the SPRITE
+## keeps the two in agreement no matter what art drops in.
+##
+## `pair` is a _spawn_prop result (empty for art-less buildings, which keep the old box —
+## there the procedural footprint IS what's drawn, so it was never wrong).
+func _add_building_body(b: Dictionary, pair: Dictionary) -> void:
+	var body := StaticBody2D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	# A HAND-AUTHORED polygon wins over the measurement (see collider_points): open
+	# scenes/ground/colliders/<art key>.tscn and drag the points to match the art exactly.
+	var art_key: String = BUILDING_ART.get(str(b.name), "")
+	var pts := collider_points(art_key) if (art_key != "" and not pair.is_empty()) \
+		else PackedVector2Array()
+	if not pts.is_empty():
+		body.position = pair["base"]
+		var poly := CollisionPolygon2D.new()
+		var sc: float = float(pair["scale"])
+		var scaled := PackedVector2Array()
+		for p in pts:
+			scaled.append(p * sc)
+		poly.polygon = scaled
+		body.add_child(poly)
+		body.set_meta("building", str(b.name))
+		add_child(body)
+		return
+	var shape := RectangleShape2D.new()
+	if pair.is_empty():
+		body.position = b.pos
+		shape.size = Vector2(b.size.x * 0.82, b.size.y * 0.72)
+	else:
+		# The art's own base line: its width, and its front edge, in world units.
+		var sc: float = float(pair["scale"])
+		var base: Vector2 = pair["base"]
+		var w: float = (float(pair["right"]) - float(pair["left"])) * sc
+		var depth: float = w * FOOTPRINT_DEPTH
+		shape.size = Vector2(w * FOOTPRINT_INSET, depth)
+		# Front edge ON the drawn base, footprint standing BEHIND it (north).
+		body.position = base + Vector2(0.0, -depth * 0.5)
+	var col := CollisionShape2D.new()
+	col.shape = shape
+	body.add_child(col)
+	body.set_meta("building", str(b.name))
+	add_child(body)
+
+
+## HAND-AUTHORED COLLIDER SHAPES (user, 2026-07-25 — "can I adjust the point data of the
+## polygon in the Godot UI?"). Drop a scene at `scenes/ground/colliders/<key>.tscn` holding
+## a CollisionPolygon2D and its points REPLACE the measured rectangle for that art. Points
+## are authored in SOURCE-PIXEL space relative to the art's BASE ANCHOR (origin = the
+## middle of the sprite's base line, +y down/toward the viewer), which is exactly what the
+## authoring scene shows you, so what you drag is what you get at any prop scale.
+##
+## Generate the starter scenes with:
+##   <godot> --headless --path . --script res://tools/make_collider_scenes.gd
+## then open one in the editor and drag the points. No code, no re-generation needed —
+## missing file = the automatic rectangle, unchanged.
+const COLLIDER_DIR := "res://scenes/ground/colliders/%s.tscn"
+
+static var _poly_cache := {}
+
+
+## Points for a hand-authored collider, in source-pixel space, or [] if none exists.
+static func collider_points(key: String) -> PackedVector2Array:
+	if _poly_cache.has(key):
+		return _poly_cache[key]
+	var pts := PackedVector2Array()
+	var path := COLLIDER_DIR % key
+	if ResourceLoader.exists(path):
+		var packed: PackedScene = load(path)
+		var inst := packed.instantiate()
+		for c in inst.get_children():
+			if c is CollisionPolygon2D:
+				pts = (c as CollisionPolygon2D).polygon
+				break
+		inst.queue_free()
+	_poly_cache[key] = pts
+	return pts
+
+
+## The same art-measured footprint, for a scattered prop (rock, mesa). Props had NO
+## colliders at all — you walked straight through a boulder the size of a hab (user).
+## Dunes stay passable; only `solid` props get one. A hand-authored polygon wins.
+func _add_prop_body(pair: Dictionary, key := "") -> void:
+	if pair.is_empty():
+		return
+	var sc: float = float(pair["scale"])
+	var base: Vector2 = pair["base"]
+	var body := StaticBody2D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var pts := collider_points(key) if key != "" else PackedVector2Array()
+	if not pts.is_empty():
+		# Authored in source pixels about the base anchor: just scale to this instance.
+		body.position = base
+		var poly := CollisionPolygon2D.new()
+		var scaled := PackedVector2Array()
+		for p in pts:
+			scaled.append(p * sc)
+		poly.polygon = scaled
+		body.add_child(poly)
+	else:
+		var w: float = (float(pair["right"]) - float(pair["left"])) * sc
+		var depth: float = w * FOOTPRINT_DEPTH
+		body.position = base + Vector2(0.0, -depth * 0.5)
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(w * FOOTPRINT_INSET, depth)
+		var col := CollisionShape2D.new()
+		col.shape = shape
+		body.add_child(col)
+	add_child(body)
+
+
+func _load_tex(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var r = load(path)
+		if r is Texture2D:
+			return r
+	if not FileAccess.file_exists(path):
+		return null   # art not dropped in yet — fall back to the procedural box, quietly
+	var img := Image.new()
+	if img.load(path) == OK:
+		return ImageTexture.create_from_image(img)
+	return null
+
+
+## The sprite's ground-CONTACT ROW: the WIDEST opaque row in the lower part of the sprite —
+## its left/right ends are the base's outer corners (for a 3/4 cube, the left + right points
+## of the base diamond). The shadow flips about THIS row, so those two corners stay fixed and
+## the shadow touches the sprite there (no gap = not floating). Returns {y, left, right, center}.
+## The art's base line. Delegates to the SHARED measurement (ArtAnchor) so the collider
+## authoring tool anchors polygons to exactly the row the game places them against.
+func _base_row(img: Image) -> Dictionary:
+	return ArtAnchor.base_row(img)
+
+
+func _draw() -> void:
+	if _interior_id != "":
+		_draw_interior()
+	else:
+		_draw_town()
+
+
+func _draw_town() -> void:
+	_draw_ground()
+	# All cast shadows FIRST, so no body ever gets a shadow drawn over it. Buildings with
+	# real art carry their OWN painted shadow (baked into the sprite in Aseprite) — only the
+	# procedural-box fallbacks get an engine shadow.
+	for b in BUILDINGS:
+		if not _art.get(b.name, false):
+			_building_shadow(Rect2(b.pos - b.size * 0.5, b.size), B_OFS)
+	_spire_shadow(Vector2(300, -560))
+	# Character shadows are BAKED into the sprites (animated, painted in Aseprite) — the
+	# engine no longer draws them.
+	# Then the ground-layer bodies (art buildings + actors are y-sorted nodes in _world).
+	for b in BUILDINGS:
+		_draw_building(b)
+	_draw_spire(Vector2(300, -560))
+	for n in _npcs:
+		draw_string(_font, n.node.global_position + Vector2(-40, -78), n.name,
+			HORIZONTAL_ALIGNMENT_CENTER, 80, 15, Color(0.96, 0.92, 0.82, 0.85))
+	# Guide nudge: a soft chevron over the pilot pointing toward the current objective — a ground
+	# lesson's target, or whoever the quest system wants you to talk to.
+	var obj := _current_objective_pos()
+	if not is_inf(obj.x) and _player.global_position.distance_to(obj) > 150.0:
+		_draw_nudge((obj - _player.global_position).normalized())
+
+
+func _draw_ground() -> void:
+	draw_rect(Rect2(Vector2(-7000, -7000), Vector2(14000, 14000)), SAND)
+	# Dune banding — subtle light/dark stripes so the sand isn't a flat sheet.
+	for i in 22:
+		var y := -7000.0 + i * 640.0
+		var tint := SAND.lightened(0.05) if i % 2 == 0 else SAND.darkened(0.06)
+		draw_rect(Rect2(Vector2(-7000, y), Vector2(14000, 320)), Color(tint.r, tint.g, tint.b, 0.35))
+	# (Center square + rocks were procedural MVP bits — removed; buildings + real props stand in.)
+	# Heat haze at the world's edge (the "too hot" telegraph).
+	for k in 3:
+		draw_arc(CENTER, HEAT_LIMIT - k * 60.0, 0, TAU, 96,
+			Color(0.78, 0.32, 0.18, 0.10 + k * 0.05), 6.0)
+
+
+func _draw_building(b: Dictionary) -> void:
+	# A real sprite stands in _world for this one — just tag it beneath its base.
+	if _art.get(b.name, false):
+		if b.name != "" and b.name != "?":
+			draw_string(_font, Vector2(b.pos.x - b.size.x * 0.5, b.pos.y + b.size.y * 0.5 + 30),
+				b.name, HORIZONTAL_ALIGNMENT_CENTER, b.size.x, 14, Color(0.95, 0.9, 0.8, 0.6))
+		return
+	var sz: Vector2 = b.size
+	var half: Vector2 = sz * 0.5
+	var rect := Rect2(b.pos - half, sz)
+	var col: Color = b.color
+	if b.name == "AQUAPONICS":
+		draw_circle(b.pos, half.length() * 0.95, Color(0.25, 0.95, 0.45, 0.12))   # biodome glow
+	draw_rect(rect, col)   # flat roof
+	draw_rect(Rect2(b.pos - half * 0.62, sz * 0.62), col.lightened(0.07))          # inset panel
+	# Sunlit SW rim (the low sun catches the left + bottom edges).
+	draw_line(rect.position, Vector2(rect.position.x, rect.end.y), Color(1.0, 0.82, 0.5, 0.45), 2.0)
+	draw_line(Vector2(rect.position.x, rect.end.y), rect.end, Color(1.0, 0.82, 0.5, 0.28), 2.0)
+	draw_rect(rect, Color(0, 0, 0, 0.5), false, 2.0)
+	draw_rect(Rect2(b.pos.x - 12, rect.end.y - 4, 24, 16), Color(0.08, 0.07, 0.10))  # door
+	# Lit windows along the top (dusk = lights on); a sealed hab reads cold + dark.
+	var win: Color = WINDOW if b.name != "SEALED" else Color(0.20, 0.20, 0.24)
+	var count := int(sz.x / 46.0)
+	for i in count:
+		draw_rect(Rect2(rect.position.x + 20.0 + i * 46.0, rect.position.y + 8.0, 12, 9), win)
+	if b.name != "":
+		draw_string(_font, Vector2(rect.position.x + 8, b.pos.y + 5), b.name,
+			HORIZONTAL_ALIGNMENT_CENTER, sz.x - 16, 15, Color(0.97, 0.94, 0.86, 0.92))
+
+
+func _cast_ellipse(base: Vector2, ofs: Vector2, r: float) -> void:
+	var dir := ofs.normalized() if ofs.length() > 0.1 else Vector2.RIGHT
+	var perp := Vector2(-dir.y, dir.x)
+	var center := base + ofs * 0.5
+	var along := ofs.length() * 0.5 + r
+	var pts := PackedVector2Array()
+	for i in 16:
+		var a := float(i) / 16.0 * TAU
+		pts.append(center + dir * (cos(a) * along) + perp * (sin(a) * r * 0.7))
+	draw_colored_polygon(pts, SHADOW_COL)
+
+
+func _building_shadow(rect: Rect2, ofs: Vector2) -> void:
+	# A soft ground ellipse hugging the footprint base — reads as a shadow under any
+	# building shape (round dome, boxy hab) instead of a hard rectangle sticking out.
+	var base := Vector2(rect.position.x + rect.size.x * 0.5, rect.end.y - 12.0)
+	_cast_ellipse(base, ofs, rect.size.x * 0.44)
+
+
+func _spire_shadow(pos: Vector2) -> void:
+	var far := Vector2(190, -114)
+	draw_colored_polygon(PackedVector2Array([
+		pos + Vector2(-14, 4), pos + Vector2(14, 4),
+		pos + Vector2(14, 4) + far, pos + Vector2(-14, 4) + far]), SHADOW_COL)
+
+
+func _draw_spire(pos: Vector2) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		pos + Vector2(-14, 0), pos + Vector2(14, 0),
+		pos + Vector2(8, -300), pos + Vector2(-8, -300)]), Color(0.44, 0.44, 0.5))
+	draw_line(pos + Vector2(-14, 0), pos + Vector2(-8, -300), Color(1.0, 0.82, 0.5, 0.5), 2.0)
+	draw_circle(pos + Vector2(0, -300), 22, Color(1.0, 0.7, 0.3, 0.25))
+	draw_circle(pos + Vector2(0, -300), 12, Color(1.0, 0.85, 0.5))
+
+
+## One generic room shell (floor + walls + title from the INTERIORS def), then per-room
+## DRESSING so each place has a face. Procedural for now — drop-in interior art is a later
+## seam, same as the buildings got.
+func _draw_interior() -> void:
+	var def: Dictionary = INTERIORS.get(_interior_id, {})
+	var half: Vector2 = def.get("half", IROOM_HALF)
+	var rect := Rect2(IROOM - half, half * 2.0)
+	match _interior_id:
+		"AQUAPONICS":
+			_dress_aquaponics(rect)
+		"MARKET":
+			_dress_market(rect)
+		"EXPLORERS GUILD":
+			_dress_guild(rect)
+		_:
+			_dress_cave(rect)
+	draw_string(_font, IROOM + Vector2(-half.x + 20, -half.y + 30),
+		str(def.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, 700, 18,
+		Color(0.9, 0.82, 0.62))
+
+
+func _dress_cave(rect: Rect2) -> void:
+	draw_rect(rect, Color(0.20, 0.16, 0.14))                      # dark earth floor
+	draw_rect(rect, Color(0.10, 0.08, 0.07), false, 16.0)         # rough rock walls
+	draw_rect(rect.grow(-8), Color(0.26, 0.20, 0.17), false, 6.0)
+	for k in 3:
+		draw_circle(IROOM + Vector2(0, -110), 210 - k * 40, Color(0.95, 0.7, 0.38, 0.06))
+	draw_circle(IROOM + Vector2(0, -110), 8, Color(1.0, 0.8, 0.45))   # the lamp
+
+
+## Sella's map room: the Reach in pencil and pins — and the HOLES, which are the point.
+## Blank chart panels with a "?" are what she pays pilots to fill; the room says her whole
+## deal without a line of dialogue.
+func _dress_guild(rect: Rect2) -> void:
+	draw_rect(rect, Color(0.21, 0.19, 0.16))                      # dusty plank floor
+	draw_rect(rect, Color(0.10, 0.09, 0.08), false, 14.0)
+	draw_rect(rect.grow(-7), Color(0.33, 0.29, 0.23), false, 4.0)
+	# The chart wall along the north: paper rects, some INKED, some blank holes.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7331   # stable wall — the same charts every visit
+	for i in 6:
+		var c := Rect2(IROOM + Vector2(-350 + i * 118, -260), Vector2(100, 74))
+		var known := i % 2 == 0
+		draw_rect(c, Color(0.82, 0.76, 0.62) if known else Color(0.30, 0.27, 0.23))
+		draw_rect(c, Color(0.16, 0.13, 0.10), false, 2.0)
+		if known:
+			# Pencil squiggles + a pin.
+			for k in 3:
+				var y := c.position.y + 16 + k * 18
+				draw_line(Vector2(c.position.x + 8, y),
+					Vector2(c.position.x + 30 + rng.randf() * 55, y + rng.randf_range(-6, 6)),
+					Color(0.35, 0.32, 0.3), 1.5)
+			draw_circle(c.position + Vector2(14 + rng.randf() * 70, 14 + rng.randf() * 44),
+				3.0, Color(0.85, 0.3, 0.25))
+		else:
+			draw_string(_font, c.position + Vector2(40, 46), "?",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(0.55, 0.5, 0.42))
+	# Her chart table, mid-room — a big working map weighted at the corners.
+	var tbl := Rect2(IROOM + Vector2(-140, -60), Vector2(280, 130))
+	draw_rect(tbl, Color(0.36, 0.30, 0.22))
+	draw_rect(tbl, Color(0.14, 0.11, 0.09), false, 3.0)
+	draw_rect(tbl.grow(-14), Color(0.80, 0.74, 0.60))
+	draw_arc(tbl.get_center(), 30.0, 0, TAU, 24, Color(0.4, 0.36, 0.32), 1.2)
+	draw_arc(tbl.get_center() + Vector2(40, -10), 16.0, 0, TAU, 18, Color(0.4, 0.36, 0.32), 1.2)
+	for corner in [tbl.grow(-14).position, tbl.grow(-14).end - Vector2(8, 8)]:
+		draw_circle(corner + Vector2(4, 4), 5.0, Color(0.5, 0.48, 0.5))
+	# Shelf of rolled charts by the postings board.
+	for i in 4:
+		draw_line(IROOM + Vector2(190 + i * 18, -210), IROOM + Vector2(196 + i * 18, -160),
+			Color(0.72, 0.66, 0.52), 7.0)
+
+
+## Sella's farm: rows of fish tanks under grow-racks, everything faintly green and wet.
+func _dress_aquaponics(rect: Rect2) -> void:
+	draw_rect(rect, Color(0.16, 0.20, 0.17))                      # damp deck plating
+	draw_rect(rect, Color(0.08, 0.11, 0.09), false, 14.0)         # greenhouse frame
+	draw_rect(rect.grow(-7), Color(0.24, 0.34, 0.26), false, 4.0)
+	# Green wash — the grow-lights that make the dome glow from outside.
+	draw_rect(rect.grow(-20), Color(0.35, 0.75, 0.42, 0.06))
+	# Three tank rows along the west side, water shimmering.
+	for i in 3:
+		var t := Rect2(IROOM + Vector2(-330, -220 + i * 130), Vector2(240, 84))
+		draw_rect(t, Color(0.10, 0.22, 0.30))                     # tank body
+		draw_rect(t, Color(0.30, 0.44, 0.52), false, 3.0)
+		draw_rect(Rect2(t.position + Vector2(6, 6), Vector2(228, 40)),
+			Color(0.22, 0.52, 0.62, 0.85))                        # water
+		# A couple of silverfin, frozen mid-circle.
+		draw_circle(t.position + Vector2(60 + i * 40, 24), 5.0, Color(0.85, 0.9, 0.95, 0.9))
+		draw_circle(t.position + Vector2(150 - i * 30, 30), 4.0, Color(0.75, 0.85, 0.9, 0.8))
+	# Grow racks along the east: green rows on shelf lines.
+	for i in 4:
+		var y := -210.0 + i * 110.0
+		draw_line(IROOM + Vector2(120, y + 22), IROOM + Vector2(350, y + 22),
+			Color(0.30, 0.26, 0.20), 5.0)
+		for g in 6:
+			draw_circle(IROOM + Vector2(140 + g * 38, y + 10), 9.0, Color(0.34, 0.62, 0.30))
+			draw_circle(IROOM + Vector2(146 + g * 38, y + 4), 6.0, Color(0.45, 0.75, 0.38))
+	# A feed pipe with a slow drip.
+	draw_line(IROOM + Vector2(-330, -260), IROOM + Vector2(350, -260), Color(0.45, 0.5, 0.55), 4.0)
+
+
+## Bram's floor: crate stacks, a counter, produce nets — the trade route as a room.
+func _dress_market(rect: Rect2) -> void:
+	draw_rect(rect, Color(0.23, 0.19, 0.14))                      # worn board floor
+	draw_rect(rect, Color(0.11, 0.09, 0.07), false, 14.0)
+	draw_rect(rect.grow(-7), Color(0.34, 0.27, 0.19), false, 4.0)
+	# Bram's counter — he stands behind it (actor_pos is just north of here).
+	draw_rect(Rect2(IROOM + Vector2(-60, -100), Vector2(240, 34)), Color(0.38, 0.30, 0.20))
+	draw_rect(Rect2(IROOM + Vector2(-60, -100), Vector2(240, 34)), Color(0.16, 0.12, 0.08), false, 3.0)
+	# Crate stacks west (station imports), sacks east (colony grain).
+	for i in 3:
+		for j in 2 - (i % 2):
+			var c := Rect2(IROOM + Vector2(-330 + j * 12, -200 + i * 92), Vector2(74, 60))
+			draw_rect(c, Color(0.42, 0.36, 0.28))
+			draw_rect(c, Color(0.2, 0.16, 0.11), false, 2.5)
+			draw_line(c.position + Vector2(8, 30), c.position + Vector2(66, 30),
+				Color(0.2, 0.16, 0.11), 2.0)
+	for i in 4:
+		draw_circle(IROOM + Vector2(240 + (i % 2) * 46, -40 + (i / 2) * 60), 24.0,
+			Color(0.55, 0.48, 0.32))
+	# A cooler with the silverfin — Tam's fish, one building over.
+	var cool := Rect2(IROOM + Vector2(220, -220), Vector2(120, 60))
+	draw_rect(cool, Color(0.72, 0.76, 0.8))
+	draw_rect(cool, Color(0.4, 0.48, 0.55), false, 3.0)

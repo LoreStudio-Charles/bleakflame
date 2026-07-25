@@ -604,6 +604,33 @@ func fire_mounts(target_dist := 0.0) -> void:
 			mount.fire()
 
 
+## Fire ONE weapon array. Group 1 = guns (no magazine, so they can be a held state),
+## group 2 = ordnance (finite rounds, so it stays an on-demand verb). The player's
+## weapons-free toggle drives the first; [R] drives the second. AI still uses
+## fire_mounts() and shoots everything it has.
+func fire_array(group: int, target_dist := 0.0) -> void:
+	for mount in _mounts:
+		if mount.group == group and target_dist <= mount.def.weapon_range:
+			mount.fire()
+
+
+func fire_guns(target_dist := 0.0) -> void:
+	fire_array(1, target_dist)
+
+
+func fire_ordnance(target_dist := 0.0) -> void:
+	fire_array(2, target_dist)
+
+
+## Does this hull actually carry ordnance? Drives the HUD prompt and stops [R] from
+## reporting a dry click on a ship that never had a launcher.
+func has_ordnance() -> bool:
+	for mount in _mounts:
+		if mount.group == 2:
+			return true
+	return false
+
+
 ## Whoever last dealt us damage — kill credit. XP and loot are the PLAYER's
 ## reward alone (guardians/pirates killing each other pay nobody), so death
 ## handlers gate on killed_by_player().

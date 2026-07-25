@@ -1,6 +1,6 @@
 class_name SalvagePanel
 extends CanvasLayer
-## In-space salvage & cargo management ([B], or right-clicking a cluster of
+## In-space salvage & cargo management ([H], or right-clicking a cluster of
 ## overlapping loot). Left: everything drifting within reach — click to pull
 ## it aboard. Right: your hold — click to jettison and make room. Lets the
 ## player compare floating loot against what they're carrying and choose.
@@ -11,7 +11,7 @@ var ship: TestShip
 var _open := false
 var _panel: PanelContainer
 var _salvage_box: VBoxContainer
-var _hold_box: VBoxContainer
+var _hold: InventoryGrid
 var _header: Label
 var _refresh_t := 0.0
 
@@ -60,10 +60,21 @@ func _ready() -> void:
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(row)
 	_salvage_box = _side(row, "NEARBY SALVAGE — click to pull aboard")
-	_hold_box = _side(row, "SHIP HOLD — click to jettison")
+	# RIGHT-CLICK ONLY (user's call, 2026-07-25). Jettisoning is DESTRUCTIVE, and this
+	# panel is open mid-fight — a single left-click throwing cargo into the void was one
+	# stray click from losing a hold of ore. Right-click is now the one interact verb
+	# everywhere, so this both unifies the idiom and makes the dangerous move deliberate.
+	_hold = InventoryGrid.new(ship)
+	_hold.title = "SHIP HOLD — right-click to jettison"
+	_hold.columns = 4
+	_hold.item_hint = func(_c) -> String: return "RIGHT-CLICK to jettison"
+	_hold.material_hint = func(_k) -> String: return "RIGHT-CLICK to jettison"
+	_hold.on_item = func(c, _s: String) -> void: ship.jettison_component(c)
+	_hold.on_material = func(k: String, _s: String) -> void: ship.jettison_commodity(k)
+	row.add_child(_hold)
 	# Explainer footer (user, 2026-07-24): make the click-to-move idiom obvious.
 	var footer := Label.new()
-	footer.text = "Click an item on the LEFT to pull it aboard   ·   click one on the RIGHT to jettison it and make room"
+	footer.text = "Click an item on the LEFT to pull it aboard   ·   RIGHT-CLICK one on the RIGHT to jettison it and make room"
 	footer.add_theme_font_size_override("font_size", 11)
 	footer.add_theme_color_override("font_color", UiTheme.ACCENT)
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -111,13 +122,13 @@ func close() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
-	if event.keycode == KEY_B and not ship.dead and ship.docked_at == null:
+	if event.keycode == Keys.HOLD and not ship.dead and ship.docked_at == null:
 		Tutor.did("salvage_opened")   # they opened the salvage panel themselves
 		if _open:
 			close()
 		else:
 			open()
-	elif event.keycode == KEY_ESCAPE and _open:
+	elif event.keycode == Keys.MENU and _open:
 		close()
 
 
@@ -132,12 +143,11 @@ func _process(delta: float) -> void:
 
 
 func _rebuild() -> void:
-	_header.text = "SALVAGE & CARGO        HOLD %d / %.0f        [B] close" % [
+	_header.text = "SALVAGE & CARGO        HOLD %d / %.0f        [H] close" % [
 		int(ship.cargo_used()), ship.stats.cargo]
 	for child in _salvage_box.get_children():
-		child.queue_free()
-	for child in _hold_box.get_children():
-		child.queue_free()
+		_salvage_box.remove_child(child)
+		child.queue_free()   # remove first: queue_free is deferred (see inventory_grid)
 
 	# Nearby salvage, nearest first.
 	var loot: Array = []
@@ -157,20 +167,11 @@ func _rebuild() -> void:
 	if _salvage_box.get_child_count() == 0:
 		_note(_salvage_box, "— nothing in reach —")
 
-	# The hold: components then commodities, each jettisonable.
-	for comp in ship.cargo:
-		var b := _row(_hold_box, "%s  Mk%d %s  (mass %.0f)" % [
-			comp.display_name, comp.mark, Grades.display_name(comp.grade), comp.mass],
-			Grades.color(comp.grade))
-		b.pressed.connect(func() -> void: ship.jettison_component(comp))
-	for key in ship.commodities:
-		var qty: int = ship.commodities[key]
-		var b := _row(_hold_box, "%s x%d  (mass %.0f ea)" % [
-			TradeGoods.display_name(key), qty, TradeGoods.unit_mass(key)],
-			Color(0.9, 0.82, 0.6))
-		b.pressed.connect(func() -> void: ship.jettison_commodity(key))
-	if _hold_box.get_child_count() == 0:
-		_note(_hold_box, "— hold empty —")
+	# The hold is the SHARED InventoryGrid (see inventory_grid.gd) with JETTISON bound to
+	# the one interact verb — same tiles, same grade borders and pips as the shop counter
+	# and the dossier, so your cargo reads identically everywhere.
+	_hold.ship = ship
+	_hold.refresh()
 
 
 func _grab(loot) -> void:

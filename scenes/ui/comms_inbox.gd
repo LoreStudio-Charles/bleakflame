@@ -2,7 +2,7 @@ class_name CommsInbox
 extends CanvasLayer
 ## The mailbox: a persistent badge shows the unread comm count, and [C] opens
 ## the inbox to re-read any message an NPC ever sent. Dismissing a comm never
-## loses it — it lands here. Modeled on the [G] chart / [L] log overlays.
+## loses it — it lands here. Modeled on the [M] map / [L] log overlays.
 
 var ship: TestShip
 var _badge: Label
@@ -99,10 +99,10 @@ func _process(_delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
-	if event.keycode == KEY_C and not ship.dead and ship.docked_at == null:
+	if event.keycode == Keys.COMMS and not ship.dead and ship.docked_at == null:
 		Tutor.did("comms_opened")   # they opened the archive themselves
 		_toggle()
-	elif event.keycode == KEY_ESCAPE and _open:
+	elif event.keycode == Keys.MENU and _open:
 		_toggle()
 
 

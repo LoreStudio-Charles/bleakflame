@@ -46,7 +46,7 @@ const QUESTS := [
 	{"id": "dirtside_run", "title": "Dirtside Run", "giver": "ruel",
 		"requires": "",
 		"body": "The colony is waiting on a crate off the last freighter, and Ruel has nobody dirtside. Fly it down, hand it to Imari — and put the hull on the ground without leaving a crater.",
-		"briefing": "Ruel finally looks up. \"Before I put you on anything that matters — milk run. Colony's short a crate off the last freighter and I've no one dirtside.\" He raps the crate with a knuckle. \"And pilot — setting down is NOT docking. There's no lane to line up on. A planet has gravity; it pulls you in whether you're ready or not. Your only job is slowing it. Come in slow, and drop TOWARD the pad, not across it.\" He jerks his chin at your console. \"And use your chart — [G] pulls up the nav map. Set the colony as your waypoint and fly the diamond. The Reach is bigger than it looks. Imari signs for the crate.\"",
+		"briefing": "Ruel finally looks up. \"Before I put you on anything that matters — milk run. Colony's short a crate off the last freighter and I've no one dirtside.\" He raps the crate with a knuckle. \"And pilot — setting down is NOT docking. There's no lane to line up on. A planet has gravity; it pulls you in whether you're ready or not. Your only job is slowing it. Come in slow, and drop TOWARD the pad, not across it.\" He jerks his chin at your console. \"And use your chart — [M] pulls up the nav map. Set the colony as your waypoint and fly the diamond. The Reach is bigger than it looks. Imari signs for the crate.\"",
 		"debrief": "\"Down and back with the paint still on her. Good.\" Ruel almost nods. \"Now let's see what you do with work that bites back.\"",
 		"stages": [
 			{"kind": "talk", "npc": "imari", "venue": "planet",
@@ -83,7 +83,7 @@ const QUESTS := [
 		"debrief": "You tell her: nothing. Not a hull plate, not a fuel sheen. Voss is quiet a long moment. \"No debris.\" She says it flat. \"Pirates leave debris. Storms leave debris. Everything leaves debris.\" The stamp comes down — LOST, CAUSE UNKNOWN — but her hand doesn't lift off it. \"...Thank you. Take the payment. And keep your comm on.\"",
 		"stages": [
 			{"kind": "goto", "pos": [6950, 3400], "radius": 420.0, "poi": "meridian_fix",
-				"step": "Sweep the Meridian's last transmitted fix (charted on [G]; follow the waypoint diamond).",
+				"step": "Sweep the Meridian's last transmitted fix (charted on [M]; follow the waypoint diamond).",
 				"flash": "SWEEP COMPLETE: no debris, no beacon, no fuel sheen. Not wreckage — NOTHING."},
 			{"kind": "report",
 				"step": "Report the empty sweep to Voss at the station.",

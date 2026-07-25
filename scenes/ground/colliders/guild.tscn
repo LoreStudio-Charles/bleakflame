@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://b4e5a3rq1p3bp"]
+
+[ext_resource type="Texture2D" uid="uid://btkkoorbkxjxv" path="res://assets/ground/buildings/guild.png" id="1_muniq"]
+
+[node name="PropCollider" type="Node2D" unique_id=2072634790]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=898439299]
+texture = ExtResource("1_muniq")
+centered = false
+offset = Vector2(-79.5, -112)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=1110709019]
+polygon = PackedVector2Array(-44.65, 0, -30, 11, -1, 18, 28, 13, 44.65, 0, 23, -29, -20, -29)

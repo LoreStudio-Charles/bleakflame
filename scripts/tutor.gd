@@ -29,7 +29,7 @@ const LESSONS := {
 		{"id": "tut_thrust", "anchor": "effigy", "pin": false, "where": "flight", "text": "Fore and aft thrust: burn forward with [W], feel the weak reverse with [S]. Engines point back, so reverse is soft on every hull."},
 		{"id": "tut_rotate", "anchor": "effigy", "pin": false, "where": "flight", "text": "Vector the nose with [A] and [D]. Your velocity holds its heading until you burn against it."},
 		{"id": "tut_boostbrake", "anchor": "effigy", "pin": false, "where": "flight", "text": "Hold [SHIFT] to boost. Hold [SPACE] to brake to a full stop."},
-		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Weapons hot — practice drones inbound. RIGHT-CLICK to lock a target, hold LEFT-CLICK to squeeze the trigger. Clear them all."},
+		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Practice drones inbound. RIGHT-CLICK one to target it — that also declares WEAPONS FREE and your guns open up. [Q] holds fire. Steer to keep them in your sights, and clear them all."},
 		{"id": "tut_dock", "anchor": "effigy", "pin": false, "text": "Well flown. Now bring her home and dock: line up ALONG the lane, ease the throttle, green is clean. Crawl her in when you're unsure."},
 	],
 	# WHERE YOUR VITALS LIVE — the first thing a new pilot needs to be able to
@@ -63,7 +63,7 @@ const LESSONS := {
 	# where the colony IS, and hunting for it is the confusing part — not the
 	# flying. Anchored to the RADAR, because that is where navigation lives.
 	"chart": [
-		{"anchor": "radar", "where": "flight", "text": "Press [G] for the system chart — your destination is marked on it."},
+		{"anchor": "radar", "where": "flight", "text": "Press [M] for the map — your destination is marked on it."},
 	],
 	# Fired by the FIRST transmission a pilot ever receives. Comms scroll away,
 	# and nothing tells you they were kept — so the one thing worth teaching is
@@ -146,13 +146,13 @@ const LESSONS := {
 		{"anchor": "missions_hud", "where": "flight", "text": "Press [L] for the captain's log — every lead, order and discovery is kept there."},
 	],
 	"salvage": [
-		{"anchor": "cargo_gauge", "where": "flight", "text": "Hold's full. Press [B] to manage cargo — grab what's nearby, jettison what isn't worth the mass."},
+		{"anchor": "cargo_gauge", "where": "flight", "text": "Hold's full. Press [H] to manage cargo — grab what's nearby, jettison what isn't worth the mass."},
 	],
 	"ordnance": [
-		{"anchor": "ord_gauge", "where": "flight", "text": "You're carrying ORDNANCE. Rounds are finite and cost credits at dock — press [Z] to hold them and fire guns only."},
+		{"anchor": "ord_gauge", "where": "flight", "text": "You're carrying ORDNANCE. Guns fire themselves once weapons are free, but rounds are finite and cost credits at dock — press [R] to launch them when it counts."},
 	],
 	"targeting": [
-		{"anchor": "radar", "where": "flight", "text": "RIGHT-CLICK a contact to target it — [T] cycles hostiles, [Y] friendlies. Most systems need a target."},
+		{"anchor": "radar", "where": "flight", "text": "LEFT-CLICK anything to target it — a rock to scan, an ally to help. RIGHT-CLICK a hostile to target it AND open fire; [TAB] cycles hostiles. Most systems need a target."},
 	],
 
 	# THE PIP ITSELF. Taught the first time one ever appears, because the whole
@@ -206,7 +206,7 @@ const LESSONS := {
 	],
 	"meet_doug": [
 		{"anchor": "radar", "where": "flight", "dwell": 12.0,
-			"text": "You're carrying ore. Doug Diggs buys it at THE DIG, out in the Verge — better than station rate. It's on your chart [G]."},
+			"text": "You're carrying ore. Doug Diggs buys it at THE DIG, out in the Verge — better than station rate. It's on your chart [M]."},
 	],
 
 	# --- FIRST VISIT to each dock tab. Self-paced by design: these arm when the
@@ -243,6 +243,18 @@ const LESSONS := {
 	"commission": [
 		{"venue": "station", "anchor": "tab_pilot", "where": "dock", "tab": "Pilot", "text": "Someone's been watching your work. Open PILOT."},
 		{"anchor": "commissions", "where": "dock", "text": "Green means an invitation. You sign on with the LEADER, not here — go and see them where they work, and their office door will be beside them."},
+	],
+
+	# GROUND-MODE onboarding (2026-07-25) — the town replaces tab-poking with WALKING.
+	# `where: "ground"` means the caption + a soft direction nudge live in the TOWN (not a
+	# TutorPing on a Control), and `target` names the NPC or building to point at. Completion
+	# is an IN-WORLD action folded in as a did() event: reaching the NPC (they notice +
+	# approach) or [E]-ing the place. Watchdog treats "ground" steps as player-paced.
+	"ground_intro": [
+		{"where": "ground", "target": "", "anchor": "", "text": "Welcome to Epharon, pilot — the colony at the edge of the Reach. Stretch your legs: [WASD] or hold the mouse to walk."},
+		{"where": "ground", "target": "Imari", "anchor": "", "text": "Elder Imari keeps this place running, out by the Starport. Head over and see what she needs."},
+		{"where": "ground", "target": "MARKET", "anchor": "", "text": "The colony trades at the MARKET. Walk up and press [E] to see what's for sale."},
+		{"where": "ground", "target": "STARPORT", "anchor": "", "text": "That's the colony. When you're ready to fly, step to your ship on the Starport pad and press [E] to lift off."},
 	],
 }
 
@@ -440,8 +452,8 @@ static func tick(delta: float) -> void:
 		_stall = 0.0
 		_stall_key = ""
 		return
-	if PATIENT.has(active):
-		_stall = 0.0            # player-paced: this lesson waits forever, never times out
+	if PATIENT.has(active) or str(_step_of(active, step).get("where", "")) == "ground":
+		_stall = 0.0            # player-paced: waits as long as it takes (exploring a town / meeting people)
 		return
 	if not safe or not _fits(active, step):
 		return                      # not its moment; that is waiting, not stalling
@@ -515,6 +527,18 @@ static func current() -> Dictionary:
 		return {}
 	var steps: Array = LESSONS[active]
 	return steps[step] if step < steps.size() else {}
+
+
+## The current (unfinished) step of ANY lesson — active, queued, or paused. Lets a
+## spatial host (the town) peek at a dock lesson still waiting in the queue and map its
+## objective to a place, so "open the Market tab" can be redirected to "walk to the
+## MARKET building" while the tabbed lesson itself never has to know about the town.
+static func step_for(id: String) -> Dictionary:
+	if not LESSONS.has(id):
+		return {}
+	var at := step if id == active else int(_progress.get(id, 0))
+	var steps: Array = LESSONS[id]
+	return steps[at] if at < steps.size() else {}
 
 
 ## Is this anchor the thing we're currently pointing at?
@@ -719,12 +743,12 @@ static func _build_preds() -> void:
 	# Comms: a transmission has arrived; completes when they open the archive [C].
 	_arm_pred["comms"] = func(c): return c.get("flying", false) and c.get("comms_any", false) and not c.get("comms_opened", false)
 	_done_pred["comms"] = [func(c): return c.get("comms_opened", false)]
-	# Salvage: the hold is full; completes when they open the cargo manager [B].
+	# Salvage: the hold is full; completes when they open the cargo manager [H].
 	_arm_pred["salvage"] = func(c): return c.get("flying", false) and c.get("hold_full", false) and not c.get("salvage_opened", false)
 	_done_pred["salvage"] = [func(c): return c.get("salvage_opened", false)]
-	# Ordnance: a magazine weapon is aboard; completes the first time they hold it [Z].
-	_arm_pred["ordnance"] = func(c): return c.get("flying", false) and c.get("carrying_ordnance", false) and not c.get("held_ordnance", false)
-	_done_pred["ordnance"] = [func(c): return c.get("held_ordnance", false)]
+	# Ordnance: a magazine weapon is aboard; completes the first time they LAUNCH one [R].
+	_arm_pred["ordnance"] = func(c): return c.get("flying", false) and c.get("carrying_ordnance", false) and not c.get("fired_ordnance", false)
+	_done_pred["ordnance"] = [func(c): return c.get("fired_ordnance", false)]
 
 	# --- The gear loop + firing (dock -> flight) ---
 	# memorize: a fitted ability is WIRED to the bus (auto-wired now); completes the
@@ -795,6 +819,16 @@ static func _build_preds() -> void:
 	_arm_pred["tab_intro_shipyard"] = func(c): return str(c.get("tab", "")) == "Shipyard"
 	_arm_pred["tab_intro_research"] = func(c): return str(c.get("tab", "")) == "Research Lab"
 	_arm_pred["tab_intro_bar"] = func(c): return str(c.get("tab", "")) == "Ember Row"
+
+	# --- GROUND (context "ground"): the town publishes the snapshot + draws the caption/
+	# nudge; each step completes on an in-world action folded in as a did() event.
+	_arm_pred["ground_intro"] = func(c): return c.get("on_ground", false) and c.get("tutorial_done", false)
+	_done_pred["ground_intro"] = [
+		func(c): return c.get("ground_moved", false),
+		func(c): return c.get("met_imari", false),
+		func(c): return c.get("used_market", false),
+		func(c): return c.get("launched", false),
+	]
 
 
 ## The stall log as plain data for the save. NOT cleared by reset(): a fresh

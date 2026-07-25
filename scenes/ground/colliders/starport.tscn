@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://cwqh3po5b0hct"]
+
+[ext_resource type="Texture2D" uid="uid://1cxftml7xb8y" path="res://assets/ground/buildings/starport.png" id="1_b3c2i"]
+
+[node name="PropCollider" type="Node2D" unique_id=1221333216]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=1447897007]
+texture = ExtResource("1_b3c2i")
+centered = false
+offset = Vector2(-79.5, -109)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=976840202]
+polygon = PackedVector2Array(-42.77, 0, 4, 26, 45, -1, 2, -24)

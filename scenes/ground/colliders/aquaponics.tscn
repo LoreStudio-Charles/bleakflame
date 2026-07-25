@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://cr6w3drljemn2"]
+
+[ext_resource type="Texture2D" uid="uid://cqbovvbiye3pa" path="res://assets/ground/buildings/aquaponics.png" id="1_nijpu"]
+
+[node name="PropCollider" type="Node2D" unique_id=838365375]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=1230243085]
+texture = ExtResource("1_nijpu")
+centered = false
+offset = Vector2(-75.5, -117)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=2045668703]
+polygon = PackedVector2Array(-67.21, 0, -37, 12, 6, 18, 49, 13, 76, -1, 46, -38, -32, -39)

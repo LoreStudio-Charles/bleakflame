@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://bgq0w1gxiim1f"]
+
+[ext_resource type="Texture2D" uid="uid://b0gavag1uk58l" path="res://assets/ground/buildings/cave.png" id="1_38fqu"]
+
+[node name="PropCollider" type="Node2D" unique_id=1458925727]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=1944456939]
+texture = ExtResource("1_38fqu")
+centered = false
+offset = Vector2(-87, -111)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=1904245746]
+polygon = PackedVector2Array(-68.62, 0, -29, 23, 5, -7, 25, -9, 39, 7, 75, 1, 32, -39, -21, -36)

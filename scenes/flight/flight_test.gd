@@ -56,6 +56,13 @@ var shoal_screen: SpeakEasy
 var diggs: DiggsFreighter
 var diggs_screen: ProspectDeck
 var _was_docked_at: Node = null
+
+# Epharon ground mode: the walkable town lives in a SubViewport overlay (isolated camera +
+# physics), raised only while docked at the colony. Built lazily on first landing there.
+var _ground_layer: CanvasLayer
+var _ground_vp: SubViewport
+var _town: Node = null
+var _ground_active := false
 var _launch_window: LaunchWindow = null
 var _range_ruler: RangeRuler = null
 var _dev_vitals: DevVitals = null
@@ -137,6 +144,9 @@ func _ready() -> void:
 	add_child(shoal_screen)
 	diggs_screen = ProspectDeck.new(ship)
 	add_child(diggs_screen)
+	# The pilot DOSSIER — [P] anywhere (flight, town, docked). Self-toggling; reads the
+	# global statics + the boarded ship, so it needs no per-context wiring.
+	add_child(CharacterSheet.new())
 
 	# The chart: charted places start discovered; the rest must be FOUND.
 	PoiMap.clear_scene()
@@ -169,11 +179,11 @@ func _ready() -> void:
 	PoiMap.register("waygate", "The Ancient Gate", Vector2(-6800, 8200), "gate")
 	if PoiMap.waypoint_id == "":
 		PoiMap.waypoint_id = "station"   # a new pilot can always find home
-	add_child(SystemMap.new(ship))
+	add_child(StarMap.new(ship))
 	add_child(CaptainsLog.new(ship))
 	add_child(CommsInbox.new(ship))
 	add_child(SalvagePanel.new(ship))
-	add_child(FactionsView.new(ship))   # [U] factions & peace (docked or flying)
+	add_child(FactionsView.new(ship))   # [I] factions & peace (docked or flying)
 	add_child(GoingDark.new(ship))      # [K] systems offline: re-flash the Bus in flight
 	# Last, so it receives Esc before the overlays above and can defer to any
 	# of them that's currently open (they join "esc_capture" while visible).
@@ -326,11 +336,15 @@ func _process(_delta: float) -> void:
 	Sfx.reset_vo_session()   # new docking session: play-once greetings speak again
 	# Exact-instance match: the Shoal berth is a DockingPad too, so `is DockingPad`
 	# would wrongly raise the station screen for it.
+	# Touching down at Epharon (the colony) raises the WALKABLE TOWN, not the dock menu.
+	# The descent from space is unchanged — only what the landing hands you differs.
+	var at_epharon: bool = ship.docked_at == planetoid
 	station_screen.visible = ship.docked_at == station.pad
-	planet_screen.visible = ship.docked_at is Planetoid
+	planet_screen.visible = ship.docked_at is Planetoid and not at_epharon
 	shoal_screen.visible = ship.docked_at == shoal.pad
 	diggs_screen.visible = ship.docked_at == diggs.pad
 	orivel_screen.visible = _outpost != null and _outpost.pads.has(ship.docked_at)
+	_set_ground_visible(at_epharon)
 	if station_screen.visible:
 		station_screen.refresh()
 	if planet_screen.visible:
@@ -344,6 +358,53 @@ func _process(_delta: float) -> void:
 	# Music follows place: docked comfort vs the drift. Silent until tracks
 	# land in res://audio/music/ (station.ogg / drift.ogg).
 	Sfx.play_music("station" if ship.docked_at != null else "drift")
+
+
+## Build the Epharon town once, inside its own SubViewport so its camera + physics are
+## fully isolated from flight (two worlds in one window). Lazy — nothing exists until the
+## first time you set down at the colony.
+func _ensure_ground() -> void:
+	if _town != null:
+		return
+	_ground_layer = CanvasLayer.new()
+	_ground_layer.layer = 3   # above the flight HUD (1); the pause menu is added last and still wins Esc
+	add_child(_ground_layer)
+	var cont := SubViewportContainer.new()
+	cont.stretch = true
+	cont.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_ground_layer.add_child(cont)
+	_ground_vp = SubViewport.new()
+	_ground_vp.handle_input_locally = true
+	_ground_vp.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	cont.add_child(_ground_vp)
+	_town = load("res://scenes/ground/epharon_town.tscn").instantiate()
+	_ground_vp.add_child(_town)
+	_town.launch_requested.connect(_on_town_launch)
+
+
+func _set_ground_visible(on: bool) -> void:
+	if on:
+		_ensure_ground()
+	if _ground_layer == null or on == _ground_active:
+		return
+	_ground_active = on
+	_ground_layer.visible = on
+	# Freeze the town's whole subtree while it's hidden so it isn't polling input or
+	# wandering NPCs behind your back during normal flight.
+	_ground_vp.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+	if on:
+		_town.enter_town()
+
+
+## Player boarded their ship in the town and hit launch. Same gate as the dock launch
+## (a broken build stays grounded), then the ordinary undock pops us back above Epharon —
+## no change to how flight resumes.
+func _on_town_launch() -> void:
+	if not ShipStats.validate(ship.build).is_empty():
+		if _town != null:
+			_town.reject_launch("This ship can't fly — fix the build at a proper bay.")
+		return
+	ship.undock()
 
 
 ## The dig site spawns its rock the moment the chain opens it (that can
@@ -469,6 +530,8 @@ const TEACH_THREAT_R := 1100.0
 
 func _tick_flight_lessons() -> void:
 	Tutor.tick(get_process_delta_time())   # a jammed lesson always gives up
+	if _ground_active:
+		return   # the walkable town drives the tutor (context "ground") while you're on foot
 	if ship.dead:
 		return
 	if ship.docked_at != null:
@@ -790,7 +853,7 @@ func _tick_landing_brief() -> void:
 
 
 ## Chart lesson, delivered at the moment it's needed: the first time the pilot is
-## actually IN FLIGHT on the dirtside run, Ruel calls to point them at [G]. A new
+## actually IN FLIGHT on the dirtside run, Ruel calls to point them at [M]. A new
 ## player has no idea where the colony is, and hunting for it is the confusing
 ## part — not the flying. Fires once per launch of the run.
 var _taught_chart := false
@@ -801,7 +864,7 @@ func _tick_chart_hint() -> void:
 	if not Quests.active.has("dirtside_run"):
 		return
 	_taught_chart = true
-	var line := "\"Colony's already on your chart. Press [G] for the nav map, set it as your waypoint, and follow the diamond. The Reach is bigger than it looks.\""
+	var line := "\"Colony's already on your chart. Press [M] for the nav map, set it as your waypoint, and follow the diamond. The Reach is bigger than it looks.\""
 	ship._flash_note("RUEL: %s" % line)
 	Comms.post("ruel", "Dirtside Run", line)
 	# Ruel SAYS it; the ping SHOWS it. The "chart" lesson arms itself off a set
@@ -1136,6 +1199,10 @@ func _drone_spot() -> Vector2:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
+	# While the walkable town owns the screen, the cockpit keys are dead — the town does
+	# its own input (movement + [E]/[Esc]) by global polling inside its SubViewport.
+	if _ground_active:
+		return
 	# COMMS LINE. ENTER talks, SLASH opens already holding the slash — the two
 	# habits every chat window in the genre trains. ESC backs out without
 	# sending. Checked FIRST so a keystroke meant for the message can never
@@ -1159,16 +1226,17 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# a debug build, so release exports can never reach them. They moved off the
 	# keyboard so a stray keypress can't fire one and so there's ONE dev gate, not
 	# five scattered is_debug_build() key checks.
+	# NOTE: F1-F4 are PLAYER binds now (target self / party 2-4, MMO-standard). The
+	# assembly viewer that used to sit on F1 is a DEV tool, so it moved to the comm
+	# terminal as `/assembly` — the one dev gate, per the no-dev-actions-on-keys rule.
 	match event.keycode:
-		KEY_F1:
-			get_tree().change_scene_to_file("res://scenes/debug/assembly_viewer.tscn")
-		KEY_F12:
+		Keys.SCREENSHOT:
 			_save_screenshot()
-		KEY_E:
+		Keys.CONFIRM:
 			_handle_interact()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			# Boarding happens at the station: docked only, owned ships only.
-			var index: int = event.keycode - KEY_1
+			var index: int = event.keycode - Keys.ABILITY_1
 			if not ship.dead and ship.docked_at is DockingPad \
 					and SampleBuilds.owned.has(index) and index != SampleBuilds.current:
 				SampleBuilds.current = index
@@ -1209,6 +1277,11 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 		"ruler":
 			_range_ruler.visible = not _range_ruler.visible
 			_dev_feedback("Range ruler %s" % ("ON" if _range_ruler.visible else "off"))
+			return true
+		"assembly", "viewer":
+			# Was F1. F-keys are PLAYER binds now (target self / party), and a dev tool
+			# has no business on one anyway — this is the sanctioned dev gate.
+			get_tree().change_scene_to_file("res://scenes/debug/assembly_viewer.tscn")
 			return true
 		"heartbeat", "vitals":
 			if _dev_vitals != null:

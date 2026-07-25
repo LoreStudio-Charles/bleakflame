@@ -21,18 +21,9 @@ Sfx="*res://scripts/sfx.gd"
 
 [display]
 
-; DESIGN RESOLUTION. Every cockpit rect in data/cockpits/*.json is authored in
-; these units, so this must stay 1920x1080 — changing it silently moves every
-; instrument. The window can be any size; canvas_items scales to suit.
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-; canvas_items scales the 2D canvas instead of just handing out a bigger
-; viewport, so the HUD holds its proportions at any window size (720p was
-; showing a 1080p-authored dashboard at 1:1 and clipping it).
 window/stretch/mode="canvas_items"
-; expand, not keep: a same-aspect window scales cleanly, and a WIDER monitor
-; gains world sideways rather than black bars. The cockpit already anticipates
-; this — right-console rects use NEGATIVE x, measured from the right edge.
 window/stretch/aspect="expand"
 
 [dotnet]

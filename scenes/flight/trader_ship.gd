@@ -2,7 +2,7 @@ class_name TraderShip
 extends AIShip
 ## A NEUTRAL Trader-guild hauler — civilian traffic, NOT a combatant. It runs its
 ## patrol route (station <-> planet, station <-> gate), turns up in the friendlies
-## roster, [Y]-cycles as a friendly, and can be hailed.
+## roster (click a row to target), and can be hailed.
 ##
 ## It rides "player_team" so PIRATES prey on it (the living-world raids), but it
 ## is only in "hostile_team" — the player's targetable set — once you DECLARE WAR
@@ -34,7 +34,7 @@ var _saved := false
 
 func _ready() -> void:
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
-	add_to_group("friendly_targets")   # roster + [Y] + hailable
+	add_to_group("friendly_targets")   # friendlies roster + hailable
 	add_to_group("traders")
 	add_to_group("player_team")         # so PIRATES hunt it (guns target player_team)
 	refresh_hostility()

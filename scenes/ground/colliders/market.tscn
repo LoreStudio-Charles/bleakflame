@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://clv0a6js1oy4y"]
+
+[ext_resource type="Texture2D" uid="uid://bwe8wteccy11s" path="res://assets/ground/buildings/market.png" id="1_wduqv"]
+
+[node name="PropCollider" type="Node2D" unique_id=140953822]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=289356279]
+texture = ExtResource("1_wduqv")
+centered = false
+offset = Vector2(-82, -103)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=521916962]
+polygon = PackedVector2Array(-65, -3, -41, 9, -19, 2, 4, 21, 31, 22, 68, 4, -11, -32, -49, -20)

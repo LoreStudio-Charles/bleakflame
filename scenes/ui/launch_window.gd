@@ -138,10 +138,10 @@ func _update_count() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
-	if event.keycode == KEY_E:
+	if event.keycode == Keys.CONFIRM:
 		get_viewport().set_input_as_handled()
 		_launch()
-	elif event.keycode == KEY_Q or event.keycode == KEY_ESCAPE:
+	elif event.keycode == Keys.CANCEL or event.keycode == Keys.MENU:
 		get_viewport().set_input_as_handled()
 		_abort()
 

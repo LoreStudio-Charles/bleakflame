@@ -133,6 +133,8 @@ func _case_every_home_tab_can_host_its_person() -> void:
 		for id in Npcs.CAST:
 			if not Npcs.is_dockside(str(id)):
 				continue   # Krayt and Doug keep their own bespoke screens
+			if Npcs.is_ground(str(id)):
+				continue   # Tam/Bram live in walkable-town buildings, not behind a dock tab
 			if Npcs.at_venue(str(id), venue_is_station) \
 					and Npcs.home(str(id)) != "":
 				_ok(titles.has(Npcs.home(str(id))),
@@ -842,6 +844,12 @@ func _case_every_lesson_is_completable() -> void:
 			var where := str(st.get("where", ""))
 			var label := "%s[%d]" % [lid, i]
 
+			if where == "ground":
+				# GROUND lessons are drawn by the TOWN (epharon_town: a caption + a spatial chevron
+				# to the target NPC/building), NOT a TutorPing — they carry a `target`, no `anchor`.
+				_ok(str(st.get("text", "")) != "", "%s has copy to show" % label)
+				continue
+
 			_ok(anchor != "", "%s names an anchor" % label)
 			_ok(str(st.get("text", "")) != "", "%s has copy to show" % label)
 			var venue := str(st.get("venue", ""))
@@ -1107,11 +1115,11 @@ func _find_text(root: Node, needle: String) -> bool:
 	return false
 
 
-## The counter must render as ArmoryTiles — same grade border, mark badge, pips
+## The counter must render as ItemTiles — same grade border, mark badge, pips
 ## and price as everywhere else equipment is shown.
 func _find_tile(root: Node) -> Node:
 	for child in root.get_children():
-		if child is DockScreen.ArmoryTile:
+		if child is ItemTile:
 			return child
 		var hit := _find_tile(child)
 		if hit != null:

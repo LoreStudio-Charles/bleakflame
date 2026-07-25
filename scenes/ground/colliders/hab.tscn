@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://bnm5pr2wwin32"]
+
+[ext_resource type="Texture2D" uid="uid://cb27ryiirf1g4" path="res://assets/ground/buildings/hab.png" id="1_23wtl"]
+
+[node name="PropCollider" type="Node2D" unique_id=871831969]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=163592682]
+texture = ExtResource("1_23wtl")
+centered = false
+offset = Vector2(-80.5, -110)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=1384229847]
+polygon = PackedVector2Array(-50.29, 0, -1, 25, 53, -1, 2, -18)

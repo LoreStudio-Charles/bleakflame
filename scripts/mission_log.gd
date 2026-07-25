@@ -214,6 +214,53 @@ static func turn_in(index: int, ship) -> bool:
 	return true
 
 
+## ---- THE SHARED BOARD ACTIONS ----
+##
+## `accept`/`turn_in` above are the raw moves; these two are the WHOLE action a board
+## performs, side effects included — taking work, and closing it out with the standing
+## credit and the campaign hand-off that must follow it. They exist because the station's
+## tabbed board and the ground's colony board would otherwise each re-implement the
+## trailing effects, and the one that forgot a step would drift (the Scan-Data standing
+## bug was exactly that shape).
+##
+## UI-FREE, like the rest of this file: they return {"ok": bool, "msg": String} and the
+## caller decides how to show it. `here` is a venue NAME ("station"/"planet"/"verge") so
+## outposts work; `tutorial_done` is PASSED IN rather than read, keeping this module
+## SaveGame-free and loadable under `--script` (the same rule quests.gd follows).
+
+## Take the offer at a GLOBAL offers index (the venue-filtered lists carry it as metadata).
+static func take(index: int) -> Dictionary:
+	if index < 0 or index >= offers.size():
+		return {"ok": false, "msg": "That contract is no longer posted."}
+	if not accept(index):
+		return {"ok": false, "msg": "Mission log full (max %d active)." % MAX_ACTIVE}
+	ensure_offers()
+	return {"ok": true, "msg": "Contract accepted."}
+
+
+## Close out the active contract at `index`, with everything that must follow it:
+## payment (turn_in), the GIVER'S GUILD standing, and the campaign check that lets the
+## next quest's giver greet you right here instead of after a re-dock.
+static func complete(index: int, ship, here: String, tutorial_done: bool) -> Dictionary:
+	if index < 0 or index >= active.size():
+		return {"ok": false, "msg": "No such contract."}
+	# Read the contract BEFORE turn_in consumes it, so it can still feed standing.
+	var m: Dictionary = active[index]
+	if not is_complete(m, ship):
+		return {"ok": false, "msg": "%s isn't finished yet." % label(m)}
+	if not venue_ok_at(m, here):
+		return {"ok": false, "msg": "%s turns in elsewhere." % label(m)}
+	if not turn_in(index, ship):
+		return {"ok": false, "msg": "That contract can't be closed here."}
+	# Standing follows the GIVER, not the work type: Sella's Scan Data runs are
+	# `delivery` contracts, so a type-only map fed her survey work to the Traders.
+	var fac := faction_for(m)
+	if fac != "":
+		Standing.add(fac, 2)
+	Quests.check_new_work(here == "station", tutorial_done)
+	return {"ok": true, "msg": "Contract complete. Payment received.", "faction": fac}
+
+
 ## "Suppression contract — Harbormaster Ruel". Old saves may lack a giver.
 static func label(m: Dictionary) -> String:
 	var giver: String = str(m.get("giver", ""))

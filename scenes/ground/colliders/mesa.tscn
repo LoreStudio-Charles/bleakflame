@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://xslpx4508i6v"]
+
+[ext_resource type="Texture2D" uid="uid://1g1pt38kpd4y" path="res://assets/ground/props/mesa.png" id="1_3yt0y"]
+
+[node name="PropCollider" type="Node2D" unique_id=244057171]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=70504768]
+texture = ExtResource("1_3yt0y")
+centered = false
+offset = Vector2(-78, -98)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=881508573]
+polygon = PackedVector2Array(-55.46, 0, 2, 23, 59, 0, -2, -26)

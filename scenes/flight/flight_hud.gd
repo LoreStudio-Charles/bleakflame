@@ -24,7 +24,6 @@ const LAYOUT_PATH := "res://data/cockpits/default.json"
 @onready var _legacy_info: Label = $Info
 
 var ship: TestShip
-var show_hold := false
 var _layout := {}
 var _panel_h := 170.0
 var _floating_target := true
@@ -49,7 +48,6 @@ var _center_note: Label
 var _prompt: Label          # standing center-screen interact prompt (ship.interact_prompt)
 var _veil: ColorRect        # held world veil (blackout / whiteout / dim) BEHIND the HUD
 var _veil_flash: ColorRect  # transient bright pulse over the world (lightning, blooms)
-var _hold_label: Label
 var _loot_tip: Label
 
 
@@ -288,19 +286,6 @@ func _ready() -> void:
 	bearing.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bearing)
 
-	var hold_settings := LabelSettings.new()
-	hold_settings.font_size = 12
-	hold_settings.font_color = UiTheme.TEXT
-	hold_settings.outline_size = 3
-	hold_settings.outline_color = Color(0, 0, 0, 0.85)
-	_hold_label = Label.new()
-	_hold_label.label_settings = hold_settings
-	_hold_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_hold_label.offset_left = 18
-	_hold_label.offset_bottom = -(_panel_h + 10)
-	_hold_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	add_child(_hold_label)
-
 	# Hover tooltip: names loot floating in space, follows the cursor.
 	_loot_tip = Label.new()
 	var tip_settings := LabelSettings.new()
@@ -391,12 +376,6 @@ func _center_rect(ctrl: Control, spec, def: Array) -> void:
 	ctrl.offset_bottom = y + h
 
 
-func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo \
-			and event.keycode == KEY_TAB:
-		show_hold = not show_hold
-
-
 func _process(_delta: float) -> void:
 	if ship == null or ship.build == null:
 		return
@@ -414,7 +393,6 @@ func _process(_delta: float) -> void:
 	_energy_gauge.visible = flying
 	_ord_gauge.visible = flying
 	_update_loot_tip(flying)
-	_hold_label.visible = flying and show_hold
 	if ship.dead:
 		_banner.text = "SHIP LOST — cargo lost with it   [E] restart"
 		_banner_settings.font_color = UiTheme.DANGER
@@ -467,13 +445,12 @@ func _process(_delta: float) -> void:
 	# other center note keeps the amber. (label_settings here is _center_note's own.)
 	_center_note.label_settings.font_color = UiTheme.DANGER \
 		if (ship.scan_note_t > 0.0 and ship.scan_note_fail) else UiTheme.AMBER
-	_hold_label.text = _hold_block() if show_hold else ""
 
 
 func _target_text() -> String:
 	if ship.target == null or not is_instance_valid(ship.target):
 		# A projection with no target shows nothing — glass stays clear.
-		return "" if _floating_target else "NO TARGET   (RMB click / [T] cycle)"
+		return "" if _floating_target else "NO TARGET   (LMB select / RMB engage / [TAB] cycle)"
 	var t: Node2D = ship.target
 	var name_text := "contact"
 	if t is BuildShip and t.build != null:
@@ -567,19 +544,6 @@ func _kind_glyph(kind: String) -> String:
 		"campaign": return "◆"
 		"lead": return "◇"
 		_: return "•"
-
-
-func _hold_block() -> String:
-	if ship.cargo.is_empty() and ship.commodities.is_empty():
-		return "HOLD — empty"
-	var out := "HOLD  %.0f/%.0f:" % [ship.cargo_used(), ship.stats.cargo]
-	for comp in ship.cargo:
-		out += "\n  %s  —  Mk %d %s  (mass %.0f)" % [
-			comp.display_name, comp.mark, Grades.display_name(comp.grade), comp.mass]
-	for key in ship.commodities:
-		out += "\n  %s x%d  (mass %.0f)" % [TradeGoods.display_name(key),
-			ship.commodities[key], ship.commodities[key] * TradeGoods.unit_mass(key)]
-	return out
 
 
 func _approach_line() -> String:
@@ -1376,7 +1340,7 @@ class EnergyGauge:
 
 ## Ordnance readout: for each magazine weapon, a HOT (colour) / COLD (grey) box
 ## with its remaining rounds. Scales to any launcher (count, not one-pip-per-
-## round). Grey when dry OR safed with [Z]. Hidden when no ordnance is fitted.
+## round). Grey when dry OR the array is offline. Hidden when no ordnance is fitted.
 class OrdnanceGauge:
 	extends Control
 	var ship: TestShip
@@ -1390,7 +1354,7 @@ class OrdnanceGauge:
 	func _draw() -> void:
 		if ship == null or ship.build == null:
 			return
-		var held: bool = not ship.array_enabled[1]   # [Z] hold = ordnance safed/cold
+		var held: bool = not ship.array_enabled[1]   # array offline = ordnance cold
 		var f := get_theme_default_font()
 		# `def`, not `weapon` — WeaponMount has no `weapon` property. This only
 		# ever evaluates for a group-2 mount, so it stayed hidden until a hull

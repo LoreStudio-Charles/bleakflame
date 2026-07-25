@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://ciib6esqnjxmi"]
+
+[ext_resource type="Texture2D" uid="uid://bw1yis2inedd6" path="res://assets/ground/props/boulders.png" id="1_ptdgc"]
+
+[node name="PropCollider" type="Node2D" unique_id=1079098292]
+
+[node name="ArtReference" type="Sprite2D" parent="." unique_id=678106519]
+texture = ExtResource("1_ptdgc")
+centered = false
+offset = Vector2(-64, -73)
+
+[node name="Footprint" type="CollisionPolygon2D" parent="." unique_id=1018155697]
+polygon = PackedVector2Array(-40.42, 0, 40.42, 0, 15, -24, -11, -22)

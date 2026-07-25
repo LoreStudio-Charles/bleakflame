@@ -1226,7 +1226,6 @@ func _open_office(npc: String, prof: String) -> void:
 	var office := GuildOffice.new(npc, prof, ship,
 		func(path: String) -> void: _buy_component(path),
 		func(id: String) -> void: _join_commission(id))
-	office.tiles_host = self
 	office.closed.connect(refresh)
 	add_child(office)
 
@@ -1279,11 +1278,11 @@ func _on_accept_person_board(npc: String) -> void:
 	var sel := lst.get_selected_items()
 	if sel.is_empty():
 		return
-	if not MissionLog.accept(int(lst.get_item_metadata(sel[0]))):
-		_flash("Mission log full (max %d active)." % MissionLog.MAX_ACTIVE)
+	var r := MissionLog.take(int(lst.get_item_metadata(sel[0])))
+	if not r.ok:
+		_flash(str(r.msg))
 	else:
 		Tutor.did("accepted_contract")
-	MissionLog.ensure_offers()
 	refresh()
 
 
@@ -1725,19 +1724,42 @@ func _refresh_armory() -> void:
 	for path in SHOP_STOCK:
 		var comp: ComponentDef = load(path)
 		if _armory_filter == -1 or comp.slot_type() == _armory_filter:
-			_shop_grid.add_child(ArmoryTile.new(comp, "shop", self, path))
+			_shop_grid.add_child(_shop_tile(comp, path))
 	# Faction gear (cloak, Crystalline Array, ...) is NOT open-market — it's sold
 	# by each profession's leader in the Pilot-tab QUARTERMASTER, never here.
 	for comp in ship.cargo:
 		if _armory_filter == -1 or comp.slot_type() == _armory_filter:
-			_armory_grid.add_child(ArmoryTile.new(comp, "hold", self))
+			_armory_grid.add_child(_goods_tile(comp, "hold"))
 	for comp in Stash.items:
 		if _armory_filter == -1 or comp.slot_type() == _armory_filter:
-			_armory_grid.add_child(ArmoryTile.new(comp, "stash", self))
+			_armory_grid.add_child(_goods_tile(comp, "stash"))
 	if _shop_grid.get_child_count() == 0:
 		_empty_note(_shop_grid, "— nothing here —")
 	if _armory_grid.get_child_count() == 0:
 		_empty_note(_armory_grid, "— nothing in this category —")
+
+
+## The Armory's two grids, built from the SHARED ItemTile: the shop shelf (right-click
+## buys) and your own goods (right-click sells). The tile draws itself; the dock only
+## binds what its verbs mean here — which is what lets the ground reuse the same widget
+## with `buy` bound to a colony merchant instead.
+func _shop_tile(comp: ComponentDef, path: String) -> ItemTile:
+	var t := ItemTile.new(comp, "shop", ItemTile.Style.SHOP)
+	t.price = ItemVisuals.buy_price(comp)
+	t.hint = "left-click inspect · RIGHT-CLICK to buy (%dc)" % t.price
+	t.on_inspect = _on_armory_tile_selected
+	t.on_interact = func(_c: ComponentDef, _s: String) -> void: _buy_component(path)
+	return t
+
+
+func _goods_tile(comp: ComponentDef, source: String) -> ItemTile:
+	var t := ItemTile.new(comp, source, ItemTile.Style.SHOP)
+	t.price = ItemVisuals.sell_price(comp)
+	t.price_color = Color(0.42, 0.86, 0.46)
+	t.hint = "left-click inspect · RIGHT-CLICK to sell (%dc)" % t.price
+	t.on_inspect = _on_armory_tile_selected
+	t.on_interact = _sell_component
+	return t
 
 
 func _refresh_engineering() -> void:
@@ -1792,7 +1814,11 @@ func _refresh_cargo_stash() -> void:
 
 ## Materials (mined commodities) ride as stack tiles in the cargo/stash grids.
 func _add_material_tile(grid: GridContainer, key: String, qty: int, source: String) -> void:
-	grid.add_child(MaterialTile.new(key, qty, source, self))
+	var t := MaterialStackTile.new(key, qty, source)
+	t.hint = "drag to the other panel · shift+right-click %s" % [
+		"→ stash" if source == "hold" else "→ hold"]
+	t.on_alt_interact = _toggle_material_location
+	grid.add_child(t)
 
 
 ## Move a whole material stack between the hold and the safe station stash.
@@ -1841,71 +1867,21 @@ func _move_material(key: String, source: String, target: String) -> void:
 ## Periodic-style glyph + category tint for a material tile (placeholder until
 ## real icon art lands — the icon pass replaces these AND the component marks).
 func _material_glyph(key: String) -> String:
-	match key:
-		"ferrite_ore": return "Fe"
-		"cobalt_ore": return "Co"
-		"aurite_ore": return "Au"
-		"scan_data": return "Sc"
-		"cinder_fragment": return "Cf"
-		"wayfinder_core": return "Wf"
-		"circuits": return "Ci"
-		"food": return "Fd"
-		"water": return "Wa"
-		"stolen_goods": return "Sg"
-	return TradeGoods.display_name(key).left(2)
+	return ItemVisuals.material_glyph(key)
 
 
 func _material_color(key: String) -> Color:
-	if key == "aurite_ore":
-		return Color(0.95, 0.78, 0.42)
-	if key.ends_with("_ore"):
-		return Color(0.78, 0.74, 0.62)
-	if key == "scan_data":
-		return Color(0.5, 0.82, 0.95)
-	if key == "cinder_fragment" or key == "wayfinder_core":
-		return Color(0.78, 0.55, 0.95)
-	return Color(0.85, 0.8, 0.68)
+	return ItemVisuals.material_color(key)
 
 
-## Drop-in component icon: assets/icons/components/<tres-basename>.png, resolved
-## from the item's base_path (affixed drop) or resource_path (clean shop gear),
-## so a rolled "Sharpened VK-2 Autocannon" shares the base VK-2 icon. Falls back
-## to a fitted overlay_sprite, then (in the tile) to the slot+mark label. Art is
-## pure drop-in — no .tres edits, survives data regeneration.
 func _component_icon(comp: ComponentDef) -> Texture2D:
-	if comp.overlay_sprite != null:
-		return comp.overlay_sprite
-	for src in [comp.base_path, comp.resource_path]:
-		if str(src) != "":
-			var p := "res://assets/icons/components/%s.png" % str(src).get_file().get_basename()
-			if ResourceLoader.exists(p):
-				return load(p)
-	# ABILITY-BEARING GEAR wears the face of the ability it grants. Every chip
-	# already had art at assets/icons/abilities/<id>.png for the gem bar; without
-	# this the entire chip family fell back to a grey "S1" text tile in the
-	# Armory, the hold, the stash and the Coupling bag.
-	# `get()` returns null on a component that has no `tags` at all (most of
-	# them), so this must be nil-checked before it is iterated.
-	var tags = comp.get("tags")
-	if tags != null:
-		for tag in tags:
-			var aid := Abilities.id_for_tag(str(tag))
-			if aid != "":
-				var at := Abilities.icon(aid)
-				if at != null:
-					return at
-	return null
+	return ItemVisuals.component_icon(comp)
 
 
-## Drop-in material icon: assets/icons/materials/<commodity-key>.png.
 func _material_icon(key: String) -> Texture2D:
-	var p := "res://assets/icons/materials/%s.png" % key
-	return load(p) if ResourceLoader.exists(p) else null
+	return ItemVisuals.material_icon(key)
 
 
-## Takes any CONTAINER, not just a grid: the Coupling's bag row is an HBox, and
-## typing this to GridContainer made passing one a PARSE error — the whole
-## script failed to load, so New Game died before it started.
 func _empty_note(grid: Container, text: String) -> void:
 	if grid.get_child_count() == 0:
 		var lbl := Label.new()
@@ -1914,9 +1890,18 @@ func _empty_note(grid: Container, text: String) -> void:
 		grid.add_child(lbl)
 
 
+## One square of equipment in the Engineering hold/stash grid: click selects, right-click
+## auto-fits to a ship slot, shift+right-click moves it between cargo and stash. Same
+## shared ItemTile as the Armory — only the verbs differ.
 func _add_tile(grid: GridContainer, comp: ComponentDef, source: String,
 		group: ButtonGroup, selected: bool) -> void:
-	var tile := EquipTile.new(comp, source, self)
+	var tile := ItemTile.new(comp, source, ItemTile.Style.HOLD)
+	tile.hint = "drag to a slot · right-click auto-fit · shift+right-click %s" % [
+		"→ stash" if source == "hold" else "→ hold"]
+	tile.toggle_mode = true
+	tile.on_inspect = func(c: ComponentDef) -> void: _on_tile_selected(c, source)
+	tile.on_interact = _auto_fit
+	tile.on_alt_interact = _toggle_location
 	tile.button_group = group
 	tile.button_pressed = selected
 	grid.add_child(tile)
@@ -2076,21 +2061,22 @@ func _remove_from_source(comp: ComponentDef, source: String) -> void:
 		Stash.items.erase(comp)
 
 
-## Prices route through the pilot trade seams (1.0 today; the Trader
-## profession fills them). Kept here so the buttons and the handlers agree.
+## Prices route through the pilot trade seams (1.0 today; the Trader profession fills
+## them). Thin wrappers over TradeGoods — the ONE price rule, shared with the ground shop.
 func _buy_price(key: String) -> int:
-	return int(round(market.sells[key] * Pilot.trade_buy_mult()))
+	return TradeGoods.buy_price(market, key)
 
 
 func _sell_price(key: String) -> int:
-	return int(round(market.buys[key] * Pilot.trade_sell_mult()))
+	return TradeGoods.sell_price(market, key)
 
 
 func _refresh_market() -> void:
 	for child in _commodity_box.get_children():
 		child.queue_free()
-	# What this dock actually produces; everything else it sells is imported.
-	var local: Array = ["circuits"] if is_station else ["food", "water"]
+	# What this dock actually produces; everything else it sells is imported. Read from
+	# the market table (TradeGoods) so the ground shop colours deals by the same rule.
+	var local: Array = market.get("local", [])
 	# Ordered: this dock's own products (exports) first, then what it imports,
 	# then sell-only goods (ore the industry buys).
 	var keys: Array = []
@@ -2472,53 +2458,17 @@ func _describe(comp: ComponentDef) -> String:
 ## a mining laser's ore-cutting, or the gem ability a fitted system unlocks. So
 ## a player never has to guess that the Ferro Cutter mines or the scanner scans.
 func _ability_line(comp: ComponentDef) -> String:
-	if comp is WeaponDef and (comp as WeaponDef).mining_power > 0.0:
-		return "[b][color=#f2b859]⛏ MINING LASER[/color][/b][color=#8fe08f] — cuts ore from asteroids at full yield; ordinary guns only chip rock.[/color]"
-	var ab := Abilities.granted_by(comp)
-	if not ab.is_empty():
-		return "[b][color=#f2b859]▸ GRANTS ABILITY — %s[/color][/b]\n[color=#8fe08f]%s[/color]\n[color=#73bff2]Fit it, then wire it to a [1]–[5] bus slot (Pilot tab).[/color]" % [
-			str(ab.name), str(ab.desc)]
-	return ""
+	return ItemVisuals.ability_line(comp)
 
 
-## A BBCode tooltip whose NAME is grade-coloured (default Button tooltips are
-## plain text). The tiles override _make_custom_tooltip to use it. Returns just
-## the content — Godot already wraps a custom tooltip in the theme's TooltipPanel,
-## so adding our own panel here would double the border.
-## WHAT THE PART ACTUALLY DOES, for a tooltip. Tiles used to show name, grade,
-## mass and price — everything except the reason to buy it. A cargo pod read as
-## "Strapdown Cargo Pod, mass 4, 60c" with no mention that it adds hold space.
-## `stat_summary()` is each schema's own effect line, so this stays correct for
-## every component type without a lookup table.
 static func effect_lines(comp: ComponentDef) -> String:
-	var out := ""
-	var stats := comp.stat_summary()
-	if stats != "":
-		out += "[color=#8fe08f]%s[/color]\n" % stats
-	if comp.description != "":
-		out += "[i][color=#a8b0c2]%s[/color][/i]\n" % comp.description
-	return out
+	return ItemVisuals.effect_lines(comp)
 
 
-## The ability equivalent of grade_tooltip: icon + name, then the body from
-## Abilities.tooltip_body. Same visual weight as an equipment hover, because an
-## ability IS equipment now — it lives on a chip in the Coupling.
 static func ability_tooltip(aid: String, body: String) -> Control:
-	var rt := RichTextLabel.new()
-	rt.bbcode_enabled = true
-	rt.fit_content = true
-	rt.custom_minimum_size = Vector2(260, 0)
-	var art := "res://assets/icons/abilities/%s.png" % aid
-	var img := "[img=28]%s[/img]  " % art if ResourceLoader.exists(art) else ""
-	rt.text = "%s[b][color=#f2b859]%s[/color][/b]
-%s" % [
-		img, Abilities.display_name(aid), body]
-	return rt
+	return ItemVisuals.ability_tooltip(aid, body)
 
 
-## A button that hovers like equipment does. Used by the gem slots and the
-## ability book so both explain cost, source and readiness rather than showing a
-## bare description string.
 class AbilityButton extends Button:
 	var aid: String
 	var _tip: String
@@ -2582,27 +2532,15 @@ static func hull_tooltip(build: ShipBuild) -> Control:
 
 
 static func grade_tooltip(comp: ComponentDef, body: String) -> Control:
-	var rt := RichTextLabel.new()
-	rt.bbcode_enabled = true
-	rt.fit_content = true
-	rt.custom_minimum_size = Vector2(250, 0)
-	var gc := Grades.color(comp.grade).to_html(false)
-	var nm := ("◆ " if not comp.affix_ids.is_empty() else "") + comp.display_name
-	# Name on its own line, then grade + size on the SECOND line — so the rarity/
-	# Mk phrase never wraps mid-word behind the name (the "· " separator is gone
-	# now that the line break does that job).
-	rt.text = "[b][color=#%s]%s[/color][/b]\n[color=#%s]%s Mk %d[/color]\n%s" % [
-		gc, nm, gc, Grades.display_name(comp.grade), comp.mark, body]
-	return rt
+	return ItemVisuals.grade_tooltip(comp, body)
 
 
-## Armory tile helpers: prices (via the pilot trade seams) + inspect.
 func _comp_buy_price(comp: ComponentDef) -> int:
-	return int(comp.value() * BUY_MULT)
+	return ItemVisuals.buy_price(comp)
 
 
 func _comp_sell_price(comp: ComponentDef) -> int:
-	return int(round(comp.value() * Pilot.sell_mult()))
+	return ItemVisuals.sell_price(comp)
 
 
 func _on_armory_tile_selected(comp: ComponentDef) -> void:
@@ -2862,14 +2800,10 @@ func _note_market(anchor: String) -> void:
 
 func _on_buy_commodity(key: String) -> void:
 	_flash_msg = ""
-	var price := _buy_price(key)
-	if Wallet.credits < price:
-		_flash("Not enough credits (%dc)." % price)
-	elif not ship.can_carry_mass(TradeGoods.unit_mass(key)):
-		_flash("Hold full.")
+	var r := TradeGoods.buy(ship, market, key)
+	if not r.ok:
+		_flash(str(r.msg))
 	else:
-		Wallet.credits -= price
-		ship.add_commodity(key, 1)
 		# Buying where a good is MADE — station circuits outbound, colony food
 		# on the way home. Venue-tagged so each leg advances its own lesson.
 		# A step may demand a QUANTITY ("need"): a 4-crate contract isn't taught
@@ -2880,15 +2814,10 @@ func _on_buy_commodity(key: String) -> void:
 
 func _on_sell_commodity(key: String) -> void:
 	_flash_msg = ""
-	if ship.commodities.get(key, 0) <= 0:
-		_flash("No %s in hold." % TradeGoods.display_name(key))
-	elif not market.buys.has(key):
-		_flash("No buyer for %s here." % TradeGoods.display_name(key))
+	var r := TradeGoods.sell(ship, market, key)
+	if not r.ok:
+		_flash(str(r.msg))
 	else:
-		ship.remove_commodity(key, 1)
-		Wallet.credits += _sell_price(key)
-		if key.ends_with("_ore"):
-			Standing.add("miner", 1)   # ore off your hold = Doug's kind of work
 		# Selling where a good is WANTED closes a leg of the route.
 		_note_market("market_goods" if is_station else "market_goods_planet")
 	refresh()
@@ -2984,36 +2913,26 @@ func _on_accept() -> void:
 	if sel.is_empty():
 		return
 	# The list is venue-filtered; the row's metadata is the global offer index.
-	if not MissionLog.accept(int(_offers_list.get_item_metadata(sel[0]))):
-		_flash("Mission log full (max %d active)." % MissionLog.MAX_ACTIVE)
+	var r := MissionLog.take(int(_offers_list.get_item_metadata(sel[0])))
+	if not r.ok:
+		_flash(str(r.msg))
 	else:
 		Tutor.did("accepted_contract")   # they took the contract themselves
-	MissionLog.ensure_offers()
 	refresh()
 
 
 func _on_turn_in(index: int) -> void:
 	_flash_msg = ""
-	# Read the contract before turn_in consumes it, so it can feed standing.
-	var m: Dictionary = {}
-	if index >= 0 and index < MissionLog.active.size():
-		m = MissionLog.active[index]
-	if MissionLog.turn_in(index, ship):
+	# One shared completion path (payment + the giver's guild standing + the campaign
+	# hand-off, so the next quest's giver greets you right here rather than after a
+	# re-dock). The ground board calls the very same function.
+	var r := MissionLog.complete(index, ship, "station" if is_station else "planet",
+		SaveGame.tutorial_done)
+	if r.ok:
 		Tutor.did("turned_in")   # the loop closes: work -> cargo -> paid
 		Tutor.retire("turn_in")        # they did it; no need to be told how
-		# Standing follows the GIVER, not the work type. Sella's Scan Data runs
-		# are `delivery` contracts, so a type-only map (delivery->trader) fed her
-		# survey work to the Traders and left Scout standing stuck once the map's
-		# secrets were all charted. Doing a guild's work builds that guild.
-		var fac := MissionLog.faction_for(m)
-		if fac != "":
-			Standing.add(fac, 2)
-		# Turning this in may have COMPLETED a quest (MissionLog.turn_in →
-		# Quests.note_contract). Check for the next one so its giver — Voss after
-		# Ruel's board work — greets you right here, not after a redock.
-		Quests.check_new_work(is_station, SaveGame.tutorial_done)
 		Sfx.play("jingle", -8.0)
-		_flash("Contract complete. Payment received.")
+		_flash(str(r.msg))
 	refresh()
 
 
@@ -3046,6 +2965,13 @@ class TabPips extends Control:
 
 	func _draw() -> void:
 		if tabs == null or not is_instance_valid(tabs):
+			return
+		# NO STRIP, NO PIPS. The spatialized planet dock (raised over the walkable town)
+		# hides the tab strip and shows one room, so a pip drawn at a tab's corner floats
+		# in dead space pointing at a control the player cannot see or click — the same
+		# phantom-tab bug the tutor ping had (TutorPing._tab_hidden). On the ground the
+		# TOWN does the pointing: you walk to the person or the building.
+		if not tabs.tabs_visible:
 			return
 		var bar: TabBar = tabs.get_tab_bar()
 		if bar == null:
@@ -3144,260 +3070,7 @@ class ChipTile extends Button:
 		screen._load_chip(data["comp"], str(data.get("source", "hold")))
 
 
-class EquipTile extends Button:
-	var comp: ComponentDef
-	var source: String
-	var screen: DockScreen
-	var _tip_body: String
-
-	func _init(p_comp: ComponentDef, p_source: String, p_screen: DockScreen) -> void:
-		comp = p_comp
-		source = p_source
-		screen = p_screen
-		toggle_mode = true
-		custom_minimum_size = Vector2(52, 52)
-		var tex := screen._component_icon(comp)
-		if tex != null:
-			icon = tex
-			expand_icon = true
-			icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		else:
-			text = "%s%s%d" % ["◆" if not comp.affix_ids.is_empty() else "",
-				HardpointDef.SlotType.keys()[comp.slot_type()][0], comp.mark]
-			add_theme_font_size_override("font_size", 15)
-		add_theme_color_override("font_color", Grades.color(comp.grade))
-		# Quality at a glance: a grade-colored border + pips (colour ALWAYS pairs
-		# with pips for colourblind safety, per the grades convention).
-		var gc := Grades.color(comp.grade)
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(gc.r, gc.g, gc.b, 0.14)
-		sb.border_color = gc
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(4)
-		add_theme_stylebox_override("normal", sb)
-		var sb_hi: StyleBoxFlat = sb.duplicate()
-		sb_hi.bg_color = Color(gc.r, gc.g, gc.b, 0.30)
-		add_theme_stylebox_override("hover", sb_hi)
-		add_theme_stylebox_override("pressed", sb_hi)
-		var pips: int = Grades.INFO[comp.grade]["pips"]
-		if pips > 0:
-			var pl := Label.new()
-			pl.text = "•".repeat(pips)
-			pl.add_theme_font_size_override("font_size", 9)
-			pl.add_theme_color_override("font_color", gc)
-			pl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-			pl.add_theme_constant_override("outline_size", 3)
-			pl.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-			pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			pl.grow_vertical = Control.GROW_DIRECTION_BEGIN
-			pl.offset_bottom = -1
-			pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			add_child(pl)
-		# Stash gear rides dimmer than hold gear — location at a glance.
-		if source == "stash":
-			modulate = Color(1, 1, 1, 0.68)
-		_tip_body = DockScreen.effect_lines(comp) \
-			+ "[color=#8890a0]mass %.0f   [%s][/color]\n[color=#8890a0]drag to a slot · right-click auto-fit · shift+right-click %s[/color]" % [
-			comp.mass, source, "→ stash" if source == "hold" else "→ hold"]
-		tooltip_text = comp.display_name
-		pressed.connect(func() -> void: screen._on_tile_selected(comp, source))
-
-	func _make_custom_tooltip(_for_text: String) -> Object:
-		return DockScreen.grade_tooltip(comp, _tip_body)
-
-	func _get_drag_data(_at: Vector2) -> Variant:
-		var preview := Label.new()
-		preview.text = comp.display_name
-		preview.add_theme_color_override("font_color", Grades.color(comp.grade))
-		set_drag_preview(preview)
-		return {"comp": comp, "source": source}
-
-	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed \
-				and event.button_index == MOUSE_BUTTON_RIGHT:
-			accept_event()
-			if event.shift_pressed:
-				screen._toggle_location(comp, source)   # cargo <-> stash
-			else:
-				screen._auto_fit(comp, source)           # -> a ship slot
-
-
-## An Armory grid tile: the component's icon with its grade border + pips and a
-## price badge. Left-click inspects it (details panel); RIGHT-CLICK buys (shop)
-## or sells (your goods) — no faraway button, matching the right-click idiom.
-class ArmoryTile extends Button:
-	## Emitted after a buy/sell so a borrowing screen can refresh. The dock screen
-	## refreshes itself inside _buy_component; this is for everyone else.
-	signal traded
-
-	var comp: ComponentDef
-	var source: String        # "shop" | "hold" | "stash"
-	var path: String          # shop only — the .tres to (re)load on buy
-	var screen: DockScreen
-	var _tip_body: String
-
-	func _init(p_comp: ComponentDef, p_source: String, p_screen: DockScreen, p_path := "") -> void:
-		comp = p_comp
-		source = p_source
-		path = p_path
-		screen = p_screen
-		custom_minimum_size = Vector2(66, 66)
-		var tex := screen._component_icon(comp)
-		if tex != null:
-			icon = tex
-			expand_icon = true
-			icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		else:
-			text = "%s%d" % [HardpointDef.SlotType.keys()[comp.slot_type()][0], comp.mark]
-			add_theme_font_size_override("font_size", 16)
-			add_theme_color_override("font_color", Grades.color(comp.grade))
-		var gc := Grades.color(comp.grade)
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(gc.r, gc.g, gc.b, 0.14)
-		sb.border_color = gc
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(4)
-		add_theme_stylebox_override("normal", sb)
-		var sb_hi: StyleBoxFlat = sb.duplicate()
-		sb_hi.bg_color = Color(gc.r, gc.g, gc.b, 0.30)
-		add_theme_stylebox_override("hover", sb_hi)
-		add_theme_stylebox_override("pressed", sb_hi)
-		# MARK / SIZE badge (top-left): a boxed roman numeral so it's obvious every
-		# part — and every slot it fits — has a SIZE. Mk I–V.
-		var roman: String = ["", "I", "II", "III", "IV", "V"][clampi(comp.mark, 1, 5)]
-		var mb := Label.new()
-		mb.text = roman
-		mb.add_theme_font_size_override("font_size", 12)
-		mb.add_theme_color_override("font_color", Color(0.82, 0.9, 1.0))
-		var mbox := StyleBoxFlat.new()
-		mbox.bg_color = Color(0.07, 0.09, 0.13, 0.9)
-		mbox.set_corner_radius_all(3)
-		mbox.content_margin_left = 4
-		mbox.content_margin_right = 4
-		mbox.content_margin_top = 0
-		mbox.content_margin_bottom = 0
-		mb.add_theme_stylebox_override("normal", mbox)
-		mb.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		mb.offset_left = 2
-		mb.offset_top = 2
-		mb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(mb)
-		# GRADE pips (top-right): the colour-blind-safe rarity read. Was font 8 —
-		# far too small; bumped so it's legible at a glance.
-		var pips: int = Grades.INFO[comp.grade]["pips"]
-		if pips > 0:
-			var pl := Label.new()
-			pl.text = "•".repeat(pips)
-			pl.add_theme_font_size_override("font_size", 15)
-			pl.add_theme_color_override("font_color", gc)
-			pl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
-			pl.add_theme_constant_override("outline_size", 3)
-			pl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-			pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			pl.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-			pl.offset_right = -3
-			pl.offset_top = 0
-			pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			add_child(pl)
-		var price := screen._comp_buy_price(comp) if source == "shop" else screen._comp_sell_price(comp)
-		var pb := Label.new()
-		pb.text = "%dc" % price
-		pb.add_theme_font_size_override("font_size", 10)
-		pb.add_theme_color_override("font_color",
-			UiTheme.AMBER if source == "shop" else Color(0.42, 0.86, 0.46))
-		pb.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
-		pb.add_theme_constant_override("outline_size", 3)
-		pb.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-		pb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pb.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		pb.offset_bottom = -1
-		pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(pb)
-		if source == "stash":
-			modulate = Color(1, 1, 1, 0.7)   # your stashed gear rides dimmer
-		var verb := "buy" if source == "shop" else "sell"
-		# Lead with any special ability the part grants, so it's the first thing
-		# a hover reveals (mining laser / scan / cloak / bulwark).
-		var ability := screen._ability_line(comp)
-		var head := (ability + "\n") if ability != "" else ""
-		_tip_body = head + DockScreen.effect_lines(comp) \
-			+ "[color=#8890a0]value %dc   mass %.0f%s[/color]\n[color=#8890a0]left-click inspect · RIGHT-CLICK to %s (%dc)[/color]" % [
-			comp.value(), comp.mass, "" if source == "shop" else "   [%s]" % source, verb, price]
-		tooltip_text = comp.display_name
-		pressed.connect(func() -> void: screen._on_armory_tile_selected(comp))
-
-	func _make_custom_tooltip(_for_text: String) -> Object:
-		return DockScreen.grade_tooltip(comp, _tip_body)
-
-	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed \
-				and event.button_index == MOUSE_BUTTON_RIGHT:
-			accept_event()
-			if source == "shop":
-				screen._buy_component(path)
-			else:
-				screen._sell_component(comp, source)
-			traded.emit()
-
-
-## A stack of a mined commodity, shown as a cargo tile with a ×N badge. Drag it
-## onto the cargo/stash panel, or shift+right-click, to move the whole stack.
-class MaterialTile extends Button:
-	var key: String
-	var qty: int
-	var source: String
-	var screen: DockScreen
-
-	func _init(p_key: String, p_qty: int, p_source: String, p_screen: DockScreen) -> void:
-		key = p_key
-		qty = p_qty
-		source = p_source
-		screen = p_screen
-		custom_minimum_size = Vector2(52, 52)
-		var tex := screen._material_icon(key)
-		if tex != null:
-			icon = tex
-			expand_icon = true
-			icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		else:
-			text = screen._material_glyph(key)
-			add_theme_font_size_override("font_size", 15)
-			add_theme_color_override("font_color", screen._material_color(key))
-		if source == "stash":
-			modulate = Color(1, 1, 1, 0.68)   # stash rides dimmer than the hold
-		tooltip_text = "%s ×%d\nmaterial   mass %.0f ea   [%s]\ndrag to the other panel · shift+right-click %s" % [
-			TradeGoods.display_name(key), qty, TradeGoods.unit_mass(key), source,
-			"→ stash" if source == "hold" else "→ hold"]
-		var badge := Label.new()
-		badge.text = "×%d" % qty
-		badge.add_theme_font_size_override("font_size", 11)
-		badge.add_theme_color_override("font_color", Color(0.96, 0.96, 0.99))
-		badge.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-		badge.add_theme_constant_override("outline_size", 4)
-		badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-		badge.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		badge.offset_right = -3
-		badge.offset_bottom = -1
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(badge)
-
-	func _get_drag_data(_at: Vector2) -> Variant:
-		var preview := Label.new()
-		preview.text = "%s ×%d" % [TradeGoods.display_name(key), qty]
-		preview.add_theme_color_override("font_color", screen._material_color(key))
-		set_drag_preview(preview)
-		return {"material": key, "source": source}
-
-	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.pressed \
-				and event.button_index == MOUSE_BUTTON_RIGHT:
-			accept_event()
-			if event.shift_pressed:
-				screen._toggle_material_location(key, source)   # hold <-> stash
-
-
-## One hardpoint on the paperdoll. Click selects; accepts EquipTile drops
+## One hardpoint on the paperdoll. Click selects; accepts inventory-tile drops
 ## when the component legally fits (the cursor shows validity while hovering).
 class SlotSquare extends Button:
 	var slot_index: int
