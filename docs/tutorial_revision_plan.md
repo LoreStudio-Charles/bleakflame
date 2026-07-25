@@ -72,14 +72,25 @@ Station: all 8 tabs (tab_intro_*) + offices. Flight: chart, log, comms, salvage,
 |---|---|
 | **Ground ShopView** | `used_market` fires, but nothing teaches the RPG idiom itself (shelf = buy right-click, your hold = sell right-click). One caption when the first shop opens. |
 | **Ground BoardView** | same — postings expand, turn-in lights where valid |
-| **Character sheet [P] Inventory tab** | never mentioned anywhere |
+| ~~**Character sheet [P]**~~ | TAUGHT 2026-07-25 — the `dossier` lesson arms the first time a SKILL POINT is waiting (unpinned, in flight, where kills earn it) |
 | **StarMap levels** | `chart` teaches [M] but not RMB-zoom-out / click-in — one line of copy when first opened ON THE GROUND (where SURFACE→SYSTEM is visible) |
 | **Weapons-free state** | `targeting` implies it; nothing teaches [Q] as the deliberate toggle when you want guns hot WITHOUT a target (e.g. mining rocks chip with any gun) |
 | **The cave / hermit** | quest-driven (fine) — but ground_intro could name "places worth walking to" |
 
-### Ground verbs: reserved but unbuilt — DO NOT teach yet
-Sprint (SHIFT), kneel/cover (SPACE), grenade (R), ground auto-attack (Q), ground ability
-set (1-5). The lesson plan gets a section the moment ground combat lands.
+### Ground verbs — TAUGHT as of 2026-07-25 (ground combat landed)
+Three lessons, each armed by the SITUATION rather than by landing, because a caption
+about killing things is noise to someone who came down to sell food:
+- **`ground_fight`** — arms on `hostile_near`. RMB targets AND fires, TAB cycles, LMB
+  only looks; then [Q] by hand, the auto stand-down on a kill, and [SPACE] cover.
+- **`techniques`** — arms on `has_technique`. [1]-[5], then WHERE they come from
+  (training, prepared at [P]) — taught apart from the fight lesson on purpose, since
+  "how to shoot" and "where abilities live" are different ideas.
+- **`meditate`** — arms on a cell below half. Answers a question the player is already
+  asking.
+ALL THREE ALSO REQUIRE `tutorial_done`: that is their own precondition (a licensed
+pilot), not chaining off another lesson. Without it they armed during FLIGHT TRAINING
+and took the slot the colony onboarding needed — caught by test_ground_tutor.
+Still unbuilt, still untaught: grenade [R], sprint [SHIFT].
 
 ---
 

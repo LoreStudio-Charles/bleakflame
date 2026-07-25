@@ -112,9 +112,15 @@ const LESSONS := {
 	# lesson behind it. Unpinned + dwell cannot starve the queue, and the tab
 	# already wears a PIP whenever something is closeable, which is the durable
 	# signal; this is just the one-time explanation of it.
+	# STATION-ONLY as of 2026-07-25. It used to be venue-agnostic and anchored to
+	# "tab_missions_planet" — a tab on the planet DOCK SCREEN, which no longer opens:
+	# planetside is ground-native, and the colony's hand-in is a BUILDING you walk to
+	# (taught by ground_intro's CONTRACT BOARD step). Left as-is it told a pilot standing
+	# in the sand to open a tab that does not exist. Unpinned + dwell still, because the
+	# tab already wears a pip and this is only the one-time explanation of it.
 	"turn_in": [
-		{"anchor": "tab_missions_planet", "where": "dock", "pin": false, "dwell": 9.0,
-			"text": "That delivery can be closed out right here — the Mission board is wearing a mark. Open it and hand the cargo in for payment."},
+		{"venue": "station", "anchor": "tab_missions", "where": "dock", "pin": false, "dwell": 9.0,
+			"text": "That job can be closed out right here — the Mission Computer is wearing a mark. Open it and hand the cargo in for payment."},
 	],
 
 	# Only the STATION half lives here now — buying the food is the ground lesson's job.
@@ -244,6 +250,41 @@ const LESSONS := {
 		{"where": "ground", "target": "MARKET", "anchor": "", "text": "Check the prices at Bram's MARKET — GREEN means a local bargain."},
 		{"where": "ground", "target": "MARKET", "anchor": "", "text": "Food is GROWN here, so it's cheap — RIGHT-CLICK the shelf and buy 4 to sell back at the station."},
 		{"where": "ground", "target": "STARPORT", "anchor": "", "text": "That's the colony. Lift off from your ship on the pad — or the Starport services desk."},
+	],
+
+	# --- ON-FOOT COMBAT. The plan deliberately held these back until the verbs existed
+	# (docs/tutorial_revision_plan.md: "DO NOT teach yet"); ground combat landed
+	# 2026-07-25, so they arm now. Each waits for the moment it MATTERS — a scrit in
+	# view, a spent cell — never on landing, because a caption about killing things is
+	# noise to someone who came down to sell food.
+	"ground_fight": [
+		{"where": "ground", "anchor": "", "text": "Something's out there. RIGHT-CLICK it to target AND open fire — [TAB] cycles what's near. Left-click only ever LOOKS."},
+		{"where": "ground", "anchor": "", "text": "[Q] switches your weapon on and off by hand, and it switches off by itself when your target drops. [SPACE] kneels for cover — you take far less while you're down."},
+	],
+
+	# The character's own bus. Taught apart from the fight lesson on purpose: knowing
+	# WHERE abilities come from (training, prepared at the dossier) is a different idea
+	# from knowing how to shoot, and cramming both into one caption taught neither.
+	"techniques": [
+		{"where": "ground", "anchor": "", "text": "You know a few TECHNIQUES on foot — [1] to [5] along the bottom. Try one."},
+		{"where": "ground", "anchor": "", "text": "Techniques are training, not hardware: press [P] and open TECHNIQUES to choose which five you carry. Your ship's abilities are a separate set."},
+	],
+
+	# Armed by a SPENT CELL, which is the only moment the answer is interesting.
+	"meditate": [
+		{"where": "ground", "anchor": "", "text": "Cell's low. Press [K] to MEDITATE — it floods back fast, but you're defenceless while you're down. Never in the open with something hunting."},
+	],
+
+	# The dossier is where levels, skills, standing, cargo and now equipment live, and
+	# nothing ever mentioned it. Armed the first time the player has a REASON: a level
+	# with a skill point waiting to be spent.
+	# IN FLIGHT, unpinned. Skill points come from XP and XP comes from kills, so the
+	# cockpit is where you are standing when you earn one — and an unpinned caption needs
+	# no anchor, which is why it can't live in the "any context" bucket the validator
+	# (rightly) insists must point at something real.
+	"dossier": [
+		{"where": "flight", "anchor": "effigy", "pin": false,
+			"text": "You've earned a skill point. Press [P] for your dossier — level, skills, standing, what you're carrying, and the gear you wear on foot."},
 	],
 }
 
@@ -812,6 +853,37 @@ static func _build_preds() -> void:
 		func(c): return int(c.get("cargo_food", 0)) >= 4,
 		func(c): return c.get("launched", false),
 	]
+
+	# ON-FOOT COMBAT. Armed by the SITUATION, never by landing: a hostile you can
+	# actually see. `hostile_near` is published by the town each frame.
+	# NOTE every ground-combat lesson also requires `tutorial_done`. That is its OWN
+	# precondition (you are a licensed pilot), NOT chaining off another lesson finishing —
+	# the forbidden pattern. Without it they armed during FLIGHT TRAINING and took the
+	# slot the colony onboarding needed, which is exactly the starvation shape the
+	# declarative engine exists to prevent.
+	_arm_pred["ground_fight"] = func(c): return c.get("on_ground", false) \
+		and c.get("tutorial_done", false) and c.get("hostile_near", false)
+	_done_pred["ground_fight"] = [
+		func(c): return c.get("ground_engaged", false),
+		func(c): return c.get("ground_weapons_toggled", false) or c.get("ground_kneeled", false),
+	]
+	# Techniques: you must actually KNOW one, or the lesson points at an empty bar.
+	_arm_pred["techniques"] = func(c): return c.get("on_ground", false) \
+		and c.get("tutorial_done", false) and c.get("has_technique", false)
+	_done_pred["techniques"] = [
+		func(c): return c.get("used_technique", false),
+		func(c): return c.get("dossier_opened", false),
+	]
+	# Meditate answers a question the player is ALREADY asking — "why won't this fire?"
+	# — so it waits for a cell spent below half with a technique prepared.
+	_arm_pred["meditate"] = func(c): return c.get("on_ground", false) \
+		and c.get("tutorial_done", false) and c.get("has_technique", false) \
+		and float(c.get("energy_frac", 1.0)) < 0.5
+	_done_pred["meditate"] = [func(c): return c.get("meditated", false)]
+	# The dossier, the first time there is something to DO in it. Not venue-gated: [P]
+	# opens anywhere, and the moment you earn a point is the moment to say so.
+	_arm_pred["dossier"] = func(c): return int(c.get("skill_points", 0)) > 0
+	_done_pred["dossier"] = [func(c): return c.get("dossier_opened", false)]
 
 
 ## The stall log as plain data for the save. NOT cleared by reset(): a fresh

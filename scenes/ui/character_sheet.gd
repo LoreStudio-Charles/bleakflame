@@ -214,6 +214,7 @@ func toggle() -> void:
 func open() -> void:
 	_say("")
 	_refresh()
+	Tutor.did("dossier_opened")   # retires the "you've earned a skill point" nudge
 	visible = true
 	add_to_group("esc_capture")   # so the pause menu defers Esc to us
 	_freeze_town(true)

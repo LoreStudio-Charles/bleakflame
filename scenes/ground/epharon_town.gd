@@ -585,6 +585,7 @@ func _poll_combat() -> void:
 		var hit := _hostile_at(_world.get_global_mouse_position())
 		if hit != null:
 			_player.engage(hit)   # picking a fight and starting it are one gesture
+			Tutor.did("ground_engaged")
 	_rmb_was = rmb
 	var q := Input.is_key_pressed(Keys.WEAPONS_FREE)
 	if q and not _q_was:
@@ -594,6 +595,7 @@ func _poll_combat() -> void:
 		if not _player.auto_attack:
 			_player.set_pose("kneeling" if _kneeling else "")
 		_flash("WEAPONS FREE" if _player.auto_attack else "WEAPONS TIGHT", 1.0)
+		Tutor.did("ground_weapons_toggled")
 	_q_was = q
 	var tabk := Input.is_key_pressed(Keys.CYCLE_FOE)
 	if tabk and not _tab_was:
@@ -603,6 +605,7 @@ func _poll_combat() -> void:
 	if kneel and not _kneel_was:
 		_kneeling = not _kneeling
 		_player.set_pose("kneeling" if _kneeling else "")
+		Tutor.did("ground_kneeled")
 	_kneel_was = kneel
 	# [K] MEDITATE — the Going-Dark mirror on foot: power down into the cell, refill fast,
 	# defenseless while you're down. Kneeling is the pose either way, so leaving meditation
@@ -614,6 +617,7 @@ func _poll_combat() -> void:
 			_player.set_pose("kneeling")
 		_flash("MEDITATING — systems down, cell charging" if _player.meditating
 			else "Up. Systems live.", 1.6)
+		Tutor.did("meditated")
 	_med_was = med
 	# [1]-[5] TECHNIQUES — the character's own bus (Pilot.techniques), distinct from the
 	# ship's gems by design: hardware vs training.
@@ -664,6 +668,7 @@ func _use_technique(i: int) -> void:
 		_tech_fail("%s — NOT ENOUGH ENERGY" % str(d.name).to_upper())
 		return
 	_tech_cd[tid] = float(d.get("cooldown", 0.0))
+	Tutor.did("used_technique")   # fired AFTER every refusal, so only a real cast counts
 	# ---- the dispatch (one arm per Techniques.LIST entry; effects live on the character) ----
 	match tid:
 		"field_patch":
@@ -744,6 +749,14 @@ func _tick_tutor() -> void:
 		"on_ground": true,
 		"tutorial_done": SaveGame.tutorial_done,
 		"cargo_food": int(ship.commodities.get("food", 0)) if ship != null else 0,
+		# ON-FOOT COMBAT context. Each lesson arms on the SITUATION, so the snapshot has
+		# to carry it: something visible to fight, a technique actually known, and how
+		# much cell is left. Every key is read with a default on the other side, so a
+		# missing one is falsy rather than a crash (the engine's can't-jam rule).
+		"hostile_near": _nearest_hostile() != null,
+		"has_technique": Pilot.technique_at(0) != "" or Pilot.first_empty_technique() != 0,
+		"energy_frac": (_player.energy / _player.max_energy) if _player.max_energy > 0.0 else 1.0,
+		"skill_points": Pilot.skill_points_available(),
 	})
 	# One caption for the ONE dirtside objective (onboarding step / a held quest talk / a dock
 	# tutorial redirected to its building) — and the chevron in _draw_town points at the same spot.

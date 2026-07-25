@@ -72,6 +72,40 @@ func _ready() -> void:
 		await get_tree().process_frame
 	_chk(Tutor.seen.has("ground_intro"), "launching completed the colony visit")
 
+	# ---- ON-FOOT COMBAT LESSONS (2026-07-25) ----
+	# Each arms on a SITUATION, and every one of them must ALSO require tutorial_done —
+	# without that they armed during flight training and took the slot the colony
+	# onboarding needed (caught by this suite when they were first written).
+	var trained := {"on_ground": true, "tutorial_done": true}
+	var untrained := {"on_ground": true, "tutorial_done": false}
+	_chk(not Tutor._arm_pred["ground_fight"].call(untrained.merged({"hostile_near": true})),
+		"a scrit in view teaches NOTHING to a pilot still in flight training")
+	_chk(Tutor._arm_pred["ground_fight"].call(trained.merged({"hostile_near": true})),
+		"...and DOES once licensed")
+	_chk(not Tutor._arm_pred["ground_fight"].call(trained),
+		"the fight lesson never arms with nothing to fight")
+	_chk(not Tutor._arm_pred["techniques"].call(trained),
+		"the technique lesson never arms with an empty bus")
+	_chk(Tutor._arm_pred["techniques"].call(trained.merged({"has_technique": true})),
+		"...and arms once something is prepared")
+	# Meditate answers "why won't this fire?" — it waits for a SPENT cell.
+	_chk(not Tutor._arm_pred["meditate"].call(trained.merged({"has_technique": true})),
+		"meditate holds while the cell is full")
+	_chk(Tutor._arm_pred["meditate"].call(
+			trained.merged({"has_technique": true, "energy_frac": 0.2})),
+		"...and arms on a spent cell")
+	# The dossier waits until there is something to DO in it.
+	_chk(not Tutor._arm_pred["dossier"].call({"skill_points": 0}),
+		"the dossier nudge holds until a point is earned")
+	_chk(Tutor._arm_pred["dossier"].call({"skill_points": 1}),
+		"...and arms the moment one is")
+	# EVERY key these read must be safe when absent — the engine's can't-jam rule.
+	for lid in ["ground_fight", "techniques", "meditate", "dossier"]:
+		Tutor._arm_pred[lid].call({})
+		for d in Tutor._done_pred.get(lid, []):
+			d.call({})
+	_chk(true, "every new predicate survives an EMPTY context (no key, no crash)")
+
 	print("test_ground_tutor: ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails > 0 else 0)
 
