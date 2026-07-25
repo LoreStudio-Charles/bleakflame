@@ -29,7 +29,7 @@ const LESSONS := {
 		{"id": "tut_thrust", "anchor": "effigy", "pin": false, "where": "flight", "text": "Fore and aft thrust: burn forward with [W], feel the weak reverse with [S]. Engines point back, so reverse is soft on every hull."},
 		{"id": "tut_rotate", "anchor": "effigy", "pin": false, "where": "flight", "text": "Vector the nose with [A] and [D]. Your velocity holds its heading until you burn against it."},
 		{"id": "tut_boostbrake", "anchor": "effigy", "pin": false, "where": "flight", "text": "Hold [SHIFT] to boost. Hold [SPACE] to brake to a full stop."},
-		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Practice drones inbound. RIGHT-CLICK one to target it — that also declares WEAPONS FREE and your guns open up. [Q] holds fire. Steer to keep them in your sights, and clear them all."},
+		{"id": "tut_drones", "anchor": "effigy", "pin": false, "where": "flight", "text": "Practice drones inbound. RIGHT-CLICK a drone: that targets it AND switches your guns ON. When your target dies the guns switch OFF — right-click the next one. [Q] toggles your guns by hand. Clear all three."},
 		{"id": "tut_dock", "anchor": "effigy", "pin": false, "text": "Well flown. Now bring her home and dock: line up ALONG the lane, ease the throttle, green is clean. Crawl her in when you're unsure."},
 	],
 	# WHERE YOUR VITALS LIVE — the first thing a new pilot needs to be able to
@@ -93,15 +93,9 @@ const LESSONS := {
 		{"venue": "station", "anchor": "tab_market", "where": "dock", "tab": "Market", "text": "The contract doesn't supply the cargo — you do. Open the MARKET."},
 		{"venue": "station", "anchor": "market_goods", "where": "dock", "good": "circuits", "need": 4,
 			"text": "Circuits are MADE here, so they're cheap. Buy the 4 you owe — and a few spare to sell down there."},
-		# (Launch is NOT taught here — see the "launch" lesson, which fires at the
-		# very first countdown. By the time a pilot is running freight they have
-		# launched a dozen times, and explaining it then reads as the game not
-		# paying attention.)
-		# Landed. Without this step the turn-in ping lives INSIDE the missions
-		# tab, so a pilot who never opens it sees nothing and flies home still
-		# carrying the freight.
-		{"venue": "planet", "anchor": "tab_missions_planet", "where": "dock", "tab": "Mission", "text": "Down safe, still carrying their freight. Open the Mission Uplink."},
-		{"venue": "planet", "anchor": "contracts_held", "where": "dock", "text": "Turn the contract in here for the reward."},
+		# (Launch is NOT taught here — see the "launch" lesson. The PLANETSIDE half of
+		# the run — turning in, buying the return load — is the GROUND lesson
+		# "ground_intro" now: the colony is a place, not a tab deck.)
 	],
 
 	# THE RETURN LEG. The trade route is RECIPROCAL — the station manufactures,
@@ -123,11 +117,9 @@ const LESSONS := {
 			"text": "That delivery can be closed out right here — the Mission board is wearing a mark. Open it and hand the cargo in for payment."},
 	],
 
+	# Only the STATION half lives here now — buying the food is the ground lesson's job.
 	"trade_return": [
-		{"venue": "planet", "anchor": "tab_market_planet", "where": "dock", "tab": "Market", "text": "Never fly home empty. Open the colony MARKET."},
-		{"venue": "planet", "anchor": "market_goods_planet", "where": "dock", "good": "food", "need": 4,
-			"text": "The colony GROWS food — down here it's cheap. Fill your hold."},
-		{"venue": "station", "anchor": "market_goods", "where": "dock", "text": "The station grows nothing and pays a premium for it. Sell here — that's the whole route, both ways."},
+		{"venue": "station", "anchor": "market_goods", "where": "dock", "text": "That food in your hold: the station grows nothing and pays a premium for it. Sell here — that's the whole route, both ways."},
 	],
 
 	# THE VERY FIRST COUNTDOWN. The old tutorial already says "press E to
@@ -152,7 +144,7 @@ const LESSONS := {
 		{"anchor": "ord_gauge", "where": "flight", "text": "You're carrying ORDNANCE. Guns fire themselves once weapons are free, but rounds are finite and cost credits at dock — press [R] to launch them when it counts."},
 	],
 	"targeting": [
-		{"anchor": "radar", "where": "flight", "text": "LEFT-CLICK anything to target it — a rock to scan, an ally to help. RIGHT-CLICK a hostile to target it AND open fire; [TAB] cycles hostiles. Most systems need a target."},
+		{"anchor": "radar", "where": "flight", "text": "LEFT-CLICK targets without shooting — a rock to scan, an ally to help. RIGHT-CLICK a hostile to target it AND switch your guns on. [TAB] cycles hostiles. Most systems need a target."},
 	],
 
 	# THE PIP ITSELF. Taught the first time one ever appears, because the whole
@@ -188,14 +180,6 @@ const LESSONS := {
 	# "someone here has business with you"; overloading it with "here is a person
 	# who exists" would teach players that a pip is story and then disappoint
 	# them. Two meanings, two visual languages.
-	"meet_sella": [
-		{"venue": "planet", "anchor": "tab_explorers", "where": "dock", "tab": "Explorer's Union", "dwell": 10.0,
-			"text": "You haven't met the colony's cartographer. Sella pays credits for scan data — and posts survey work the lab can't match."},
-	],
-	# The FIRST hand-off after flight training: point the new pilot at Ruel, who holds
-	# the first job (dirtside_run). Persists until they talk to him (done pred) and is
-	# PATIENT so it never times out — without it, new pilots followed the ambient Ember
-	# Row rumour nudge to Odessa instead, whose real quest is beats away (user, 2026-07-24).
 	"meet_ruel": [
 		{"venue": "station", "anchor": "panel_bay", "where": "dock", "pin": false,
 			"text": "Harbormaster Ruel has your first job — talk to him here at the Landing Bay."},
@@ -250,11 +234,16 @@ const LESSONS := {
 	# TutorPing on a Control), and `target` names the NPC or building to point at. Completion
 	# is an IN-WORLD action folded in as a did() event: reaching the NPC (they notice +
 	# approach) or [E]-ing the place. Watchdog treats "ground" steps as player-paced.
+	# THE COLONY VISIT — the user's canonical order (2026-07-25): land -> Imari ->
+	# contract board -> Sella -> market prices -> buy food -> spaceport -> launch.
+	# (The station sell that closes the route is trade_return, at the station.)
 	"ground_intro": [
-		{"where": "ground", "target": "", "anchor": "", "text": "Welcome to Epharon, pilot — the colony at the edge of the Reach. Stretch your legs: [WASD] or hold the mouse to walk."},
-		{"where": "ground", "target": "Imari", "anchor": "", "text": "Elder Imari keeps this place running, out by the Starport. Head over and see what she needs."},
-		{"where": "ground", "target": "MARKET", "anchor": "", "text": "The colony trades at the MARKET. Walk up and press [E] to see what's for sale."},
-		{"where": "ground", "target": "STARPORT", "anchor": "", "text": "That's the colony. When you're ready to fly, step to your ship on the Starport pad and press [E] to lift off."},
+		{"where": "ground", "target": "Imari", "anchor": "", "text": "Welcome to Epharon. Elder Imari keeps this place running — find her out by the Starport and see what she needs. [WASD] or hold the mouse to walk."},
+		{"where": "ground", "target": "CONTRACTS", "anchor": "", "text": "Work gets settled at the colony's CONTRACT BOARD — walk over and turn in what you're carrying."},
+		{"where": "ground", "target": "EXPLORERS GUILD", "anchor": "", "text": "Cartographer Sella maps the Reach from the Explorer's Union. Step inside and introduce yourself — she pays for the far dark."},
+		{"where": "ground", "target": "MARKET", "anchor": "", "text": "Check the prices at Bram's MARKET — GREEN means a local bargain."},
+		{"where": "ground", "target": "MARKET", "anchor": "", "text": "Food is GROWN here, so it's cheap — RIGHT-CLICK the shelf and buy 4 to sell back at the station."},
+		{"where": "ground", "target": "STARPORT", "anchor": "", "text": "That's the colony. Lift off from your ship on the pad — or the Starport services desk."},
 	],
 }
 
@@ -774,27 +763,19 @@ static func _build_preds() -> void:
 		func(c): return c.get("accepted_contract", false),
 		func(c): return str(c.get("tab", "")) == "Market",
 		func(c): return int(c.get("cargo_circuits", 0)) >= 4,
-		func(c): return str(c.get("tab", "")) == "Mission" and str(c.get("venue", "")) == "planet",
-		func(c): return c.get("turned_in", false),
 	]
 	# trade_return: the colony half of the reciprocal route.
 	# Buy-food waits until the crate is DELIVERED — otherwise it jumped ahead of turning the
 	# contract in to Imari, the actual reason you flew down (user, 2026-07-24).
-	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("turn_in_here", false)
+	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "station" and int(c.get("cargo_food", 0)) > 0
 	_done_pred["trade_return"] = [
-		func(c): return str(c.get("tab", "")) == "Market" and str(c.get("venue", "")) == "planet",
-		func(c): return int(c.get("cargo_food", 0)) >= 4,
 		func(c): return str(c.get("tab", "")) == "Market" and str(c.get("venue", "")) == "station",
 	]
 
 	# --- Dock: dwell / pip lessons (arm-only; a dwell timer retires them) ---
 	# turn_in: a contract can be closed at this venue.
 	_arm_pred["turn_in"] = func(c): return c.get("turn_in_here", false)
-	# Introductions the campaign never makes.
-	# Meeting Sella waits behind the turn-in so the colony visit leads with the actual
-	# objective (deliver the crate), not a cartographer intro (user, 2026-07-24). She's a
-	# dwell nudge, so buy-food (an actionable lesson) naturally takes the slot first.
-	_arm_pred["meet_sella"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("met_sella", false) and not c.get("turn_in_here", false)
+	# (meet_sella retired 2026-07-25: meeting her is a step of the GROUND sequence now.)
 	_arm_pred["meet_dex"] = func(c): return c.get("dirtside_done", false) and str(c.get("venue", "")) == "station" and not c.get("met_dex", false)
 	# meet_ruel: landed post-tutorial with Ruel holding the first job; done when you talk to him.
 	_arm_pred["meet_ruel"] = func(c): return str(c.get("venue", "")) == "station" and c.get("dirtside_active", false) and c.get("ruel_pending", false)
@@ -824,9 +805,11 @@ static func _build_preds() -> void:
 	# nudge; each step completes on an in-world action folded in as a did() event.
 	_arm_pred["ground_intro"] = func(c): return c.get("on_ground", false) and c.get("tutorial_done", false)
 	_done_pred["ground_intro"] = [
-		func(c): return c.get("ground_moved", false),
 		func(c): return c.get("met_imari", false),
+		func(c): return c.get("turned_in", false) or c.get("used_mission_uplink", false),
+		func(c): return c.get("met_sella", false),
 		func(c): return c.get("used_market", false),
+		func(c): return int(c.get("cargo_food", 0)) >= 4,
 		func(c): return c.get("launched", false),
 	]
 

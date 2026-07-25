@@ -483,14 +483,19 @@ func _case_turn_in_is_signalled() -> void:
 	_ok(_tutor_knows("turn_in"), "and the hand-in is taught the first time")
 	MissionLog.active.clear()
 
-	# The return leg must arm on its own merits, with `trade` never completed.
+	# The return leg (SELL at the station — the buying moved to the ground lesson) must
+	# arm on its own merits: station venue + food aboard, with `trade` never completed.
 	Tutor.reset()
 	Tutor.safe = true
 	_ok(not Tutor.seen.has("trade"), "precondition: the outbound lesson never finished")
-	screen.refresh()
-	_ok(_tutor_knows("trade_return"),
-		"the colony still teaches the way home — not chained to another lesson")
 	screen.queue_free()
+	var st := _fresh_dock(true)
+	st.ship.add_commodity("food", 4)
+	st.refresh()
+	_ok(_tutor_knows("trade_return"),
+		"carrying food at the STATION teaches the sell — not chained to another lesson")
+	st.ship.remove_commodity("food", 4)
+	st.queue_free()
 
 
 ## SCENERY MUST NOT INTERRUPT WORK. Tab-intro blurbs retire on a timer; an
@@ -498,20 +503,25 @@ func _case_turn_in_is_signalled() -> void:
 ## the objective's ping disappears and the blurb self-destructs seconds later —
 ## which reads as "the tutor vanished on its own and I did nothing".
 func _case_filler_never_preempts_an_objective() -> void:
-	var screen := _fresh_dock(false)
+	# The objective here is the STATION outbound lesson (the colony's steps are a GROUND
+	# lesson now and never touch a dock tab).
+	var screen := _fresh_dock(true)
 	Tutor.safe = true
+	Quests.active["dirtside_run"] = {"stage": 0, "count": 0}
+	Quests.take_talk("ruel")
+	screen._held_talks["ruel"] = []
 	screen.refresh()
 	screen.refresh()
-	_ok(Tutor.active == "trade_return", "the colony's objective lesson is running")
+	_ok(Tutor.active == "trade", "the station's objective lesson is running")
 
-	# Open the Market the way a click does — mid-objective.
+	# Open the Armory the way a click does — mid-objective.
 	for i in screen._tabs.get_tab_count():
-		if screen._tabs.get_tab_title(i) == "Market":
+		if screen._tabs.get_tab_title(i) == "Armory":
 			screen._tabs.current_tab = i
 			break
-	_ok(Tutor.active == "trade_return",
+	_ok(Tutor.active == "trade",
 		"opening a tab mid-objective does NOT hand the slot to a tab blurb")
-	_ok(not Tutor.pending.has("tab_intro_market"),
+	_ok(not Tutor.pending.has("tab_intro_armory"),
 		"and the blurb is not even queued while real work is outstanding")
 
 	# With nothing outstanding, scenery is welcome again.
@@ -525,25 +535,25 @@ func _case_filler_never_preempts_an_objective() -> void:
 	Tutor.reset()
 	Tutor.safe = true
 	Tutor.arm("tab_intro_market")
-	Tutor.arm("trade_return")
+	Tutor.arm("trade")
 	Tutor.pump()
-	_ok(Tutor.active == "trade_return", "queued together, the objective takes the slot first")
+	_ok(Tutor.active == "trade", "queued together, the objective takes the slot first")
 
 	# ALREADY ON THE TAB. A step that completes on a tab-CHANGE must not deadlock
 	# when the lesson activates while the player is already standing there —
-	# otherwise the NEXT step (the one that says "buy 4 food") never arrives.
+	# otherwise the NEXT step (accept the contract) never arrives.
 	Tutor.reset()
 	Tutor.safe = true
 	for i in screen._tabs.get_tab_count():
-		if screen._tabs.get_tab_title(i) == "Market":
+		if screen._tabs.get_tab_title(i).begins_with("Mission"):
 			screen._tabs.current_tab = i
 			break
-	Tutor.arm("trade_return")
+	Tutor.arm("trade")
 	screen.refresh()
-	_ok(Tutor.active == "trade_return" and Tutor.step >= 1,
+	_ok(Tutor.active == "trade" and Tutor.step >= 1,
 		"a lesson that starts on the tab it points at advances to the real task")
-	_ok(str(Tutor.current().get("good", "")) == "food",
-		"...which is the BUY FOOD step, actually on screen")
+	_ok(str(Tutor.current().get("item", "")) == "Circuits",
+		"...which is the ACCEPT-CIRCUITS step, actually on screen")
 	screen.queue_free()
 
 
@@ -773,8 +783,10 @@ func _case_hulls_are_graded_gear() -> void:
 ## colony's landing pad was told to go and meet Dex at the station's lab. Arming
 ## at the right venue is not enough when lessons can wait.
 func _case_lessons_stay_at_their_own_venue() -> void:
-	var venues := {"meet_dex": "station", "meet_sella": "planet",
-		"trade": "station", "trade_return": "planet", "commission": "station"}
+	# (meet_sella retired 2026-07-25 — meeting her is a GROUND step now; trade_return
+	# moved to the STATION, its planet half became the ground lesson.)
+	var venues := {"meet_dex": "station",
+		"trade": "station", "trade_return": "station", "commission": "station"}
 	for lid in venues:
 		var want := str(venues[lid])
 		var other := "planet" if want == "station" else "station"

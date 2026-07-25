@@ -1,0 +1,78 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/PilotM/animations/Kneeling/south/frame_000.png" id="1_ybw3l"]
+[ext_resource type="Texture2D" path="res://assets/characters/PilotM/animations/Kneeling/east/frame_000.png" id="2_7oy3v"]
+[ext_resource type="Texture2D" path="res://assets/characters/PilotM/animations/Kneeling/north/frame_000.png" id="3_hn68r"]
+[ext_resource type="Texture2D" path="res://assets/characters/PilotM/animations/Kneeling/west/frame_000.png" id="4_1wx11"]
+
+[node name="WeaponAnchors" type="Node2D" unique_id=613382847]
+
+[node name="south" type="Node2D" parent="." unique_id=426276783]
+
+[node name="frame_0" type="Sprite2D" parent="south" unique_id=637921754]
+texture = ExtResource("1_ybw3l")
+centered = false
+
+[node name="one" type="Marker2D" parent="south/frame_0" unique_id=1836102281]
+position = Vector2(34, 35)
+rotation = 1.5707964
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="south/frame_0" unique_id=31990547]
+position = Vector2(34, 35)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="east" type="Node2D" parent="." unique_id=982563499]
+position = Vector2(0, 92)
+
+[node name="frame_0" type="Sprite2D" parent="east" unique_id=1526399285]
+texture = ExtResource("2_7oy3v")
+centered = false
+
+[node name="one" type="Marker2D" parent="east/frame_0" unique_id=1105047755]
+position = Vector2(51, 30)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="east/frame_0" unique_id=1974831288]
+position = Vector2(51, 30)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="north" type="Node2D" parent="." unique_id=793279183]
+position = Vector2(0, 184)
+
+[node name="frame_0" type="Sprite2D" parent="north" unique_id=1845860019]
+texture = ExtResource("3_hn68r")
+centered = false
+
+[node name="one" type="Marker2D" parent="north/frame_0" unique_id=33947082]
+position = Vector2(31, 41)
+rotation = -1.5707964
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="north/frame_0" unique_id=513693305]
+position = Vector2(31, 41)
+rotation = -0.7853982
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="west" type="Node2D" parent="." unique_id=1134321589]
+position = Vector2(0, 276)
+
+[node name="frame_0" type="Sprite2D" parent="west" unique_id=640278273]
+texture = ExtResource("4_1wx11")
+centered = false
+
+[node name="one" type="Marker2D" parent="west/frame_0" unique_id=1070064045]
+position = Vector2(18, 30)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="west/frame_0" unique_id=54170496]
+position = Vector2(18, 30)
+gizmo_extents = 6.0
+metadata/behind = false

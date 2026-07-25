@@ -102,6 +102,44 @@ reused by Imari, Tam, goblins, everyone. New animation template = one more table
 (The alternative — LPC-style full overlay sheets per item — costs a whole animated
 sheet PER WEAPON and is exactly why we're NOT drawing worn armor.)
 
+**PROVEN 2026-07-25 (pistol + rifle PoC on PilotM's walk, all 4 dirs × 4 frames).**
+Findings that are now RULES:
+1. **One-handers: naive hand-tracking just works.** Anchor to the weapon-hand pixel
+   per frame; rotate by facing (south = barrel down at the side, profile = forward,
+   north = behind the body). The pistol read correctly on the first table.
+2. **Two-handers need CARRY POSES, not hand-tracking** (the user predicted this
+   failure point; confirmed). A two-hander is constrained by BOTH hands, so it rides
+   the BODY with a small bob: south = horizontal across the waist (over), north =
+   DIAGONAL 45° back-sling (behind), profiles = fore-grip at the leading hand,
+   stock trailing. Naive tracking made it chase one arm and teleport.
+3. **Weapon art must be GENRE-SCALED (~60% of character height, ~29px on our 48px
+   cast), not realistic.** A realistic 20px rifle is smaller than the torso
+   silhouette, so any back-sling is fully hidden — oversizing is what makes it
+   readable, which is why every classic pixel RPG does it.
+4. Table shape (becomes the GD data): per grip type, `dir -> 4 anchor px` + a pose
+   `{rot, flip, behind, center}` per direction. One table per animation template
+   serves every mannequin character.
+
+### Combat STANCES (user, 2026-07-25) — poses, not shoot animations
+
+The body doesn't animate a shot; it holds a STANCE and the weapon layer does the
+firing (rotation toward target within the facing, recoil kick, muzzle flash,
+projectile). Two stances, generated as PixelLab character STATES (4 rotations each,
+EMPTY extended hands so the drawn weapon doesn't fight a baked one):
+- **Aiming** — standing two-handed brace, arms extended. Entered on engage.
+- **Kneeling** — down on one knee, braced. [SPACE], carries the accuracy/cover bonus.
+
+Mechanically each stance is just an ANIMATION GROUP in the character's bank
+(`animations/Aiming/<dir>/frame_000.png` — single-frame pose) + its own weapon-anchor
+scene (the extended hands hold the gun elsewhere than a walk does). GroundCharacter:
+`set_pose("aiming"|"kneeling"|"")` — pose overrides walk/idle; a character WITHOUT
+that group gracefully keeps walk/idle frames (the weapon still aims). PixelLab has no
+shoot/aim TEMPLATE — states are the way. Body-recoil frames are optional later polish;
+recoil reads fine on the weapon sprite alone.
+
+Enemy/melee/death DO use body animation (templates: cross-punch, falling-back-death,
+taking-punch, throw-object for the grenade).
+
 ## Abilities — profession TECHNIQUES (user: "equipped like spells in fantasy MMORPGs")
 
 - NOT chips. A character's ability book = what their PROFESSION has trained into them
@@ -154,12 +192,46 @@ Nothing else may hardcode death consequences.
 
 ## v1 build scope (in order)
 
-1. Schema: SuitDef + ground slot types on ComponentDef; derived stat block.
-2. GroundActor combat: health/barrier/mitigation, auto-attack, target/engage verbs.
-3. DustGoblin AI (pack skulk/rush/flee) + warren spawner + town sanctuary.
-4. Techniques: universal floor set + prepare-bus + [K] meditate; profession kits after.
-5. Bags [B] + drop-satchel death + Starport wake.
-6. Grenades [R] later (needs consumables); cover [SPACE] with the combat pass.
+1. Schema — **BUILT 2026-07-25**: `GroundGearDef` (extends ComponentDef; 9-slot enum,
+   worn mitigation/health/barrier + weapon damage/range/cooldown/two_handed/melee +
+   drop-in `art_key`/grip, `weapon_views()` = THE art discovery), catalog in
+   `data/ground/*.tres` (seed: `tools/generate_ground_gear.gd` — regen OVERWRITES),
+   ground affixes (keen/quickdraw/farshot/hardened/warding), `Pilot.ground_gear`
+   {slot:{base,affixes}} persisted + `ensure_ground_kit()` once on first landfall
+   (pistol/vest/pants/boots). `Pilot.equip_ground` returns `{ok,msg,out}` — `out` =
+   EVERYTHING displaced (two-hander shoves the Offhand out too, never overwrites it);
+   unequipping the Offhand LOCK is refused (drop the Main instead).
+   `GroundStats.derive` = the ONE stat source; town `apply_gear(fresh)` maps it onto
+   the walker + dresses the Main weapon (`fresh=false` keeps the health fraction — a
+   vest swap is never a free heal). Dossier [P] gained an EQUIPMENT tab (9 rows,
+   right-click unequip→hold, derived block alongside) and the Inventory tab's ONE
+   verb: right-click equips ground gear. Goblins clutch drops (22%,
+   `DustGoblin.DROP_POOL`, affix-rolled → ship hold). Tests: `tools/test_ground_gear.gd`
+   (--script; two-hand rules sabotage-verified) + drop checks in test_ground_combat.
+2. GroundActor combat: health/barrier/mitigation, auto-attack, target/engage verbs — BUILT.
+3. DustGoblin AI (pack skulk/rush/flee) + warren spawner + town sanctuary — BUILT.
+4. Techniques — **BUILT 2026-07-25**: `scripts/ground/techniques.gd` (Techniques.LIST,
+   `source` = "universal" or a profession id; `known()` = the floor + your commission's
+   syllabus; drop-in art `assets/icons/techniques/<id>.png`; `tooltip_body` returns a
+   STRING so the file stays UI-free and parses under --script). v1 set: Field Patch /
+   Kick Sand / Second Wind (universal) + Brace (guardian, the profession seam).
+   `Pilot.techniques` = the CHARACTER's own 5-slot bus, its own save key, never
+   `Pilot.gems` — `set_technique` (one technique, one key) + `autoprepare()` (mirrors
+   autowire: drop unknown, fill open, leave placed keys alone), called on landfall.
+   THE CELL: `GroundGearDef.energy`/`energy_recharge` + `GroundStats.BASE_ENERGY 60` /
+   `BASE_RECHARGE 1.4` so the floor set works in rags; `spend_energy` refuses without
+   spending (the ship's invariant). EFFECTS LIVE ON GroundCharacter (`mend`,
+   `apply_stun`, `apply_haste`, `apply_brace`) so a future goblin shaman or ally uses
+   the identical call — the AI-specialist rule. Reeling and meditating root you in the
+   ONE motion path, so no controller can walk out of it. `set_meditating` = [K], the
+   Going-Dark mirror (MEDITATE_REGEN 9/s, stands you down, kneeling pose). Town owns
+   the dispatch (`_use_technique`) and every refusal is LOUD and specific, always
+   BEFORE the spend. Readout: `scenes/ground/technique_bar.gd` (bottom-centre bus +
+   cell gauge, cooldown curtain, ✕ when the cell is short) — a readout only, it never
+   decides. Prepare UI = dossier [P] → TECHNIQUES tab (select-slot-then-pick, the ship
+   bus's gesture). Test: `tools/test_techniques.tscn` (37 checks).
+5. Bags [B] + drop-satchel death + Starport wake (v1 seam BUILT as GroundDeath.apply).
+6. Grenades [R] later (needs consumables); cover [SPACE] — BUILT (kneel mitigation).
 
 ## Open questions (parked)
 

@@ -34,6 +34,12 @@ const POOL := {
 	"efficient": {"prefix": "Efficient", "line": "-25% load", "drawback": false},
 	# --- drawbacks (Flotsam's curse) ---
 	"ballast": {"prefix": "Ballast-Fouled", "line": "+45% mass", "drawback": true},
+	# --- GROUND gear (GroundGearDef: personal weapons + worn kit) ---
+	"keen": {"prefix": "Keen", "line": "+18% damage", "drawback": false},
+	"quickdraw": {"prefix": "Quickdraw", "line": "-12% cooldown", "drawback": false},
+	"farshot": {"prefix": "Farshot", "line": "+20% reach", "drawback": false},
+	"hardened": {"prefix": "Hardened", "line": "+25% mitigation", "drawback": false},
+	"warding": {"prefix": "Warding", "line": "+12 barrier", "drawback": false},
 	"hungry": {"prefix": "Power-Hungry", "line": "+40% load", "drawback": true},
 }
 
@@ -50,6 +56,16 @@ static func text(id: String) -> String:
 
 ## Positive affixes this component could roll.
 static func eligible(comp: ComponentDef) -> Array[String]:
+	# Ground gear rolls its OWN pool (its stats live on different properties).
+	if comp is GroundGearDef:
+		var g: Array[String] = ["featherlight"]
+		if (comp as GroundGearDef).is_weapon():
+			g.append_array(["keen", "quickdraw", "farshot"])
+		if comp.mitigation > 0.0:
+			g.append("hardened")
+		if comp.barrier > 0.0 or (comp as GroundGearDef).ground_slot == GroundGearDef.Slot.WAIST:
+			g.append("warding")
+		return g
 	var out: Array[String] = ["featherlight"]
 	if comp.power_draw > 0.0:
 		out.append("efficient")
@@ -155,6 +171,16 @@ static func _mutate(comp: ComponentDef, id: String) -> void:
 			comp.traverse_override = comp.traverse_speed() * 1.6
 		"deeprack":
 			comp.magazine = int(comp.magazine * 1.5)
+		"keen":
+			comp.damage *= 1.18
+		"quickdraw":
+			comp.cooldown *= 0.88
+		"farshot":
+			comp.attack_range *= 1.2
+		"hardened":
+			comp.mitigation *= 1.25
+		"warding":
+			comp.barrier += 12.0
 		"overtuned":
 			comp.thrust *= 1.15
 		"surging":

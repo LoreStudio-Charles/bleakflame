@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_gadla"]
+
+[resource]
+script = ExtResource("1_gadla")
+ground_slot = 2
+mitigation = 0.02
+display_name = "Dune Boots"
+description = "Sand-proof, mostly. Nothing on this rock is sand-proof."
+grade = 0
+affix_ids = PackedStringArray()

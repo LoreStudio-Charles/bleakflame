@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_kk725"]
+
+[resource]
+script = ExtResource("1_kk725")
+ground_slot = 7
+mitigation = 0.06
+display_name = "Scrap Buckler"
+description = "A hatch cover with a handle. It has already survived worse than you will."
+grade = 1
+mass = 1.6
+affix_ids = PackedStringArray()

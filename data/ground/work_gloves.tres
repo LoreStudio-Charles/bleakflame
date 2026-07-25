@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_vv1ee"]
+
+[resource]
+script = ExtResource("1_vv1ee")
+ground_slot = 4
+mitigation = 0.02
+display_name = "Work Gloves"
+description = "Palm-worn smooth at the pump handles. Tam swears by them."
+grade = 1
+mass = 0.4
+affix_ids = PackedStringArray()

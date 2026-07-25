@@ -551,3 +551,108 @@ the Cinder Reach Campaign ("The Legend") — the commission LEADER is a later re
 - **Capture, not kill:** subdue to low hull, then tag for the (higher) live
   bounty — hooks the existing bounty board (MissionLog) and the Ooshu mask-breach.
 - **Coop:** locks + reveals the mark ("it can't run — converge"), control not buff.
+
+---
+
+## Banked — the 8th commission: THE MARINE (NOT built, captured 2026-07-25)
+
+Captured at the user's request as a SEED, deliberately undesigned. **Nothing is to be
+built until the tutorial line through Epharon and The Gate is finished and verified
+again** (that is the standing order). When work resumes on the Cinder Reach Campaign,
+the open question to answer first is **where the Marine and the [Bounty Hunter](#banked--the-7th-commission-the-bounty-hunter-not-built)
+enter the story** — both are banked commissions waiting for a place in "The Legend."
+
+### What the user set (canon; do not drift)
+- **A HEAVY ARMOR WARRIOR.** The armored front-line identity none of the six cover.
+- **Housed at ORIVEL or its ORBITAL OUTPOST** — the Galean capital, not the fringe
+  station. Which of the two is open; the outpost's drydock ring is the more
+  military-feeling room, the planet the more institutional one.
+- **Roles: DEFENSE / DAMAGE** (user, 2026-07-25) — deliberately the same pair Guardian
+  holds. **The pair is not the identity; the PLAYSTYLE is.** In the user's words: the
+  Marine is *"warrior in your face"*, against *"the self-healing Guardian"* and *"the
+  backhanded tactics Privateer."*
+
+### THE ARMORED TRIO (this is the frame — it completes the EverQuest tank set)
+The three durable professions are separated by HOW THEY SURVIVE and how they impose
+themselves, not by which roles they tick:
+
+| | EQ | survives by | imposes by |
+|---|---|---|---|
+| **Guardian** | Paladin | **SUSTAIN** — self-mending, absorb (Bulwark) | protecting others; outlasting |
+| **Marine** | **Warrior** | **ARMOR** — flat mitigation, no healing at all | being IN YOUR FACE; unignorable |
+| **Privateer** | Shadow Knight | **ATTRITION** — drains that steal, evasion (JINX) | **backhanded tactics** — terror, decoys, DoT |
+
+So the design test for any Marine ability: *could Guardian or Privateer have it?* If
+yes, it is the wrong ability. Guardian mends and shields; Privateer tricks and drains;
+**the Marine does neither — it walks in wearing the armor and refuses to be avoided.**
+Concretely that means NO healing whatsoever (allied healing is locked to
+Science/Trader, self-healing is Guardian's claim), durability from mitigation rather
+than from a refilling pool, and a damage profile of sustained close pressure rather
+than Guardian's heavy single strike (Lance) or Privateer's slow rot (Withering Timbers).
+
+### Why it fits the world we already have
+- Orivel is the **Galean capital** and the outpost is its **drydock ring**, whose
+  bays are already SIZE-GATED to SUPER_HEAVY hulls that do not exist yet. A military
+  commission is the natural tenant of the capital's war infrastructure, and it arrives
+  alongside the fleet that fills those drydocks.
+- The **Galean Navy** already exists in-engine as a faction with its own art
+  convention (`assets/ships/galean-navy/`) and a dev spawn (`/fleet`). The Marine is
+  the player's door into it.
+- `docs/capital_defenses.md` (the capital's weapon platforms) is the same
+  neighbourhood — likely shared authoring, possibly a shared beat.
+
+### The remaining risk (now a design discipline, not an open question)
+The collision with Guardian is RESOLVED at the fantasy level (above) — but it has to
+hold at the ability level too, and that is where a tank duplicates another tank without
+anyone deciding to. The guard rails:
+- **EQ touchstone:** the **Warrior** — irreplaceable claim: **taunt / forced
+  engagement plus pure mitigation.** That claim is the seed of its signature: something
+  that makes ignoring you impossible (the ship mirror of a taunt is making a hostile
+  break its current lock and come at YOU — a real gap in the current kit, since nothing
+  in the game redirects AI aggression).
+- The Marine's second role (Damage) must NOT read as Guardian's Lance with a new name.
+- If it ends up as "Guardian with bigger numbers," it should not ship.
+- **GUARDIAN MAY HAVE TO GIVE SOMETHING UP** (user, 2026-07-25): most likely the
+  **Hyper-Conductive Lance** — traded for a self-only heal or another sustain tool, so
+  Guardian leans all the way into PROTECT-AND-OUTLAST and leaves the in-your-face
+  damage lane to the Marine. Not decided; flagged because adding the 8th commission is
+  allowed to REBALANCE the existing six rather than only add to them. The Lance is
+  built and shipping, so any such swap is a deliberate change with its own test pass.
+
+### Why this one is different from every commission so far
+The six built professions are **ship-first** identities that later grew ground
+techniques. The Marine reads as the first **GROUND-FIRST** commission — heavy armor
+is a body worn by a person, and the ground layer now has the mechanics to express it
+(mitigation that never ablates, the 9-slot paperdoll, the technique bus, cover). That
+makes it the natural proving ground for "a commission whose home arena is on foot,"
+which is a bigger structural decision than one more ability tree — and another reason
+not to start it until Epharon is settled.
+
+### Open questions (parked, answer with the user)
+- Orivel surface or the orbital outpost? Who leads it (a new NPC, or someone already
+  in the cast)?
+- Where does it enter "The Legend," and does it braid with the Quarn war — a Galean
+  military commission is politically loaded in a campaign about a hunted war-legend.
+- Does it gate on standing with the Galean Navy (a faction the player currently has
+  no standing meter with)?
+- Boarding: is it a real mechanic (enter a hostile hull on foot) or flavour? A real
+  one would be the biggest new system in the game and must be scoped deliberately.
+  - **THE HULL-DIVE (user riff, 2026-07-25 — half joke, but it solves a real problem):**
+    the Marine LAUNCHES HIMSELF at an enemy ship, wrecks it hand-to-hand, and flies
+    back to his own craft. Gloriously stupid; also the cleanest answer yet to the
+    question a ground-first commission has to face — *what does a heavy-armor warrior
+    DO in a dogfight, where everyone else's identity is a module?* He leaves the ship.
+    It is a taunt in the most literal form the game could have (you cannot ignore a man
+    standing on your hull), it reuses the ground kit rather than needing a new one, and
+    it makes the Marine the only profession that crosses the two arenas MID-FIGHT.
+    Scope discipline if it is ever built: the cheap version is a **timed away-action on
+    a targeted hull** — you are the projectile, damage resolves against the ship, you
+    return — NOT a walkable interior. Interiors are the expensive fantasy; the dive is
+    the affordable one, and it may be the better one anyway.
+  - **The whole beat, as the user described it (2026-07-25):** launch → SCREEN SHAKE +
+    grunts and punching sfx → a brief HP DRAIN on the victim → shot back to your ship.
+    Note what that list is made of: things the game already does (camera shake, drop-in
+    Sfx names, damage over time). The dive is FEEDBACK, not simulation — the fight is
+    implied by sound and shake, never rendered. That is the entire reason it is cheap,
+    and the design should stay honest about it: if anyone ever asks to SEE the fight,
+    the cost goes back up by an order of magnitude.

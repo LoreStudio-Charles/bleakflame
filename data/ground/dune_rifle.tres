@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_546a1"]
+
+[resource]
+script = ExtResource("1_546a1")
+ground_slot = 6
+damage = 16.0
+attack_range = 380.0
+two_handed = true
+art_key = "rifle"
+grip_x = 18
+grip_y = 5
+display_name = "Dune Rifle"
+description = "A long gun for open country — slower, heavier, and it reaches past the shimmer."
+grade = 1
+mass = 3.4
+affix_ids = PackedStringArray()

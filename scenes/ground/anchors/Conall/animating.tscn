@@ -1,0 +1,279 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/south/frame_000.png" id="1_4mxvv"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/south/frame_001.png" id="2_w642g"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/south/frame_002.png" id="3_o84bn"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/south/frame_003.png" id="4_7kw6r"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/east/frame_000.png" id="5_3lm02"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/east/frame_001.png" id="6_t0q7e"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/east/frame_002.png" id="7_xvwyf"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/east/frame_003.png" id="8_wdd24"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/north/frame_000.png" id="9_rmr6a"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/north/frame_001.png" id="10_hrhji"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/north/frame_002.png" id="11_s4p0h"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/north/frame_003.png" id="12_84gvk"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/west/frame_000.png" id="13_a8y76"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/west/frame_001.png" id="14_1stby"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/west/frame_002.png" id="15_ukfnk"]
+[ext_resource type="Texture2D" path="res://assets/characters/Conall/animations/animating/west/frame_003.png" id="16_wm2tj"]
+
+[node name="WeaponAnchors" type="Node2D" unique_id=1101794754]
+
+[node name="south" type="Node2D" parent="." unique_id=24797784]
+
+[node name="frame_0" type="Sprite2D" parent="south" unique_id=1626974270]
+texture = ExtResource("1_4mxvv")
+centered = false
+
+[node name="one" type="Marker2D" parent="south/frame_0" unique_id=1635209179]
+position = Vector2(27, 43)
+rotation = 1.5707964
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="south/frame_0" unique_id=1225370617]
+position = Vector2(34, 41)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_1" type="Sprite2D" parent="south" unique_id=1376005887]
+position = Vector2(92, 0)
+texture = ExtResource("2_w642g")
+centered = false
+
+[node name="one" type="Marker2D" parent="south/frame_1" unique_id=1205409169]
+position = Vector2(27, 43)
+rotation = 1.5707964
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="south/frame_1" unique_id=1023082524]
+position = Vector2(34, 40)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_2" type="Sprite2D" parent="south" unique_id=195836644]
+position = Vector2(184, 0)
+texture = ExtResource("3_o84bn")
+centered = false
+
+[node name="one" type="Marker2D" parent="south/frame_2" unique_id=258355192]
+position = Vector2(41, 42)
+rotation = 1.5707964
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="south/frame_2" unique_id=1587366172]
+position = Vector2(34, 39)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_3" type="Sprite2D" parent="south" unique_id=257624117]
+position = Vector2(276, 0)
+texture = ExtResource("4_7kw6r")
+centered = false
+
+[node name="one" type="Marker2D" parent="south/frame_3" unique_id=1382921412]
+position = Vector2(42, 43)
+rotation = 1.5707964
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="south/frame_3" unique_id=1126770388]
+position = Vector2(34, 40)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="east" type="Node2D" parent="." unique_id=247058558]
+position = Vector2(0, 92)
+
+[node name="frame_0" type="Sprite2D" parent="east" unique_id=2104491441]
+texture = ExtResource("5_3lm02")
+centered = false
+
+[node name="one" type="Marker2D" parent="east/frame_0" unique_id=119464611]
+position = Vector2(35, 46)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="east/frame_0" unique_id=1069467310]
+position = Vector2(40, 41)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_1" type="Sprite2D" parent="east" unique_id=1080527738]
+position = Vector2(92, 0)
+texture = ExtResource("6_t0q7e")
+centered = false
+
+[node name="one" type="Marker2D" parent="east/frame_1" unique_id=1141730128]
+position = Vector2(40, 46)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="east/frame_1" unique_id=597068371]
+position = Vector2(40, 40)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_2" type="Sprite2D" parent="east" unique_id=1937208978]
+position = Vector2(184, 0)
+texture = ExtResource("7_xvwyf")
+centered = false
+
+[node name="one" type="Marker2D" parent="east/frame_2" unique_id=1213900738]
+position = Vector2(33, 45)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="east/frame_2" unique_id=2046283038]
+position = Vector2(40, 41)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_3" type="Sprite2D" parent="east" unique_id=1942842381]
+position = Vector2(276, 0)
+texture = ExtResource("8_wdd24")
+centered = false
+
+[node name="one" type="Marker2D" parent="east/frame_3" unique_id=1066581744]
+position = Vector2(27, 45)
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="east/frame_3" unique_id=281824774]
+position = Vector2(40, 40)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="north" type="Node2D" parent="." unique_id=1382650344]
+position = Vector2(0, 184)
+
+[node name="frame_0" type="Sprite2D" parent="north" unique_id=1385768176]
+texture = ExtResource("9_rmr6a")
+centered = false
+
+[node name="one" type="Marker2D" parent="north/frame_0" unique_id=1102991908]
+position = Vector2(42, 42)
+rotation = -1.5707964
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="north/frame_0" unique_id=1822342510]
+position = Vector2(34, 33)
+rotation = -0.7853982
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="frame_1" type="Sprite2D" parent="north" unique_id=109810394]
+position = Vector2(92, 0)
+texture = ExtResource("10_hrhji")
+centered = false
+
+[node name="one" type="Marker2D" parent="north/frame_1" unique_id=833855113]
+position = Vector2(38, 56)
+rotation = -1.5707964
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="north/frame_1" unique_id=963145980]
+position = Vector2(34, 32)
+rotation = -0.7853982
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="frame_2" type="Sprite2D" parent="north" unique_id=1797927583]
+position = Vector2(184, 0)
+texture = ExtResource("11_s4p0h")
+centered = false
+
+[node name="one" type="Marker2D" parent="north/frame_2" unique_id=1035305291]
+position = Vector2(42, 40)
+rotation = -1.5707964
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="north/frame_2" unique_id=336300910]
+position = Vector2(34, 33)
+rotation = -0.7853982
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="frame_3" type="Sprite2D" parent="north" unique_id=1420318690]
+position = Vector2(276, 0)
+texture = ExtResource("12_84gvk")
+centered = false
+
+[node name="one" type="Marker2D" parent="north/frame_3" unique_id=2122935345]
+position = Vector2(31, 55)
+rotation = -1.5707964
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="north/frame_3" unique_id=1963741529]
+position = Vector2(34, 32)
+rotation = -0.7853982
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="west" type="Node2D" parent="." unique_id=1601661869]
+position = Vector2(0, 276)
+
+[node name="frame_0" type="Sprite2D" parent="west" unique_id=1175260753]
+texture = ExtResource("13_a8y76")
+centered = false
+
+[node name="one" type="Marker2D" parent="west/frame_0" unique_id=267458095]
+position = Vector2(33, 45)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="west/frame_0" unique_id=2086228490]
+position = Vector2(28, 41)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_1" type="Sprite2D" parent="west" unique_id=445223704]
+position = Vector2(92, 0)
+texture = ExtResource("14_1stby")
+centered = false
+
+[node name="one" type="Marker2D" parent="west/frame_1" unique_id=347204754]
+position = Vector2(40, 45)
+gizmo_extents = 6.0
+metadata/behind = true
+
+[node name="two" type="Marker2D" parent="west/frame_1" unique_id=1533180191]
+position = Vector2(28, 40)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_2" type="Sprite2D" parent="west" unique_id=898597531]
+position = Vector2(184, 0)
+texture = ExtResource("15_ukfnk")
+centered = false
+
+[node name="one" type="Marker2D" parent="west/frame_2" unique_id=495731687]
+position = Vector2(33, 44)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="west/frame_2" unique_id=1981689162]
+position = Vector2(28, 41)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="frame_3" type="Sprite2D" parent="west" unique_id=646103668]
+position = Vector2(276, 0)
+texture = ExtResource("16_wm2tj")
+centered = false
+
+[node name="one" type="Marker2D" parent="west/frame_3" unique_id=1293491404]
+position = Vector2(26, 43)
+gizmo_extents = 6.0
+metadata/behind = false
+
+[node name="two" type="Marker2D" parent="west/frame_3" unique_id=1339157468]
+position = Vector2(28, 40)
+gizmo_extents = 6.0
+metadata/behind = false

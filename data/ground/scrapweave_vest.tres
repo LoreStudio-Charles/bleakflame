@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_jnv03"]
+
+[resource]
+script = ExtResource("1_jnv03")
+mitigation = 0.08
+display_name = "Scrapweave Vest"
+description = "Cable braid and freighter lagging, stitched into something jacket-shaped."
+grade = 0
+mass = 2.0
+affix_ids = PackedStringArray()

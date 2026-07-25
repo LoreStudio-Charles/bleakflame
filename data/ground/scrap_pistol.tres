@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_2v77k"]
+
+[resource]
+script = ExtResource("1_2v77k")
+ground_slot = 6
+damage = 9.0
+attack_range = 240.0
+cooldown = 0.6
+art_key = "pistol"
+grip_x = 3
+grip_y = 5
+display_name = "Scrap Pistol"
+description = "Somebody's hull plating, reborn as a sidearm. It goes bang more often than not."
+grade = 0
+mass = 1.2
+affix_ids = PackedStringArray()

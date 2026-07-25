@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GroundGearDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/ground_gear.gd" id="1_70ct1"]
+
+[resource]
+script = ExtResource("1_70ct1")
+ground_slot = 6
+damage = 7.0
+attack_range = 42.0
+cooldown = 0.45
+melee = true
+display_name = "Scrap Shiv"
+description = "A goblin's answer to every question. Now it's yours."
+grade = 0
+mass = 0.6
+affix_ids = PackedStringArray()

@@ -93,6 +93,14 @@ static var met: Array[String] = []
 
 static var gems := ["", "", "", "", ""]
 
+## ---- GROUND EQUIPMENT (docs/ground_combat.md: the 9-slot paperdoll) ----
+## slot name -> {"base": tres path, "affixes": [ids]} — the same save-safe shape ship
+## builds use; Affixes.rebuild makes the identical item every load. TWO-HAND RULE: a
+## two-handed Main writes "__2h__" into Offhand (a lock marker, not an item).
+static var ground_gear := {}
+static var _ground_cache := {}   # slot -> rebuilt GroundGearDef (instances, not saved)
+const OFFHAND_LOCK := "__2h__"
+
 
 ## Radio handle — what NPCs and comms call you. The audio-capable name.
 static func handle() -> String:
@@ -283,6 +291,155 @@ static func _perk_bonus(perk_name: String) -> float:
 		if profession != "" and Professions.perk(profession) == perk_name else 0.0
 
 
+## ---- Ground equipment ----
+
+## The rebuilt items, {slot_name: GroundGearDef} (lock markers excluded).
+static func ground_gear_items() -> Dictionary:
+	var out := {}
+	for slot in ground_gear:
+		if _ground_cache.has(slot):
+			out[slot] = _ground_cache[slot]
+			continue
+		var row: Dictionary = ground_gear[slot]
+		if str(row.get("base", "")) == OFFHAND_LOCK:
+			continue
+		var item := Affixes.rebuild(str(row.get("base", "")), row.get("affixes", []))
+		if item is GroundGearDef:
+			_ground_cache[slot] = item
+			out[slot] = item
+	return out
+
+
+static func ground_item(slot: String) -> GroundGearDef:
+	return ground_gear_items().get(slot)
+
+
+## Equip into the item's own slot. Returns {ok, msg, out} — the thin-skin idiom: `out`
+## is every item DISPLACED (0-2: the slot's previous occupant, plus the Offhand a
+## two-handed Main shoves out) so the caller puts them back in a hold; a refused equip
+## (Offhand while a two-hander owns both hands) changes nothing and says why.
+static func equip_ground(item: GroundGearDef) -> Dictionary:
+	if item == null:
+		return {"ok": false, "msg": "Nothing to equip.", "out": []}
+	var slot := item.slot_name()
+	if slot == "Offhand" and offhand_locked():
+		var main := ground_item("Main")
+		return {"ok": false, "out": [],
+			"msg": "Both hands are on the %s." % (main.display_name if main != null else "two-hander")}
+	var out: Array = []
+	var previous := ground_item(slot)
+	if previous != null:
+		out.append(previous)
+	ground_gear[slot] = {
+		"base": item.base_path if item.base_path != "" else item.resource_path,
+		"affixes": Array(item.affix_ids),
+	}
+	_ground_cache.erase(slot)
+	if slot == "Main":
+		if item.two_handed:
+			# The two-hander claims the off hand: whatever was there comes OUT (it used
+			# to be silently overwritten by the lock marker — a lost buckler).
+			var shoved := ground_item("Offhand")
+			if shoved != null:
+				out.append(shoved)
+			ground_gear["Offhand"] = {"base": OFFHAND_LOCK, "affixes": []}
+			_ground_cache.erase("Offhand")
+		elif offhand_locked():
+			ground_gear.erase("Offhand")
+	return {"ok": true, "msg": "", "out": out}
+
+
+static func unequip_ground(slot: String) -> GroundGearDef:
+	# The Offhand lock is NOT an item: "unequipping" it must not free the hand while the
+	# two-hander is still wielded. Drop the Main instead and both clear together.
+	if slot == "Offhand" and offhand_locked():
+		return null
+	var item := ground_item(slot)
+	ground_gear.erase(slot)
+	_ground_cache.erase(slot)
+	if slot == "Main" and str(ground_gear.get("Offhand", {}).get("base", "")) == OFFHAND_LOCK:
+		ground_gear.erase("Offhand")
+	return item
+
+
+static func offhand_locked() -> bool:
+	return str(ground_gear.get("Offhand", {}).get("base", "")) == OFFHAND_LOCK
+
+
+## ---- The CHARACTER's technique bus ([1]-[5] on foot) ----
+##
+## Deliberately NOT `gems`: a ship's bus holds chip-granted abilities, a character's
+## holds trained techniques (docs/ground_combat.md — hardware vs training). Same
+## 5-slot idiom, separate list, separate save key, so boarding a different hull never
+## touches what your character knows how to do.
+static var techniques: Array = ["", "", "", "", ""]
+
+
+static func _ensure_techniques() -> void:
+	while techniques.size() < Techniques.BUS_SLOTS:
+		techniques.append("")
+
+
+static func technique_at(i: int) -> String:
+	_ensure_techniques()
+	return str(techniques[i]) if i >= 0 and i < techniques.size() else ""
+
+
+## Prepare `tid` into slot `i` (""=clear). A technique lives in ONE slot: preparing it
+## elsewhere vacates the old one, so a key never fires the same thing twice.
+static func set_technique(i: int, tid: String) -> void:
+	_ensure_techniques()
+	if i < 0 or i >= techniques.size():
+		return
+	if tid != "":
+		for j in techniques.size():
+			if str(techniques[j]) == tid:
+				techniques[j] = ""
+	techniques[i] = tid
+
+
+static func first_empty_technique() -> int:
+	_ensure_techniques()
+	for i in techniques.size():
+		if str(techniques[i]) == "":
+			return i
+	return -1
+
+
+## Reconcile the bus with what the character actually KNOWS (mirrors autowire): drop
+## anything they no longer know, fill open slots with anything they know and haven't
+## prepared, and leave a deliberately-placed technique exactly where it was.
+static func autoprepare() -> void:
+	_ensure_techniques()
+	var known := Techniques.known()
+	for i in techniques.size():
+		if str(techniques[i]) != "" and not known.has(str(techniques[i])):
+			techniques[i] = ""
+	for tid in known:
+		var id := str(tid)
+		if id == "" or techniques.has(id):
+			continue
+		var slot := first_empty_technique()
+		if slot < 0:
+			break
+		techniques[slot] = id
+
+
+## The starter kit — once, on first landfall: rags and a scrap pistol, so the first
+## goblin is beatable and the paperdoll teaches itself. Never re-granted.
+static var ground_kit_granted := false
+static func ensure_ground_kit() -> void:
+	if ground_kit_granted:
+		return
+	ground_kit_granted = true
+	for path in ["res://data/ground/scrap_pistol.tres", "res://data/ground/scrapweave_vest.tres",
+			"res://data/ground/canvas_pants.tres", "res://data/ground/dune_boots.tres"]:
+		if ResourceLoader.exists(path):
+			var item = load(path)
+			if item is GroundGearDef:
+				equip_ground(item)
+
+
 ## ---- Ability gems (the [1]-[5] active bar; EverQuest-style memorize) ----
 
 static func gem_at(i: int) -> String:
@@ -380,6 +537,9 @@ static func to_dict() -> Dictionary:
 		"portrait": portrait_path, "background": background, "bio": bio,
 		"profession": profession, "skills": skills.duplicate(),
 		"gems": gems.duplicate(), "shoal_invited": shoal_invited,
+		"ground_gear": ground_gear.duplicate(true),
+		"techniques": techniques.duplicate(),
+		"ground_kit_granted": ground_kit_granted,
 		"shoal_truce_kills": shoal_truce_kills,
 		"met": met.duplicate()}
 
@@ -399,6 +559,21 @@ static func from_dict(data: Dictionary) -> void:
 	if profession != "" and Professions.def(profession).is_empty():
 		profession = ""
 	shoal_invited = bool(data.get("shoal_invited", false))
+	ground_gear = {}
+	_ground_cache.clear()
+	var gg: Dictionary = data.get("ground_gear", {})
+	for slot in gg:
+		if typeof(gg[slot]) == TYPE_DICTIONARY:
+			ground_gear[str(slot)] = {"base": str(gg[slot].get("base", "")),
+				"affixes": Array(gg[slot].get("affixes", []))}
+	ground_kit_granted = bool(data.get("ground_kit_granted", false))
+	# The character bus: keep only ids that still name a real technique (same rule the
+	# gems get). A pre-techniques save simply arrives empty and auto-prepares on landfall.
+	techniques = ["", "", "", "", ""]
+	var raw_t: Array = data.get("techniques", [])
+	for i in mini(Techniques.BUS_SLOTS, raw_t.size()):
+		var tid := str(raw_t[i])
+		techniques[i] = tid if tid == "" or not Techniques.def(tid).is_empty() else ""
 	shoal_truce_kills = int(data.get("shoal_truce_kills", 0))
 	met.clear()
 	for who in data.get("met", []):
@@ -457,5 +632,9 @@ static func reset() -> void:
 	profession = ""
 	skills = {}
 	gems = ["", "", "", "", ""]   # empty until a fit grants something
+	techniques = ["", "", "", "", ""]
+	ground_gear = {}
+	_ground_cache.clear()
+	ground_kit_granted = false
 	shoal_invited = false
 	shoal_truce_kills = 0

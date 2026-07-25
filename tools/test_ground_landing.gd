@@ -42,6 +42,24 @@ func _ready() -> void:
 				"no town spot routes to a dock panel ('%s')" % s.get("action", "")) and ok
 	ok = _chk(not pscr.visible, "the planet dock screen stays hidden while grounded") and ok
 
+	# THE LANDING APRON (2026-07-25): your actual hull is parked south of the Starport and
+	# the launch prompt lives ON it — you board the thing you can see. Guarded because the
+	# ship renders only when its hull has art, so a silent art-path change would quietly
+	# leave an empty berth, and the [E] that gets you off the planet would drift with it.
+	if town != null:
+		var pad: Vector2 = town.get("PAD_CENTER")
+		var launch_here := false
+		for s in town.get("_spots"):
+			if str(s.get("action", "")) == "launch":
+				launch_here = s.get("pos") != null and (s.get("pos") as Vector2).distance_to(pad) < 1.0
+		ok = _chk(launch_here, "the launch prompt sits on the apron, at the parked ship") and ok
+		# The starter Rooster HAS art, so a missing sprite here means the resolution broke.
+		ok = _chk(town.get("_ship_sprite") != null, "the player's hull is parked on the apron") and ok
+		var pad_size: Vector2 = town.get("PAD_SIZE")
+		var biggest: float = float(town.get("GROUND_SHIP_W")[HullDef.SizeBand.SUPER_HEAVY])
+		ok = _chk(pad_size.x > biggest and pad_size.y > biggest * 0.6,
+			"the berth has room for a SUPER_HEAVY (%s vs %.0f)" % [pad_size, biggest]) and ok
+
 	# The pilot dossier opens anywhere and both tabs populate.
 	var sheet: Variant = null
 	for c in scene.get_children():

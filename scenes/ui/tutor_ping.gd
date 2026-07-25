@@ -136,21 +136,55 @@ static func leader_points(box: Rect2, target: Rect2) -> Array:
 	return [from, to]
 
 
+## Captions WRAP at a maximum width (user: the vitals lesson ran clean off the screen).
+## A long sentence becomes a readable block, never a marquee.
+const CAPTION_MAX_W := 540.0
+const CAPTION_LINE_H := 19.0
+
+
+static func wrap_lines(text: String, f: Font, size_px: int, max_w: float) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var line := ""
+	for word in text.split(" "):
+		var probe := word if line.is_empty() else line + " " + word
+		if f.get_string_size(probe, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x > max_w \
+				and not line.is_empty():
+			lines.append(line)
+			line = word
+		else:
+			line = probe
+	if not line.is_empty():
+		lines.append(line)
+	return lines
+
+
+## The caption block: wrapped text centred on x, pulsing border. Returns its rect so the
+## pinned path can hang the leader line off it.
+func _draw_caption_box(center_x: float, top_y: float, text: String, pulse: float) -> Rect2:
+	var f := get_theme_default_font()
+	var size_px := 15
+	var lines := wrap_lines(text, f, size_px, CAPTION_MAX_W)
+	var w := 0.0
+	for l in lines:
+		w = maxf(w, f.get_string_size(l, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x)
+	w += 18.0
+	var box := Rect2(center_x - w * 0.5, top_y, w, lines.size() * CAPTION_LINE_H + 9.0)
+	draw_rect(box, Color(0.04, 0.06, 0.10, 0.97))
+	draw_rect(box, Color(GLOW, 0.55 + 0.45 * pulse), false, 2.0)
+	for i in lines.size():
+		draw_string(f, Vector2(box.position.x + 9.0, box.position.y + 16.0 + i * CAPTION_LINE_H),
+			lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(1, 0.95, 0.82))
+	return box
+
+
 ## Copy with no pointer — for steps that teach a KEY rather than a widget.
 func _draw_caption_only() -> void:
 	var text := _caption()
 	if text.is_empty():
 		return
-	var f := get_theme_default_font()
-	var size_px := 15
-	var w: float = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x + 18.0
 	var bounds: Vector2 = get_viewport_rect().size
 	var pulse: float = 0.5 + 0.5 * sin(_t * TAU / PERIOD)
-	var box := Rect2(bounds.x * 0.5 - w * 0.5, bounds.y * 0.62, w, 26.0)
-	draw_rect(box, Color(0.04, 0.06, 0.10, 0.97))
-	draw_rect(box, Color(GLOW, 0.55 + 0.45 * pulse), false, 2.0)
-	draw_string(f, Vector2(box.position.x + 9.0, box.position.y + 18.0), text,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(1, 0.95, 0.82))
+	_draw_caption_box(bounds.x * 0.5, bounds.y * 0.62, text, pulse)
 
 
 func _draw() -> void:
@@ -200,27 +234,15 @@ func _draw() -> void:
 	var text := _caption()
 	if text.is_empty():
 		return
-	var f := get_theme_default_font()
-	var size_px := 15
-	var w: float = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x + 18.0
-	var h := 26.0
-	# Bound against the VIEWPORT, not `size`: this Control's own rect is not
-	# reliably the full screen, and clamping to it flung the caption to the far
-	# left, half a screen from the tab it was pointing at.
+	# A CALLOUT near screen centre (bounded against the VIEWPORT — this Control's own
+	# rect is not reliably the full screen), WRAPPED at CAPTION_MAX_W (the vitals lesson
+	# ran clean off the side), on the opposite side of centre from the target so the
+	# leader line has real length and the copy never covers what it points at.
 	var bounds: Vector2 = get_viewport_rect().size
-	# A CALLOUT, not a tooltip (user, 2026-07-22): the copy sits near the middle
-	# of the screen where it is always legible and never clipped, and a LEADER
-	# LINE runs from it to the brackets. Chasing the target with a tooltip meant
-	# the text landed wherever the target happened to be — jammed in a corner,
-	# clamped against an edge, or half off-screen for anything near the rim.
-	# It may cover other UI on the way; a tutor drop is once-ever and the eye
-	# matters more than an unobstructed panel.
 	var mid := bounds * 0.5
-	# Sit on the opposite side of centre from the target, so the line has real
-	# length and the copy never lands on the thing it is pointing at.
 	var target_mid := r.position + r.size * 0.5
 	var box_y: float = mid.y + (bounds.y * 0.12 if target_mid.y < mid.y else -bounds.y * 0.18)
-	var box := Rect2(mid.x - w * 0.5, box_y - h * 0.5, w, h)
+	var box := _draw_caption_box(mid.x, box_y - 13.0, text, pulse)
 
 	# Leader: caption edge -> the NEAREST edge of the target, never through it.
 	var leader := leader_points(box, r)
@@ -228,8 +250,3 @@ func _draw() -> void:
 		var lead := Color(GLOW, 0.5 + 0.5 * pulse)
 		draw_line(leader[0], leader[1], lead, 2.0)
 		draw_circle(leader[1], 4.0, lead)
-
-	draw_rect(box, Color(0.04, 0.06, 0.10, 0.97))
-	draw_rect(box, Color(GLOW, 0.55 + 0.45 * pulse), false, 2.0)
-	draw_string(f, Vector2(box.position.x + 9.0, box.position.y + 18.0), text,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, Color(1, 0.95, 0.82))

@@ -1283,6 +1283,34 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			# has no business on one anyway — this is the sanctioned dev gate.
 			get_tree().change_scene_to_file("res://scenes/debug/assembly_viewer.tscn")
 			return true
+		"arm":
+			# /arm pistol|rifle|none — show a test weapon on the GROUND pilot, for tuning
+			# the hand-anchor scenes (scenes/ground/anchors/<Char>/Walking.tscn) in the
+			# editor against what the game actually draws. Ground-only.
+			if _town == null or not _ground_active:
+				_dev_feedback("/arm works on the ground — land at Epharon first")
+				return true
+			# THE REAL ITEMS, not a parallel table (2026-07-25): this used to carry its own
+			# grips + attack numbers + art discovery, which meant tuning an anchor scene
+			# against numbers the game no longer used once the gear schema landed. It now
+			# EQUIPS a catalog piece, so /arm shows exactly what play shows.
+			var kit := {"pistol": "res://data/ground/scrap_pistol.tres",
+				"rifle": "res://data/ground/dune_rifle.tres",
+				"shiv": "res://data/ground/scrap_shiv.tres"}
+			var choice := rest.strip_edges().to_lower()
+			if kit.has(choice):
+				var item: GroundGearDef = load(kit[choice])
+				Pilot.equip_ground(item)
+				_town.apply_gear(false)
+				var views := item.weapon_views()
+				_dev_feedback("Armed: %s (%s-hand, %d view(s)) — RMB a goblin to engage" % [
+					item.display_name, "two" if item.two_handed else "one", views.size()])
+			else:
+				var dropped := Pilot.unequip_ground("Main")
+				_town.apply_gear(false)
+				_dev_feedback("Disarmed (%s)" % (dropped.display_name if dropped != null else "bare hands")
+					+ " — /arm pistol|rifle|shiv")
+			return true
 		"heartbeat", "vitals":
 			if _dev_vitals != null:
 				_dev_vitals.visible = not _dev_vitals.visible

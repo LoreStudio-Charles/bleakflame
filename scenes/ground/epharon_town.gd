@@ -17,6 +17,33 @@ signal launch_requested
 
 const HEAT_LIMIT := 3300.0            # ~5 screen-widths from town center before the sun turns you back
 const CENTER := Vector2.ZERO
+
+## ---- THE LANDING APRON (user, 2026-07-25) ----
+## Your ACTUAL ship, parked south of town, rendered from the hull you're flying — so
+## boarding the Dowager changes what's sitting on the pad. The apron is deliberately
+## sized for a SUPER_HEAVY even while a starter Rooster sits on it: this is the colony's
+## only berth, and it should look like it could take the big hull that doesn't exist yet
+## rather than being resized later (user: "room enough for a super heavy").
+## Far enough south that the apron clears the Starport's base (the building spans to
+## y=1100) instead of the hull appearing to park in its doorway.
+const PAD_CENTER := Vector2(0, 1580)
+const PAD_SIZE := Vector2(1180, 800)
+## HOW BIG A PARKED HULL DRAWS, by size band, in world units of length.
+##
+## NOT derived from the flight sizes (HullDef.world_budget), and that is deliberate: in
+## space a Light is 32 units and a Super-Heavy 256 — an 8x spread that is legible at
+## flight distances but useless here, where the SMALL end has to stand beside a ~68-unit
+## person and the BIG end has to fit a berth. On foot the interesting comparison is
+## ship-to-PERSON, so these are authored for that: a starter Rooster reads as roughly
+## five people long — a real vehicle you could climb into — and the ladder above it
+## grows on a gentler curve so the largest hull still lands inside PAD_SIZE.
+const GROUND_SHIP_W := {
+	HullDef.SizeBand.LIGHT: 300.0,
+	HullDef.SizeBand.MEDIUM: 450.0,
+	HullDef.SizeBand.HEAVY: 640.0,
+	HullDef.SizeBand.SUPER_HEAVY: 900.0,
+	HullDef.SizeBand.SUPER_HEAVY_PLUS: 1040.0,
+}
 const IROOM := Vector2(12000.0, 0.0)  # interiors live far off the town grid; camera hides the gap
 const IROOM_HALF := Vector2(430.0, 330.0)   # default room half-extent (a def may override)
 
@@ -141,10 +168,20 @@ var _flash_t := 0.0
 var _flash_msg := ""
 var _e_was := false
 var _esc_was := false
+var _lmb_was := false
+var _rmb_was := false
+var _q_was := false
+var _tab_was := false
+var _kneel_was := false
+var _kneeling := false
+var _med_was := false
+var _tech_was := {}      # bus slot -> key held last frame (edge detection)
+var _tech_cd := {}       # technique id -> seconds remaining
 var _active := true   # frozen while a dock panel is open over the town (flight_test drives it)
 var _current_npc := ""   # name of the NPC under the [E] prompt (for the tutor's met-events)
 var _tutor_cap: Label    # ground-lesson caption (top-center)
 var _weather: CPUParticles2D   # the sandstorm — an OUTSIDE thing, hidden while indoors
+var _ship_sprite: Sprite2D     # your hull, parked on the apron (null when it has no art)
 
 @onready var _prompt: Label = $HUD/Prompt
 @onready var _center: Label = $HUD/Center
@@ -161,10 +198,18 @@ func _ready() -> void:
 	add_child(_world)
 	_build_buildings()
 	_scatter_props()   # rocks + dunes in the open roam (drop-in art)
+	_spawn_player_ship()   # your hull on the apron, south of the Starport
 
 	_player = _make_actor("res://assets/characters/PilotM", Color.WHITE)
 	_player.global_position = Vector2(0, 780)
+	_player.team = "player_team"
+	_player.add_to_group("player_walker")
+	Pilot.ensure_ground_kit()   # first landfall grants the rags + scrap pistol, once
+	Pilot.autoprepare()         # the bus reconciles with what this character knows
+	apply_gear(true)
+	_player.died.connect(_on_player_down)
 	_world.add_child(_player)
+	_spawn_warren()
 	var cam := Camera2D.new()
 	cam.zoom = Vector2(1.3, 1.3)
 	_player.add_child(cam)
@@ -210,7 +255,93 @@ func _ready() -> void:
 	_tutor_cap.add_theme_constant_override("outline_size", 5)
 	_tutor_cap.visible = false
 	$HUD.add_child(_tutor_cap)
+	var bar := TechniqueBar.new()
+	bar.walker = _player
+	bar.cooldowns = _tech_cd   # the LIVE dict — the bar reads, it never decides
+	$HUD.add_child(bar)
 	_rebuild_town_spots()
+
+
+## YOUR SHIP, ON THE GROUND. Renders the hull you are actually flying, parked nose-north
+## on the apron. Art resolves exactly the way build_ship.gd does — an explicit
+## `art_path` first (the faction/company convention), else the display name — so a hull
+## with no sprite yet (the Dowager) simply parks nothing and the berth still works.
+func _spawn_player_ship() -> void:
+	var b := SampleBuilds.get_build(SampleBuilds.current)
+	if b == null or b.hull == null:
+		return
+	var path: String = b.hull.art_path if b.hull.art_path != "" \
+		else "res://assets/ships/%s.png" % b.hull.display_name.to_snake_case()
+	var tex := _load_tex(path)
+	if tex == null:
+		# No sprite for this hull yet (the Dowager ships without one). The berth and its
+		# [E] launch still stand — an empty pad is honest, a placeholder would not be.
+		push_warning("Epharon apron: no ground art for hull '%s' (%s)" % [b.hull.display_name, path])
+		return
+	var width: float = float(GROUND_SHIP_W.get(b.hull.size_band, 300.0))
+	var sc: float = width / float(maxf(1.0, tex.get_width()))
+	# Hull art is authored nose +X (the flight convention). Parked, we want it facing
+	# NORTH — pointing away down the apron, the way a ship waits to lift.
+	var facing := -PI * 0.5
+	# Shadow falls DOWN-LEFT, matching every building and character in the scene (the sun
+	# sits off the upper right — check the Starport's cast shadow, not the sunlit-rim
+	# comment in _draw_building, which describes the lit EDGE and misled the first pass).
+	# A parked ship is seen from ABOVE, not standing on the sand, so this is a plain
+	# offset copy — NOT the walker's projected, skewed silhouette, which would read as a
+	# second ship lying on its side beside the first.
+	var shd := Sprite2D.new()
+	shd.texture = tex
+	shd.scale = Vector2(sc, sc)
+	shd.rotation = facing
+	shd.position = PAD_CENTER + Vector2(-30, 22)
+	shd.modulate = GroundCharacter.SHADOW_TINT
+	_world.add_child(shd)
+	_ship_sprite = Sprite2D.new()
+	_ship_sprite.texture = tex
+	_ship_sprite.scale = Vector2(sc, sc)
+	_ship_sprite.rotation = facing
+	_ship_sprite.position = PAD_CENTER
+	_world.add_child(_ship_sprite)
+	# You walk AROUND your ship, not through it. A capsule down the long axis fits a hull
+	# far better than the props' base-row rectangle, which assumes something standing up.
+	var body := StaticBody2D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	body.position = PAD_CENTER
+	var shape := CapsuleShape2D.new()
+	shape.radius = width * 0.22
+	shape.height = width * 0.86
+	var col := CollisionShape2D.new()
+	col.shape = shape
+	col.rotation = facing + PI * 0.5   # capsule is tall by default; lay it along the hull
+	body.add_child(col)
+	_world.add_child(body)
+
+
+## GEAR -> WALKER: derive the character's numbers from the worn kit (GroundStats — the
+## ONE place character stats come from) and dress the Main weapon on the sprite. Public
+## and in group "ground_town" so the dossier refreshes the live walker on equip/unequip:
+##   get_tree().call_group("ground_town", "apply_gear", false)
+## fresh=true (landfall) fills health/barrier; a mid-visit re-derive keeps the current
+## fraction so swapping a vest is never a free heal.
+func apply_gear(fresh := false) -> void:
+	var stats := GroundStats.derive(Pilot.ground_gear_items())
+	var frac := 1.0 if fresh or _player.max_health <= 0.0 else _player.health / _player.max_health
+	_player.max_health = float(stats.max_health)
+	_player.health = _player.max_health * frac
+	_player.mitigation = float(stats.mitigation)
+	_player.max_barrier = float(stats.barrier)
+	_player.barrier = float(stats.barrier) if fresh else minf(_player.barrier, _player.max_barrier)
+	_player.max_energy = float(stats.max_energy)
+	_player.energy = _player.max_energy if fresh else minf(_player.energy, _player.max_energy)
+	_player.energy_recharge = float(stats.energy_recharge)
+	_player.attack_spec = (stats.attack as Dictionary).duplicate()
+	var w: GroundGearDef = stats.weapon
+	var views := w.weapon_views() if w != null else {}
+	if views.is_empty():
+		_player.unequip_weapon()   # fists or a shiv — the swing still plays, no sprite
+	else:
+		_player.equip_weapon_views(views, w.two_handed)
 
 
 func _make_actor(dir: String, tint: Color) -> GroundCharacter:
@@ -245,7 +376,12 @@ func _process(delta: float) -> void:
 		_tick_npcs(delta)
 		_enforce_heat()
 		_tick_footdust()
-		_tick_tutor()
+		_poll_combat()
+	_tick_techniques(delta)   # cooldowns run indoors too — a room is not a time-out
+	# The tutor observes EVERYWHERE — indoors too (user bug: opening Bram's shop inside
+	# the market fired used_market, but the lesson only advanced after stepping back
+	# outside, because observe() never ran while a room was up).
+	_tick_tutor()
 	_update_focus()
 	_poll_actions()
 	if _flash_t > 0.0:
@@ -320,6 +456,209 @@ func _tick_npcs(delta: float) -> void:
 			node.move_to(home + Vector2(cos(ang), sin(ang)) * rad)
 
 
+## THE WARREN — the goblins' authored place, out past the east dunes (living-world rule:
+## enemies live somewhere, they don't spawn on you). Far enough out that a new pilot
+## meets them by CHOOSING to roam; the town's light (DustGoblin.TOWN_SANCTUARY_R) keeps
+## the streets safe regardless.
+const WARREN := Vector2(2300, 1500)
+const WARREN_PACK := 4
+
+func _spawn_warren() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 909
+	for i in WARREN_PACK:
+		var g := DustGoblin.new()
+		_world.add_child(g)
+		var a := rng.randf() * TAU
+		g.setup_goblin(WARREN + Vector2(cos(a), sin(a)) * rng.randf_range(30.0, 190.0))
+		g.died.connect(_on_goblin_down.bind(g))
+
+
+func _on_goblin_down(g: DustGoblin) -> void:
+	Wallet.xp += 6   # one spine: goblins pay the same currency as pirates (KILL_XP style)
+	_flash("Dust goblin down  ·  +6 XP", 1.6)
+	if _player.combat_target == g:
+		_player.engage(null)
+	# The body stays: it settles into the DEAD state and becomes a loot container
+	# (DustGoblin._become_corpse) — scavenge it with [E], or leave it to the sand.
+
+
+## Ground death routes through THE seam (GroundDeath.apply — the open EQ-light policy
+## lives there, nowhere else). v1: bag drops, wake at the Starport.
+func _on_player_down() -> void:
+	var ship := get_tree().get_first_node_in_group("player_ship")
+	var result := GroundDeath.apply(ship)
+	var lost: Array = result.get("dropped", [])
+	var msg := "DOWN IN THE DUST...  you wake at the Starport"
+	if not lost.is_empty():
+		msg += "  ·  your bag spilled where you fell"
+	_flash(msg, 4.0)
+	# Wake: restore and stand the pilot back on the pad. (The satchel entity is an OPEN
+	# seam — v1 the goods are simply gone from the hold; see GroundDeath.)
+	await get_tree().create_timer(2.2).timeout
+	_player.dead = false
+	_player.health = _player.max_health
+	_player.set_pose("")
+	_player.global_position = Vector2(0, 780)
+	_player.face("south")
+
+
+## ---- combat verbs (the input scheme, on foot) ----
+## LMB = SELECT (a click on a goblin targets it; holding still walks). RMB on a hostile
+## = target AND engage (the soft interact). [Q] toggles weapons-free. [TAB] cycles
+## hostiles. [SPACE] kneels — cover mitigation + the braced pose.
+func _poll_combat() -> void:
+	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	if lmb and not _lmb_was:
+		var hit := _hostile_at(_world.get_global_mouse_position())
+		if hit != null:
+			_player.combat_target = hit
+	_lmb_was = lmb
+	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	if rmb and not _rmb_was:
+		var hit := _hostile_at(_world.get_global_mouse_position())
+		if hit != null:
+			_player.engage(hit)   # picking a fight and starting it are one gesture
+	_rmb_was = rmb
+	var q := Input.is_key_pressed(Keys.WEAPONS_FREE)
+	if q and not _q_was:
+		_player.auto_attack = not _player.auto_attack
+		if _player.auto_attack and _player.combat_target == null:
+			_player.combat_target = _nearest_hostile()
+		if not _player.auto_attack:
+			_player.set_pose("kneeling" if _kneeling else "")
+		_flash("WEAPONS FREE" if _player.auto_attack else "WEAPONS TIGHT", 1.0)
+	_q_was = q
+	var tabk := Input.is_key_pressed(Keys.CYCLE_FOE)
+	if tabk and not _tab_was:
+		_player.combat_target = _nearest_hostile(_player.combat_target)
+	_tab_was = tabk
+	var kneel := Input.is_key_pressed(Keys.BRAKE)
+	if kneel and not _kneel_was:
+		_kneeling = not _kneeling
+		_player.set_pose("kneeling" if _kneeling else "")
+	_kneel_was = kneel
+	# [K] MEDITATE — the Going-Dark mirror on foot: power down into the cell, refill fast,
+	# defenseless while you're down. Kneeling is the pose either way, so leaving meditation
+	# restores whatever stance you chose.
+	var med := Input.is_key_pressed(Keys.DARK)
+	if med and not _med_was:
+		_player.set_meditating(not _player.meditating)
+		if not _player.meditating and _kneeling:
+			_player.set_pose("kneeling")
+		_flash("MEDITATING — systems down, cell charging" if _player.meditating
+			else "Up. Systems live.", 1.6)
+	_med_was = med
+	# [1]-[5] TECHNIQUES — the character's own bus (Pilot.techniques), distinct from the
+	# ship's gems by design: hardware vs training.
+	for i in Techniques.BUS_SLOTS:
+		var key := Keys.ability_key(i)
+		var down := Input.is_key_pressed(key)
+		if down and not _tech_was.get(i, false):
+			_use_technique(i)
+		_tech_was[i] = down
+
+
+## Fire the technique prepared in bus slot `i`. EVERY refusal is loud and specific (the
+## ship's _ability_fail rule, mirrored) — and, the invariant that matters: the energy
+## and the cooldown are only ever charged AFTER the last refusal, so a refused technique
+## costs nothing.
+func _use_technique(i: int) -> void:
+	var tid := Pilot.technique_at(i)
+	if tid == "":
+		_tech_fail("[%d] IS EMPTY — prepare a technique in your dossier [P]" % (i + 1))
+		return
+	var d := Techniques.def(tid)
+	if d.is_empty():
+		return
+	if _player.dead:
+		return
+	if _player.meditating:
+		_tech_fail("%s — YOU'RE MEDITATING" % str(d.name).to_upper())
+		return
+	if _player.is_stunned():
+		_tech_fail("%s — YOU'RE REELING" % str(d.name).to_upper())
+		return
+	if _tech_cd.get(tid, 0.0) > 0.0:
+		_tech_fail("%s — %.0fs LEFT" % [str(d.name).to_upper(), float(_tech_cd[tid])])
+		return
+	# Target-needing techniques check the target BEFORE the cell is touched.
+	var target := _player.combat_target
+	if tid == "sand_kick":
+		if target == null or not is_instance_valid(target) or target.dead:
+			_tech_fail("KICK SAND — NO TARGET")
+			return
+		if _player.global_position.distance_to(target.global_position) > float(d.range):
+			_tech_fail("KICK SAND — OUT OF RANGE")
+			return
+	if tid == "field_patch" and _player.health >= _player.max_health:
+		_tech_fail("FIELD PATCH — YOU'RE UNHURT")
+		return
+	if not _player.spend_energy(float(d.get("energy", 0.0))):
+		_tech_fail("%s — NOT ENOUGH ENERGY" % str(d.name).to_upper())
+		return
+	_tech_cd[tid] = float(d.get("cooldown", 0.0))
+	# ---- the dispatch (one arm per Techniques.LIST entry; effects live on the character) ----
+	match tid:
+		"field_patch":
+			var healed := _player.mend(float(d.heal))
+			_flash("FIELD PATCH — mended %d" % int(healed), 1.6)
+		"sand_kick":
+			target.apply_stun(float(d.duration))
+			_flash("KICK SAND — it reels, clawing at its eyes", 1.8)
+		"second_wind":
+			_player.apply_haste(float(d.duration))
+			_flash("SECOND WIND", 1.4)
+		"brace":
+			_player.apply_brace(float(d.duration), float(d.mitigation))
+			_flash("BRACED — set your feet", 1.6)
+	Sfx.play("pickup", -10.0)
+
+
+func _tech_fail(reason: String) -> void:
+	# The unmistakable refusal (ship rule: loud, red, distinct from the soft nav click).
+	_flash("✕ " + reason, 2.2)
+	Sfx.play("click", -6.0, 0.32)
+
+
+func _tick_techniques(delta: float) -> void:
+	for tid in _tech_cd.keys():
+		var left: float = float(_tech_cd[tid]) - delta
+		if left <= 0.0:
+			_tech_cd.erase(tid)
+		else:
+			_tech_cd[tid] = left
+
+
+func _hostile_at(point: Vector2) -> GroundCharacter:
+	var best: GroundCharacter = null
+	var best_d := 46.0
+	for n in get_tree().get_nodes_in_group("ground_hostiles"):
+		var g := n as GroundCharacter
+		if g == null or g.dead:
+			continue
+		var d := point.distance_to(g.global_position - Vector2(0, 24))
+		if d < best_d:
+			best_d = d
+			best = g
+	return best
+
+
+func _nearest_hostile(after: GroundCharacter = null) -> GroundCharacter:
+	var all: Array = []
+	for n in get_tree().get_nodes_in_group("ground_hostiles"):
+		var g := n as GroundCharacter
+		if g != null and not g.dead 				and _player.global_position.distance_to(g.global_position) < 900.0:
+			all.append(g)
+	if all.is_empty():
+		return null
+	all.sort_custom(func(a, b) -> bool:
+		return _player.global_position.distance_to(a.global_position) 			< _player.global_position.distance_to(b.global_position))
+	if after != null and all.has(after):
+		return all[(all.find(after) + 1) % all.size()]
+	return all[0]
+
+
 func _cardinal(v: Vector2) -> String:
 	if absf(v.x) > absf(v.y):
 		return "east" if v.x > 0.0 else "west"
@@ -334,7 +673,12 @@ func _tick_tutor() -> void:
 	Tutor.context = "ground"
 	Tutor.venue = "planet"
 	Tutor.safe = true
-	Tutor.observe({"on_ground": true, "tutorial_done": SaveGame.tutorial_done})
+	var ship := get_tree().get_first_node_in_group("player_ship")
+	Tutor.observe({
+		"on_ground": true,
+		"tutorial_done": SaveGame.tutorial_done,
+		"cargo_food": int(ship.commodities.get("food", 0)) if ship != null else 0,
+	})
 	# One caption for the ONE dirtside objective (onboarding step / a held quest talk / a dock
 	# tutorial redirected to its building) — and the chevron in _draw_town points at the same spot.
 	var obj := _dirtside_objective()
@@ -377,14 +721,6 @@ func _ground_target_pos(target: String) -> Vector2:
 	return Vector2.INF
 
 
-# A tabbed DOCK tutorial ("open the colony Market") mapped to the TOWN building it lives in,
-# so dirtside guidance points at a PLACE you can walk to, never a phantom tab.
-const TUTOR_BUILDING := {
-	"tab_market_planet": "MARKET", "market_goods_planet": "MARKET",
-	"tab_missions_planet": "CONTRACTS", "contracts_held": "CONTRACTS",
-	"tab_explorers": "EXPLORERS GUILD",
-}
-
 ## The ONE thing to do dirtside right now, as a TOWN place + a line of copy — never a tab.
 ## Priority: the active onboarding step, then whoever holds a quest talk for you, then a
 ## tabbed dock tutorial redirected to its building (user: "direct toward the station or NPC,
@@ -403,27 +739,11 @@ func _dirtside_objective() -> Dictionary:
 	if not Quests.talks_for("hermit").is_empty():
 		return {"pos": CAVE_MOUTH,
 			"text": "The Counter keeps to his cave on the colony's edge. Head out and hear him."}
-	return _tutor_dirtside()
-
-
-## A tabbed dock tutorial redirected to its building. Peeks the active lesson then the queue
-## (a dock lesson waits as PENDING while you're on foot — context is "ground"), skipping
-## informational dwell steps. So "Open the colony MARKET" becomes a chevron to the MARKET.
-func _tutor_dirtside() -> Dictionary:
-	var ids: Array = []
-	if Tutor.active != "":
-		ids.append(Tutor.active)
-	ids.append_array(Tutor.pending)
-	for id in ids:
-		var st: Dictionary = Tutor.step_for(str(id))
-		if st.has("dwell"):
-			continue   # an intro blurb, nothing to walk to
-		var anchor := str(st.get("anchor", ""))
-		if TUTOR_BUILDING.has(anchor):
-			var pos := _ground_target_pos(str(TUTOR_BUILDING[anchor]))
-			if not is_inf(pos.x):
-				return {"pos": pos, "text": str(st.get("text", ""))}
 	return {}
+
+
+## (The tab→building remap shim that lived here is DELETED — no dock lesson points at a
+## planet tab any more; the colony visit is a native ground lesson.)
 
 
 ## Where the on-screen guide points — the single dirtside objective's place (INF if none).
@@ -524,6 +844,15 @@ func _update_focus() -> void:
 			text = s.prompt
 			_current_action = s.action
 			_current_npc = str(s.get("npc", ""))
+	# Loot corpses are dynamic interactables — nearest one within reach wins the prompt
+	# if nothing else claimed it.
+	if _current_action == "":
+		for n in get_tree().get_nodes_in_group("ground_loot"):
+			var c := n as Node2D
+			if c != null and _player.global_position.distance_to(c.global_position) < 70.0:
+				_current_action = "loot"
+				text = "[E] Scavenge the goblin"
+				break
 	_prompt.text = text
 	_prompt.visible = text != ""
 
@@ -658,6 +987,7 @@ func map_data() -> Dictionary:
 ## the pad, clear any interior state from a prior visit. Standalone runs never call it.
 func enter_town() -> void:
 	_interior_id = ""
+	_set_cam_offset(Vector2.ZERO)
 	_hermit.visible = false
 	_farmhand.visible = false
 	_trader.visible = false
@@ -735,6 +1065,32 @@ func _do_action(action: String) -> void:
 			_flash("Colonist: \"...you're not from the patrol, are you.\" (they look away)", 2.6)
 		"sealed":
 			_flash("The door is sealed tight. No handle, no panel. Nothing.", 2.0)
+		"loot":
+			var best: DustGoblin = null
+			var best_d := 80.0
+			for n in get_tree().get_nodes_in_group("ground_loot"):
+				var c := n as DustGoblin
+				if c != null:
+					var dd := _player.global_position.distance_to(c.global_position)
+					if dd < best_d:
+						best_d = dd
+						best = c
+			if best != null:
+				var haul := best.loot()
+				if not haul.is_empty():
+					Wallet.credits += int(haul.get("credits", 0))
+					var note := "Scavenged the scavenger — %dc in trinkets." % int(haul.get("credits", 0))
+					# A gear find goes to the SHIP HOLD (the ground v1 inventory — same place
+					# a jettisoned crate would land), where the dossier can equip it from.
+					var gear: GroundGearDef = haul.get("gear")
+					if gear != null:
+						var ship := get_tree().get_first_node_in_group("player_ship")
+						if ship != null and ship.can_carry(gear):
+							ship.add_cargo(gear)
+							note += "  It was clutching: %s (in your hold)." % gear.display_name
+						else:
+							note += "  It clutched %s — but your hold is full." % gear.display_name
+					_flash(note, 2.8)
 		_:
 			# "idle:<id>" — nothing queued for this person; a spoken one-liner so saying
 			# hello is never a dead click (same rule as the dock's NPC desks).
@@ -749,13 +1105,26 @@ func _do_action(action: String) -> void:
 ## Open an NPC's shop counter over the town. The town FREEZES while it's up (same
 ## contract as a dock panel) and thaws when it closes — the ShopView owns Esc itself.
 ## The trade RULES live in TradeGoods, shared with the station dock; this only hosts.
+## BRAM'S SHELF — the colony's first ground-gear stock (SALVAGE tier, docs/ground_combat.md).
+## Clean factory pieces; the affixed versions come off goblins. Only his counter stocks
+## equipment — Imari is the Elder, not a shopkeep.
+const BRAM_GEAR: Array = [
+	"res://data/ground/dune_rifle.tres",
+	"res://data/ground/scrap_buckler.tres",
+	"res://data/ground/rag_hood.tres",
+	"res://data/ground/work_gloves.tres",
+	"res://data/ground/surveyor_belt.tres",
+]
+
+
 func _open_shop(npc: String) -> void:
 	var ship := _player_ship()
 	if ship == null:
 		return
 	Tutor.did("used_market")   # a ground shop IS the market lesson, satisfied spatially
 	set_active(false)
-	var shop := ShopView.new(npc, TradeGoods.PLANET_MARKET, ship)
+	var shop := ShopView.new(npc, TradeGoods.PLANET_MARKET, ship,
+		BRAM_GEAR if npc == "bram" else [])
 	shop.closed.connect(func() -> void: set_active(true))
 	add_child(shop)
 
@@ -781,6 +1150,9 @@ func _open_starport() -> void:
 	set_active(false)
 	var view := StarportView.new(ship)
 	view.closed.connect(func() -> void: set_active(true))
+	view.launch_requested.connect(func() -> void:
+		view.close()
+		_do_action("launch"))
 	add_child(view)
 
 
@@ -797,7 +1169,10 @@ func _player_ship() -> Node:
 
 func _rebuild_town_spots() -> void:
 	_spots = [
-		{"pos": Vector2(170, 860), "range": 150, "prompt": "[E] Board your ship and launch", "action": "launch"},
+		# The launch prompt lives ON THE APRON now, at your actual parked ship — you board
+		# the thing you can see. (The Starport counter still offers a lift-off button, so
+		# the older route in and the tutorial's "return to the spaceport" both still work.)
+		{"pos": PAD_CENTER, "range": 230, "prompt": "[E] Board your ship and launch", "action": "launch"},
 		{"pos": Vector2(0, 900), "range": 165, "prompt": "[E] Starport services", "action": "starport"},
 		{"pos": Vector2(560, 430), "range": 160, "prompt": "[E] Enter the colony market", "action": "enter:MARKET"},
 		{"pos": Vector2(-640, 480), "range": 160, "prompt": "[E] Read the colony contract board", "action": "board:"},
@@ -828,6 +1203,10 @@ func _enter_interior(id: String) -> void:
 	_player.face("north")
 	_spots = []
 	# Who's home — a room may have its own resident actor (the hermit, Tam the farmhand).
+	# Frame the ROOM: the entry stands at the south wall and rooms extend north, so an
+	# unshifted camera showed the room crammed at the top of the screen over a void
+	# (user). Bias the view up while inside; restored on exit.
+	_set_cam_offset(Vector2(0, -half.y * 0.55))
 	var actor := _interior_actor(def)
 	if actor != null:
 		actor.visible = true
@@ -864,6 +1243,12 @@ func _interior_actor(def: Dictionary) -> GroundCharacter:
 	return null
 
 
+func _set_cam_offset(ofs: Vector2) -> void:
+	for c in _player.get_children():
+		if c is Camera2D:
+			(c as Camera2D).offset = ofs
+
+
 func _exit_interior() -> void:
 	var def: Dictionary = INTERIORS.get(_interior_id, {})
 	_interior_id = ""
@@ -882,6 +1267,7 @@ func _exit_interior() -> void:
 	_player.stop()
 	_player.global_position = def.get("exit_pos", Vector2(2100, -1720))
 	_player.face("south")
+	_set_cam_offset(Vector2.ZERO)
 	_rebuild_town_spots()
 
 
@@ -1109,6 +1495,11 @@ func _prop_clear(pos: Vector2, radius: float) -> bool:
 		var half: float = maxf(b.size.x, b.size.y) * 0.75
 		if pos.distance_to(b.pos) < radius + half + PROP_GAP:
 			return false
+	# THE APRON IS SWEPT GROUND. Nothing scatters onto a working berth — the first pass
+	# dropped a stack of crates inside the painted box, which read as the pad being
+	# derelict rather than the colony's live front door.
+	if Rect2(PAD_CENTER - PAD_SIZE * 0.5, PAD_SIZE).grow(radius + PROP_GAP).has_point(pos):
+		return false
 	return true
 
 
@@ -1271,6 +1662,7 @@ func _draw() -> void:
 
 func _draw_town() -> void:
 	_draw_ground()
+	_draw_apron()   # painted onto the ground, under every sprite and shadow
 	# All cast shadows FIRST, so no body ever gets a shadow drawn over it. Buildings with
 	# real art carry their OWN painted shadow (baked into the sprite in Aseprite) — only the
 	# procedural-box fallbacks get an engine shadow.
@@ -1287,11 +1679,55 @@ func _draw_town() -> void:
 	for n in _npcs:
 		draw_string(_font, n.node.global_position + Vector2(-40, -78), n.name,
 			HORIZONTAL_ALIGNMENT_CENTER, 80, 15, Color(0.96, 0.92, 0.82, 0.85))
+	# Combat readouts: a thin hp bar over anyone recently in a fight, and an amber ring
+	# under the player's current target (LMB select / TAB cycle).
+	var fighters: Array = get_tree().get_nodes_in_group("ground_hostiles").duplicate()
+	fighters.append(_player)
+	for n in fighters:
+		var g := n as GroundCharacter
+		if g == null or not is_instance_valid(g) or g.dead:
+			continue
+		if g.health < g.max_health:
+			var top := g.global_position + Vector2(-16, -62)
+			draw_rect(Rect2(top, Vector2(32, 4)), Color(0.08, 0.06, 0.08, 0.85))
+			draw_rect(Rect2(top, Vector2(32.0 * (g.health / g.max_health), 4)),
+				Color(0.42, 0.86, 0.46) if g == _player else Color(0.9, 0.42, 0.35))
+	if _player.combat_target != null and is_instance_valid(_player.combat_target):
+		draw_arc(_player.combat_target.global_position, 20.0, 0, TAU, 22,
+			Color(0.95, 0.72, 0.35, 0.9), 2.0)
+
 	# Guide nudge: a soft chevron over the pilot pointing toward the current objective — a ground
 	# lesson's target, or whoever the quest system wants you to talk to.
 	var obj := _current_objective_pos()
 	if not is_inf(obj.x) and _player.global_position.distance_to(obj) > 150.0:
 		_draw_nudge((obj - _player.global_position).normalized())
+
+
+## THE LANDING APRON — compacted blast-scarred ground with a painted berth. Drawn with
+## the GROUND (under every sprite) so the parked hull and the walker both stand on it.
+## Sized by PAD_SIZE, which fits a SUPER_HEAVY: the empty margin around a small starter
+## ship is the point, not a mistake — it's a berth waiting for a bigger hull.
+func _draw_apron() -> void:
+	var rect := Rect2(PAD_CENTER - PAD_SIZE * 0.5, PAD_SIZE)
+	draw_rect(rect, Color(0.34, 0.29, 0.26))                       # scorched hardstand
+	draw_rect(rect.grow(-16.0), Color(0.38, 0.33, 0.29))           # inner slab
+	draw_rect(rect, Color(0.86, 0.72, 0.42, 0.55), false, 4.0)     # painted edge
+	# Hazard chevrons along the north lip — the side you walk in from.
+	var y := rect.position.y + 8.0
+	var x := rect.position.x + 24.0
+	while x < rect.end.x - 40.0:
+		draw_line(Vector2(x, y), Vector2(x + 22.0, y + 16.0), Color(0.90, 0.75, 0.40, 0.45), 5.0)
+		x += 46.0
+	# Corner brackets, the universal "set it down inside this" mark.
+	var arm := 74.0
+	for c in [[rect.position, 1.0, 1.0], [Vector2(rect.end.x, rect.position.y), -1.0, 1.0],
+			[Vector2(rect.position.x, rect.end.y), 1.0, -1.0], [rect.end, -1.0, -1.0]]:
+		var p: Vector2 = c[0] + Vector2(18.0 * float(c[1]), 18.0 * float(c[2]))
+		draw_line(p, p + Vector2(arm * float(c[1]), 0), Color(0.93, 0.80, 0.48, 0.75), 5.0)
+		draw_line(p, p + Vector2(0, arm * float(c[2])), Color(0.93, 0.80, 0.48, 0.75), 5.0)
+	# Touchdown cross at the berth's centre, where the ship actually sits.
+	draw_line(PAD_CENTER - Vector2(52, 0), PAD_CENTER + Vector2(52, 0), Color(0.88, 0.74, 0.44, 0.30), 3.0)
+	draw_line(PAD_CENTER - Vector2(0, 52), PAD_CENTER + Vector2(0, 52), Color(0.88, 0.74, 0.44, 0.30), 3.0)
 
 
 func _draw_ground() -> void:

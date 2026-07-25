@@ -26,6 +26,8 @@ const BAD := Color(0.93, 0.45, 0.42)    # a poor deal (MKT_RED)
 var npc_id: String                  # who is serving you (portrait + name)
 var market: Dictionary              # a TradeGoods market table (sells/buys)
 var ship                            # duck-typed: commodities / can_carry_mass / add_ / remove_
+var gear_stock: Array = []          # .tres paths of EQUIPMENT this counter also sells
+                                    # (clean factory stock — salvage is where affixes come from)
 
 var _rows: GridContainer      # the shelf
 var _hold: InventoryGrid      # your side of the counter
@@ -34,10 +36,11 @@ var _note: Label
 var _note_t := 0.0
 
 
-func _init(p_npc: String, p_market: Dictionary, p_ship) -> void:
+func _init(p_npc: String, p_market: Dictionary, p_ship, p_gear: Array = []) -> void:
 	npc_id = p_npc
 	market = p_market
 	ship = p_ship
+	gear_stock = p_gear
 	layer = 26   # above the town + its prompts, below the pause menu
 
 
@@ -130,6 +133,13 @@ func _ready() -> void:
 	_hold.material_price = func(key: String) -> int:
 		return TradeGoods.sell_price(market, key) if market.get("buys", {}).has(key) else -1
 	_hold.on_material = func(key: String, _s: String) -> void: _on_sell(key)
+	# EQUIPMENT sells here too (a counter that stocks gear also buys it) — how a goblin's
+	# clutched shiv turns into credits. Same price rule as the station Armory.
+	if not gear_stock.is_empty():
+		_hold.item_hint = func(c: ComponentDef) -> String:
+			return "RIGHT-CLICK to sell (%dc)" % ItemVisuals.sell_price(c)
+		_hold.item_price = func(c: ComponentDef) -> int: return ItemVisuals.sell_price(c)
+		_hold.on_item = func(c: ComponentDef, _s: String) -> void: _on_sell_gear(c)
 	cols.add_child(_hold)
 
 	_purse = Label.new()
@@ -157,6 +167,10 @@ func refresh() -> void:
 		c.queue_free()
 	# THE SHELF — only what this counter actually SELLS. (What it buys is read off your
 	# own hold, where the price badge is: you sell from your inventory, RPG-style.)
+	# Equipment first (the eye-catchers), then the produce.
+	for path in gear_stock:
+		if ResourceLoader.exists(str(path)):
+			_rows.add_child(_gear_tile(str(path)))
 	for key in market.get("sells", {}):
 		_rows.add_child(_ware_tile(str(key)))
 	if _rows.get_child_count() == 0:
@@ -186,12 +200,48 @@ func _ware_tile(key: String) -> MaterialStackTile:
 	return t
 
 
+## A piece of EQUIPMENT on the shelf — the same ItemTile the Armory and dossier use, so
+## gear reads identically wherever it appears. Shop stock is CLEAN (no affixes) by the
+## affix convention: the shop sells factory gear, salvage is where treasure comes from.
+func _gear_tile(path: String) -> ItemTile:
+	var comp: ComponentDef = load(path)
+	var t := ItemTile.new(comp, "shop", ItemTile.Style.SHOP)
+	t.price = ItemVisuals.buy_price(comp)
+	t.hint = "RIGHT-CLICK to buy (%dc) — equip it in your dossier [P]" % t.price
+	t.on_interact = func(_c: ComponentDef, _s: String) -> void: _on_buy_gear(path)
+	return t
+
+
 func _on_buy(key: String) -> void:
 	_report(TradeGoods.buy(ship, market, key))
 
 
 func _on_sell(key: String) -> void:
 	_report(TradeGoods.sell(ship, market, key))
+
+
+## Mirrors the station Armory's buy rule (credits, then hold mass, every refusal
+## visible) — load(path) hands over a FRESH resource so shop stock is never shared.
+func _on_buy_gear(path: String) -> void:
+	var comp: ComponentDef = load(path)
+	var price := ItemVisuals.buy_price(comp)
+	if Wallet.credits < price:
+		_report({"ok": false, "msg": "Not enough credits (%dc needed)." % price})
+		return
+	if not ship.can_carry(comp):
+		_report({"ok": false, "msg": "Hold can't take %s (mass %.0f)." % [comp.display_name, comp.mass]})
+		return
+	Wallet.credits -= price
+	ship.add_cargo(load(path))
+	Sfx.play("pickup", -8.0)   # the ACQUIRE cue, same as the Armory — you got something
+	_report({"ok": true, "msg": "Bought %s — %dc. Equip it in your dossier [P]." % [comp.display_name, price]})
+
+
+func _on_sell_gear(comp: ComponentDef) -> void:
+	var price := ItemVisuals.sell_price(comp)
+	ship.cargo.erase(comp)
+	Wallet.credits += price
+	_report({"ok": true, "msg": "Sold %s — %dc." % [comp.display_name, price]})
 
 
 ## Every rejection is VISIBLE (project convention) — the shared call already says why.

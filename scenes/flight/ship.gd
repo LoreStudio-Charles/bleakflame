@@ -36,7 +36,23 @@ var _hold_full_cd := 0.0
 
 var mode := ControlMode.CONNECTED
 var decoupler_fitted := false
-var target: Node2D = null
+## The selected contact. Assigning one SUBSCRIBES to its death (see _hook_death): the
+## stand-down is driven by the target ANNOUNCING it died, not by us noticing it's gone.
+##
+## WHY (2026-07-25): "gone" is ambiguous — killed, deselected, or freed by housekeeping
+## all look identical from here, and in Godot 4 a freed reference even compares equal to
+## null, exactly like a cleared one. Inferring a KILL from that ambiguity is what left the
+## guns hot after a drone died, and made real hulls a coin-flip on node order. Death is an
+## event; subscribing to it removes the guesswork instead of decorating it.
+var target: Node2D = null:
+	set(value):
+		# NO early-out on equality unless BOTH are real: a freed `target` compares equal
+		# to a null `value`, and bailing there would leave the freed reference in place.
+		if is_instance_valid(value) and is_instance_valid(target) and value == target:
+			return
+		_unhook_death(target)
+		target = value
+		_hook_death(value)
 var _target_marker: Node2D
 ## Survey scanner (System tag "scanner"): the first systems-engagement key.
 ## Select a target, press [1], the scanner channels on it. Rocks reveal ore;
@@ -515,6 +531,12 @@ func undock() -> void:
 func take_damage(amount: float, source: Node = null) -> void:
 	if docked_at != null:
 		return
+	# RETALIATION TARGETING (user, 2026-07-25): whoever hits you becomes your target —
+	# IF AND ONLY IF you had none. A fight you're already running is never re-aimed by
+	# an off-angle potshot. TARGET only, never weapons state: if your guns are free the
+	# reply starts; if tight, you've been pointed at them and the trigger stays yours.
+	if target == null and source != null and is_instance_valid(source) 			and source.is_in_group(enemy_group):
+		target = source
 	super(amount, source)
 
 
@@ -1709,6 +1731,42 @@ func _target_valid() -> bool:
 		and target.get("dead") != true
 
 
+## ---- TARGET DEATH SUBSCRIPTION ----
+## Targets are heterogeneous: hulls announce `died`, practice drones announce `destroyed`,
+## and terrain (rocks, anomalies) announces nothing at all. So we connect to whichever
+## death signal a target actually has — and silence is a legitimate answer, meaning "this
+## did not die," which is exactly why a mined-out rock never stands your guns down.
+const DEATH_SIGNALS := ["died", "destroyed"]
+
+
+func _hook_death(node: Node) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	for sig in DEATH_SIGNALS:
+		if node.has_signal(sig) and not node.is_connected(sig, _on_target_died):
+			node.connect(sig, _on_target_died, CONNECT_ONE_SHOT)
+
+
+## UNTYPED on purpose: the node being released is often the one that just died, and a
+## typed `Node` parameter REFUSES a freed object outright ("previously freed... is not a
+## subclass"), throwing before the body can check it. Same workaround projectile.gd uses.
+func _unhook_death(node) -> void:
+	# A freed node has already dropped its connections; touching it would error.
+	if node == null or not is_instance_valid(node):
+		return
+	for sig in DEATH_SIGNALS:
+		if node.has_signal(sig) and node.is_connected(sig, _on_target_died):
+			node.disconnect(sig, _on_target_died)
+
+
+## THE KILL STANDS YOU DOWN (user, 2026-07-25 — the same rule on the ground): the fight
+## you declared is over, so the guns go tight and the next fight is a deliberate RMB.
+## Only the CURRENT target is ever subscribed, so arriving here means your target died —
+## no inference, no frame-order race, nothing to tell apart from a deselect.
+func _on_target_died() -> void:
+	set_weapons_free(false)
+
+
 func _physics_process(delta: float) -> void:
 	if build == null or dead or docked_at != null:
 		if _target_marker != null:
@@ -1761,6 +1819,8 @@ func _physics_process(delta: float) -> void:
 	# A FRIENDLY selection never steers guns — it exists for future systems
 	# (repair nanites, scanners); weapons keep hunting hostiles past it.
 	# Nose-locked guns ignore all of this and hold the line you're flying.
+	# Housekeeping only: drop a selection that is no longer a thing we can point at. The
+	# STAND-DOWN is not decided here — _on_target_died does that, when the target says so.
 	if not _target_valid():
 		target = null
 	var aim_node := target if (target != null and target.is_in_group(enemy_group)) \

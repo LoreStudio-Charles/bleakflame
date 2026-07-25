@@ -93,6 +93,13 @@ static func ability_index(keycode: int) -> int:
 	return i if i >= 0 and i < ABILITY_COUNT else -1
 
 
+## The inverse — which key fires bus slot `i`. The ground POLLS its input (so it works
+## identically inside flight_test's SubViewport, where raw event routing is unreliable),
+## and a poll needs the keycode, not the index.
+static func ability_key(i: int) -> int:
+	return ABILITY_1 + i if i >= 0 and i < ABILITY_COUNT else 0
+
+
 ## Party-frame index for a target key (0 = self), or -1.
 static func party_index(keycode: int) -> int:
 	match keycode:

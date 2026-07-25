@@ -14,6 +14,7 @@ extends CanvasLayer
 ## Same contract as ShopView/BoardView: thin, self-contained, owns Esc, frees itself.
 
 signal closed
+signal launch_requested   # the Lift off button — the services desk can send you up
 
 var ship   # duck-typed TestShip: build/hull/armor/shield/stats/dock_bill
 
@@ -66,11 +67,21 @@ func _ready() -> void:
 	root.add_child(_note)
 	_note.text = _sheet()
 
+	# LAUNCH lives here too (user: landing left no way up from the services desk) —
+	# same gate as walking to your ship and pressing [E].
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	root.add_child(buttons)
+	var lift := Button.new()
+	lift.text = "Lift off — return to space"
+	UiTheme.button_flavor(lift, "primary")
+	lift.pressed.connect(func() -> void: launch_requested.emit())
+	buttons.add_child(lift)
 	var leave := Button.new()
 	leave.text = "Back to the pad   [Esc]"
 	UiTheme.button_flavor(leave, "tertiary")
 	leave.pressed.connect(close)
-	root.add_child(leave)
+	buttons.add_child(leave)
 
 
 func _sheet() -> String:

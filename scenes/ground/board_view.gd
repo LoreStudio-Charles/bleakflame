@@ -121,9 +121,13 @@ func _column(parent: Node, title: String) -> VBoxContainer:
 	col.add_child(head)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# VERTICAL ONLY (user: both sides scrolled sideways and the confirm button lived
+	# off-screen). Content wraps to the column instead of pushing it wide.
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 6)
 	scroll.add_child(box)
 	return box
 
@@ -163,28 +167,47 @@ func _empty(parent: Node, text: String) -> void:
 	parent.add_child(l)
 
 
+## A short TYPE title for the collapsed row — the full label (giver and all) lives in
+## the expanded body (user: brief title, expand for the owner + description).
+func _brief(m: Dictionary) -> String:
+	match str(m.type):
+		"bounty":
+			return "Suppression"
+		"recovery":
+			return "Recovery"
+		"delivery":
+			return "Delivery — %s" % TradeGoods.display_name(str(m.good))
+	return "Contract"
+
+
 func _offer_row(entry: Dictionary) -> void:
 	var m: Dictionary = entry["m"]          # offers_at returns {"m": mission, "index": global}
 	var idx: int = int(entry["index"])
 	var row := VBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_offers.add_child(row)
+	# COLLAPSED: a brief title that always fits the column; click to expand/collapse.
 	var b := Button.new()
-	b.text = "%s  —  %dc" % [MissionLog.label(m), int(m.reward)]
+	b.text = "%s %s  ·  %dc" % ["▾" if idx == _picked else "▸", _brief(m), int(m.reward)]
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.clip_text = true
 	UiTheme.button_flavor(b, "primary" if idx == _picked else "secondary")
 	b.pressed.connect(_on_pick.bind(idx))
 	row.add_child(b)
-	# The selected posting expands into its terms + the commitment.
+	# EXPANDED: the owner + the full terms, then the commitment on ITS OWN LINE —
+	# never pushed off the edge of the screen (user's layout call).
 	if idx == _picked:
-		var terms := Label.new()
-		terms.text = "  %s\n  Turns in: %s" % [_terms(m),
+		var body := Label.new()
+		body.text = "%s\n%s\nTurns in: %s" % [MissionLog.label(m), _terms(m),
 			str(m.get("turn_in", "planet" if m.type == "delivery" else "station"))]
-		terms.add_theme_font_size_override("font_size", 11)
-		terms.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(terms)
+		body.add_theme_font_size_override("font_size", 11)
+		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(body)
 		var take := Button.new()
 		take.text = "Take this contract"
+		take.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		UiTheme.button_flavor(take, "primary")
 		take.pressed.connect(_on_take.bind(idx))
 		row.add_child(take)
@@ -202,16 +225,20 @@ func _terms(m: Dictionary) -> String:
 
 
 func _held_row(index: int, m: Dictionary) -> void:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	# Title wraps; the Turn-in button sits BELOW on its own line (user's layout call) —
+	# the confirm is never pushed off-screen by a long label.
+	var row := VBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_held.add_child(row)
 	var lbl := Label.new()
 	lbl.text = "%s  [%d/%d]" % [MissionLog.label(m), MissionLog.progress(m, ship), int(m.n)]
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.add_theme_font_size_override("font_size", 12)
 	row.add_child(lbl)
 	var b := Button.new()
 	b.text = "Turn in"
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.disabled = not (MissionLog.is_complete(m, ship) and MissionLog.venue_ok_at(m, venue))
 	UiTheme.button_flavor(b, "primary")
 	b.pressed.connect(_on_turn_in.bind(index))
