@@ -18,6 +18,11 @@ const TOWN_SANCTUARY_R := 1150.0
 
 var home := Vector2.ZERO
 var looted := false
+## LYING IN WAIT. A dormant goblin is invisible, inert and unfindable — it does not think,
+## move, or answer a scan. The AMBUSH is the one authored exception to "enemies live in
+## places you can see": these are hidden behind a dune on the road to the hermit, and the
+## whole point is that the first you know of them is the moment they break cover.
+var dormant := false
 var _wander_t := 0.0
 var _flee_t := 0.0
 
@@ -74,7 +79,29 @@ func loot() -> Dictionary:
 	return haul
 
 
+## Go to ground behind cover: hidden and inert until sprung. Called at spawn.
+func lie_in_wait() -> void:
+	dormant = true
+	visible = false
+	auto_attack = false
+	combat_target = null
+	remove_from_group("ground_hostiles")   # nothing can target or count it while it hides
+
+
+## BREAK COVER. Reveals, rejoins the hostiles, and comes straight at `prey`.
+func spring(prey: GroundCharacter) -> void:
+	if not dormant:
+		return
+	dormant = false
+	visible = true
+	add_to_group("ground_hostiles")
+	home = global_position   # it leashes to where it was hiding, not to a distant warren
+	engage(prey)
+
+
 func _physics_process(delta: float) -> void:
+	if dormant:
+		return   # lying in wait: no thinking, no drifting, no shadow of a tell
 	if dead:
 		super._physics_process(delta)
 		return

@@ -153,6 +153,50 @@ func _init() -> void:
 		print("FAIL: corrupt save entries accepted")
 		failures += 1
 
+	# ---- RUMORS ARE NEVER SERVED TWICE (playtest, 2026-07-25) ----
+	# The report: "her pip flashes and she offers 'What's the word?' again, but he had
+	# already gotten that one." Two ways that could be a real bug — the same rumor text
+	# coming back, or the ask re-opening after the chain moved on — plus the sneaky one:
+	# a SAVE ROUND-TRIP losing chain_stage would re-arm the very first rumor.
+	Research.reset()
+	var heard: Array = []
+	if not Research.rumor_ready():
+		print("FAIL: the first rumor should be waiting at a fresh start")
+		failures += 1
+	heard.append(Research.hear_rumor())
+	if Research.rumor_ready():
+		print("FAIL: the bar still offers a rumor immediately after giving one")
+		failures += 1
+	# Round-trip RIGHT HERE — docking saves, and a lost chain_stage would re-arm rumor #1.
+	Research.from_dict(Research.to_dict())
+	if Research.rumor_ready():
+		print("FAIL: a save round-trip re-armed a rumor that was already heard")
+		failures += 1
+	# The SECOND rumor unlocks only once the Wayfinder Core is actually recovered — and
+	# when it does, it must be DIFFERENT text. (This re-arming is correct behaviour and is
+	# most likely what was seen: a new lead, not a repeat.)
+	Research.recovered.append("wayfinder_core")
+	if not Research.rumor_ready():
+		print("FAIL: recovering the core should open the next rumor")
+		failures += 1
+	heard.append(Research.hear_rumor())
+	if heard[0] == heard[1] or str(heard[1]) == "":
+		print("FAIL: the second rumor repeated the first (%s)" % [heard])
+		failures += 1
+	if Research.rumor_ready():
+		print("FAIL: the bar offers a third rumor that does not exist")
+		failures += 1
+	# And every authored rumor is distinct, so no chain can ever echo another.
+	var seen_flash := {}
+	for cid in Research.CHAINS:
+		for st in Research.CHAINS[cid].stages:
+			if str(st.get("kind", "")) == "rumor":
+				var f := str(st.get("flash", ""))
+				if f == "" or seen_flash.has(f):
+					print("FAIL: rumor text missing or duplicated in chain %s" % cid)
+					failures += 1
+				seen_flash[f] = true
+
 	Research.reset()
 	if failures == 0:
 		print("test_research: ALL PASS")

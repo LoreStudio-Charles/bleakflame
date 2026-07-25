@@ -182,6 +182,8 @@ var _current_npc := ""   # name of the NPC under the [E] prompt (for the tutor's
 var _tutor_cap: Label    # ground-lesson caption (top-center)
 var _weather: CPUParticles2D   # the sandstorm — an OUTSIDE thing, hidden while indoors
 var _ship_sprite: Sprite2D     # your hull, parked on the apron (null when it has no art)
+var _ambushers: Array = []     # the pack lying in wait behind the dune on the cave road
+var _ambush_sprung := false
 
 @onready var _prompt: Label = $HUD/Prompt
 @onready var _center: Label = $HUD/Center
@@ -197,6 +199,7 @@ func _ready() -> void:
 	_world.y_sort_enabled = true   # buildings + actors occlude by depth
 	add_child(_world)
 	_build_buildings()
+	_spawn_ambush()    # BEFORE the scatter: the ambush dune claims its own ground
 	_scatter_props()   # rocks + dunes in the open roam (drop-in art)
 	_spawn_player_ship()   # your hull on the apron, south of the Starport
 
@@ -279,7 +282,13 @@ func _spawn_player_ship() -> void:
 		push_warning("Epharon apron: no ground art for hull '%s' (%s)" % [b.hull.display_name, path])
 		return
 	var width: float = float(GROUND_SHIP_W.get(b.hull.size_band, 300.0))
-	var sc: float = width / float(maxf(1.0, tex.get_width()))
+	# INTEGER scale, never fractional: this is the most heavily upscaled art in the game
+	# (a 32px hull drawn ~300 units wide), and at a fractional factor nearest-neighbour
+	# has to make some source pixels 9 screen-pixels across and their neighbours 10 —
+	# the hull reads subtly warped even standing still. Rounding costs a few units of
+	# size and keeps every pixel square.
+	var sc: float = maxf(1.0, roundf(width / float(maxf(1.0, tex.get_width()))))
+	width = float(tex.get_width()) * sc
 	# Hull art is authored nose +X (the flight convention). Parked, we want it facing
 	# NORTH — pointing away down the apron, the way a ship waits to lift.
 	var facing := -PI * 0.5
@@ -295,27 +304,29 @@ func _spawn_player_ship() -> void:
 	shd.rotation = facing
 	shd.position = PAD_CENTER + Vector2(-30, 22)
 	shd.modulate = GroundCharacter.SHADOW_TINT
+	# NEAREST-NEIGHBOUR. The project default is linear, which nothing else notices because
+	# nothing else is scaled far past 1x — blown up ~9x it turned the hull to mush.
+	shd.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_world.add_child(shd)
 	_ship_sprite = Sprite2D.new()
 	_ship_sprite.texture = tex
 	_ship_sprite.scale = Vector2(sc, sc)
 	_ship_sprite.rotation = facing
 	_ship_sprite.position = PAD_CENTER
+	_ship_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# THE HULL ALWAYS DRAWS OVER YOU, so you pass UNDER it rather than appearing to stand
+	# on the wing. _world is y-sorted, which is right for people and buildings but wrong
+	# here: the ship is a raised object you walk beneath, not a footprint on the sand, and
+	# y-sorting put the pilot on top the moment they stepped south of its centre. z_index
+	# wins over y-sort within a layer, so this is the one exception.
+	_ship_sprite.z_index = 10
 	_world.add_child(_ship_sprite)
-	# You walk AROUND your ship, not through it. A capsule down the long axis fits a hull
-	# far better than the props' base-row rectangle, which assumes something standing up.
-	var body := StaticBody2D.new()
-	body.collision_layer = 1
-	body.collision_mask = 0
-	body.position = PAD_CENTER
-	var shape := CapsuleShape2D.new()
-	shape.radius = width * 0.22
-	shape.height = width * 0.86
-	var col := CollisionShape2D.new()
-	col.shape = shape
-	col.rotation = facing + PI * 0.5   # capsule is tall by default; lay it along the hull
-	body.add_child(col)
-	_world.add_child(body)
+	# NO COLLIDER, deliberately. The first pass gave the hull a capsule so you walked
+	# around it — but the ship now draws OVER the pilot so you can pass beneath it, and a
+	# solid body makes that impossible: you'd bounce off thin air under the wing while the
+	# art says there's room. It sits on its gear with clearance underneath; the berth is
+	# open ground. (If it should read as solid again, the capsule belongs on the ENGINE
+	# BLOCK alone, not the whole silhouette.)
 
 
 ## GEAR -> WALKER: derive the character's numbers from the worn kit (GroundStats — the
@@ -376,6 +387,7 @@ func _process(delta: float) -> void:
 		_tick_npcs(delta)
 		_enforce_heat()
 		_tick_footdust()
+		_tick_ambush()
 		_poll_combat()
 	_tick_techniques(delta)   # cooldowns run indoors too — a room is not a time-out
 	# The tutor observes EVERYWHERE — indoors too (user bug: opening Bram's shop inside
@@ -463,6 +475,23 @@ func _tick_npcs(delta: float) -> void:
 const WARREN := Vector2(2300, 1500)
 const WARREN_PACK := 4
 
+## ---- THE DUNE AMBUSH (user, 2026-07-25) ----
+## The warren sits far south-east; the hermit's cave is far NORTH-east, so the walk to
+## the Counter never met a thing (playtest: "he didn't get attacked going to see the
+## hermit"). This is the authored answer — a pack lying in wait BEHIND a dune on that
+## road, unseen until you are close, then breaking cover at you.
+##
+## Still not on-player spawning: the dune is a fixed place with a fixed pack, and walking
+## a different way misses them entirely. The AUTHORED-AMBUSH exception to the
+## living-world rule (see flight_test's scripted beats) — a place that hides, not a
+## spawner that follows.
+const AMBUSH_DUNE := Vector2(1680, -1180)   # on the town → cave diagonal
+const AMBUSH_PACK := 3
+const AMBUSH_TRIGGER := 330.0               # they hold until you are THIS close
+## Where each hides, relative to the dune — the FAR side from a pilot walking up from
+## town, so the sand is between you and them right up to the moment they move.
+const AMBUSH_SPOTS := [Vector2(-120, -95), Vector2(35, -130), Vector2(165, -80)]
+
 func _spawn_warren() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 909
@@ -472,6 +501,43 @@ func _spawn_warren() -> void:
 		var a := rng.randf() * TAU
 		g.setup_goblin(WARREN + Vector2(cos(a), sin(a)) * rng.randf_range(30.0, 190.0))
 		g.died.connect(_on_goblin_down.bind(g))
+
+
+## Plant the ambush: an AUTHORED dune (not one of the scattered ones — the trap must not
+## depend on where a seeded scatter happened to drop sand) with the pack tucked behind it.
+## Called BEFORE _scatter_props so the dune claims its ground and the scatter avoids it.
+func _spawn_ambush() -> void:
+	var dune := _load_tex("res://assets/ground/props/dune.png")
+	if dune != null:
+		var pair := _spawn_prop(dune, AMBUSH_DUNE, 520.0, Color(0.80, 0.70, 0.55), false)
+		_placed_props.append({"pos": AMBUSH_DUNE, "r": 260.0})   # scatter keeps its distance
+		if pair.is_empty():
+			pass
+	for i in AMBUSH_PACK:
+		var g := DustGoblin.new()
+		_world.add_child(g)
+		g.setup_goblin(AMBUSH_DUNE + AMBUSH_SPOTS[i % AMBUSH_SPOTS.size()])
+		g.lie_in_wait()
+		g.died.connect(_on_goblin_down.bind(g))
+		_ambushers.append(g)
+
+
+## Hold until the pilot is close, then break cover together. One-shot: once sprung they
+## are ordinary goblins with an ordinary leash, so a survivor never re-hides.
+func _tick_ambush() -> void:
+	if _ambush_sprung or _ambushers.is_empty():
+		return
+	if _player.global_position.distance_to(AMBUSH_DUNE) > AMBUSH_TRIGGER:
+		return
+	_ambush_sprung = true
+	var woke := 0
+	for g in _ambushers:
+		if is_instance_valid(g) and not g.dead:
+			g.spring(_player)
+			woke += 1
+	if woke > 0:
+		_flash("THEY WERE WAITING — %d of them, out of the sand!" % woke, 2.4)
+		Sfx.play("dread", -8.0, 1.4)
 
 
 func _on_goblin_down(g: DustGoblin) -> void:

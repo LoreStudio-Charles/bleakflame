@@ -1,14 +1,11 @@
 extends Node
-## Dev-only: render the LANDING APRON south of the Starport, so the parked hull, the
-## berth markings and the walk-up read can be eyeballed. Run WINDOWED:
-##   <godot> --path . res://tools/shoot_pad.tscn
-
+## Dev-only: the dune ambush on the road to the hermit — one shot holding OUTSIDE the
+## trigger (nothing should be visible but sand) and one the instant it springs.
 const DIR := "C:/Users/charl/AppData/Local/Temp/claude/E--Seared-Games-repos-Bleakflame-bleakflame/3a9df3e2-fa85-477f-96c4-c9436e26c8ad/scratchpad"
 
 var _town: Node
 var _player: Node2D
 var _cam: Camera2D
-
 
 func _ready() -> void:
 	SaveGame.tutorial_done = true
@@ -19,16 +16,16 @@ func _ready() -> void:
 	for c in _player.get_children():
 		if c is Camera2D:
 			_cam = c
-	# Wide: the whole south end — Starport above, apron and ship below.
-	await _shot(Vector2(0, 1150), 0.52, "pad_wide.png")
-	# Walk-up: standing at the apron's north lip, the way a player arrives.
-	await _shot(Vector2(0, 1180), 1.0, "pad_walkup.png")
-	# Close: the parked hull beside the pilot, for scale.
-	await _shot(Vector2(-40, 1560), 1.3, "pad_close.png")
-	# Standing UNDER the hull: the pilot must be occluded by it, not drawn on top.
-	await _shot(Vector2(60, 1600), 1.6, "pad_under.png")
+	var dune: Vector2 = _town.get("AMBUSH_DUNE")
+	# Approach: just OUTSIDE the trigger, walking up from town.
+	await _shot(dune + Vector2(-120, 430), 0.85, "ambush_before.png")
+	# Cross the line and let them break cover.
+	_player.global_position = dune + Vector2(-40, 250)
+	for _i in 40:
+		await get_tree().process_frame
+	get_viewport().get_texture().get_image().save_png(DIR + "/ambush_after.png")
+	print("saved ambush_after.png  sprung=", _town.get("_ambush_sprung"))
 	get_tree().quit()
-
 
 func _shot(pos: Vector2, zoom: float, name: String) -> void:
 	_player.global_position = pos

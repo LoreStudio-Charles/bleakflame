@@ -166,6 +166,32 @@ func _ready() -> void:
 			break
 	_chk(found_gear, "some corpses clutch gear (60 rolls, none hit)")
 
+	# ---- 10) THE DUNE AMBUSH: hidden, inert, and unfindable until it springs ----
+	# The whole point is that you get no tell, so "dormant" has to mean ALL of it: not
+	# drawn, not thinking, and NOT IN THE HOSTILE GROUP — otherwise TAB-cycle or a radar
+	# sweep names three goblins standing in empty sand before they've moved.
+	var lurker := DustGoblin.new()
+	add_child(lurker)
+	lurker.setup_goblin(Vector2(20000, 20000))
+	lurker.lie_in_wait()
+	_chk(not lurker.visible, "a waiting ambusher is invisible")
+	_chk(not lurker.is_in_group("ground_hostiles"), "...and cannot be targeted or cycled")
+	var walker := GroundCharacter.new()
+	walker.setup("res://assets/characters/PilotM")
+	add_child(walker)
+	walker.team = "player_team"
+	walker.add_to_group("player_walker")
+	walker.global_position = Vector2(20000, 20060)   # right on top of it
+	var lurk_pos := lurker.global_position
+	for _i in 20:
+		await get_tree().physics_frame
+	_chk(lurker.global_position == lurk_pos, "it does not stir, even with prey beside it")
+	_chk(not lurker.auto_attack, "...and does not attack while it waits")
+	lurker.spring(walker)
+	_chk(lurker.visible and lurker.is_in_group("ground_hostiles"), "springing reveals it")
+	_chk(lurker.combat_target == walker and lurker.auto_attack, "springing sends it at you")
+	_chk(lurker.home == lurk_pos, "it leashes to the cover it broke from, not a far warren")
+
 	print("test_ground_combat: ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails > 0 else 0)
 

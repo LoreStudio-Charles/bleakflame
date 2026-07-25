@@ -826,7 +826,12 @@ func _odessa_action(action: String) -> String:
 		Sfx.play_voice(Research.last_rumor_vo)
 	else:
 		Sfx.play("jingle", -10.0, 1.1)
-	return "She leans in, voice under the room's hum.\n\n\"%s\"" % rumor.trim_prefix("RUMOR OVERHEARD: ")
+	var reply := "She leans in, voice under the room's hum.\n\n\"%s\"" % rumor.trim_prefix("RUMOR OVERHEARD: ")
+	# NAME the expedition this opened. Every rumor's text differs, but the ask never does,
+	# so a second "What's the word?" reads as a repeat unless the payoff says otherwise.
+	if Research.last_rumor_chain != "":
+		reply += "\n\n[NEW LEAD — %s. It's in your log.]" % Research.last_rumor_chain
+	return reply
 
 
 func _refresh_bar() -> void:

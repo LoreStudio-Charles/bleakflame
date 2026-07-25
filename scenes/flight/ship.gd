@@ -659,10 +659,28 @@ func grab_loot(loot) -> bool:
 	if loot.def != null:
 		add_cargo(loot.def)
 	else:
+		_note_collection(str(loot.commodity))   # BEFORE the add: it reads the count itself
 		add_commodity(loot.commodity, 1)
 	Sfx.play("pickup", -8.0, 1.2)
 	loot.queue_free()
 	return true
+
+
+## "CINDER FRAGMENT  2/3" as you pick it up (playtest, 2026-07-25: a quest pickup gave no
+## sense of progress — you learned the count only by opening the log). Says nothing at all
+## for ordinary cargo, so ore runs stay quiet; the flash means "this counted."
+func _note_collection(key: String) -> void:
+	var c := Research.collection_for(key, self, 1)
+	if c.is_empty():
+		return
+	var done: bool = int(c.have) >= int(c.need)
+	# The LAST one is the moment that matters: you now have everything and can go cash it.
+	# Say that outright rather than leaving the player to notice 3/3 and infer it.
+	_flash_note("%s  %d/%d%s" % [TradeGoods.display_name(key).to_upper(),
+		int(c.have), int(c.need),
+		"   ✔ THAT'S ALL OF THEM — take them to the station lab" if done else ""])
+	if done:
+		Sfx.play("jingle", -8.0, 1.15)   # the set is complete — a different sound than a grab
 
 
 ## Drop cargo back into space to make room — the item drifts clear (armed

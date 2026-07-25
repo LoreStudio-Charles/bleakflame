@@ -14,6 +14,7 @@ var _salvage_box: VBoxContainer
 var _hold: InventoryGrid
 var _header: Label
 var _refresh_t := 0.0
+var _hold_sig := "<never-built>"   # sentinel: never equals a real signature, so the first pass builds
 
 
 func _init(p_ship: TestShip) -> void:
@@ -170,8 +171,32 @@ func _rebuild() -> void:
 	# The hold is the SHARED InventoryGrid (see inventory_grid.gd) with JETTISON bound to
 	# the one interact verb — same tiles, same grade borders and pips as the shop counter
 	# and the dossier, so your cargo reads identically everywhere.
+	#
+	# REBUILT ONLY WHEN IT CHANGES (playtest, 2026-07-25: "mouse doesn't highlight items in
+	# the hold, it flickers, and there's no tooltip"). Nearby salvage drifts, so the LEFT
+	# column has to stay live on a timer — but rebuilding on that same tick destroyed and
+	# recreated every hold tile underneath the cursor. Godot needs an unbroken ~0.5s hover
+	# on ONE control before a tooltip appears, so a tile replaced every 0.35s can never
+	# show one, and its hover styling was thrown away just as the eye caught it.
 	_hold.ship = ship
-	_hold.refresh()
+	var sig := _hold_signature()
+	if sig != _hold_sig:
+		_hold_sig = sig
+		_hold.refresh()
+
+
+## What the hold contains, as a comparable string: the parts (with their affix rolls, so
+## two different rolls of the same base are distinct) plus every commodity count.
+func _hold_signature() -> String:
+	var parts: Array[String] = []
+	var carried = ship.get("cargo")
+	if carried != null:
+		for c in carried:
+			parts.append("%s|%s" % [c.base_path if c.base_path != "" else c.resource_path,
+				",".join(PackedStringArray(c.affix_ids))])
+	for key in ship.commodities:
+		parts.append("%s=%d" % [key, int(ship.commodities[key])])
+	return "/".join(parts)
 
 
 func _grab(loot) -> void:

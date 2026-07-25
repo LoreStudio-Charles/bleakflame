@@ -61,6 +61,9 @@ static func trackables(ship) -> Array:
 			"label": str(m.get("desc", str(m.get("type", "contract")).capitalize())),
 			"detail": "%s  %d/%d" % [str(m.get("type", "")).to_upper(),
 				MissionLog.progress(m, ship), int(m.get("n", 1))],
+			# `count` is the BARE progress, separate from the sentence in `detail`, so a
+			# compact surface (the HUD corner) can show "2/3" without printing the prose.
+			"count": Vector2i(MissionLog.progress(m, ship), int(m.get("n", 1))),
 			"poi": _contract_poi(m)}
 		live_order.append(key)
 
@@ -72,6 +75,7 @@ static func trackables(ship) -> Array:
 		found[key] = {"key": key, "kind": "lead",
 			"label": str(Research.CHAINS[id].get("title", id)),
 			"detail": Research.journal_line(id, ship),
+			"count": Research.stage_progress(id, ship),
 			"poi": str(Research.stage(id).get("poi", ""))}
 		live_order.append(key)
 

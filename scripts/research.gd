@@ -143,8 +143,16 @@ static func stage(id: String) -> Dictionary:
 static func _complete_stage(id: String) -> void:
 	var st := stage(id)
 	if st.has("flash"):
-		pending_notes.append(st.flash)
-		journal.append({"day": day, "text": st.flash})
+		# A COMPLETION READS AS A COMPLETION (playtest, 2026-07-25: "quest completion should
+		# be more obvious"). These lines used to arrive in the same amber prose as every
+		# other dockside notice, so finishing a stage looked identical to being told the
+		# weather. The tick marks it; a rumor is the one kind that OPENS rather than closes
+		# something, so it keeps the plain voice.
+		var text: String = st.flash
+		if str(st.get("kind", "")) != "rumor":
+			text = "✔  " + text
+		pending_notes.append(text)
+		journal.append({"day": day, "text": text})
 	chain_stage[id] = chain_stage.get(id, 0) + 1
 	# Entering a haul stage is when the dig site hits the chart.
 	var next := stage(id)
@@ -189,13 +197,22 @@ static func on_dock(is_station: bool, ship) -> void:
 static var last_rumor_vo := ""
 
 
+## Which expedition the last rumor opened — so the bar can NAME it. Every rumor is
+## worded differently, but the ASK is always "What's the word?", and a player who has
+## heard one before reasonably reads a second offer as the game repeating itself
+## (playtest, 2026-07-25). Naming the expedition it opens settles that instantly.
+static var last_rumor_chain := ""
+
+
 static func hear_rumor() -> String:
 	last_rumor_vo = ""
+	last_rumor_chain = ""
 	for id in CHAINS:
 		var st := stage(id)
 		if st.get("kind", "") == "rumor" and _rumor_ok(st):
 			var text: String = st.flash
 			last_rumor_vo = str(st.get("vo", ""))
+			last_rumor_chain = str(CHAINS[id].get("title", ""))
 			_complete_stage(id)
 			pending_notes.erase(text)
 			return text
@@ -279,6 +296,36 @@ static func journal_line(id: String, ship) -> String:
 			return st.journal % [ship.commodities.get(st.key, 0), int(st.n)]
 		_:
 			return str(st.get("journal", ""))
+
+
+## HAVE / NEED for a chain's current stage, or (-1, -1) when this stage isn't a count.
+## Split out of journal_line (which buries the numbers inside a sentence) so the HUD can
+## show a bare "2/3" on the tracker and a pickup can flash the same figure — playtest,
+## 2026-07-25: "show a #/# when taking a new item, and the count on the tracker."
+static func stage_progress(id: String, ship) -> Vector2i:
+	var st := stage(id)
+	match st.get("kind", ""):
+		"survey_rocks":
+			return Vector2i(survey_progress, int(st.n))
+		"fragments":
+			if ship == null:
+				return Vector2i(-1, -1)
+			return Vector2i(int(ship.commodities.get(st.key, 0)), int(st.n))
+	return Vector2i(-1, -1)
+
+
+## Which live chain (if any) is collecting `commodity_key` right now, plus the count it
+## would read AFTER `gained` more. Returns {} when nothing wants it — so a pickup only
+## announces progress when there is progress to announce.
+static func collection_for(commodity_key: String, ship, gained := 0) -> Dictionary:
+	for id in CHAINS:
+		var st := stage(id)
+		if str(st.get("kind", "")) == "fragments" and str(st.get("key", "")) == commodity_key:
+			var need := int(st.n)
+			var have: int = int(ship.commodities.get(commodity_key, 0)) + gained if ship != null else gained
+			return {"id": id, "title": str(CHAINS[id].get("title", id)),
+				"have": mini(have, need), "need": need}
+	return {}
 
 
 static func take_notes() -> Array:

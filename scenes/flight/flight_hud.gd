@@ -41,7 +41,7 @@ var _cargo_gauge: CargoGauge
 var _energy_gauge: EnergyGauge
 var _ord_gauge: OrdnanceGauge
 var _gem_bar: GemBar
-var _missions: Label
+var _missions: RichTextLabel   # BBCode: the objective kinds are coloured apart
 var _group: GroupOverlay
 var _target_info: Label
 var _center_note: Label
@@ -254,18 +254,26 @@ func _ready() -> void:
 	# dynamically right under the missions block each frame (see the update),
 	# so a busy quest log never buries the friendlies. Top-LEFT stays reserved
 	# for co-op party frames when multiplayer lands.
-	var mission_settings := LabelSettings.new()
-	mission_settings.font_size = 13
-	mission_settings.font_color = UiTheme.AMBER
-	mission_settings.outline_size = 3
-	mission_settings.outline_color = Color(0, 0, 0, 0.85)
-	_missions = Label.new()
-	_missions.label_settings = mission_settings
+	# A RichTextLabel, not a Label: the three objective kinds are COLOURED apart here the
+	# same way they are in the quest log (playtest, 2026-07-25 — "all currently gold", so
+	# a campaign beat, a hauling contract and an expedition lead read as one undifferentiated
+	# block). A plain Label carries exactly one font colour, which is what forced that.
+	_missions = RichTextLabel.new()
+	_missions.bbcode_enabled = true
+	_missions.fit_content = true
+	_missions.scroll_active = false
+	_missions.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_missions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_missions.add_theme_font_size_override("normal_font_size", 13)
+	_missions.add_theme_font_size_override("bold_font_size", 13)
+	_missions.add_theme_constant_override("outline_size", 3)
+	_missions.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_missions.add_theme_color_override("default_color", UiTheme.AMBER)
 	_missions.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_missions.offset_left = -430   # RichTextLabel needs a real width to lay out inside
 	_missions.offset_right = -16
 	_missions.offset_top = 40   # clear of the comms badge (offset_top 12, one line)
 	_missions.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_missions.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	Tutor.register("missions_hud", _missions)
 	add_child(_missions)
 
@@ -518,22 +526,43 @@ func world_flash(color: Color, intensity: float, dur: float) -> void:
 ## objectives show and in what order (MissionTracker); TOP is current and wears a
 ## ▶ plus its next step, the rest are one glyph-tagged line each so campaign,
 ## contract and lead read distinct at a glance.
+## Objective kind -> colour, matching the quest log's tints exactly so the two surfaces
+## teach the same vocabulary: amber = the campaign spine, cyan = an expedition lead,
+## plain = a side contract.
+const KIND_COLOR := {"campaign": "f2b859", "lead": "7fd3e0", "contract": "d8dce4"}
+
+
 func _missions_line() -> String:
 	var tracked: Array = MissionTracker.visible_tracked(ship)
 	if tracked.is_empty():
 		return ""
-	var lines: Array[String] = ["OBJECTIVES"]
+	var lines: Array[String] = ["[right][color=#8890a0]OBJECTIVES[/color]"]
 	for i in tracked.size():
 		var t: Dictionary = tracked[i]
+		var col: String = KIND_COLOR.get(str(t.kind), "d8dce4")
 		var head := "%s %s %s" % ["▶" if i == 0 else " ",
 			_kind_glyph(str(t.kind)), str(t.label)]
-		if str(t.kind) == "contract":
-			head += "   %s" % str(t.detail)         # progress reads inline
-		lines.append(head)
+		# A BARE COUNT on every line that has one — you should be able to see "2/3"
+		# without opening the log or being the current objective (playtest).
+		var c: Vector2i = t.get("count", Vector2i(-1, -1))
+		if c.y > 0:
+			head += "   %d/%d" % [c.x, c.y]
+		# READY TO HAND IN is its own state, and the one the player asked to see (2026-07-25:
+		# "by completion I mean having everything ready to turn in"). Gathering the last
+		# item used to change nothing on screen — the line still read like work in progress,
+		# so you had to do the arithmetic yourself to know you were done. It goes GREEN and
+		# says so, which also overrides the kind colour on purpose: "you can cash this" is
+		# more urgent than "this is a contract".
+		if c.y > 0 and c.x >= c.y:
+			col = "6ee07a"
+			head += "   ✔ READY TO TURN IN"
+		# The CURRENT objective is bold as well as marked, so the eye lands on it first.
+		lines.append("[color=#%s]%s%s%s[/color]" % [col,
+			"[b]" if i == 0 else "", head, "[/b]" if i == 0 else ""])
 		# The current objective also spells out its step; the rest stay one line.
 		if i == 0 and str(t.kind) != "contract" and str(t.get("detail", "")) != "":
-			lines.append("      %s" % str(t.detail))
-	return "\n".join(lines)
+			lines.append("[color=#8890a0]%s[/color]" % str(t.detail))
+	return "\n".join(lines) + "[/right]"
 
 
 ## Per-kind marker so the three objective types read apart in the corner:

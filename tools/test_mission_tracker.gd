@@ -78,6 +78,23 @@ func _init() -> void:
 	_ok(MissionTracker.order == saved_order, "order survives a save round-trip")
 	_ok(MissionTracker.is_hidden(first_uid_key), "hidden set survives a save round-trip")
 
+	# --- EVERY COUNTED OBJECTIVE CARRIES A BARE #/# (playtest, 2026-07-25) ---
+	# The HUD shows "2/3" on any tracked line and turns it GREEN with "READY TO TURN IN"
+	# the moment it fills. Both read `count` — a Vector2i kept SEPARATE from the prose in
+	# `detail`, because the corner has no room for a sentence. If `count` ever stops being
+	# emitted, the corner silently goes back to showing progress nowhere.
+	_reset_all()
+	MissionLog.ensure_offers()
+	_ok(MissionLog.accept(0), "accept a contract to count")
+	var saw_count := false
+	for e in MissionTracker.trackables(ship):
+		if str(e.kind) == "contract":
+			var c: Vector2i = e.get("count", Vector2i(-1, -1))
+			saw_count = c.y > 0
+			_ok(saw_count, "a contract reports a bare count (got %s)" % c)
+			_ok(c.x <= c.y, "progress never exceeds the requirement (%s)" % c)
+	_ok(saw_count, "at least one counted objective was tracked")
+
 	if fails.is_empty():
 		print("test_mission_tracker: ALL PASS")
 	else:
