@@ -754,7 +754,9 @@ static func _build_preds() -> void:
 		func(c): return c.get("turned_in", false),
 	]
 	# trade_return: the colony half of the reciprocal route.
-	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "planet"
+	# Buy-food waits until the crate is DELIVERED — otherwise it jumped ahead of turning the
+	# contract in to Imari, the actual reason you flew down (user, 2026-07-24).
+	_arm_pred["trade_return"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("turn_in_here", false)
 	_done_pred["trade_return"] = [
 		func(c): return str(c.get("tab", "")) == "Market" and str(c.get("venue", "")) == "planet",
 		func(c): return int(c.get("cargo_food", 0)) >= 4,
@@ -765,7 +767,10 @@ static func _build_preds() -> void:
 	# turn_in: a contract can be closed at this venue.
 	_arm_pred["turn_in"] = func(c): return c.get("turn_in_here", false)
 	# Introductions the campaign never makes.
-	_arm_pred["meet_sella"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("met_sella", false)
+	# Meeting Sella waits behind the turn-in so the colony visit leads with the actual
+	# objective (deliver the crate), not a cartographer intro (user, 2026-07-24). She's a
+	# dwell nudge, so buy-food (an actionable lesson) naturally takes the slot first.
+	_arm_pred["meet_sella"] = func(c): return str(c.get("venue", "")) == "planet" and not c.get("met_sella", false) and not c.get("turn_in_here", false)
 	_arm_pred["meet_dex"] = func(c): return c.get("dirtside_done", false) and str(c.get("venue", "")) == "station" and not c.get("met_dex", false)
 	# meet_ruel: landed post-tutorial with Ruel holding the first job; done when you talk to him.
 	_arm_pred["meet_ruel"] = func(c): return str(c.get("venue", "")) == "station" and c.get("dirtside_active", false) and c.get("ruel_pending", false)
