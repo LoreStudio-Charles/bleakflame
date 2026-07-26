@@ -157,15 +157,60 @@ denied:
 - **getting caught once** teaches you permanently
 - **friendly standing** means customs *warns* you instead of acting
 
-### The annihilation tier should be WARDEN TECH
+### SEVERITY IS PER JURISDICTION TOO — and it characterises them
 
-The worst rung should not be drugs. **Carrying something Warden-made through Galean space
-being shoot-on-sight** says an enormous amount with no dialogue at all: the Confederacy
-knows what the gates are, or knows enough to be terrified of anyone handling them.
+The ladder is not a property of the item. **It is a function of what the item IS and who
+caught you with it.** Same cargo, different jurisdictions, completely different day:
+
+| | **Alien tech** (Warden, Drakhar) | **Weapons** | |
+|---|---|---|---|
+| **Galean Navy** | **confiscation** — they *want* it | **annihilation** | |
+| **Isolationists** | **annihilation** | **annihilation** | |
+| **Profession guilds** | barely a glance | barely a glance | |
+
+**This is where the law stops being a rules table and becomes a lens on the setting.**
+
+- **The Navy CONFISCATES alien tech rather than destroying it, because Galeans LEARN from
+  these things.** They are not protecting you from it; they are collecting it. That is
+  quietly sinister in a way no dialogue line could manage, and it is true to the
+  Confederacy.
+- **The Navy ANNIHILATES weapon-carriers** — a military monopoly on force is a far harder
+  line than a customs one, and it explains why the fleet is feared rather than resented.
+- **Isolationists annihilate for either**, because their objection is not practical, it is
+  ideological. Contact itself is the crime.
+- **The guilds do not flinch.** Commerce is amoral, and a faction that shrugs at what would
+  get you shot elsewhere says as much as one that shoots.
+
+**So the same smuggling run has a completely different risk profile depending on whose
+space it crosses** — which makes route choice a *political* decision rather than a
+navigational one, and gives the Long Lane's three bands a second meaning on top of danger.
+
+> **THE DRAKHAR — "the dark inversion of the Wardens" (user, 2026-07-26). NEW LORE, and
+> Saga-weight.** Not a misspelling of the **Threshers**, who are already banked in
+> `threats_wardens.md` as the swarm horror that converts worlds into hive — a different
+> flavour of dread entirely, described in *contrast* to the Wardens rather than as their
+> mirror.
+>
+> This is a significant addition. The Wardens are the tragic-but-RIGHT jailers; an
+> inversion of them is a large claim about the Saga — jailers who are wrong, or who want
+> the Convergence, or who built the prison for another reason entirely.
+>
+> **It belongs in `docs/the_convergence.md`, the declared source of truth for Saga
+> material, before it is leaned on here.** Contraband tiers can wait; "which alien tech"
+> turns out to matter, because the Navy's appetite for a given source is a
+> characterisation choice per source.
+
+### Alien tech is the annihilation tier — and the reason is the Convergence
+
+The worst rung should not be drugs. Alien tech carrying the harshest penalties says an
+enormous amount with no dialogue at all — and note it is **the isolationists**, not the
+Navy, who shoot you for Warden relics. The Confederacy wants them. Someone else thinks
+touching them at all is the crime, which is a much more frightening position to meet on a
+dark road.
 
 That ties smuggling into **the Convergence** rather than leaving it a parallel economy — and
 it makes the most dangerous cargo in the game not the most valuable, but the most
-**incriminating**. The contraband that can get you annihilated is *evidence*.
+**incriminating**. The contraband that gets you annihilated is *evidence*.
 
 See `docs/the_convergence.md` and `docs/threats_wardens.md`.
 
@@ -242,6 +287,11 @@ has — worth tracking as the list grows rather than noticing at ten.
 5. **Does fitted contraband get confiscated, or does the whole ship?** Taking a fitted
    module is far harsher than taking cargo, and may be too harsh for a first offence —
    which is part of why the ladder escalates rather than jumping.
-6. **Who controls what, per jurisdiction?** Needs a controlling faction per region before
+6. **WHO ARE THE DRAKHAR?** Named as a second alien-tech source and otherwise undocumented.
+   Needed before contraband tiers can be authored.
+7. **Who are the isolationists?** Named here as the faction that annihilates for alien tech.
+   No such faction exists in `Professions.LIST` or the lore docs yet — this may be the
+   Quarn, may be a Galean political bloc, or may be new.
+8. **Who controls what, per jurisdiction?** Needs a controlling faction per region before
    any law can apply. The Gap having *none* is the interesting case and should stay that
    way.
