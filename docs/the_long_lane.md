@@ -100,10 +100,30 @@ Ships are meant to be levelled by region, not all sitting at 1:
 - **The Long Lane: 6–15.** Harrier 6, Dray 8, Goshawk 12, Bellwether 15.
 - **The Navy: 35–40.** Supercruiser 35.
 
-**The DATA is set; the CURVE is not.** `HullDef.level` is still a display seam — nothing
-scales off it yet, which is why every ship currently fights as though it were level 1.
-Deciding what a level is *worth* (hull/damage per level, and whether components carry
-levels too) is the open balance decision. See "power levels" in the next-steps list.
+**WIRED 2026-07-25.** On the lane, **level rides POSITION**: `lane_level(t)` spreads
+L6–L15 along the road, so a raider met deep in the Gap is genuinely worse than one at
+its mouth. That is the patrol-band lesson told a second way — the geography *is* the
+difficulty curve, and it is exactly what the relative scaling model was built for (one
+`harrier.tres` covers the whole span).
+
+| who | level |
+|---|---|
+| Guardian rim patrol | `lane_level(0.25)` — the low end, L8 |
+| V-Shrike in the Gap | `lane_level(t)` where they prowl — L9–L12 |
+| Escorts | **the level of the hull they cover** — you hire cover fit for the cargo |
+| Freighters | authored (Dray L8, Bellwether L15) — those are tuned numbers |
+| Navy picket | `navy_level(t)` — L35+, a plainly different tier |
+
+**The RIM is deliberately untouched.** Its hulls already span 1–5 by authored level
+(Rooster/Wasp 1 … Vulture 5) and those are individually tuned; a random roll there would
+only disturb the tutorial zone.
+
+`tools/test_lane.tscn` asserts the gradient never flattens or dips, stays in band at
+every point on the road, that the far Gap is at least 2 levels above the guarded rim
+(or it isn't worth an escort), and that the Navy never overlaps the lane's top.
+`tools/test_levels.tscn` asserts the SPAWNERS actually pass it through — the fragile
+part is ordering, since `spawn_level` set *after* the setup call compiles, reads fine,
+and does nothing. Both sabotage-verified.
 
 ## The V-SHRIKE — new canon (user, 2026-07-25)
 

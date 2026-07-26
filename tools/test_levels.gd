@@ -24,6 +24,7 @@ func _ready() -> void:
 	_case_fielding_lower_scales_down()
 	_case_ratio_is_relative_not_absolute()
 	_case_zero_and_missing_levels_are_safe()
+	_case_spawners_actually_pass_the_level()
 
 	if failures == 0:
 		print("test_levels: ALL PASS")
@@ -116,6 +117,46 @@ func _case_ratio_is_relative_not_absolute() -> void:
 		_fail("toughness_between(%d, %d) should be 1.0, got %.4f" % [
 			lvl, lvl, Progression.toughness_between(lvl, lvl)])
 	s.queue_free()
+
+
+## THE SPAWNERS MUST ACTUALLY PASS IT THROUGH. A correct level band that no
+## spawner hands to a ship is the same failure as a correct helper nobody calls —
+## everything computes, nothing changes, and the world quietly stays level 1.
+##
+## The ORDER is the fragile part: spawn_level has to be set BEFORE the setup call,
+## because apply_build is where the pools get scaled. Setting it afterwards
+## compiles, reads fine, and does nothing at all.
+func _case_spawners_actually_pass_the_level() -> void:
+	var route: Array[Vector2] = [Vector2.ZERO, Vector2(500, 0)]
+
+	# GuardianShip.spawn_lane_patrol — the Navy picket's path.
+	var base := GuardianShip.spawn_lane_patrol(self, Vector2.ZERO,
+		SampleBuilds.guardian_vulture(), route)
+	var hot := GuardianShip.spawn_lane_patrol(self, Vector2.ZERO,
+		SampleBuilds.guardian_vulture(), route, 30)
+	if hot.level() != 30:
+		_fail("spawn_lane_patrol(level=30) produced a level-%d ship" % hot.level())
+	if hot.stats.hull_hp <= base.stats.hull_hp:
+		_fail("a level-30 lane patrol is no tougher than a default one (%.0f vs %.0f) — spawn_level was set after apply_build" % [
+			hot.stats.hull_hp, base.stats.hull_hp])
+	base.queue_free()
+	hot.queue_free()
+
+	# VShrikeShip — the Gap raiders, spawned through their own path.
+	var plain := VShrikeShip.new()
+	add_child(plain)
+	plain.setup_vshrike(SampleBuilds.vshrike_goshawk())
+	var deep := VShrikeShip.new()
+	add_child(deep)
+	deep.spawn_level = 15
+	deep.setup_vshrike(SampleBuilds.vshrike_goshawk())
+	if deep.level() != 15:
+		_fail("a V-Shrike set to level 15 reports level %d" % deep.level())
+	if deep.stats.hull_hp <= plain.stats.hull_hp:
+		_fail("a deep-Gap V-Shrike is no tougher than one at the mouth (%.0f vs %.0f)" % [
+			deep.stats.hull_hp, plain.stats.hull_hp])
+	plain.queue_free()
+	deep.queue_free()
 
 
 ## A hull with an unset (0) level must not blow the ratio up or divide by zero.

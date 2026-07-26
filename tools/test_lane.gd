@@ -22,6 +22,8 @@ func _ready() -> void:
 	_case_the_gap_is_unpatrolled()
 	_case_bands_are_ordered_and_sane()
 	_case_the_rim_end_clears_the_sanctuary()
+	_case_level_rises_with_distance()
+	_case_level_bands_do_not_overlap()
 
 	print("test_lane: %s" % ("ALL PASS" if _fails == 0 else "%d FAILURE(S)" % _fails))
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -66,3 +68,47 @@ func _case_the_rim_end_clears_the_sanctuary() -> void:
 	if d <= AIShip.SANCTUARY_R:
 		_fail("the lane's rim anchor is %.0fu from the station, inside the %.0fu sanctuary" % [
 			d, AIShip.SANCTUARY_R])
+
+
+## LEVEL RIDES POSITION: the road gets harder the further from the rim you push,
+## which is the patrol-band lesson told a second way. If this ever flattens, the
+## geography stops being the difficulty curve and the Gap's depth means nothing.
+func _case_level_rises_with_distance() -> void:
+	var mouth: int = FT.lane_level(0.0)
+	var deep: int = FT.lane_level(1.0)
+	if deep <= mouth:
+		_fail("the far end of the lane (L%d) is no harder than its mouth (L%d)" % [deep, mouth])
+	if mouth != int(FT.LANE_LEVEL.x) or deep != int(FT.LANE_LEVEL.y):
+		_fail("the lane spans L%d-L%d but its band is L%d-L%d" % [
+			mouth, deep, int(FT.LANE_LEVEL.x), int(FT.LANE_LEVEL.y)])
+	# Monotonic the whole way, and never out of band at any point on the road.
+	var prev := mouth
+	for i in 21:
+		var t := float(i) / 20.0
+		var lvl: int = FT.lane_level(t)
+		if lvl < prev:
+			_fail("level dips to L%d at t=%.2f, having reached L%d" % [lvl, t, prev])
+		if lvl < int(FT.LANE_LEVEL.x) or lvl > int(FT.LANE_LEVEL.y):
+			_fail("t=%.2f fields L%d, outside the lane band" % [t, lvl])
+		prev = lvl
+	# The Gap in particular must be a real step up from the guarded mouth.
+	var gap_deep: int = FT.lane_level(FT.LANE_GAP_LEG.y)
+	var guarded: int = FT.lane_level(FT.LANE_GUARD_LEG.y)
+	if gap_deep - guarded < 2:
+		_fail("the far Gap (L%d) is only %d levels above the guarded rim (L%d) — not worth an escort" % [
+			gap_deep, gap_deep - guarded, guarded])
+
+
+## The Navy is a different tier, not the top of the lane's. A player who wanders
+## to the capital end should meet something plainly out of their league.
+func _case_level_bands_do_not_overlap() -> void:
+	var lane_top: int = FT.lane_level(1.0)
+	var navy_low: int = FT.navy_level(FT.LANE_NAVY_LEG.x)
+	var navy_high: int = FT.navy_level(FT.LANE_NAVY_LEG.y)
+	if navy_low <= lane_top:
+		_fail("the Navy starts at L%d, at or below the lane's top of L%d" % [navy_low, lane_top])
+	if navy_high < navy_low:
+		_fail("the Navy band is inverted (L%d -> L%d)" % [navy_low, navy_high])
+	if navy_low < int(FT.NAVY_LEVEL.x) or navy_high > int(FT.NAVY_LEVEL.y):
+		_fail("the Navy fields L%d-L%d, outside its L%d-L%d band" % [
+			navy_low, navy_high, int(FT.NAVY_LEVEL.x), int(FT.NAVY_LEVEL.y)])

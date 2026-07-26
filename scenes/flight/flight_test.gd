@@ -1661,11 +1661,13 @@ func _respawn_guardian_later(kind: String, i: int) -> void:
 ## and the refusal to talk live in ONE place, not in every spawn site.
 func _spawn_vshrike(pos: Vector2, build: ShipBuild,
 		p_tactic: AIShip.Tactic = AIShip.Tactic.ORBIT,
-		route: Array[Vector2] = []) -> VShrikeShip:
+		route: Array[Vector2] = [], level: int = 0) -> VShrikeShip:
 	var raider := VShrikeShip.new()
 	raider.position = pos
 	add_child(raider)
 	raider.patrol_points = route
+	# BEFORE setup: apply_build is where the level scales the pools.
+	raider.spawn_level = level
 	raider.setup_vshrike(build, p_tactic)
 	raider.died.connect(_grant_kill_xp.bind(raider, "brawler"))
 	return raider
@@ -1692,6 +1694,30 @@ const LANE_NAVY_LEG := Vector2(0.75, 0.98)    # the Navy, in to Orivel
 ## are hired, and out here the difference between an escort and a pirate is who
 ## is paying.
 const ESCORT_LIVERY := Color(0.25, 0.70, 0.58)
+
+## LEVELS BY REGION (user, 2026-07-25). The RIM runs 1-5 and needs nothing here —
+## its hulls are already authored across that span (Rooster/Wasp 1 … Vulture 5),
+## and those are individually tuned numbers a random roll would only disturb.
+##
+## THE LANE IS DIFFERENT: level rides POSITION along the road, so the run gets
+## harder the further from the rim you push. That is the patrol-band lesson told a
+## second way — the geography IS the difficulty curve, and a raider met deep in
+## the Gap is genuinely worse than one met at its mouth. It is also the reason
+## `spawn_level` was built relative: one Harrier .tres covers the whole span.
+const LANE_LEVEL := Vector2(6, 15)     # the Long Lane's band
+const NAVY_LEVEL := Vector2(35, 40)    # the Navy's, at the capital end
+
+
+## The level to field a lane ship at, from how far along the road it lives.
+static func lane_level(t: float) -> int:
+	return int(round(lerpf(LANE_LEVEL.x, LANE_LEVEL.y, clampf(t, 0.0, 1.0))))
+
+
+## The Navy's own band, spread across the stretch it actually patrols.
+static func navy_level(t: float) -> int:
+	var f := inverse_lerp(LANE_NAVY_LEG.x, LANE_NAVY_LEG.y,
+		clampf(t, LANE_NAVY_LEG.x, LANE_NAVY_LEG.y))
+	return int(round(lerpf(NAVY_LEVEL.x, NAVY_LEVEL.y, f)))
 
 
 ## A point `t` of the way along the lane (0 = the rim, 1 = Orivel's outpost).
@@ -1721,10 +1747,12 @@ func _spawn_long_lane() -> void:
 	_spawn_escort(SampleBuilds.escort_harrier(), bell, 1, 3)
 	_spawn_escort(SampleBuilds.escort_harrier(), bell, 2, 3)
 
+
 	# BAND 1 — GUARDIANS, the first quarter out of the rim. They will not follow
 	# you past the leash, and that boundary is the lesson.
 	var guard_leg := _lane_leg(LANE_GUARD_LEG.x, LANE_GUARD_LEG.y, 3)
-	_spawn_lane_guardian(guard_leg[0] + _jitter(400.0), guard_leg)
+	_spawn_lane_guardian(guard_leg[0] + _jitter(400.0), guard_leg,
+		lane_level(LANE_GUARD_LEG.y))
 
 	# BAND 3 — THE NAVY, the last quarter in to Orivel. Same leash, other end.
 	# A picket, NOT a capital: super-heavies stay a paced reveal (/fleet).
@@ -1760,8 +1788,11 @@ func _respawn_lane_freighter_later(build: ShipBuild, route: Array[Vector2], t: f
 ## A HIRED escort flying cover on a hauler. Borrows the Guardian protector
 ## behaviour (formation, break off, rejoin) and then sheds every Guardian cue —
 ## these are a contractor's ships, not the law.
+## Fielded at the level of the ship it covers: you hire cover appropriate to the
+## cargo, and a level-6 Harrier screening a level-15 Bellwether is not cover.
 func _spawn_escort(build: ShipBuild, protect: Node2D, slot: int, wing: int) -> GuardianShip:
-	var esc := GuardianShip.spawn_protector(self, build, protect, slot, wing)
+	var lvl: int = protect.level() if protect.has_method("level") else 0
+	var esc := GuardianShip.spawn_protector(self, build, protect, slot, wing, lvl)
 	esc.set_hull_tint(Color.WHITE)
 	esc.apply_livery(ESCORT_LIVERY)
 	return esc
@@ -1771,7 +1802,7 @@ func _spawn_escort(build: ShipBuild, protect: Node2D, slot: int, wing: int) -> G
 ## leash that stops well short of the Gap.
 func _spawn_navy_picket(route: Array[Vector2]) -> void:
 	var p := GuardianShip.spawn_lane_patrol(self, route[0] + _jitter(400.0),
-		SampleBuilds.guardian_vulture(), route)
+		SampleBuilds.guardian_vulture(), route, navy_level(LANE_NAVY_LEG.x))
 	p.set_hull_tint(Color.WHITE)
 	p.apply_livery(Color(0.23, 0.44, 0.85))   # Galean Navy blue
 	p.died.connect(_respawn_navy_picket_later.bind(route))
@@ -1788,7 +1819,8 @@ func _respawn_navy_picket_later(route: Array[Vector2]) -> void:
 ## rule, and it keeps travel time as the pacing.
 func _spawn_gap_raider(build: ShipBuild, p_tactic: AIShip.Tactic,
 		route: Array[Vector2], t: float) -> void:
-	var r := _spawn_vshrike(_lane_point(t) + _jitter(700.0), build, p_tactic, route)
+	var r := _spawn_vshrike(_lane_point(t) + _jitter(700.0), build, p_tactic, route,
+		lane_level(t))
 	r.died.connect(_respawn_gap_raider_later.bind(build, p_tactic, route, t))
 
 
@@ -1893,15 +1925,18 @@ func _respawn_trader_later(route: Array[Vector2]) -> void:
 
 ## A lone Guardian patrolling a trade lane. Killed or devoured, the Board sends
 ## another from home — the patrol never truly stops.
-func _spawn_lane_guardian(pos: Vector2, route: Array[Vector2]) -> void:
-	var g := GuardianShip.spawn_lane_patrol(self, pos, SampleBuilds.guardian_sparrowhawk(), route)
-	g.died.connect(_respawn_lane_guardian_later.bind(route))
+## `level` 0 = the hull's authored level, which is what the RIM lanes want (their
+## hulls already sit in the 1-5 band). The Long Lane passes a real one.
+func _spawn_lane_guardian(pos: Vector2, route: Array[Vector2], level: int = 0) -> void:
+	var g := GuardianShip.spawn_lane_patrol(self, pos, SampleBuilds.guardian_sparrowhawk(),
+		route, level)
+	g.died.connect(_respawn_lane_guardian_later.bind(route, level))
 
 
-func _respawn_lane_guardian_later(route: Array[Vector2]) -> void:
+func _respawn_lane_guardian_later(route: Array[Vector2], level: int = 0) -> void:
 	await get_tree().create_timer(35.0).timeout
 	if is_inside_tree() and not route.is_empty():
-		_spawn_lane_guardian(route[0] + _jitter(400.0), route)
+		_spawn_lane_guardian(route[0] + _jitter(400.0), route, level)
 
 
 ## F12: dump the frame to bleakflame/screenshots/ for UI review.

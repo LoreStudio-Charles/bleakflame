@@ -112,10 +112,13 @@ static func spawn_shadow_escort(parent: Node, pos: Vector2, objective: Vector2,
 ## formation, breaks off to gun down any pirate that gets near the pilot,
 ## then rejoins. Military-grade, so it actually wins — it clears the road
 ## instead of dying on it. `slot` spreads a wing around the escorted ship.
+## `level` 0 = field it at its hull's own level. Anything else must be set BEFORE
+## setup_guard, since apply_build is where the pools are scaled.
 static func spawn_protector(parent: Node, build: ShipBuild, protect_ship: Node2D,
-		slot: int, wing: int) -> GuardianShip:
+		slot: int, wing: int, level: int = 0) -> GuardianShip:
 	var g := GuardianShip.new()
 	parent.add_child(g)
+	g.spawn_level = level
 	g.setup_guard(build, MIN_R + 100.0)
 	g.protect = protect_ship
 	g._slot_angle = TAU * float(slot) / float(maxi(wing, 1))
@@ -128,9 +131,10 @@ static func spawn_protector(parent: Node, build: ShipBuild, protect_ship: Node2D
 ## Military-grade like the guard wing but off the station's leash — and exposed,
 ## so the beast can take it. Respawns from home when lost (flight_test).
 static func spawn_lane_patrol(parent: Node, pos: Vector2, build: ShipBuild,
-		route: Array[Vector2]) -> GuardianShip:
+		route: Array[Vector2], level: int = 0) -> GuardianShip:
 	var g := GuardianShip.new()
 	parent.add_child(g)
+	g.spawn_level = level
 	g.setup_guard(build, MIN_R + 100.0)
 	g.lane_patrol = true
 	g.patrol_points = route
