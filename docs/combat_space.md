@@ -478,6 +478,30 @@ effective against each.
 the target, so the damage type and the armor mechanic are the same system seen from two
 ends rather than a name collision.
 
+##### WEAPONS ATTRIT. ABILITIES CONTROL. (user, 2026-07-26)
+
+**A weapon effect may NEVER debilitate.** Wearing a target down is a weapon's job; taking
+away what a target can *do* — stun, root, blind, disable, silence — belongs to ABILITIES,
+and specifically to the control professions. A weapon that debilitates tramples the thing
+those commissions exist to be, and hands out for the price of ammunition what a controller
+spends a whole identity on.
+
+**Where a weapon effect and a control ability share a name, they exist at two
+intensities.** The weapon version is the mild, attrition-flavoured one; the profession
+ability is the real thing. Same fiction, two tiers, and the controller keeps sole ownership
+of removing agency.
+
+**Weapon effects should ENHANCE control, not replace it.** A contaminated target is
+*easier to control* — tangle sticks better, stuns land more reliably, control lasts a touch
+longer. That makes a Radiation gunner the **setup** for a controller rather than a
+substitute for one: two players' choices combining into something neither had alone, which
+is exactly what the coop north star is for.
+
+> **THIS CORRECTS AN EARLIER LINE IN THIS DOCUMENT.** EMP was written as "the hard blind
+> that drops below the visual floor". That is a debilitation and it violates this rule.
+> **EMP-the-weapon-effect is a minor sensor/energy degrade that stays ABOVE the visual
+> floor.** EMP-the-ability — whoever ends up owning it — is the one that genuinely blinds.
+
 **TYPES AND EFFECTS ARE SEPARATE AXES.** A *type* is what resistances answer; an *effect*
 is a rider a weapon inflicts. **EMP is an EFFECT, not a type** — any weapon may carry it
 regardless of what damage it deals. Heat happens to be both, because Heat damage is
@@ -502,7 +526,7 @@ everything is a single implementation, always felt, and scales smoothly with exp
 Contamination, not a crippling stack. This is deliberate and it is what keeps the mechanic
 honest: it degrades *everything at once*, so even a small number is felt across turning,
 tracking, seeing and recharging simultaneously. Push it higher and it stops being attrition
-and becomes a soft disable — which is EMP's job, not Radiation's. A ship soaking Radiation
+and becomes a soft disable — which is a CONTROL ABILITY's job, not a weapon's. A ship soaking Radiation
 should feel like it is *wearing down*, never like it is being switched off.
 
 **It is CUMULATIVE and SLOW to decay** — which is what separates it from Heat. Heat is a
@@ -520,8 +544,9 @@ shields up it breaks them and holds them down, shields down it grinds. Radiation
 > and leave it unable to answer. The range rule already prevents it —
 > `min(weapon_range, max(VISUAL_RANGE, sensor_reach))` — because **the visual floor holds
 > even at zero sensors.** Radiation shortens your reach; it can never take your guns. That
-> also gives the two effects a clean split: **EMP is the HARD blind** that drops below the
-> floor, **Contamination is the SOFT degrade** that never does. Keep it that way.
+> also sets the rule for every weapon rider: **no weapon effect may push a target below the
+> floor.** Contamination shortens reach and never removes it. Only a CONTROL ABILITY blinds
+> outright — see "weapons attrit, abilities control".
 
 ##### One layer, one owner
 
@@ -589,9 +614,14 @@ stops being true for anyone who fights.
 **Some sensors should extend weapon range** — a fire-control array is a weapons upgrade,
 not just a map upgrade.
 
-**A BLINDING EFFECT STILL KILLS YOUR DAMAGE.** The visual floor covers *having a cheap
-sensor*; it must not protect you from being actively blinded. A blind effect drops
-effective range below the floor — being blinded is supposed to be devastating.
+**AN ABILITY-GRADE BLIND STILL KILLS YOUR DAMAGE.** The visual floor covers *having a
+cheap sensor*; it must not protect you from a controller who has genuinely blinded you. A
+**control ability** drops effective range below the floor — being blinded is supposed to be
+devastating.
+
+**WEAPON effects never do this.** Per "weapons attrit, abilities control", no damage type
+or weapon rider may push a target below the floor. Radiation's Contamination shortens your
+reach; only an ability can take your guns.
 
 #### Rate of fire
 
