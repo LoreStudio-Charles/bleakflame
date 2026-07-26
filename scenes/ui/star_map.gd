@@ -93,8 +93,23 @@ class ChartView:
 		level = Level.SURFACE if _town() != null else Level.SYSTEM
 		_selected = ""
 
+	## The town YOU ARE STANDING IN — null while flying.
+	##
+	## Existence is not the question. Launching from Epharon HIDES the town and
+	## freezes its SubViewport; it is never freed, and it stays in group
+	## "ground_town" because the character sheet needs to reach it to re-apply gear
+	## whether you are down there or not. So asking the group whether a town exists
+	## answered "yes" forever after your first landing, and the chart opened on the
+	## surface map for the rest of the session no matter how far out you flew
+	## (user, 2026-07-26).
+	##
+	## `can_process()` is the honest test: flight_test disables the ground viewport's
+	## process mode when you launch, so this is false exactly when you are not on
+	## foot — and it stays correct if the town is ever pooled or re-parented, which
+	## a visibility check would not.
 	func _town() -> Node:
-		return get_tree().get_first_node_in_group("ground_town")
+		var t := get_tree().get_first_node_in_group("ground_town")
+		return t if t != null and t.can_process() else null
 
 	# ---------------------------------------------------------------- elements
 

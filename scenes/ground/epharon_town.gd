@@ -86,8 +86,13 @@ const INTERIORS := {
 		"actor_spot": {"npc": "Sella", "prompt": "[E] Speak with Sella", "action": "idle:sella"},
 		"exit_prompt": "[E] Back out to the street",
 		"extra_spots": [
+			# "TAKE", not "READ" (user, 2026-07-26: "it isn't obvious that you can use
+			# the board in Sella's room and pick up missions"). The hotspot always
+			# worked; the verb described LORE. Next to a chart wall that genuinely is
+			# flavour, "read the postings" reads as more of the same, so a player walks
+			# past a contract board. The prompt now names the transaction.
 			{"pos": Vector2(230, -140), "range": 130,
-				"prompt": "[E] Read the survey postings",
+				"prompt": "[E] Take survey work from Sella's board",
 				"action": "board:sella"},
 			{"pos": Vector2(-280, -150), "range": 140,
 				"prompt": "[E] Study the chart wall",
@@ -1285,7 +1290,20 @@ func _do_action(action: String) -> void:
 			# hello is never a dead click (same rule as the dock's NPC desks).
 			if action.begins_with("idle:"):
 				var who := action.substr(5)
-				_flash("%s: \"%s\"" % [Npcs.display_name(who), Npcs.idle_line(who)], 3.0)
+				# A CONVERSATION IS A CONVERSATION WHEREVER YOU HAVE IT (user,
+				# 2026-07-26). This flashed a toast that faded in three seconds, so a
+				# player could miss a line entirely by looking at the wrong part of
+				# the screen — and the same exchange with the same person AT THE
+				# STATION opened a proper panel with their portrait. Campaign talks
+				# down here already present as a DialoguePanel (_try_quest_talks);
+				# only the idle ones were second-class. Same construction as the
+				# dock's _idle_chat, so the two venues cannot drift apart again.
+				Pilot.meet(who)
+				var nodes := {"start": {
+					"text": Npcs.idle_line(who),
+					"choices": [{"text": "Fly safe.", "next": "end"}]}}
+				add_child(DialoguePanel.new(who, nodes,
+					func(_a: String) -> String: return ""))
 				# Spoken where recorded: audio/vo/idle_<id>.* is a drop-in — a missing
 				# file is a silent no-op (Sfx.play_voice returns false), never an error.
 				Sfx.play_voice("idle_" + who)
@@ -1364,7 +1382,7 @@ func _rebuild_town_spots() -> void:
 		{"pos": PAD_CENTER, "range": 230, "prompt": "[E] Board your ship and launch", "action": "launch"},
 		{"pos": Vector2(0, 900), "range": 165, "prompt": "[E] Starport services", "action": "starport"},
 		{"pos": Vector2(560, 430), "range": 160, "prompt": "[E] Enter the colony market", "action": "enter:MARKET"},
-		{"pos": Vector2(-640, 480), "range": 160, "prompt": "[E] Read the colony contract board", "action": "board:"},
+		{"pos": Vector2(-640, 480), "range": 160, "prompt": "[E] Take work from the colony contract board", "action": "board:"},
 		{"pos": Vector2(-800, -110), "range": 170, "prompt": "[E] Enter the Explorer's Union", "action": "enter:EXPLORERS GUILD"},
 		{"pos": Vector2(-560, -340), "range": 150, "prompt": "[E] Enter the aquaponics farm", "action": "enter:AQUAPONICS"},
 		{"pos": Vector2(-360, 15), "range": 140, "prompt": "[E] Sealed hab", "action": "sealed"},
@@ -1382,6 +1400,14 @@ func _enter_interior(id: String) -> void:
 		return
 	var def: Dictionary = INTERIORS[id]
 	_interior_id = id
+	# OWN ESC WHILE INDOORS (user, 2026-07-26: "it says esc to leave but you have to
+	# walk to the edge and press E"). Esc WAS wired -- _poll_actions calls
+	# _exit_interior -- but the pause menu is added last in flight precisely so it
+	# sees Esc first, and it only stands down for something in "esc_capture". The
+	# interior was not in it, so Esc opened the menu, the menu paused the tree, and
+	# the town's poll never ran. The prompt described the intent correctly and the
+	# result not at all. Every panel that owns Esc does this; the room is a panel too.
+	add_to_group("esc_capture")
 	if _weather != null:
 		_weather.visible = false   # no sandstorm inside a greenhouse
 	var half: Vector2 = def.get("half", IROOM_HALF)
@@ -1456,6 +1482,8 @@ func _set_cam_offset(ofs: Vector2) -> void:
 func _exit_interior() -> void:
 	var def: Dictionary = INTERIORS.get(_interior_id, {})
 	_interior_id = ""
+	# Hand Esc back, or the pause menu could never open again on foot.
+	remove_from_group("esc_capture")
 	if _weather != null:
 		_weather.visible = true
 	_hermit.visible = false
