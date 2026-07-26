@@ -133,11 +133,38 @@ The Gap's owners, and a deliberate contrast with everything the Reach has met so
    render until art lands, as the Dowager already does.
 2. ~~**Turret fit** on the freighters~~ — DONE, via authored traverse rather than low
    marks. `SampleBuilds.lane_builds()` holds all six NPC fits.
-3. **The lane** — waypoint route between the rim and Orivel, haulers running it.
-4. **The three bands** — Guardian leash from the rim, Navy leash from Orivel, and
-   nothing in the middle.
-5. **The V-Shrike** as an AI variant that never hails, over the existing pirate
-   behaviours. The FITS already say it — see below.
+3. ~~**The lane**~~ — DONE. `flight_test._spawn_long_lane()`.
+4. ~~**The three bands**~~ — DONE.
+5. ~~**The V-Shrike**~~ — DONE (`VShrikeShip`). The FITS already said it — see below.
+
+### The lane as built
+
+~91k units from the rim anchor (`LANE_RIM`, just outside the station's 1800u
+sanctuary) to Orivel's orbital outpost. Positions along it are a fraction `t` of the
+road, so the three bands are three `t` ranges — and they are **constants, because
+they are the design**:
+
+| band | `t` | who |
+|---|---|---|
+| `LANE_GUARD_LEG` | 0.02 – 0.25 | Guardian lane patrol out of the rim |
+| `LANE_GAP_LEG` | 0.34 – 0.66 | **nobody** — two V-Shrike prowl it |
+| `LANE_NAVY_LEG` | 0.75 – 0.98 | Galean Navy picket in to Orivel |
+
+Running it: a **Dray** and a **Bellwether** haul the full road, the Bellwether under a
+hired screen of a Goshawk and two Harriers. Escorts borrow `GuardianShip`'s protector
+behaviour (formation → break off → rejoin) and then shed every Guardian cue for a
+contractor's teal livery — they are hired, not the law. The Navy picket is a Vulture in
+Galean blue, **not** a capital: super-heavies stay a paced reveal via `/fleet`.
+
+Everything is world-anchored per the living-world rule — haulers, patrols and raiders
+are somewhere on the road when you arrive, and replacements fly in rather than
+appearing on top of you.
+
+**`tools/test_lane.tscn` guards the Gap.** Widening a patrol band by a few percent
+looks like tuning, changes nothing visible on any screen, and silently deletes the
+reason the lane exists. The test asserts neither authority reaches into the Gap from
+either end, that the unpatrolled middle stays ≥35% of the road, and that the rim
+anchor clears the station sanctuary. Sabotage-verified.
 
 ### The widow livery (user, 2026-07-25)
 

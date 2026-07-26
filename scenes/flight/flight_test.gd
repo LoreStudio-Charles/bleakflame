@@ -261,6 +261,8 @@ func _populate_world() -> void:
 		Vector2(-5400, 3900)]
 	_spawn_pirate(verge_prowl[randi() % verge_prowl.size()] + _jitter(400.0), "raider", verge_prowl)
 	_spawn_lane_guardian(verge_run[1] + _jitter(300.0), verge_run)
+	# THE LONG LANE — the capital run and its three patrol bands.
+	_spawn_long_lane()
 
 
 ## Fixed-seed scatter: a Belt is a charted place; its rocks stay put. Each
@@ -1656,16 +1658,145 @@ func _respawn_guardian_later(kind: String, i: int) -> void:
 
 
 ## A V-SHRIKE raider (docs/the_long_lane.md). Its own class so the widow livery
-## and the refusal to talk live in ONE place, not in every spawn site — the lane
-## builder will call this too.
+## and the refusal to talk live in ONE place, not in every spawn site.
 func _spawn_vshrike(pos: Vector2, build: ShipBuild,
-		p_tactic: AIShip.Tactic = AIShip.Tactic.ORBIT) -> VShrikeShip:
+		p_tactic: AIShip.Tactic = AIShip.Tactic.ORBIT,
+		route: Array[Vector2] = []) -> VShrikeShip:
 	var raider := VShrikeShip.new()
 	raider.position = pos
 	add_child(raider)
+	raider.patrol_points = route
 	raider.setup_vshrike(build, p_tactic)
 	raider.died.connect(_grant_kill_xp.bind(raider, "brawler"))
 	return raider
+
+
+# ==== THE LONG LANE (docs/the_long_lane.md) ====
+# ~91k units of open road between the rim and Orivel's drydock ring, and the whole
+# design is a DANGER GRADIENT you read by FLYING it — there is deliberately no UI
+# for it anywhere. Guardians cover the first quarter out of the rim, the Navy
+# covers the last quarter in to Orivel, and the middle HALF belongs to nobody.
+#
+# THE EMPTY MIDDLE IS THE POINT. It is why freight hires escorts, it is where the
+# V-Shrike live, and it is the reason a convoy is a convoy. Both authorities have
+# a LEASH (GuardianShip lane patrols already work this way), so the danger is a
+# PLACE on the map rather than a difficulty number.
+const LANE_RIM := Vector2(-2600, -1600)   # just outside the station's 1800 sanctuary
+## THE THREE BANDS as fractions of the road, (start, end). These are the design,
+## not just parameters: GUARD and NAVY must never reach into GAP, or freight stops
+## needing an escort and the lane stops meaning anything. Asserted in test_lane.
+const LANE_GUARD_LEG := Vector2(0.02, 0.25)   # Guardians, out of the rim
+const LANE_GAP_LEG := Vector2(0.34, 0.66)     # nobody — the V-Shrike prowl here
+const LANE_NAVY_LEG := Vector2(0.75, 0.98)    # the Navy, in to Orivel
+## A private contractor's colours — NOT Guardian blue and NOT Navy blue. Escorts
+## are hired, and out here the difference between an escort and a pirate is who
+## is paying.
+const ESCORT_LIVERY := Color(0.25, 0.70, 0.58)
+
+
+## A point `t` of the way along the lane (0 = the rim, 1 = Orivel's outpost).
+func _lane_point(t: float) -> Vector2:
+	return LANE_RIM.lerp(ORIVEL + ORIVEL_ORBITAL_OFFSET, clampf(t, 0.0, 1.0))
+
+
+## A patrol route covering the stretch between two points of the lane.
+func _lane_leg(t0: float, t1: float, steps: int) -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	for i in steps + 1:
+		out.append(_lane_point(lerpf(t0, t1, float(i) / float(steps))))
+	return out
+
+
+func _spawn_long_lane() -> void:
+	var road := _lane_leg(0.0, 1.0, 5)
+
+	# THE FREIGHT the lane exists for. The Bellwether is the convoy's heart: worth
+	# more than her escort, slower than her attackers, and aware of both.
+	_spawn_lane_freighter(SampleBuilds.lane_dray(), road, 0.14)
+	var bell := _spawn_lane_freighter(SampleBuilds.lane_bellwether(), road, 0.58)
+	# Her hired screen — a Goshawk and two Harriers flying formation, breaking off
+	# to gun whatever closes and rejoining. GuardianShip is borrowed for that
+	# behaviour ONLY; the guardian blue comes straight back off.
+	_spawn_escort(SampleBuilds.escort_goshawk(), bell, 0, 3)
+	_spawn_escort(SampleBuilds.escort_harrier(), bell, 1, 3)
+	_spawn_escort(SampleBuilds.escort_harrier(), bell, 2, 3)
+
+	# BAND 1 — GUARDIANS, the first quarter out of the rim. They will not follow
+	# you past the leash, and that boundary is the lesson.
+	var guard_leg := _lane_leg(LANE_GUARD_LEG.x, LANE_GUARD_LEG.y, 3)
+	_spawn_lane_guardian(guard_leg[0] + _jitter(400.0), guard_leg)
+
+	# BAND 3 — THE NAVY, the last quarter in to Orivel. Same leash, other end.
+	# A picket, NOT a capital: super-heavies stay a paced reveal (/fleet).
+	var navy_leg := _lane_leg(LANE_NAVY_LEG.x, LANE_NAVY_LEG.y, 3)
+	_spawn_navy_picket(navy_leg)
+
+	# BAND 2 — THE GAP. Nothing patrols it. Two V-Shrike prowl the middle half,
+	# world-anchored like every other ambient hostile: they live HERE, they do not
+	# spawn on top of you, and a replacement flies in from deeper space.
+	var gap := _lane_leg(LANE_GAP_LEG.x, LANE_GAP_LEG.y, 3)
+	_spawn_gap_raider(SampleBuilds.vshrike_goshawk(), AIShip.Tactic.BOOM_ZOOM, gap, 0.40)
+	_spawn_gap_raider(SampleBuilds.vshrike_harrier(), AIShip.Tactic.ORBIT, gap, 0.60)
+
+
+## A hauler running the capital road. Same living-world rule as the short lanes:
+## it is somewhere on the route when you arrive, not conjured near you.
+func _spawn_lane_freighter(build: ShipBuild, route: Array[Vector2], t: float) -> TraderShip:
+	var hauler := TraderShip.new()
+	hauler.position = _lane_point(t) + _jitter(500.0)
+	add_child(hauler)
+	hauler.patrol_points = route
+	hauler.setup_trader(build, Color(0.82, 0.84, 0.88))   # clean corporate grey
+	hauler.died.connect(_respawn_lane_freighter_later.bind(build, route, t))
+	return hauler
+
+
+func _respawn_lane_freighter_later(build: ShipBuild, route: Array[Vector2], t: float) -> void:
+	await get_tree().create_timer(50.0).timeout
+	if is_inside_tree():
+		_spawn_lane_freighter(build, route, t)
+
+
+## A HIRED escort flying cover on a hauler. Borrows the Guardian protector
+## behaviour (formation, break off, rejoin) and then sheds every Guardian cue —
+## these are a contractor's ships, not the law.
+func _spawn_escort(build: ShipBuild, protect: Node2D, slot: int, wing: int) -> GuardianShip:
+	var esc := GuardianShip.spawn_protector(self, build, protect, slot, wing)
+	esc.set_hull_tint(Color.WHITE)
+	esc.apply_livery(ESCORT_LIVERY)
+	return esc
+
+
+## The Navy's end of the road. Galean colours, borrowed patrol behaviour, and a
+## leash that stops well short of the Gap.
+func _spawn_navy_picket(route: Array[Vector2]) -> void:
+	var p := GuardianShip.spawn_lane_patrol(self, route[0] + _jitter(400.0),
+		SampleBuilds.guardian_vulture(), route)
+	p.set_hull_tint(Color.WHITE)
+	p.apply_livery(Color(0.23, 0.44, 0.85))   # Galean Navy blue
+	p.died.connect(_respawn_navy_picket_later.bind(route))
+
+
+func _respawn_navy_picket_later(route: Array[Vector2]) -> void:
+	await get_tree().create_timer(45.0).timeout
+	if is_inside_tree():
+		_spawn_navy_picket(route)
+
+
+## A V-Shrike prowling the Gap. Replacements fly in from the DEEP end of the
+## middle stretch rather than appearing where the last one died — the living-world
+## rule, and it keeps travel time as the pacing.
+func _spawn_gap_raider(build: ShipBuild, p_tactic: AIShip.Tactic,
+		route: Array[Vector2], t: float) -> void:
+	var r := _spawn_vshrike(_lane_point(t) + _jitter(700.0), build, p_tactic, route)
+	r.died.connect(_respawn_gap_raider_later.bind(build, p_tactic, route, t))
+
+
+func _respawn_gap_raider_later(build: ShipBuild, p_tactic: AIShip.Tactic,
+		route: Array[Vector2], t: float) -> void:
+	await get_tree().create_timer(60.0).timeout
+	if is_inside_tree():
+		_spawn_gap_raider(build, p_tactic, route, t)
 
 
 func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = []) -> void:
