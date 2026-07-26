@@ -28,6 +28,7 @@ func _ready() -> void:
 	_case_no_sensors_means_blind()
 	_case_hunters_see_only_as_far_as_they_are_equipped()
 	_case_evasion_shrinks_the_profile_for_every_weapon()
+	_case_interaction_reach_is_a_ship_property()
 
 	if failures == 0:
 		print("test_levels: ALL PASS")
@@ -259,6 +260,42 @@ func _case_evasion_shrinks_the_profile_for_every_weapon() -> void:
 	if not is_equal_approx(BuildShip.hit_profile_of(null, 12.0), 12.0):
 		_fail("hit_profile_of(null) did not fall back cleanly")
 	s.queue_free()
+
+
+## THE THIRD RADIUS — how far a ship can PULL (user, 2026-07-26).
+##
+## It was a flat constant on the player, so a Bellwether scooped from exactly the
+## same distance as a Rooster and NO COMPONENT COULD AFFECT IT — a cargo scoop was
+## unbuildable. A component has to provide something or there is no reason to carry
+## it. The hull gives the baseline; gear raises it.
+func _case_interaction_reach_is_a_ship_property() -> void:
+	var small := _ship(SampleBuilds.escort_harrier(), 0)       # LIGHT
+	var big := _ship(SampleBuilds.lane_bellwether(), 0)        # HEAVY
+	if small.interaction_radius() < BuildShip.BASE_INTERACTION:
+		_fail("a bare hull reaches %.0f, under the %.0f baseline" % [
+			small.interaction_radius(), BuildShip.BASE_INTERACTION])
+	if big.interaction_radius() <= small.interaction_radius():
+		_fail("a HEAVY freighter (%.0f) does not out-reach a LIGHT fighter (%.0f)" % [
+			big.interaction_radius(), small.interaction_radius()])
+
+	# THE POINT OF THE WHOLE CHANGE: a fitted module must move it.
+	var scooped := SampleBuilds.escort_harrier()
+	var fitted := false
+	for i in scooped.hull.hardpoints.size():
+		if scooped.hull.hardpoints[i].slot_type == HardpointDef.SlotType.SYSTEM:
+			scooped.slots[i] = load("res://data/components/systems/grapple_scoop.tres")
+			fitted = true
+			break
+	if not fitted:
+		_fail("no SYSTEM slot to test a scoop in — this case proved nothing")
+	else:
+		var s := _ship(scooped, 0)
+		if s.interaction_radius() <= small.interaction_radius():
+			_fail("fitting a Grapple Scoop changed nothing (%.0f vs %.0f) — the stat never reached the ship" % [
+				s.interaction_radius(), small.interaction_radius()])
+		s.queue_free()
+	small.queue_free()
+	big.queue_free()
 
 
 ## Strip the sensor out of a build, whatever socket it landed in.

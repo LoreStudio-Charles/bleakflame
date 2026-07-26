@@ -327,6 +327,32 @@ func sensor_reach(floor_r: float) -> float:
 	return 0.0 if r <= 0.0 else maxf(floor_r, r)
 
 
+## The reach a hull has with nothing fitted — its own cargo door and manipulators.
+## Matches the flat `SALVAGE_RADIUS` this replaced, so a bare ship behaves exactly
+## as it did.
+const BASE_INTERACTION := 95.0
+## How much of the hull's physical size counts toward that reach, so a freighter
+## scoops from further than a fighter without anyone authoring a number per hull.
+const INTERACTION_PER_RADIUS := 2.4
+
+
+## THE INTERACTION RADIUS — how far this ship can PULL: salvage, pickups, and the
+## beneficial radius generally. The third of the three radii, and the one that is
+## NOT about combat (see hit_profile_of for that, and hit_radius for physics).
+##
+## IT USED TO BE A FLAT CONSTANT ON THE PLAYER, which meant a Bellwether scooped
+## from exactly the same distance as a Rooster and — worse — NO COMPONENT COULD
+## AFFECT IT, so a cargo scoop module was literally unbuildable. A component has to
+## provide something or there is no reason to carry its mass and draw.
+##
+## The HULL provides the baseline (it is a component too, and a bigger hull has a
+## bigger door); gear raises it from there. Aggregated as a MAX rather than a sum —
+## two scoops do not reach twice as far.
+func interaction_radius() -> float:
+	var from_hull := maxf(BASE_INTERACTION, hit_radius * INTERACTION_PER_RADIUS)
+	return maxf(from_hull, float(stats.get("interaction_range", 0.0)))
+
+
 ## THE HIT PROFILE — how big this thing is TO A WEAPON, which is deliberately not
 ## how big it is to the physics engine.
 ##

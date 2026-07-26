@@ -28,7 +28,9 @@ const SLIDE_COOLDOWN := 1.2
 ## An empty-space click clears the selection — deselection stays possible.
 const TARGET_CLICK_RADIUS := 150.0
 ## Forgiving right-click salvage reach — click ANYWHERE near loot to grab it.
-const SALVAGE_RADIUS := 95.0
+## Salvage reach now lives on the ship (BuildShip.interaction_radius) so hull size
+## and fitted gear can both raise it. The old flat constant is BuildShip's
+## BASE_INTERACTION, which a bare hull still gets.
 ## The lead pip orbits the ship at this distance (bearing indicator ring).
 const PIP_RING := 110.0
 
@@ -624,7 +626,7 @@ func _cycle_target(group: String) -> void:
 ## near several overlapping, open the salvage window to pick; near nothing
 ## grabbable, fall back to selecting a target.
 func _rmb_at(point: Vector2) -> void:
-	var loot := _loot_near(point, SALVAGE_RADIUS)
+	var loot := _loot_near(point, interaction_radius())
 	if loot.is_empty():
 		_select_target_at(point)
 		return

@@ -7,6 +7,15 @@ extends ComponentDef
 @export var tags: PackedStringArray = []
 @export var cargo_capacity := 0.0
 @export var sensor_range := 0.0
+## INTERACTION REACH (user, 2026-07-26) — how far this suite can PULL: salvage,
+## pickups, and the beneficial radius generally. 0 = it adds nothing.
+##
+## Exists because the reach used to be a flat constant on the player, which meant
+## NO COMPONENT COULD AFFECT IT and a cargo scoop was literally unbuildable. A
+## component has to provide something or there is no reason to carry it.
+##
+## Aggregated as a MAX, not a sum: two scoops do not reach twice as far.
+@export var interaction_range := 0.0
 ## ROLE IDENTIFICATION (user, 2026-07-25) — how far this suite can read a
 ## contact's ROLE (a rare AI specialist: mender / warden / binder), 0 = it can't.
 ##
@@ -46,6 +55,8 @@ func stat_summary() -> String:
 		parts.append("sensor range %.0f" % sensor_range)
 	if role_id_range > 0.0:
 		parts.append("identifies contact ROLE to %.0f" % role_id_range)
+	if interaction_range > 0.0:
+		parts.append("salvage reach %.0f" % interaction_range)
 	if has_tag("flight_decoupler"):
 		parts.append("unlocks Disconnected flight")
 	if not tags.is_empty():

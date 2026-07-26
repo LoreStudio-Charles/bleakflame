@@ -277,9 +277,149 @@ Nothing reads any of these at runtime:
 
 ---
 
-## 9. Queued changes that will alter this page
+## 9. THE SYSTEM WE WANT
 
-- **`docs/armor_and_penetration.md`** — armor gains damage reduction (layer-local), plus
-  Heat / Penetration / HESH weapon attributes. Spec complete, not built.
-- **`docs/progression_table.md`** — the level→stat table. `toughness_mult` is defined but
-  only used as a ratio; the absolute curve is unapplied.
+Everything above is what the code does today. This section is the **target** — the
+system we are building toward, so that anything not matching it is a known gap rather
+than an accident. Sections 1–8 describe reality; **this one wins when they disagree**.
+
+### 9.1 Principles
+
+Five rules, all established in design conversation, in rough order of how often they
+decide an argument.
+
+1. **A component PROVIDES something — that is why it is worth its mass and draw.**
+   If a component does nothing, why carry it? The corollary is the rule worth enforcing:
+   **never grant what a ship has not equipped.** Every free floor, default or fallback is
+   a component nobody needs to buy. (This is what the `maxf(600, sensor_range)` floors
+   were: sensing handed out free, which made the Tin-Ear set worthless.)
+
+2. **The layers are different MATERIALS, not one HP bar.** Shields regenerate and stop
+   everything. Armor ablates *and* mitigates, and can be answered by the right weapon.
+   Hull is the thing you are protecting. Rules are **layer-local** — armor's mitigation
+   never applies to shields or hull.
+
+3. **Information is a capability you buy.** Detection, role identification, telemetry —
+   all gear, all gated, and silence is the honest answer when you cannot tell. Never
+   imply a target is ordinary just because you cannot read it.
+
+4. **Physical size and combat size are different questions.** How big a ship is to bump
+   into is not how big it is to shoot. Evasion changes the second, never the first.
+
+5. **Authored, not derived.** A stat should state what it does rather than have it
+   inferred from something else. `mark` says how BIG a gun is; it must not silently also
+   decide what the gun can hit.
+
+### 9.2 The three radii
+
+| radius | answers | changes with | status |
+|---|---|---|---|
+| **Physical** (`hit_radius`) | collision, bumping, planetoid surfaces, AI spacing | hull only | **BUILT** |
+| **Hit profile** (`hit_profile_of`) | every weapon test — bolts, beams, fuzes, splash | **evasion** | **BUILT** |
+| **Interaction** (`interaction_radius`) | pickups and salvage reach | **hull size + components** | **BUILT** |
+
+Interaction reach was a flat `SALVAGE_RADIUS = 95.0` on the player — it did not scale with
+hull and **no component could influence it**, so a cargo scoop was unbuildable. It is now
+`BuildShip.interaction_radius()`: the **hull** provides the baseline (a bigger hull has a
+bigger door — `max(95, hit_radius x 2.4)`) and gear raises it from there, aggregated as a
+MAX because two scoops do not reach twice as far. The **Grapple Scoop** (Salvage, 260) is
+the first module that exists *because* the stat does.
+
+Still flat and not yet on this seam: **docking and scan reach.** Those are separate
+constants today and would be the natural next users of the same property.
+
+**Kept as plain distance math, not Area2D** — decided deliberately. Projectiles are not
+physics bodies, and a 2200-speed bolt covers ~37 units per frame against a ~14-unit
+target, so the **swept** segment test is more *correct* than an overlap check, not merely
+cheaper. Blast falloff needs a real distance anyway. Area2D remains reasonable for the
+*beneficial* radius later, if enter/exit semantics are wanted — but the property matters
+more than the mechanism.
+
+> **The known weakness of the math approach:** every new hit test must remember to call
+> `hit_profile_of`. That is exactly how evasion came to work in one place and be forgotten
+> in four. A collider is structurally correct by default; math is correct if you are
+> disciplined. **Any new weapon hit test goes through the shared helper.**
+
+### 9.3 The layered defence
+
+The target, per `docs/armor_and_penetration.md` (spec complete, not built):
+
+| layer | mitigates? | ablates? | answered by |
+|---|---|---|---|
+| Shield | no | yes (pool) | anything; it is the clean outer answer |
+| **Armor** | **YES — layer-local DR** | yes (pool) | **Heat / Penetration / HESH** |
+| Hull | no | it *is* the ship | getting through the above |
+
+So an armored ship is not globally tougher — it is tougher **for exactly as long as its
+armor lasts**, which makes stripping armor a real objective and gives shields and armor
+genuinely different characters.
+
+**This resurrects a currently-dead stat.** `DefenseDef.kind` is read by nothing today, and
+`ShipStats` collapses every plate into one `armor_hp` number. The spec's rule — *you get
+the LOWEST DR of all fitted plates, because Murphy's Law says that is where the shot
+lands* — needs **per-plate** data. So implementing armor means `kind` becomes live and
+`ShipStats` must keep the individual plates, not just their sum.
+
+### 9.4 Weapons declare their answers
+
+A weapon should say what it is good against rather than have it inferred:
+
+- **`traverse`** — authored deg/s. **BUILT.** `mark` no longer decides tracking, which is
+  what made the Palisade flak battery (Mk4, 420°/s, short reach) possible.
+- **`heat` / `penetration` / `hesh_bonus`** — **QUEUED.** All default to 0, so every
+  existing weapon behaves exactly as it does now and the system is opt-in per gun.
+- The payoff is that this needs **no new weapons** — it fills numbers in on the arsenal
+  already shipped and turns a flat list into a set of answers.
+
+### 9.5 Perception is bought
+
+**BUILT:** `sensor_reach` (0 with no sensor — blind means blind), `role_id_range` on a
+blue L10+ array, AI acquisition capped by its own sensors, retention deliberately
+separate.
+
+**QUEUED:** the **computer as a data tier** — modules produce data, the computer decides
+how much reaches you. That gives the long-unused `"computer"` tag a job and gives every
+future telemetry feature one gate instead of each inventing its own. Armor heat readouts,
+ordnance counts, enemy energy state, module cooldowns — all the same question, asked once.
+
+### 9.6 What does not match yet
+
+Ordered by how much the mismatch costs.
+
+| Gap | Why it matters |
+|---|---|
+| **Armor is pure HP** | A point of armor equals a point of hull; no weapon can specialise. Spec is complete — this is the biggest single upgrade available. |
+| **AI damage does not scale with level** | Only `GuardianShip` applies `Progression.damage_mult`. A level-25 Recluse is as tough as designed but hits like a level-1 pirate. **Decide before levelling more content.** |
+| **Every hull has a `trait_id` and none of them do anything** | Nine authored traits, zero hookups. Either wire them or stop authoring them. |
+| **Gunnery advertises "wider firing arcs"** | Not implemented. Either widen `_half_arc` or fix the text. |
+| **`ShipStats.dps` and `DefenseDef.kind` are dead** | `kind` comes alive with armor; `dps` is display-only and should probably say so. |
+| **`surging` affix text says capacity, code raises LOAD** | Stale since the reactor split. |
+| **Overdraw has no runtime consequence** | `validate()` refuses it at the refit screen, but nothing enforces it in flight. |
+
+### 9.7 Open decisions
+
+Genuine forks — not to be guessed at.
+
+1. **Should AI damage scale with level?** Today only Guardians do. If pirates should too,
+   the region bands on the Long Lane start meaning something on offence as well as
+   defence; if not, level is a toughness-only axis for enemies and should be documented
+   as such.
+2. **What do hull traits do?** Every hull carries one as flavour. Options: wire them as
+   real modifiers, demote them to pure description, or make them the seam for a future
+   perk system.
+3. **Should anything besides abilities cost energy?** Right now guns, shields, thrust and
+   boost are all free, so a reactor's *recharge* only matters to ability users. Making
+   sustained fire draw power would give Capacity a second job — and would be a large
+   change to how combat feels.
+4. **Does overdraw do anything in flight?** A brownout rule would make the LOAD budget a
+   live constraint rather than a fitting-screen one.
+5. **Should docking and scan reach join the interaction seam?** Salvage now runs on
+   `interaction_radius()`; docking and scanning are still separate constants. Folding them
+   in would make one module improve all three — which may be too much for one component.
+
+### 9.8 Reconciliation rule
+
+When this section and sections 1–8 disagree, **this section is the intent and the code is
+the bug.** Fix the code or change this section deliberately — never let them drift
+silently. That is the failure mode that produced the backwards traverse rationale, the
+free sensor floors, and an evasion stat that worked against exactly one weapon type.

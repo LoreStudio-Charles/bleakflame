@@ -401,6 +401,20 @@ func _generate_components() -> void:
 	s.description = "Short-range, second-hand, and honest about it. You will see the rock before you hit it and the raider once it is already close. Every hauler on the lane carries one, because the alternative is flying deaf."
 	_save(s, "res://data/components/systems/tinear_sensor_set.tres")
 
+	# GRAPPLE SCOOP — the first module that extends the BENEFICIAL radius. It exists
+	# because interaction reach became a real ship stat (BuildShip.interaction_radius);
+	# while it was a flat constant on the player this component could not exist at all.
+	# Cheap, heavy-ish, draws a little: a salvager's quality-of-life buy, not a combat
+	# choice.
+	s = SystemDefS.new()
+	s.display_name = "Grapple Scoop"
+	s.grade = G.SALVAGE
+	s.mark = 1; s.mass = 6.0; s.power_draw = 5.0
+	s.interaction_range = 260.0
+	s.tags = PackedStringArray(["scoop"])
+	s.description = "A pair of magnetic arms on a lazy winch. Nearly triples the reach you can pull salvage from, which over a long afternoon in a wreck field is the difference between working and flying."
+	_save(s, "res://data/components/systems/grapple_scoop.tres")
+
 	s = SystemDefS.new()
 	s.display_name = "Strapdown Cargo Pod"
 	s.grade = G.SALVAGE

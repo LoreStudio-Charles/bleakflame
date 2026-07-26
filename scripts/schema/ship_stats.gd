@@ -23,6 +23,9 @@ static func aggregate(build: ShipBuild) -> Dictionary:
 		# reach than sensor_range: seeing a ship and knowing what it does are
 		# different jobs. 0 = you cannot; it arrives on ADVANCED, level-10+ sensors.
 		"role_id_range": 0.0,
+		# How far the ship can PULL salvage. A MAX, not a sum -- two scoops do not
+		# reach twice as far. 0 here still leaves the hull's own baseline.
+		"interaction_range": 0.0,
 		# Miner sensor: range at which mineable rock paints the radar. 0 by default;
 		# the Miner commission grants it (ship.apply_build), and gear may add later.
 		"ore_sense": 0.0,
@@ -51,6 +54,7 @@ static func aggregate(build: ShipBuild) -> Dictionary:
 			s.cargo += comp.cargo_capacity
 			s.sensor_range = maxf(s.sensor_range, comp.sensor_range)
 			s.role_id_range = maxf(s.role_id_range, comp.role_id_range)
+			s.interaction_range = maxf(s.interaction_range, comp.interaction_range)
 	# CHIPS in the Coupling carry their own mass and may ship hardware of their
 	# own (the Killshot coilgun's optics), so they aggregate too.
 	for chip in build.chips:

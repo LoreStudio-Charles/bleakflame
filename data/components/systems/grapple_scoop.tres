@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SystemDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/system_def.gd" id="1_iw5q4"]
+
+[resource]
+script = ExtResource("1_iw5q4")
+tags = PackedStringArray("scoop")
+interaction_range = 260.0
+display_name = "Grapple Scoop"
+description = "A pair of magnetic arms on a lazy winch. Nearly triples the reach you can pull salvage from, which over a long afternoon in a wreck field is the difference between working and flying."
+grade = 1
+mass = 6.0
+power_draw = 5.0
+affix_ids = PackedStringArray()
