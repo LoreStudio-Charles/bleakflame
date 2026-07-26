@@ -2,7 +2,9 @@
 
     python tools/gen_progression_tables.py
 
-Writes docs/tables/progression_<grade>.csv, 60 rows (one per level) each.
+Writes docs/tables/progression_<grade>.csv, one row per level to MAX_LEVEL.
+LEVEL_LOCK marks how far content is balanced today; the curve runs past it so
+raising the lock later needs no re-derivation.
 
 WHY A GENERATOR AND NOT HAND-MAINTAINED FILES: every number here comes from the
 handful of constants at the top. Tune one, re-run, and all seven files move
@@ -21,7 +23,11 @@ All bases below are STANDARD-grade numbers, because Standard is the 1.00 anchor.
 import csv
 import os
 
-MAX_LEVEL = 30            # halved from 60: fewer levels, each one worth twice as much
+# The curve's DOMAIN is 60. LEVEL_LOCK is the cap CONTENT is balanced to today and is
+# meant to RISE later -- a soft cap that moves, not a design ceiling. Generating the
+# full 60 now means raising the lock never requires re-deriving the curve.
+MAX_LEVEL = 60
+LEVEL_LOCK = 30
 
 # --- the two axes ---------------------------------------------------------
 # COMPOUNDING, NOT LINEAR (user, 2026-07-26: "when a player levels they should feel
@@ -29,7 +35,16 @@ MAX_LEVEL = 30            # halved from 60: fewer levels, each one worth twice a
 # already have -- at the old 60-cap a level was +5% at the start and +1.3% at the
 # end, imperceptible by construction. Compounding is always +8%, so 29->30 feels
 # exactly as good as 1->2.
-LEVEL_PER_LEVEL = 1.08    # level_factor = this ** (L-1)  -> L30 = 9.32x
+# +8% A LEVEL, ALWAYS, ACROSS ALL 60. Compounding is what makes a level FELT --
+# linear growth makes each one a smaller share of what you already have, decaying to
+# +1.3% by L60. This is always +8%, so 59->60 lands exactly like 1->2.
+#
+# It compounds to ~x93 across the domain, and that is DELIBERATE (user: "why can't a
+# level 60 be 100 times more powerful than a level 1?"). A spread that large would
+# normally wreck grouping -- which is exactly what the LEVEL BANDS below exist to
+# solve. Because grouping is gated by BAND rather than by power, the power curve is
+# free to be dramatic.
+LEVEL_PER_LEVEL = 1.08
 
 GRADES = [                # name, factor, tier index (feeds the DR rating)
     ("flotsam",      0.80, 0),
@@ -64,9 +79,17 @@ DOT_EXP = 0.80            # ...and scales more slowly too
 DR_CAP = 0.40
 DR_K = 40.0
 
-# --- XP: fewer levels, each one earned ------------------------------------
-XP_BASE = 40.0
-XP_EXP = 2.0              # L30 total ~33,640, against the old 60-level 34,066
+# --- XP: a level should cost real effort ----------------------------------
+# 10x the shipped base of 50 (user: "you shouldn't walk outside, walk back in and
+# level up"). Exponent stays at the shipped 1.6 -- with the base already ten times
+# higher, steepening the curve as well would put the late game out of reach.
+#
+# THE REWARDS MUST MOVE TOO, BUT BY LESS. Quests go 50 -> 200 (4x) against a 10x
+# cost, which is what actually makes levelling slower rather than just renaming the
+# units. Kill XP wants the same treatment -- see the pacing note in
+# docs/progression_table.md.
+XP_BASE = 500.0
+XP_EXP = 1.6
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(REPO, "docs", "tables")
@@ -88,6 +111,24 @@ def xp_for_level(level):
     return int(XP_BASE * pow(float(max(0, level - 1)), XP_EXP))
 
 
+def group_band(level):
+    """The level range this pilot may GROUP with (user, 2026-07-26).
+
+    The band WIDENS as you level, so a big power spread never blocks play:
+        L1  -> 1-5      L5  -> 1-10     L10 -> 5-20     L30 -> 15-60
+
+    Below L11 the flat -5 window is the more permissive floor; above it, half-level
+    is. `min()` picks whichever is kinder. The top is double, so by L30 the band
+    reaches the cap and everyone 30+ groups with everyone 30+.
+
+    THIS IS WHAT MAKES THE x93 CURVE SAFE. Grouping is gated by band, not by power,
+    so levels can be dramatic without splitting the playerbase.
+    """
+    lower = max(1, int(min(level - 5, level / 2.0)))
+    upper = min(MAX_LEVEL, max(level * 2, 5))
+    return lower, upper
+
+
 def armor_dr(level, grade_tier, mark):
     """Both axes feed one rating; the rating flattens toward DR_CAP."""
     rating = level + grade_tier * 10 + mark * 5
@@ -95,7 +136,8 @@ def armor_dr(level, grade_tier, mark):
 
 
 def headings():
-    cols = ["level", "level_factor", "xp_total", "xp_this_level"]
+    cols = ["level", "reachable_now", "level_factor", "xp_total", "xp_this_level",
+            "group_min", "group_max"]
     cols += ["hull_" + b for b in HULL_BAND]
     for prefix in ("shield_hp", "shield_regen", "armor_hp", "armor_dr", "dps", "dot_dps"):
         cols += ["%s_%s" % (prefix, m) for m in MARKS]
@@ -109,8 +151,10 @@ def rows_for(grade_factor, grade_tier):
         regen = (lf ** REGEN_EXP) * (grade_factor ** REGEN_EXP)
         dot = (lf ** DOT_EXP) * (grade_factor ** DOT_EXP) * DOT_SCALE
 
-        row = [level, round(lf, 3),
-               xp_for_level(level), xp_for_level(level) - xp_for_level(level - 1)]
+        lo, hi = group_band(level)
+        row = [level, "yes" if level <= LEVEL_LOCK else "no", round(lf, 3),
+               xp_for_level(level), xp_for_level(level) - xp_for_level(level - 1),
+               lo, hi]
         row += [round(HULL_BAND[b] * pool) for b in HULL_BAND]
         row += [round(v * pool) for v in SHIELD_HP]
         row += [round(v * regen, 2) for v in SHIELD_REGEN]
@@ -131,8 +175,8 @@ def main():
             w.writerow(cols)
             for row in rows_for(factor, tier):
                 w.writerow(row)
-        print("  %-46s %d rows x %d cols" % (
-            os.path.relpath(path, REPO), MAX_LEVEL, len(cols)))
+        print("  %-46s %d rows x %d cols  (lock %d)" % (
+            os.path.relpath(path, REPO), MAX_LEVEL, len(cols), LEVEL_LOCK))
     print("\n%d columns:" % len(cols))
     for c in cols:
         print("   " + c)

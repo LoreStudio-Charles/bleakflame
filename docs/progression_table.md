@@ -32,15 +32,24 @@ Supersedes the previous PLANNED stub. The old placeholder formulas in `scripts/p
 
 Everything scales on **LEVEL** and **GRADE**, and both apply to every scaling stat.
 
-### Level factor — COMPOUNDING, cap 30
+### Level factor — COMPOUNDING, cap 60, soft lock 30
 
 ```
-level_factor(L) = 1.08 ^ (L - 1)          MAX_LEVEL = 30
+level_factor(L) = 1.08 ^ (L - 1)          MAX_LEVEL = 60,  LEVEL_LOCK = 30
 ```
 
-| L | 1 | 2 | 5 | 10 | 20 | 30 |
-|---|---|---|---|---|---|---|
-| ×  | 1.00 | 1.08 | 1.36 | 2.00 | 4.32 | **9.32** |
+| L | 1 | 5 | 10 | 20 | 30 *(lock)* | 45 | 60 |
+|---|---|---|---|---|---|---|---|
+| ×  | 1.00 | 1.36 | 2.00 | 4.32 | **9.32** | 29.56 | **93.76** |
+
+**The cap is 60.** `LEVEL_LOCK` is how far content is balanced *today* and is meant to
+**rise** — a soft cap that moves, not a design ceiling. The tables generate all 60, so
+raising the lock never requires re-deriving anything; a `reachable_now` column marks which
+rows are live.
+
+**A level 60 is ~94× a level 1, deliberately.** The usual objection is that a spread that
+large wrecks grouping. **The grouping bands below are the answer**, and because grouping is
+gated by band rather than by power, the power curve is free to be dramatic.
 
 **"When a player levels they should feel it and rejoice"** (user, 2026-07-26), and that
 requires **compounding** rather than linear growth.
@@ -50,30 +59,90 @@ Linear growth makes each level a *smaller share of what you already have*. On th
 imperceptible by construction, no matter how the numbers were tuned. Compounding is always
 **+8%**, so 29 → 30 feels exactly as good as 1 → 2.
 
-| A level at… | old (linear, 60) | now (1.08ⁿ, 30) |
+| A level at… | old (linear) | now (1.08ⁿ) |
 |---|---|---|
 | L2 | +5.0% | **+8.0%** |
 | L10 | +3.6% | **+8.0%** |
 | L20 | +2.6% | **+8.0%** |
 | L30 | +2.1% | **+8.0%** |
-| L60 | +1.3% | — |
+| L60 | **+1.3%** | **+8.0%** |
 
-**Half the levels, and the career is the same length**, so each one simply takes about
-twice as long to earn — the "slow it down further" half of the same request.
+The old curve *decayed* — a level at 60 was worth a quarter of a level at 2, which made
+"feel it and rejoice" impossible however the numbers were tuned. Compounding does not
+decay: **level 59 → 60 lands exactly like 1 → 2.**
 
-### XP — fewer levels, each one earned
+### GROUPING BANDS — what makes the ×94 spread safe
 
 ```
-xp_for_level(L) = 40 × (L - 1) ^ 2.0      # cumulative; L1 free
+lower = max(1, min(level − 5, level ÷ 2))
+upper = min(60, max(level × 2, 5))
 ```
 
-| L | 2 | 5 | 10 | 20 | 30 |
+| Level | May group with |
+|---|---|
+| 1 | **1 – 5** |
+| 5 | **1 – 10** |
+| 10 | **5 – 20** |
+| 20 | 10 – 40 |
+| 30 | **15 – 60** |
+| 45 | 22 – 60 |
+| 60 | 30 – 60 |
+
+**The band widens as you level.** Below level 11 the flat −5 window is the more permissive
+floor; above it, half-level takes over. The top is always double.
+
+By level 30 the band reaches the cap, so **everyone 30+ groups with everyone 30+** — the
+late game is one community rather than a ladder.
+
+**This is the piece that lets levels be enormous.** A ×94 spread would normally mean a
+low-level friend cannot meaningfully play with a high-level one. Instead the game simply
+does not pair them, and every pair it *does* allow sits inside roughly a 4× power window.
+Grouping is gated by **band**, not by power.
+
+It also reframes "play with your friends": rather than flattening progression so any two
+players can group, a player keeps **a character reserved for that group**. That needs a
+proper character-select system — `Pilot` is a single static today, one pilot per save — but
+it costs progression nothing.
+
+### XP — a level should cost real effort
+
+```
+xp_for_level(L) = 500 × (L - 1) ^ 1.6     # cumulative; L1 free
+```
+
+**10× the shipped base of 50** (user: *"you shouldn't walk outside, walk back in and level
+up"*). The exponent stays at the shipped 1.6 — with the base already ten times higher,
+steepening the curve too would put the late game out of reach.
+
+| L | 2 | 10 | 20 | 30 *(lock)* | 60 |
 |---|---|---|---|---|---|
-| cumulative | 40 | 640 | 3,240 | 14,440 | **33,640** |
-| that level alone | 40 | 280 | 680 | 1,480 | **2,280** |
+| cumulative | 500 | 16,817 | 55,587 | **109,346** | 340,669 |
+| that level alone | 500 | 2,889 | 4,607 | 5,970 | 9,191 |
 
-**33,640 total, against the old 60-level curve's 34,066** — within 1%. The career is the
-same length; there are simply half as many, twice as meaty, twice as slow.
+**The first level now costs 500 XP** — around 35 kills, or 2.5 quests at 200. Previously
+the tutorial licence paid for it outright.
+
+### XP SOURCES — every profession should level by its own verb
+
+XP is currently *~entirely combat*, which is a large part of why Miner, Scout, Trader and
+Science feel thin: their signature verb does not advance them. **Each profession should
+have an XP path through what it actually does.**
+
+| Source | Status | Notes |
+|---|---|---|
+| **Ship kills** | BUILT | 8/10/14/40 — wants ~**×3** now that costs are ×10 and other sources exist |
+| **Quests** | BUILT | 20–100 → **200**. About 2.5 per early level, which reads right |
+| **Ground kills** | BUILT | flat 6/scrit, currently ignoring `kill_xp_mult` — fold into the same system |
+| **Mining** | NEW | naturally bounded: ore is finite per rock, rocks are placed, travel costs time |
+| **Trading** | NEW | **very minor** — see below |
+| **Tutorial** | BUILT | 50 — no longer buys a level; raise with the curve |
+
+**Trading XP staying minor is load-bearing, not caution.** If it is competitive with
+combat, everyone trades, because trading is safe. It should make a Trader's own playstyle
+*viable*, never optimal.
+
+**Target: comparable XP per hour across paths**, with combat slightly ahead because it
+carries risk. Otherwise one path quietly becomes correct and the rest become flavour.
 
 ### What this does to level GAPS — the best part
 
@@ -82,6 +151,9 @@ same length; there are simply half as many, twice as meaty, twice as slow.
 | 5 levels | ×1.13 | **×1.47** |
 | 10 levels | ×1.29 | **×2.16** |
 | 17 levels | ×1.63 | **×3.70** |
+
+(A gap wider than the band cannot be *grouped* at all — only *fought*, which is where the
+Long Lane's region levels do their work.)
 
 This is what makes the Long Lane's region bands mean something. A level-25 Recluse against
 a level-8 pilot stops being a label and becomes genuinely terrifying.
@@ -95,7 +167,22 @@ a level-8 pilot stops being a label and becomes genuinely terrifying.
 ~15% a tier. **Standard is the anchor at 1.00** — every base number below is a Standard
 number, so the existing arsenal needs no re-basing.
 
-**Combined range: 16.3×** (L1 Flotsam → L30 Exotic). Multiply by the size-band spread
+**Combined range: ×16.3 at the lock, ×164 at level 60** (L1 Flotsam → Exotic).
+
+### Level and grade must BOTH matter (user, 2026-07-26)
+
+Three constraints, and the numbers satisfy all three:
+
+| Claim | Check | Result |
+|---|---|---|
+| A high level in trash is still dangerous to a low level | L30 Flotsam vs L10 Standard | **×2.1 advantage** ✓ |
+| …but has no chance against a well-geared high level | L30 Flotsam vs L30 Exotic | **×2.2 against** ✓ |
+| A low level in great gear flies through levelling | L10 Exotic ≈ a L20 in Standard | ✓ |
+
+**The knob is the RATIO of the two spreads.** Levels span ×93.8, grades ×2.19 — so a full
+grade ladder is worth roughly **10 levels**. If gear should feel more decisive than that,
+widen the grade spread rather than touching levels; 0.6 → 2.5 would make it worth about
+20. Multiply by the size-band spread
 below and the real power range is far wider.
 
 ---
@@ -279,42 +366,38 @@ None of this is wired yet. Adopting the table means:
 
 | Where | From | To |
 |---|---|---|
-| `Pilot.MAX_LEVEL` | 60 | **30** |
-| `Pilot.POINTS_PER_LEVELS` | 4 | **2** — keeps 15 skill points at cap, and a point every 2 levels feels frequent |
-| `Pilot.xp_for_level` | `50 × (L-1)^1.6` | `40 × (L-1)^2.0` |
+| `Pilot.MAX_LEVEL` | 60 | **60 — unchanged.** Add a separate soft `LEVEL_LOCK = 30` |
+| `Pilot.POINTS_PER_LEVELS` | 4 | 4 — unchanged; 15 points at 60, 7 at the lock |
+| `Pilot.xp_for_level` | `50 × (L-1)^1.6` | `500 × (L-1)^1.6` |
+| *(new)* grouping band | — | `max(1, min(L-5, L/2))` … `min(60, max(L×2, 5))` |
+| `tutorial.gd REWARD_XP` | 50 | raise with the curve — it no longer buys a level |
+| `flight_test.KILL_XP` | 8/10/14/40 | **~×3** — see XP sources |
+| Quest rewards | 20–100 | **200** |
 | `Progression.damage_mult` / `toughness_mult` | `1 + (L-1)×0.32` / `×0.28` | the single compounding `1.08^(L-1)` |
 
 **Existing pilots keep their XP** — level is derived, never stored, so a save simply
 re-reads at the new cap. A level-40 pilot becomes a level-30 pilot with XP to spare.
 
-### ⚠ THE NAVY BAND NOW EXCEEDS THE PLAYER CAP
+### The Navy sits above the LOCK, not above the cap
 
-The region bands set earlier were **rim 1–5, the Long Lane 6–15, the Navy 35–40**. With a
-cap of 30, **the Navy sits above anything a player can reach**, and the Supercruiser's
-authored level 35 is off the end of the table.
+The region levels are **rim 1–5, the Long Lane 6–15, the Navy 35–40**. With the cap at 60
+there is no conflict: the Navy simply sits **above the current soft lock of 30**, which is
+exactly the right relationship. The fleet is out of reach *for now*, and raising the lock
+later walks players toward it rather than past it.
 
-Three ways out, and this wants deciding rather than drifting:
+The Supercruiser's authored level 35 needs no change — unreachable content is what a paced
+reveal wants.
 
-1. **Let NPCs exceed the player cap.** A Galean capital being permanently out of reach is
-   good fiction, and with compounding growth a 10-level gap is already ×2.16 — the Navy
-   would be genuinely untouchable. Costs nothing; changes no bands.
-2. **Compress the bands** to fit inside 30 — roughly rim 1–3, lane 4–12, Navy 25–30.
-   Keeps everything inside one scale at the price of re-levelling shipped content.
-3. **Raise the cap** to ~40 and accept a longer career.
+### The tutorial no longer buys a level
 
-**Recommended: (1).** It preserves every band already authored, needs no content changes,
-and "the Navy is beyond you" is a better answer than "the Navy is level 30 like you".
+`tutorial.gd REWARD_XP = 50`, and level 2 now costs **500** — a tenth of a level, where
+before it paid exactly one. That was 50 against a cost of 50: a coincidence of two
+unrelated numbers rather than a decision anyone made.
 
-### The tutorial now overshoots level 2
-
-`tutorial.gd REWARD_XP = 50`, and level 2 now costs **40**. Finishing the tutorial hands you
-level 2 outright with change to spare — previously it landed on exactly 50/50 by pure
-coincidence of two unrelated numbers.
-
-That is a **good** onboarding beat and worth keeping: the first level should arrive early,
-teach the player the system exists, and feel like a reward. But it should be deliberate.
-With levels now worth +8% each and far rarer, a free one is a real gift — set `REWARD_XP`
-against the curve on purpose rather than leaving it where it happens to land.
+**An early first level is good onboarding** — it teaches that the system exists and feels
+like a reward — so `REWARD_XP` should rise with the curve rather than be left behind. The
+difference is that it would now be a *deliberate* gift, sized against a level worth +8%
+permanently.
 
 **Open before implementation:**
 
