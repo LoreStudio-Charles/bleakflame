@@ -417,10 +417,44 @@ static func _prereq_met(q: Dictionary, req: String, tutorial_done: bool) -> bool
 		return tutorial_done
 	if not completed.has(req):
 		return false
+	# LEVEL GATE — the Campaign's cold stretches (user, 2026-07-26). A trail that
+	# goes quiet while the pilot grows is a noir device the fiction wants, and it is
+	# how The Legend spans the whole game rather than being run off in an evening.
+	# Checked BEFORE the day wait: "you are not ready" outranks "not yet".
+	if Pilot.level() < int(q.get("requires_level", 0)):
+		return false
 	var wait := int(q.get("requires_days", 0))
 	if wait <= 0 or not completed_day.has(req):
 		return true
 	return Research.day >= int(completed_day[req]) + wait
+
+
+## WHY the next beat of a chain has not arrived, in the player's words — or "" if
+## nothing is being held back.
+##
+## A COLD STRETCH AND A BROKEN QUEST LOOK IDENTICAL from the cockpit. This project
+## has already lost a real save to that: it sat frozen at `ember_word` for ~46 game
+## days and the whole idiot-proof-through-line pass came out of it. Deliberate
+## silence is only a story if the game SAYS it is waiting, so any surface that shows
+## the campaign (the Landing Bay banner, the objective tracker) can ask this and
+## turn dead air into anticipation.
+static func pending_reason(id: String) -> String:
+	var q := quest_def(id)
+	if q.is_empty() or completed.has(id) or active.has(id):
+		return ""
+	var req: String = str(q.get("requires", ""))
+	if req != "" and not completed.has(req):
+		return ""   # not cold — you simply have not got there yet
+	var need_lv := int(q.get("requires_level", 0))
+	if Pilot.level() < need_lv:
+		return "The trail is cold. Something surfaces around level %d." % need_lv
+	var wait := int(q.get("requires_days", 0))
+	if wait > 0 and completed_day.has(req):
+		var due := int(completed_day[req]) + wait
+		if Research.day < due:
+			var left := due - Research.day
+			return "The trail is cold. Word in %d day%s." % [left, "" if left == 1 else "s"]
+	return ""
 
 
 static func quest_def(id: String) -> Dictionary:

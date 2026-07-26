@@ -84,8 +84,12 @@ the **firing hosts** (a friendly turret host + a DefenseSatellite node).
    + satellites + the 3 weapon `.tres`).
 3. **Capital services** — flesh out `orivel_dock.gd` (shipyard for super-heavies,
    quartermaster, commissions) when the fiction's ready.
-4. **Percival** — art `assets/world/percival.png` fits the style; DECISION PENDING:
-   place it as a distant landmark beyond Orivel, or keep pure lore for now.
+4. ~~**Percival** — DECISION PENDING: distant landmark, or pure lore?~~
+   **DECIDED 2026-07-26: a real destination you TRAVEL TO**, for the campaign's
+   reveal (beat 4 walked, not told). Same axis as Orivel, so no gate is involved and
+   the Campaign keeps its independence from the Saga. See "Percival is a JOURNEY" in
+   `docs/cinder_reach_campaign.md`. Art `assets/world/percival.png` is on disk;
+   districts are designed in `docs/planet_districts.md`. Not built.
 5. **Tuning** — eyeball the 8 pad offsets in-engine (bay 205 / drydock 140 source-px
    are estimates); add arm/cradle colliders if desired.
 

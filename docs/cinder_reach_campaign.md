@@ -220,6 +220,99 @@ the legend gone into the black. His *further* payoff belongs to the Saga (below)
 
 ---
 
+## The spine: a campaign that spans the whole game (user, 2026-07-26)
+
+**The Legend stays in Cinder Reach for most of its length and resolves around
+LEVEL 40.** It is not an evening's questline; it is the thing that is quietly going
+on while you fly the Reach, going **cold for stretches** behind level gates and
+surfacing again when you have grown.
+
+That choice resolves the distance problem rather than working around it. Percival
+sits beyond Orivel and is the longest trip in the game; instead of waiting for fast
+travel, **the campaign ends where fast travel begins** — by level 40 the pilot has
+the ship (and perhaps a warp drive) that makes the run to Percival possible. Conall
+becomes the legend again at exactly the point the player is also finally capable.
+
+### Cold stretches — and the rule that keeps them from reading as bugs
+
+`requires_level: N` on a quest def holds a beat until the pilot reaches N. Checked
+before the day wait, because *"you are not ready"* outranks *"not yet"*.
+
+> **A COLD TRAIL AND A BROKEN QUEST LOOK IDENTICAL FROM THE COCKPIT.** A real save
+> once sat frozen at `ember_word` for ~46 game days, and the whole idiot-proof
+> through-line pass came out of it. Deliberate silence is only a story if the game
+> SAYS it is waiting.
+>
+> `Quests.pending_reason(id)` answers in the player's words — *"The trail is cold.
+> Something surfaces around level 12."* Any surface that shows the campaign (the
+> Landing Bay banner, the objective tracker) must show it. **Authoring a cold
+> stretch without surfacing its reason is the one way this design fails.**
+
+Noir can absolutely do "nothing happens for a while" — Odessa has been not-asking
+for years. It just has to be legible as waiting rather than as breakage.
+
+### Percival is a JOURNEY, not a destination unlock
+
+**Decision closed 2026-07-26** (was pending in `wip_the_legend_handoff.md`):
+Percival becomes a real place you travel to, for the reveal — beat 4 is walked, not
+told. `assets/world/percival.png` is on disk and `docs/planet_districts.md` already
+designs its three districts.
+
+**It needs no gate.** Percival is on the same axis, beyond Orivel, so the Campaign
+keeps its independence from the Saga — the gate finale stays the one point they
+touch. Had Percival been through a gate, beat 4 would have depended on the Saga's
+endgame and that independence would have collapsed.
+
+**Why walked beats told:** the SE quadrant is the **Quarn Wastes**, a region the
+Quarn converged into a battery world before being driven off. That is what the war
+LOOKS like when the Quarn win. Walking it is the argument for why burying one old
+man is worth what it costs — shown, not told. A conversation can only say "he did a
+heroic thing once."
+
+**Milestone the trip.** One ten-minute flight is a wall; four legs with a beat at
+each end is a journey. The Long Lane already has the furniture — beacons, three
+patrol bands, the Gap — and extending it past Orivel toward the Quarn frontier gives
+each leg an objective and a natural difficulty ramp.
+
+**And Odessa is FROM Percival.** She sheltered Conall when he first made it out to
+the Reach. So the trip is not only "learn who he is" — it is going to the place they
+both came from, and the place she has been not-asking about for years. Open, and
+worth deciding deliberately: **does she come, or is Percival exactly where she
+cannot go?**
+
+### The Recluse — the beat the player writes themselves
+
+The named V-Shrike elite pair already on the road (`RECLUSE_LEVEL` 25, hunting
+`RECLUSE_LEG` 0.55–0.73, the stretch just short of the Navy's leash) is **an old
+friend of Conall's.**
+
+The name already carries it. A recluse is one who hides — two men who went to ground
+in opposite directions: **the Counter hid by becoming harmless, the Recluse hid by
+becoming something nobody goes near.** It is also a spider, so it sits inside the
+V-Shrike's black-widow livery with no retrofitting.
+
+**Its power is that the grudge is player-authored.** `scripts/nemesis.gd` remembers
+who killed you and the Recluse hunts the exact stretch where a pilot pushing for
+Orivel thinks they have nearly made it. By the time the campaign says *"that one
+knew him,"* the player has already died to the name and remembered it. No scripted
+villain can buy that.
+
+**Not necessarily an enemy by the end** (user) — which is the point of meeting them
+this way. Open forks, all live:
+
+- **Shielding him.** The reason nobody has found Conall is that something dangerous
+  sits on the road. You have been fighting his bodyguard, and every death was him
+  doing his job.
+- **Hiding like him.** A mirror, not an ally — another veteran who went to ground,
+  who took the other road and became the thing people avoid.
+- **Hunting him.** The friend who was bought, or who thinks turning him in ends the
+  war rather than starting it.
+
+The first makes every earlier death retroactively mean something, which is the
+strongest use of a Nemesis the system can offer.
+
+---
+
 ## The Braid (the one point Campaign and Saga touch)
 
 The Campaign is thematically independent (the Quarn war, not the Convergence), but

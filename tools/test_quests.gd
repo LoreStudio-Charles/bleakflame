@@ -403,6 +403,55 @@ func _init() -> void:
 		print("FAIL: the Legend line never started after the hermit beat")
 		failures += 1
 
+	# ---- requires_level: the Campaign's COLD STRETCHES (user, 2026-07-26) ----
+	# The Legend spans the whole game by going quiet while the pilot grows. A beat
+	# held back must stay held back, arrive when earned, and -- the part that matters
+	# most -- SAY it is waiting, because a cold trail and a broken quest look
+	# identical from the cockpit. A real save once sat frozen at ember_word for ~46
+	# game days, which is where the idiot-proof-through-line rule came from.
+	Quests.reset()
+	Research.reset()
+	Wallet.xp = 0
+	var lvl_gate := {"requires": "legend_check_in", "requires_level": 12}
+	Quests.completed.append("legend_check_in")
+	if Quests._prereq_met(lvl_gate, "legend_check_in", true):
+		print("FAIL: a level-12 beat opened for a level-1 pilot")
+		failures += 1
+	Wallet.xp = Pilot.xp_for_level(12)
+	if Pilot.level() < 12:
+		print("FAIL: test could not reach level 12 (got %d)" % Pilot.level())
+		failures += 1
+	elif not Quests._prereq_met(lvl_gate, "legend_check_in", true):
+		print("FAIL: the beat never arrived after the level was earned — a gate that "
+			+ "never opens is a dead campaign, not pacing")
+		failures += 1
+
+	# "You are not ready" must outrank "not yet": a beat gated on BOTH must report the
+	# level, or a pilot waits out the days and still finds nothing.
+	Wallet.xp = 0
+	Quests.completed_day["legend_check_in"] = 0
+	Research.day = 99
+	var both := {"requires": "legend_check_in", "requires_level": 12, "requires_days": 3}
+	if Quests._prereq_met(both, "legend_check_in", true):
+		print("FAIL: days elapsed let a level gate through")
+		failures += 1
+
+	Wallet.xp = 0
+	Quests.active.clear()
+	if not ("level" in Quests.pending_reason("legend_empty_cave")
+			or "day" in Quests.pending_reason("legend_empty_cave")
+			or Quests.pending_reason("legend_empty_cave") == ""):
+		print("FAIL: pending_reason returned something unreadable")
+		failures += 1
+	Research.day = 0
+	Quests.completed_day["legend_check_in"] = 0
+	var why := Quests.pending_reason("legend_empty_cave")
+	if why == "":
+		print("FAIL: a beat held by its 3-day wait explained nothing — silence and a "
+			+ "bug are indistinguishable to the player")
+		failures += 1
+	Wallet.xp = 0
+
 	Quests.reset()
 	PoiMap.reset()
 	Research.reset()
