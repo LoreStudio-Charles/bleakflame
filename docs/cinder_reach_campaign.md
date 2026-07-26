@@ -153,6 +153,34 @@ climax** (see The Braid).
    tense**, possibly still in the sky overhead. The player never sees a face (that is
    held for later); the threat is entirely made of what it left behind.
 
+   **THE SCRIT ARE STILL IN IT (user, 2026-07-25).** You do not arrive to an empty
+   room — you arrive to scavengers **sifting the remains**, and they fight you for it.
+   (The Campaign's first real use of ground combat, and the moment the scrit stop being
+   wildlife and become part of the story.) Loot them and one is carrying a **smashed
+   SCOUT DRONE** — an Ooshu eye, left behind to watch the cave, killed by scrit who
+   wanted the metal.
+
+   **THIS IS THE CAUSAL SPINE OF THE WHOLE BEAT, and it should be discoverable rather
+   than stated:** the Ooshu were *watching*, not raiding. Then the scrit took their eye
+   for scrap — so the hunters went blind, escalated, and came down shooting the places
+   a man sleeps because they no longer knew where he was.
+   - Which means **the scrit caused the raid.**
+   - And means **the scrit saved his life**, because a drone still watching would have
+     had him.
+   - Neither the hunters nor the scrit nor Conall will ever know this. Only the player
+     works it out, from a piece of scrap looted off a corpse. That is the Campaign's
+     thesis in one object: nobody is in control, and the thing that saves a legend is a
+     vermin with a taste for metal.
+
+   **THE DRONE IS THE KEY THAT OPENS ODESSA.** You carry it back and she recognises the
+   make on sight — and now she cannot pretend not to know. She gives up **WHO THEY ARE**:
+   the Ooshu, what they are for, what it means that they are here. She still does NOT
+   give up **who HE is** — that stays for beat 4. Evidence buys you the hunters; only
+   trust (or catastrophe) buys you the man.
+   This also fixes the "how does the player learn about the hunters" question the
+   cleanest possible way: not a witness who saw a ship come down, but an ARTEFACT. No
+   colonist has to be brave, and nothing depends on somebody agreeing to talk.
+
    The player leaves knowing more than either of the people who care about him, which
    is the engine the rest of the Campaign runs on. Odessa's reaction is the beat's
    real payoff — she hears "gone, not taken" and it does not comfort her at all.
@@ -162,7 +190,12 @@ climax** (see The Braid).
    hermit actor absent, the wall drawn bare), flipped by a quest flag. The stage is a
    `goto`/enter rather than a `talk`, since the point is that there is nobody to talk
    to; the report back to Odessa is the following stage.
-   The warm-scene layer is cheap and carries most of the horror: a low **CPUParticles2D
+   The scrit encounter is an AUTHORED pack placed by the quest inside the wrecked cave
+   (not the ambient warren, not the dune ambush) — `Scrit.lie_in_wait()` already gives
+   a pack that does nothing until it is sprung, which is exactly a group absorbed in
+   looting. The drone is a **quest item carried in cargo** to Odessa, so the hand-off
+   is a delivery the player physically makes; her ID of it is the following talk stage.
+   The warm-scene layer is cheap and carries most of the horror: a low **CPUParticles2D**
    haze** drifting in the room (the town already builds one for the sandstorm — same
    pattern, slower and flatter), **scorch decals** drawn on the alcove and door rock,
    and the ozone as a **flavour line on entry**, since smell is the one sense the game
