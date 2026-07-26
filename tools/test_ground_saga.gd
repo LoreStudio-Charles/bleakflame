@@ -96,6 +96,9 @@ func _ready() -> void:
 	# stage. Without the once-only guard a player could farm the campaign's key object.
 	Quests.reset()
 	_chk(not town._cave_wrecked(), "the cave is ordinary before the beat")
+	var fake_hold := preload("res://tools/fake_hold.gd").new()
+	fake_hold.add_to_group("player_ship")
+	add_child(fake_hold)
 	Quests.active["legend_empty_cave"] = {"stage": 0, "count": 0}
 	_chk(town._cave_wrecked(), "the beat dresses the cave as a crime scene")
 	_chk(Quests.ground_event_active("cave_wreck_looted"),
@@ -103,6 +106,13 @@ func _ready() -> void:
 	town._drone_taken = false
 	_chk(town._grant_drone(), "searching the bodies yields the Ooshu drone")
 	_chk(not town._grant_drone(), "...and yields it ONCE, never farmable")
+	# IT IS REAL FREIGHT, not just a flag — the fiction says you carry it to her, so the
+	# hold has to agree. Also confirms one grant means ONE in the hold.
+	var hold_ship = get_tree().get_first_node_in_group("player_ship")
+	_chk(hold_ship != null, "a hold exists to put the drone in (else this check is vacuous)")
+	if hold_ship != null:
+		_chk(int(hold_ship.commodities.get("ooshu_drone", 0)) == 1,
+			"the drone is in the hold, exactly one of it")
 	_chk(int(Quests.active["legend_empty_cave"].stage) == 1,
 	    "taking the drone advances the beat to the run home")
 	_chk(not town._cave_wrecked(),

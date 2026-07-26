@@ -22,6 +22,11 @@ const GOODS := {
 	# themselves during the haul home. Artifacts are NEVER combat drops.
 	"cinder_fragment": {"name": "Cinder Fragment", "mass": 0.5},
 	"wayfinder_core": {"name": "Wayfinder Core (artifact)", "mass": 6.0},
+	# CAMPAIGN EVIDENCE. Listed in no market's `sells` or `buys`, so every counter
+	# answers "no buyer here" — it is a thing you CARRY, not a thing you trade, and the
+	# hold is the only place it can be. That is the point: the fiction says you take it
+	# to Odessa, so the player should be able to open their hold and see it sitting there.
+	"ooshu_drone": {"name": "Smashed Scout Drone", "mass": 1.2},
 }
 
 ## What each venue SELLS to the player and BUYS from the player (per unit).

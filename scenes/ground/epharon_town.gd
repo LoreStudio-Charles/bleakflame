@@ -410,6 +410,11 @@ func _grant_drone() -> bool:
 	if _drone_taken or not _cave_wrecked():
 		return false
 	_drone_taken = true
+	# INTO THE HOLD, as freight you can look at. It was a flash message and a quest flag
+	# before, which meant the fiction ("take it to Odessa") and the inventory disagreed.
+	var ship := _player_ship()
+	if ship != null:
+		ship.add_commodity("ooshu_drone", 1)
 	Quests.note_ground_event("cave_wreck_looted")
 	_flash("Among the scrap: a scorched sensor stalk, one lens shattered. Somebody left an EYE on this cave.", 4.0)
 	Sfx.play("jingle", -8.0, 0.85)
