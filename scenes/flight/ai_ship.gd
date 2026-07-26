@@ -75,6 +75,15 @@ static var parley := false
 ## attack; the rest hold a menacing perimeter and wait for a slot to open.
 ## Outnumbered should feel scary but LEGIBLE — a duel with an audience, not
 ## a blender. Heavies (Vulture+) ignore the queue and always push in.
+## UNDER TEST (user, 2026-07-25): the queue was written when pirates could pounce the
+## moment you undocked, and it was the thing that made that survivable. Since then the
+## station sanctuary, the guard wing, lane patrols and the leash have all made
+## near-station space genuinely safe — so the queue may be solving a problem that no
+## longer exists, and paying for it with dogfights that feel staged. Setting
+## `queue_attackers = false` gives an ALL-IN brawl (`/brawl` toggles it in a debug
+## build). If unqueued reads as a blender rather than a fight, it comes back — and this
+## note is the reason it existed.
+static var queue_attackers := true
 const MAX_ATTACKERS := 2
 const STANDOFF_RANGE := 680.0
 const HEAVY_MASS := 100.0
@@ -389,6 +398,8 @@ func _pick_prey() -> BuildShip:
 ## True when this ship ranks among the MAX_ATTACKERS closest engaged
 ## pirates. Heavies (Vulture+) never queue.
 func _attack_slot_open(prey: BuildShip) -> bool:
+	if not queue_attackers:
+		return true      # all-in: everyone who can reach you presses the attack
 	if stats.mass >= HEAVY_MASS:
 		return true
 	var my_d := global_position.distance_squared_to(prey.global_position)

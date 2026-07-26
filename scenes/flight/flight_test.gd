@@ -1336,6 +1336,15 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 				_dev_feedback("Disarmed (%s)" % (dropped.display_name if dropped != null else "bare hands")
 					+ " — /arm pistol|rifle|shiv")
 			return true
+		"brawl":
+			# Toggle the attacker QUEUE (AIShip.queue_attackers). ON = only the two
+			# closest pirates press while the rest hold a perimeter; OFF = everyone who
+			# can reach you piles in. Under test now that near-station space is kept safe
+			# by the sanctuary, the guard wing and the leash instead of by this.
+			AIShip.queue_attackers = not AIShip.queue_attackers
+			_dev_feedback("Dogfights: %s" % ("QUEUED — 2 press, rest circle"
+				if AIShip.queue_attackers else "ALL-IN — everyone presses"))
+			return true
 		"heartbeat", "vitals":
 			if _dev_vitals != null:
 				_dev_vitals.visible = not _dev_vitals.visible
