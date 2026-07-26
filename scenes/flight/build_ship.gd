@@ -327,6 +327,34 @@ func sensor_reach(floor_r: float) -> float:
 	return 0.0 if r <= 0.0 else maxf(floor_r, r)
 
 
+## THE HIT PROFILE — how big this thing is TO A WEAPON, which is deliberately not
+## how big it is to the physics engine.
+##
+## `hit_radius` is the PHYSICAL size: it is the CircleShape2D radius, and it drives
+## bumping, planetoid surfaces and AI spacing. An evasive ship is not physically
+## smaller, so none of that ever shrinks. What evasion shrinks is how easy the ship
+## is to SHOOT.
+##
+## KEPT AS PLAIN MATH, NOT A SECOND COLLIDER (user, 2026-07-26). A separate "combat"
+## Area2D per hull would be the tidier object model and a good deal more expensive —
+## dozens of ships and hundreds of bolts in flight, each wanting overlap callbacks.
+## A distance check is cheaper and the bolts already do swept geometry anyway.
+##
+## EVERY WEAPON TEST GOES THROUGH HERE so the shrink applies to all of them. It used
+## to be a multiply inlined in the bolt sweep and nowhere else, which meant Evasion —
+## a favoured 5-cap skill for two commissions — did nothing whatsoever against
+## beams, proximity fuzes, splash or any ability.
+##
+## Duck-typed and static: asteroids, decoys and the leviathan carry a `hit_radius`
+## and no `evasion`, so they get their honest full size.
+static func hit_profile_of(node: Object, fallback := 12.0) -> float:
+	if node == null:
+		return fallback
+	var r: float = node.get("hit_radius") if node.get("hit_radius") != null else fallback
+	var ev: float = node.get("evasion") if node.get("evasion") != null else 0.0
+	return maxf(0.0, r * (1.0 - clampf(ev, 0.0, 0.95)))
+
+
 ## Tints the hull art (sprite modulate or polygon color, whichever is active).
 ## SELF_MODULATE, NOT MODULATE (2026-07-25). `modulate` cascades to CHILDREN, and
 ## every decal is a child of the hull sprite — the Guardian stripe, the livery

@@ -27,6 +27,7 @@ func _ready() -> void:
 	_case_spawners_actually_pass_the_level()
 	_case_no_sensors_means_blind()
 	_case_hunters_see_only_as_far_as_they_are_equipped()
+	_case_evasion_shrinks_the_profile_for_every_weapon()
 
 	if failures == 0:
 		print("test_levels: ALL PASS")
@@ -222,6 +223,42 @@ func _case_hunters_see_only_as_far_as_they_are_equipped() -> void:
 	cheap.queue_free()
 	blind.queue_free()
 	keen.queue_free()
+
+
+## EVASION IS A SMALLER TARGET TO EVERY WEAPON (user, 2026-07-26).
+##
+## It used to be a multiply inlined in the bolt sweep and nowhere else, so Evasion
+## — a favoured 5-cap skill for two commissions — did nothing at all against beams,
+## proximity fuzes, splash or any ability. All four weapon tests now share
+## `hit_profile_of`, while the PHYSICAL `hit_radius` is untouched: an evasive ship
+## is harder to shoot, not smaller to bump into.
+func _case_evasion_shrinks_the_profile_for_every_weapon() -> void:
+	var s := _ship(SampleBuilds.escort_goshawk(), 0)
+	var physical := s.hit_radius
+	if physical <= 0.0:
+		_fail("test is toothless: the hull has no hit_radius to shrink")
+
+	if not is_equal_approx(BuildShip.hit_profile_of(s), physical):
+		_fail("a ship with no evasion is already shrunk (%.1f vs %.1f)" % [
+			BuildShip.hit_profile_of(s), physical])
+
+	s.evasion = 0.25          # the real ceiling: 5 ranks x 0.05
+	var profile := BuildShip.hit_profile_of(s)
+	if profile >= physical:
+		_fail("evasion did not shrink the hit profile (%.1f vs %.1f)" % [profile, physical])
+	if not is_equal_approx(profile, physical * 0.75):
+		_fail("expected %.2f at 0.25 evasion, got %.2f" % [physical * 0.75, profile])
+
+	# THE PHYSICAL COLLIDER MUST NOT MOVE. Evasion is about being hard to hit, not
+	# about phasing closer to planets or through other hulls.
+	if not is_equal_approx(s.hit_radius, physical):
+		_fail("evasion changed the PHYSICAL radius (%.1f) — collision and AI spacing would shift" % s.hit_radius)
+
+	# Anything without an `evasion` property keeps its honest full size, and a
+	# missing node must not crash the helper.
+	if not is_equal_approx(BuildShip.hit_profile_of(null, 12.0), 12.0):
+		_fail("hit_profile_of(null) did not fall back cleanly")
+	s.queue_free()
 
 
 ## Strip the sensor out of a build, whatever socket it landed in.

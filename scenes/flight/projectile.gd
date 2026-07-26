@@ -166,7 +166,7 @@ func _physics_process(delta: float) -> void:
 		for target in get_tree().get_nodes_in_group(target_group):
 			if not is_instance_valid(target) or target.get("dead") == true or target == shooter:
 				continue
-			var r: float = target.get("hit_radius") if target.get("hit_radius") != null else 12.0
+			var r := BuildShip.hit_profile_of(target)
 			var fuze := blast * 0.7 + r
 			if global_position.distance_squared_to(target.global_position) <= fuze * fuze:
 				_detonate()
@@ -175,10 +175,9 @@ func _physics_process(delta: float) -> void:
 		if not is_instance_valid(target) or target.get("dead") == true or target == shooter:
 			continue
 		# Evasion shrinks the target's effective profile (player-only; 0 for the
-		# rest) — a harder target, deterministically, not an RNG miss.
-		var base_r: float = target.get("hit_radius") if target.get("hit_radius") != null else 12.0
-		var ev: float = target.get("evasion") if target.get("evasion") != null else 0.0
-		var radius: float = base_r * (1.0 - ev) + grace
+		# rest) — a harder target, deterministically, not an RNG miss. Shared with
+		# the fuze, the beam and the splash so all four agree.
+		var radius := BuildShip.hit_profile_of(target) + grace
 		var closest := Geometry2D.get_closest_point_to_segment(
 			target.global_position, prev, global_position)
 		if target.global_position.distance_squared_to(closest) <= radius * radius:
@@ -256,7 +255,7 @@ func _detonate() -> void:
 	for target in get_tree().get_nodes_in_group(target_group):
 		if not is_instance_valid(target) or target.get("dead") == true or target == shooter:
 			continue
-		var r: float = target.get("hit_radius") if target.get("hit_radius") != null else 12.0
+		var r := BuildShip.hit_profile_of(target)
 		var d := maxf(global_position.distance_to(target.global_position) - r, 0.0)
 		if d <= blast:
 			target.take_damage(damage * lerpf(1.0, blast_falloff, d / blast), src)

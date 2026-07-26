@@ -193,8 +193,7 @@ func _fire_beam() -> void:
 		for node in get_tree().get_nodes_in_group(group):
 			if not is_instance_valid(node) or node.get("dead") == true or node == shooter:
 				continue
-			var r: float = (node.get("hit_radius") + shot_grace) if node.get("hit_radius") != null \
-				else 12.0 + shot_grace
+			var r := BuildShip.hit_profile_of(node) + shot_grace
 			var to: Vector2 = node.global_position - origin
 			var along := to.dot(dir)
 			if along < 0.0 or along > best + r:
