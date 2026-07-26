@@ -1344,6 +1344,18 @@ func _show_next_talk() -> void:
 	add_child(panel)
 
 
+## Two queued talks that are the SAME conversation. Compared on quest + opening line,
+## not identity, because check_new_work rebuilds the dictionary each time. Mirrors
+## EpharonTown._same_talk — the ground and the dock drain talks through separate loops
+## and BOTH could replay one.
+static func _same_talk(a: Dictionary, b: Dictionary) -> bool:
+	if str(a.get("quest", "")) != str(b.get("quest", "")):
+		return false
+	var at := str(a.get("text", "")) + str(a.get("nodes", {}).get("start", {}).get("text", ""))
+	var bt := str(b.get("text", "")) + str(b.get("nodes", {}).get("start", {}).get("text", ""))
+	return at == bt
+
+
 func _on_talk_closed(talk: Dictionary) -> void:
 	_active_talk = null
 	# Finishing a talk-STAGE conversation advances that quest, which may in
@@ -1362,6 +1374,13 @@ func _on_talk_closed(talk: Dictionary) -> void:
 	Quests.check_new_work(is_station, SaveGame.tutorial_done)
 	var here := str(talk.get("giver", ""))
 	for t in Quests.take_talks(is_station):
+		# NEVER REPLAY THE TALK JUST FINISHED (playtest: Odessa spoke a line twice; the
+		# Counter did the same on the ground). check_new_work re-queues an ACTIVE talk
+		# stage's conversation, so a stage that did not advance comes straight back and
+		# the drain below replays it. Dropping an identical repeat makes the chain safe
+		# whatever the cause — a conversation ends when the player ends it.
+		if _same_talk(t, talk):
+			continue
 		# THE PERSON IN FRONT OF YOU KEEPS TALKING. Their own next item continues
 		# this conversation; anybody ELSE still waits behind their pip, because
 		# the rule that nobody ambushes you at the ramp has not changed.

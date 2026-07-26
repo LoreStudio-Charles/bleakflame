@@ -1092,6 +1092,16 @@ func _try_quest_talks(npc_id: String) -> bool:
 	return true
 
 
+## Two queued talks that are the SAME conversation. Compared on quest + opening line
+## rather than identity, because check_new_work rebuilds the dictionary each time.
+static func _same_talk(a: Dictionary, b: Dictionary) -> bool:
+	if str(a.get("quest", "")) != str(b.get("quest", "")):
+		return false
+	var at := str(a.get("text", "")) + str(a.get("nodes", {}).get("start", {}).get("text", ""))
+	var bt := str(b.get("text", "")) + str(b.get("nodes", {}).get("start", {}).get("text", ""))
+	return at == bt
+
+
 func _show_next_town_talk(npc_id: String) -> void:
 	var talks := Quests.talks_for(npc_id)
 	if talks.is_empty():
@@ -1126,6 +1136,15 @@ func _show_next_town_talk(npc_id: String) -> void:
 		if talk.has("advance"):
 			Quests.advance_talk(str(talk.advance))
 		Quests.check_new_work(false, SaveGame.tutorial_done)
+		# NEVER REPLAY THE TALK YOU JUST FINISHED (playtest: the Counter said "Thirty
+		# years..." twice — closing his conversation started it again from the top).
+		# check_new_work re-queues an ACTIVE talk stage's conversation, so if the stage
+		# did not advance for any reason, the drain loop below picks the very same talk
+		# straight back up. Dropping an identical repeat makes the loop safe whatever the
+		# cause: a conversation ends when the player ends it.
+		var pending := Quests.talks_for(npc_id)
+		if not pending.is_empty() and _same_talk(pending[0], talk):
+			Quests.take_talk(npc_id)
 		_show_next_town_talk(npc_id))
 	add_child(panel)
 
