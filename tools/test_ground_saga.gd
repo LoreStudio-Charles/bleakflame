@@ -89,6 +89,26 @@ func _ready() -> void:
 			await get_tree().process_frame
 	_chk(Quests.completed.has("the_hermit"), "hearing the Counter completed the beat")
 
+	# ---- CAMPAIGN BEAT 2: THE EMPTY CAVE ----
+	# The beat spans three systems (quest stage, town dressing, ground combat), so this
+	# walks the seam rather than any one of them: the cave is only a crime scene WHILE
+	# the beat is live, the drone is granted exactly once, and taking it advances the
+	# stage. Without the once-only guard a player could farm the campaign's key object.
+	Quests.reset()
+	_chk(not town._cave_wrecked(), "the cave is ordinary before the beat")
+	Quests.active["legend_empty_cave"] = {"stage": 0, "count": 0}
+	_chk(town._cave_wrecked(), "the beat dresses the cave as a crime scene")
+	_chk(Quests.ground_event_active("cave_wreck_looted"),
+	    "the ground_event stage is what the town reads (one source of truth)")
+	town._drone_taken = false
+	_chk(town._grant_drone(), "searching the bodies yields the Ooshu drone")
+	_chk(not town._grant_drone(), "...and yields it ONCE, never farmable")
+	_chk(int(Quests.active["legend_empty_cave"].stage) == 1,
+	    "taking the drone advances the beat to the run home")
+	_chk(not town._cave_wrecked(),
+	    "the cave stops being a crime scene once the beat moves on (no museum)")
+	Quests.reset()
+	
 	print("test_ground_saga: ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails > 0 else 0)
 

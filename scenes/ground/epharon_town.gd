@@ -62,6 +62,15 @@ const INTERIORS := {
 		"actor_pos": Vector2(0, -160),
 		"actor_spot": {"npc": "Counter", "prompt": "[E] Speak with the Counter", "action": "idle:hermit"},
 		"exit_prompt": "[E] Leave the cave",
+		# THE WRECKED STATE (Campaign beat 2). Swapped in ONLY while the beat is live, so
+		# the world carries the story's damage exactly as long as the story does — see
+		# _cave_wrecked(). The hermit is absent, scrit are sifting the remains, and the
+		# scene is still warm: smoke that has not settled, ozone, and blaster scoring
+		# grouped where a man would be.
+		"wrecked": {
+			"flash": "The cave mouth is scorched black. Inside: smoke still hanging flat in the cold, the stink of ozone, and something moving in the dark.",
+			"title": "THE COUNTER'S CAVE   ·   WRECKED   ·   [Esc] leave",
+		},
 	},
 	# THE EXPLORER'S UNION — Sella's map room, the seed of the Scout guild. Unlike Tam and
 	# Bram (dedicated residents), Sella is a TOWN NPC: entering her Union finds her at the
@@ -183,6 +192,8 @@ var _tutor_cap: Label    # ground-lesson caption (top-center)
 var _weather: CPUParticles2D   # the sandstorm — an OUTSIDE thing, hidden while indoors
 var _ship_sprite: Sprite2D     # your hull, parked on the apron (null when it has no art)
 var _ambushers: Array = []     # the pack lying in wait behind the dune on the cave road
+var _cave_scavengers: Array = []   # Campaign beat 2: the scrit sifting the wrecked cave
+var _drone_taken := false          # the Ooshu eye has been looted (once per visit)
 var _ambush_sprung := false
 
 @onready var _prompt: Label = $HUD/Prompt
@@ -353,6 +364,55 @@ func apply_gear(fresh := false) -> void:
 		_player.unequip_weapon()   # fists or a shiv — the swing still plays, no sprite
 	else:
 		_player.equip_weapon_views(views, w.two_handed)
+
+
+## CAMPAIGN BEAT 2 — is the Counter's cave currently a crime scene? True only while the
+## `cave_wreck_looted` stage is live, so a player who has not reached the beat finds the
+## cave exactly as it was, and one who has finished it does not keep walking into a
+## museum of it. The town asks the QUEST rather than storing its own flag: one source of
+## truth, and no save key that can drift out of step with the story.
+func _cave_wrecked() -> bool:
+	return Quests.ground_event_active("cave_wreck_looted")
+
+
+## The scrit sifting the wreck. Authored by the BEAT, not the world: a dormant pack (the
+## ambush machinery — a group that does nothing until sprung is exactly a group absorbed
+## in looting) placed inside the room, plus the drone one of them is carrying.
+func _spawn_cave_scavengers() -> void:
+	if not _cave_scavengers.is_empty() or not _cave_wrecked():
+		return
+	for i in 3:
+		var g := Scrit.new()
+		_world.add_child(g)
+		g.setup_scrit(IROOM + Vector2(-170 + i * 150, -40 + (i % 2) * 70))
+		g.lie_in_wait()
+		g.died.connect(_on_scrit_down.bind(g))
+		_cave_scavengers.append(g)
+
+
+## They notice you the moment you are properly inside — no trigger radius, because the
+## room IS the trigger and there is nowhere to hide in it.
+func _wake_cave_scavengers() -> void:
+	var woke := 0
+	for g in _cave_scavengers:
+		if is_instance_valid(g) and not g.dead and g.dormant:
+			g.spring(_player)
+			woke += 1
+	if woke > 0:
+		_flash("They were IN here — three of them, elbow-deep in his things.", 2.6)
+		Sfx.play("dread", -9.0, 1.5)
+
+
+## THE DRONE. Looted off the scavengers, and the only reason the player ever learns the
+## Ooshu were watching. Granted once, on the first corpse searched in the wrecked cave.
+func _grant_drone() -> bool:
+	if _drone_taken or not _cave_wrecked():
+		return false
+	_drone_taken = true
+	Quests.note_ground_event("cave_wreck_looted")
+	_flash("Among the scrap: a scorched sensor stalk, one lens shattered. Somebody left an EYE on this cave.", 4.0)
+	Sfx.play("jingle", -8.0, 0.85)
+	return true
 
 
 func _make_actor(dir: String, tint: Color) -> GroundCharacter:
@@ -1162,6 +1222,11 @@ func _do_action(action: String) -> void:
 					var note := "Scavenged the scavenger — %dc in trinkets." % int(haul.get("credits", 0))
 					# A gear find goes to the SHIP HOLD (the ground v1 inventory — same place
 					# a jettisoned crate would land), where the dossier can equip it from.
+					# THE OOSHU EYE. Only in the wrecked cave, only once — the object the
+					# whole beat turns on, so it is granted by the LOOT verb rather than
+					# dropped randomly: the player must actually search the bodies.
+					if _interior_id == "?" and _grant_drone():
+						note = "Scavenged the scavenger — %dc, and something that was never theirs." % int(haul.get("credits", 0))
 					var gear: GroundGearDef = haul.get("gear")
 					if gear != null:
 						var ship := get_tree().get_first_node_in_group("player_ship")
@@ -1287,7 +1352,22 @@ func _enter_interior(id: String) -> void:
 	# unshifted camera showed the room crammed at the top of the screen over a void
 	# (user). Bias the view up while inside; restored on exit.
 	_set_cam_offset(Vector2(0, -half.y * 0.55))
+	if id == "?" and _cave_wrecked():
+		_spawn_cave_scavengers()
+		_wake_cave_scavengers()
+	# CAMPAIGN BEAT 2: the cave is a crime scene while the beat runs. Its resident is
+	# GONE (that is the beat), the room announces itself differently, and the scrit
+	# already inside come up out of the dark the moment you are in with them.
+	var wrecked: bool = id == "?" and _cave_wrecked()
+	if wrecked:
+		var w: Dictionary = def.get("wrecked", {})
+		if w.has("flash"):
+			def = def.duplicate()
+			def["flash"] = w["flash"]
+			def["title"] = str(w.get("title", def.get("title", "")))
 	var actor := _interior_actor(def)
+	if wrecked:
+		actor = null   # nobody home — no resident, no [E] to speak with him
 	if actor != null:
 		actor.visible = true
 		actor.stop()

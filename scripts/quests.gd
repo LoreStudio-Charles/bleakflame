@@ -333,6 +333,37 @@ const QUESTS := [
 				}},
 		],
 		"rewards": {"credits": 150, "xp": 40}},
+	# BEAT 2 — THE EMPTY CAVE. You come back and he is gone, the place is turned over,
+	# the smoke has not settled, and scrit are sifting the wreck. What you loot off them
+	# is the whole beat: an Ooshu scout drone they smashed for the metal — which means
+	# the hunters were WATCHING, lost their eye to vermin, went blind, and escalated.
+	# The scrit caused the raid AND saved his life. Nobody in the fiction ever knows.
+	{"id": "legend_empty_cave", "title": "Nobody Home", "giver": "odessa", "layer": "campaign",
+		"requires": "legend_check_in",
+		"body": "Word from the colony: nobody has seen the Counter in days, and there is a burn on the rock outside his cave. Go and look.",
+		"briefing": "She has the bottle out again and hasn't poured any of it.\n\n\"Nobody's seen him. Three days.\" The rag is nowhere. Her hands have nothing to do and it shows. \"A hauler out of Epharon says there's a scorch on the rock by his door.\"\n\nShe looks at you the way people look at a door they don't want opened.\n\n\"Go. Please. And whatever you find — you come and tell me first.\"",
+		"debrief": "She turns the wreck over once and puts it down like it's hot.\n\n\"That's a Kessit sensor stalk. Ooshu make.\" She says it flatly, and then, because there is no way back from having said it: \"They're finders. That's the whole of what they are — you give them a description and money and they bring you the person. They don't lose. Nobody's ever hired one and gone home disappointed.\"\n\nHer hand is flat on the bar again.\n\n\"They were WATCHING him. That thing sat out there and watched his door, and I have been telling myself the quiet meant it was over.\"\n\nYou don't tell her the rest — that a scrit smashed their eye for scrap, and that's the only reason there wasn't a body in that cave. You're not sure she'd hear it as good news.",
+		"stages": [
+			{"kind": "ground_event", "event": "cave_wreck_looted", "venue": "planet",
+				"step": "Land at Epharon and search the Counter's cave.",
+				"flash": "Scrit in the wreck, and a smashed drone in their haul. Someone was WATCHING that cave."},
+			{"kind": "talk", "npc": "odessa", "venue": "station",
+				"step": "Take the drone back to Odessa at Ember Row.",
+				"flash": "Ooshu. Finders. They don't lose — and they were watching his door.",
+				"dialogue": {
+					"start": {
+						"text": "You put it on the bar between the glasses: a scorched stalk of alloy the length of your hand, one lens shattered, the casing gnawed where something tried to eat the wiring.\n\nOdessa doesn't pick it up.\n\n\"Where.\"",
+						"choices": [
+							{"text": "His cave. The place is wrecked, and he's gone.", "next": "gone", "style": "primary"},
+						]},
+					"gone": {
+						"text": "\"Gone.\" She takes that in carefully, the way you'd take weight on a bad leg. \"Gone, or taken?\"\n\n\"Gone,\" you say. Wall wiped clean. No body, no blood, nothing to bury.\n\nShe closes her eyes for exactly one breath, and it is not relief. It is a woman doing arithmetic she has done before.",
+						"choices": [
+							{"text": "What is it, Odessa?", "next": "end", "style": "primary"},
+						]},
+				}},
+		],
+		"rewards": {"credits": 300, "xp": 60}},
 ]
 
 static var active := {}                 # id -> {"stage": int, "count": int}
@@ -460,6 +491,29 @@ static func scan_site() -> Dictionary:
 static func note_scan_target(id: String) -> void:
 	if active.has(id) and stage_def(id).get("kind", "") == "scan_target":
 		_advance(id)
+
+
+## A GROUND EVENT completed something. The ground has no world coordinates the flight
+## scene can test (the town lives in its own SubViewport space), so a `ground_event`
+## stage names an `event` string and whichever ground system performs it calls this —
+## the same shape as note_scan_target/note_survived, which is how every non-dock stage
+## kind reports in. Matching by name keeps quests.gd free of any town reference.
+static func note_ground_event(event: String) -> void:
+	for id in active.keys():
+		var st := stage_def(id)
+		if str(st.get("kind", "")) == "ground_event" and str(st.get("event", "")) == event:
+			_advance(id)
+
+
+## Is a ground_event stage waiting on `event` right now? The town asks this to decide
+## whether to dress a scene for a beat (the wrecked cave) — so the world only carries
+## the story's damage while the story is actually running.
+static func ground_event_active(event: String) -> bool:
+	for id in active:
+		var st := stage_def(id)
+		if str(st.get("kind", "")) == "ground_event" and str(st.get("event", "")) == event:
+			return true
+	return false
 
 
 ## True while an active stage wants a protective Guardian escort (beat 4).
