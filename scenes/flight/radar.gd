@@ -73,6 +73,12 @@ func _draw() -> void:
 				draw_colored_polygon(PackedVector2Array([
 					lp + Vector2(0, -4), lp + Vector2(4, 0), lp + Vector2(0, 4), lp + Vector2(-4, 0)]),
 					Color(0.6, 0.55, 0.48))
+			"beacon":
+				# A lane marker: a small ringed pip. Rim-clamped like every charted
+				# landmark, which is the whole point -- it gives a pilot a BEARING to
+				# fly at across tens of thousands of units of empty road.
+				draw_arc(lp, 4.0, 0, TAU, 12, Color(0.95, 0.82, 0.45), 1.4)
+				draw_circle(lp, 1.6, Color(0.95, 0.82, 0.45))
 			_:
 				draw_circle(lp, 3.0, Color(0.6, 0.65, 0.75))
 	# The waypoint: an amber bearing diamond, whatever it points at.

@@ -323,6 +323,7 @@ func _process(_delta: float) -> void:
 	_tick_anomaly()
 	_tick_ambush()
 	_tick_protectors()
+	_tick_patrol_limit()
 	_tick_goto_dialogue()
 	_tick_chart_hint()
 	_tick_landing_brief()
@@ -1697,6 +1698,9 @@ const LANE_NAVY_LEG := Vector2(0.75, 0.98)    # the Navy, in to Orivel
 ## is paying.
 const ESCORT_LIVERY := Color(0.25, 0.70, 0.58)
 
+var _guard_limit: NavBeacon = null
+var _past_guard_limit := false
+
 ## LEVELS BY REGION (user, 2026-07-25). The RIM runs 1-5 and needs nothing here —
 ## its hulls are already authored across that span (Rooster/Wasp 1 … Vulture 5),
 ## and those are individually tuned numbers a random roll would only disturb.
@@ -1779,6 +1783,17 @@ func _spawn_long_lane() -> void:
 	# Navy's leash: exactly where a pilot pushing for Orivel thinks they have
 	# nearly made it. You die within sight of safety, and you die to something
 	# with a NAME. That name is the whole point -- see scripts/nemesis.gd.
+	# BEACONS FIRST -- the lane is unusable without them. ~91k units of road against
+	# a 1,500-unit sensor means the corridor a pilot must hold to meet anything is
+	# about SEVEN DEGREES wide, and there was previously nothing in the world to aim
+	# at. Charted POIs rim-clamp on radar, so these give a bearing from any range.
+	NavBeacon.place(self, _lane_point(0.0), "lane_head",
+		"Lane Head — Orivel Road", Color(0.95, 0.82, 0.45))
+	_guard_limit = NavBeacon.place(self, _lane_point(LANE_GUARD_LEG.y), "lane_guard_limit",
+		"GALEAN PATROL LIMIT", Color(0.55, 0.75, 1.0))
+	NavBeacon.place(self, _lane_point(LANE_NAVY_LEG.x), "lane_navy_line",
+		"NAVY PICKET LINE", Color(0.23, 0.55, 0.95))
+
 	# Tell the raiders where the law starts, so their doctrine can steer around it.
 	VShrikeShip.navy_pos = _lane_point(LANE_NAVY_LEG.x)
 	var hunt := _lane_leg(RECLUSE_LEG.x, RECLUSE_LEG.y, 3)
@@ -1806,6 +1821,25 @@ func _on_named_hunter_died(raider: VShrikeShip) -> void:
 	if ship != null and is_instance_valid(ship):
 		ship._flash_note("✔ %s — DEBT PAID" % raider.callsign.to_upper())
 	Sfx.play("jingle")
+
+
+## THE PATROL LIMIT IS THE LANE'S MOST USEFUL LINE OF TEXT. Crossing it OUTBOUND is
+## the moment the Gap starts, and a pilot who does not notice has not understood the
+## road. Fires once per crossing, both ways, so it reads as a border rather than a
+## nag.
+func _tick_patrol_limit() -> void:
+	if ship == null or not is_instance_valid(ship) or _guard_limit == null:
+		return
+	var out := ship.global_position.distance_to(LANE_RIM) \
+		> _guard_limit.global_position.distance_to(LANE_RIM)
+	if out == _past_guard_limit:
+		return
+	_past_guard_limit = out
+	if out:
+		ship._flash_note("LEAVING PATROLLED SPACE")
+		Sfx.play("dread", -12.0)
+	else:
+		ship._flash_note("PATROLLED SPACE — GALEAN WRIT")
 
 
 ## A hauler running the capital road. Same living-world rule as the short lanes:
