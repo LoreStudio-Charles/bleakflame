@@ -35,6 +35,22 @@ func _raider(build: ShipBuild) -> VShrikeShip:
 	return s
 
 
+## THE HULL'S TINT, read from wherever it actually lives.
+##
+## `set_hull_tint` uses **self_modulate** on the sprite, deliberately — `modulate`
+## cascades to children and would repaint the decals (that is the bug that made the
+## V-Shrike hourglass render black). The silhouette path has no sprite and tints
+## `_hull_visual.color` instead.
+##
+## THIS HELPER EXISTS BECAUSE THE TEST READ `modulate` AND PASSED ANYWAY. With no
+## art on the Goshawk it took the silhouette branch, so the wrong property was
+## never consulted — the case was green for the wrong reason for a full day, and
+## only broke the moment real art landed. Read the field that actually carries the
+## tint, in one place.
+func _hull_tint(s: VShrikeShip) -> Color:
+	return s._hull_sprite.self_modulate if s._hull_sprite != null else s._hull_visual.color
+
+
 ## Every polygon under the mark, whatever it is parented to.
 func _mark_polys(s: VShrikeShip) -> Array:
 	var out: Array = []
@@ -99,7 +115,7 @@ func _case_no_random_pirate_skin() -> void:
 	var s := _raider(SampleBuilds.vshrike_harrier())
 	if s.use_variant_skin:
 		_fail("V-Shrike opted into the shared pirate skin pool — the livery cannot be uniform")
-	var tint: Color = s._hull_sprite.modulate if s._hull_sprite != null else s._hull_visual.color
+	var tint := _hull_tint(s)
 	if tint != VShrikeShip.HULL_BLACK:
 		_fail("hull tint is %s, not the widow black" % tint)
 	# "Primarily black": whatever else happens, the hull must stay far darker than
@@ -143,7 +159,7 @@ func _case_a_specialist_is_still_black() -> void:
 	if not rolled:
 		_fail("never rolled a specialist in 500 tries — this case proved nothing")
 	else:
-		var tint: Color = s._hull_sprite.modulate if s._hull_sprite != null else s._hull_visual.color
+		var tint := _hull_tint(s)
 		if tint != VShrikeShip.HULL_BLACK:
 			_fail("a %s V-Shrike is %s, not black — the specialist repaint escaped the livery" % [
 				s.specialty_name(), tint])
