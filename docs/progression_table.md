@@ -32,18 +32,59 @@ Supersedes the previous PLANNED stub. The old placeholder formulas in `scripts/p
 
 Everything scales on **LEVEL** and **GRADE**, and both apply to every scaling stat.
 
-### Level factor
+### Level factor — COMPOUNDING, cap 30
 
 ```
-level_factor(L) = 1 + (L - 1) × 0.05
+level_factor(L) = 1.08 ^ (L - 1)          MAX_LEVEL = 30
 ```
 
-| L | 1 | 5 | 10 | 20 | 35 | 50 | 60 |
-|---|---|---|---|---|---|---|---|
-| ×  | 1.00 | 1.20 | 1.45 | 1.95 | 2.70 | 3.45 | **3.95** |
+| L | 1 | 2 | 5 | 10 | 20 | 30 |
+|---|---|---|---|---|---|---|
+| ×  | 1.00 | 1.08 | 1.36 | 2.00 | 4.32 | **9.32** |
 
-A full career is **~4×**. Deliberately shallow — hulls and grades carry the rest, which is
-what keeps a beloved small ship viable deep into a run.
+**"When a player levels they should feel it and rejoice"** (user, 2026-07-26), and that
+requires **compounding** rather than linear growth.
+
+Linear growth makes each level a *smaller share of what you already have*. On the previous
+60-level linear curve a level was +5.0% at the start and **+1.3% at level 60** —
+imperceptible by construction, no matter how the numbers were tuned. Compounding is always
+**+8%**, so 29 → 30 feels exactly as good as 1 → 2.
+
+| A level at… | old (linear, 60) | now (1.08ⁿ, 30) |
+|---|---|---|
+| L2 | +5.0% | **+8.0%** |
+| L10 | +3.6% | **+8.0%** |
+| L20 | +2.6% | **+8.0%** |
+| L30 | +2.1% | **+8.0%** |
+| L60 | +1.3% | — |
+
+**Half the levels, and the career is the same length**, so each one simply takes about
+twice as long to earn — the "slow it down further" half of the same request.
+
+### XP — fewer levels, each one earned
+
+```
+xp_for_level(L) = 40 × (L - 1) ^ 2.0      # cumulative; L1 free
+```
+
+| L | 2 | 5 | 10 | 20 | 30 |
+|---|---|---|---|---|---|
+| cumulative | 40 | 640 | 3,240 | 14,440 | **33,640** |
+| that level alone | 40 | 280 | 680 | 1,480 | **2,280** |
+
+**33,640 total, against the old 60-level curve's 34,066** — within 1%. The career is the
+same length; there are simply half as many, twice as meaty, twice as slow.
+
+### What this does to level GAPS — the best part
+
+| Behind by | old | now |
+|---|---|---|
+| 5 levels | ×1.13 | **×1.47** |
+| 10 levels | ×1.29 | **×2.16** |
+| 17 levels | ×1.63 | **×3.70** |
+
+This is what makes the Long Lane's region bands mean something. A level-25 Recluse against
+a level-8 pilot stops being a label and becomes genuinely terrifying.
 
 ### Grade factor
 
@@ -54,8 +95,8 @@ what keeps a beloved small ship viable deep into a run.
 ~15% a tier. **Standard is the anchor at 1.00** — every base number below is a Standard
 number, so the existing arsenal needs no re-basing.
 
-**Combined range: 6.9×** (L1 Flotsam → L60 Exotic). Multiply by the size-band spread below
-and the real power range is far wider.
+**Combined range: 16.3×** (L1 Flotsam → L30 Exotic). Multiply by the size-band spread
+below and the real power range is far wider.
 
 ---
 
@@ -231,6 +272,49 @@ Lower base **and** lower scaling, per §9.8.
 Adopting this table means **retuning both**, and the Guardian's `MILITARY_DMG 3.0` floor
 alongside them. Do it with a playtest — the son is on the tutorial line, which is exactly
 where a level-1 curve change is felt first.
+
+### THE CODE CHANGES THIS REQUIRES
+
+None of this is wired yet. Adopting the table means:
+
+| Where | From | To |
+|---|---|---|
+| `Pilot.MAX_LEVEL` | 60 | **30** |
+| `Pilot.POINTS_PER_LEVELS` | 4 | **2** — keeps 15 skill points at cap, and a point every 2 levels feels frequent |
+| `Pilot.xp_for_level` | `50 × (L-1)^1.6` | `40 × (L-1)^2.0` |
+| `Progression.damage_mult` / `toughness_mult` | `1 + (L-1)×0.32` / `×0.28` | the single compounding `1.08^(L-1)` |
+
+**Existing pilots keep their XP** — level is derived, never stored, so a save simply
+re-reads at the new cap. A level-40 pilot becomes a level-30 pilot with XP to spare.
+
+### ⚠ THE NAVY BAND NOW EXCEEDS THE PLAYER CAP
+
+The region bands set earlier were **rim 1–5, the Long Lane 6–15, the Navy 35–40**. With a
+cap of 30, **the Navy sits above anything a player can reach**, and the Supercruiser's
+authored level 35 is off the end of the table.
+
+Three ways out, and this wants deciding rather than drifting:
+
+1. **Let NPCs exceed the player cap.** A Galean capital being permanently out of reach is
+   good fiction, and with compounding growth a 10-level gap is already ×2.16 — the Navy
+   would be genuinely untouchable. Costs nothing; changes no bands.
+2. **Compress the bands** to fit inside 30 — roughly rim 1–3, lane 4–12, Navy 25–30.
+   Keeps everything inside one scale at the price of re-levelling shipped content.
+3. **Raise the cap** to ~40 and accept a longer career.
+
+**Recommended: (1).** It preserves every band already authored, needs no content changes,
+and "the Navy is beyond you" is a better answer than "the Navy is level 30 like you".
+
+### The tutorial now overshoots level 2
+
+`tutorial.gd REWARD_XP = 50`, and level 2 now costs **40**. Finishing the tutorial hands you
+level 2 outright with change to spare — previously it landed on exactly 50/50 by pure
+coincidence of two unrelated numbers.
+
+That is a **good** onboarding beat and worth keeping: the first level should arrive early,
+teach the player the system exists, and feel like a reward. But it should be deliberate.
+With levels now worth +8% each and far rarer, a free one is a real gift — set `REWARD_XP`
+against the curve on purpose rather than leaving it where it happens to land.
 
 **Open before implementation:**
 

@@ -21,10 +21,15 @@ All bases below are STANDARD-grade numbers, because Standard is the 1.00 anchor.
 import csv
 import os
 
-MAX_LEVEL = 60
+MAX_LEVEL = 30            # halved from 60: fewer levels, each one worth twice as much
 
 # --- the two axes ---------------------------------------------------------
-LEVEL_PER = 0.05          # level_factor = 1 + (L-1) * this  -> L60 = 3.95x
+# COMPOUNDING, NOT LINEAR (user, 2026-07-26: "when a player levels they should feel
+# it and rejoice"). Linear growth makes every level a SMALLER share of what you
+# already have -- at the old 60-cap a level was +5% at the start and +1.3% at the
+# end, imperceptible by construction. Compounding is always +8%, so 29->30 feels
+# exactly as good as 1->2.
+LEVEL_PER_LEVEL = 1.08    # level_factor = this ** (L-1)  -> L30 = 9.32x
 
 GRADES = [                # name, factor, tier index (feeds the DR rating)
     ("flotsam",      0.80, 0),
@@ -59,13 +64,28 @@ DOT_EXP = 0.80            # ...and scales more slowly too
 DR_CAP = 0.40
 DR_K = 40.0
 
+# --- XP: fewer levels, each one earned ------------------------------------
+XP_BASE = 40.0
+XP_EXP = 2.0              # L30 total ~33,640, against the old 60-level 34,066
+
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(REPO, "docs", "tables")
 MARKS = ["mk1", "mk2", "mk3", "mk4", "mk5"]
 
 
 def level_factor(level):
-    return 1.0 + (level - 1) * LEVEL_PER
+    return LEVEL_PER_LEVEL ** (level - 1)
+
+
+def xp_for_level(level):
+    """Cumulative XP to REACH this level. L1 free.
+
+    Steeper than the shipped 50*(L-1)^1.6 so that halving the level count does not
+    halve the career: the total lands within ~1% of the old 60-level total, which
+    means each level simply takes about twice as long to earn. That is the "slow
+    it down further" half of crunchier levels.
+    """
+    return int(XP_BASE * pow(float(max(0, level - 1)), XP_EXP))
 
 
 def armor_dr(level, grade_tier, mark):
@@ -75,7 +95,7 @@ def armor_dr(level, grade_tier, mark):
 
 
 def headings():
-    cols = ["level", "level_factor"]
+    cols = ["level", "level_factor", "xp_total", "xp_this_level"]
     cols += ["hull_" + b for b in HULL_BAND]
     for prefix in ("shield_hp", "shield_regen", "armor_hp", "armor_dr", "dps", "dot_dps"):
         cols += ["%s_%s" % (prefix, m) for m in MARKS]
@@ -89,7 +109,8 @@ def rows_for(grade_factor, grade_tier):
         regen = (lf ** REGEN_EXP) * (grade_factor ** REGEN_EXP)
         dot = (lf ** DOT_EXP) * (grade_factor ** DOT_EXP) * DOT_SCALE
 
-        row = [level, round(lf, 3)]
+        row = [level, round(lf, 3),
+               xp_for_level(level), xp_for_level(level) - xp_for_level(level - 1)]
         row += [round(HULL_BAND[b] * pool) for b in HULL_BAND]
         row += [round(v * pool) for v in SHIELD_HP]
         row += [round(v * regen, 2) for v in SHIELD_REGEN]
