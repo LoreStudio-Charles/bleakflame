@@ -89,6 +89,31 @@ func _ready() -> void:
 	_chk(not g.auto_attack, "a wounded scrit stops fighting")
 	_chk(g.is_moving(), "...and bolts for home")
 
+	# ---- 4b) CORNERED scrit never break and run (the wrecked cave) ----
+	# Same wound that routs a scavenger in the open leaves a trapped one fighting: in a
+	# room with one mouth there is nowhere to run TO, and letting it try would send it
+	# jittering at a `home` inside the room with the player.
+	var caged := Scrit.new()
+	add_child(caged)
+	caged.setup_scrit(Vector2(11000, 11000))
+	caged.cornered = true
+	var prey := GroundCharacter.new()
+	prey.setup("res://assets/characters/PilotM")
+	add_child(prey)
+	prey.team = "player_team"
+	prey.add_to_group("player_walker")
+	prey.global_position = Vector2(11000, 11030)
+	caged.engage(prey)
+	caged.health = caged.max_health * 0.15      # far below FLEE_HEALTH
+	for _i in 8:
+		await get_tree().physics_frame
+	_chk(caged.auto_attack, "a CORNERED scrit keeps fighting at 15% health")
+	_chk(caged.combat_target == prey, "...and does not drop its target to run")
+	caged.cornered = false                      # the only difference
+	for _i in 8:
+		await get_tree().physics_frame
+	_chk(not caged.auto_attack, "the SAME scrit routs the moment it has somewhere to run")
+
 	# ---- 5) THE TOWN IS SANCTUARY ----
 	var g2 := Scrit.new()
 	add_child(g2)

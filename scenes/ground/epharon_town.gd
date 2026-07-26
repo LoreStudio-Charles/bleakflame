@@ -385,6 +385,7 @@ func _spawn_cave_scavengers() -> void:
 		var g := Scrit.new()
 		_world.add_child(g)
 		g.setup_scrit(IROOM + Vector2(-170 + i * 150, -40 + (i % 2) * 70))
+		g.cornered = true   # one mouth, no line of retreat — they fight it out
 		g.lie_in_wait()
 		g.died.connect(_on_scrit_down.bind(g))
 		_cave_scavengers.append(g)

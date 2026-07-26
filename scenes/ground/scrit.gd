@@ -19,6 +19,13 @@ const TOWN_SANCTUARY_R := 1150.0
 
 var home := Vector2.ZERO
 var looted := false
+## CORNERED: no line of retreat, so the break-and-run never triggers. Set on packs in
+## ENCLOSED places (the wrecked cave) for two reasons — one fictional, one practical.
+## A scavenger runs because running works; in a room with one mouth it doesn't, and a
+## cornered animal is the more dangerous one. Practically, FLEE_HEALTH would send it
+## sprinting for a `home` that is inside the room with you, so it would jitter against
+## the walls in front of the player instead of escaping. Trapped means trapped.
+var cornered := false
 ## LYING IN WAIT. A dormant scrit is invisible, inert and unfindable — it does not think,
 ## move, or answer a scan. The AMBUSH is the one authored exception to "enemies live in
 ## places you can see": these are hidden behind a dune on the road to the hermit, and the
@@ -116,8 +123,9 @@ func _think(delta: float) -> void:
 		_flee_t -= delta
 	var prey := _find_prey()
 
-	# BREAK AND RUN: a wounded scavenger stops fighting and bolts home.
-	if health < max_health * FLEE_HEALTH:
+	# BREAK AND RUN: a wounded scavenger stops fighting and bolts home — unless it has
+	# nowhere to bolt TO (see `cornered`), in which case it fights to the end.
+	if not cornered and health < max_health * FLEE_HEALTH:
 		auto_attack = false
 		combat_target = null
 		_flee_t = 2.0
