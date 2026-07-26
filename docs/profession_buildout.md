@@ -208,6 +208,42 @@ at exactly the base rate — the commission's entire premise.
 *Next:* `insight_mult` on Research grants. Like the Miner, a one-line fix with a large
 identity payoff.
 
+#### The direction (user, 2026-07-26) — SEED ONLY, not planned yet
+
+**A weird mix of heals and control** — a cleric mashed up with a necromancer, or an
+enchanter. Some healing, and some genuinely strange stuff mixed in. Science is **not** the
+game's healer; a **MEDICAL OFFICER** commission may arrive later to be that. Science gets
+*some* traditionally clerical tools, including **rez** — flavoured as a **Temporal
+Anomaly** that brings a ship back from before it was destroyed.
+
+The user has explicitly not planned this yet. Recorded so it is not lost, with the
+questions that will bite if they are answered late:
+
+1. **Does a rez erase a Nemesis grudge?** `Nemesis` records a defeat when a *named* hunter
+   kills you, and the whole vengeance arc hangs off that. If a rez wipes the record, hunters
+   like Recluse lose their teeth whenever a Science Officer is present. **Recommend the
+   grudge STANDS** — you were killed and somebody brought you back, which is a better story
+   than un-killing.
+2. **Self-rez or others-only?** A self-rez in solo play is simply a free life and drains
+   the stakes out of every encounter, Cinderweb included. **Others-only** keeps solo death
+   meaningful *and* becomes a strong reason to fly together — which is what the coop north
+   star wants. Ties to [[coop-campaign-northstar]].
+3. **"Temporal" makes time manipulation CANON.** The Saga's Wardens are already
+   *space*-folders — the WayGate is their road — so folding time is a short step but a real
+   one, and it constrains the Saga afterwards (if time can be rewound, why not rewind the
+   Convergence?). Either accept it deliberately or keep the fiction mundane: a **pattern
+   buffer** or **phase echo** restoring a recorded state reads identically in play and
+   makes no claim about time.
+4. **Science and Trader would overlap.** The Trader is becoming a Druid (HoT + buffs, or
+   DoT + debuffs). If Science is cleric + necro + enchanter, both commissions heal and both
+   debuff. **Split them by CADENCE, not by verb:** Trader is *sustained* — over-time,
+   maintenance, gradual; Science is *burst and utility* — rez, dispel, cleanse, situational
+   oddities. That also leaves clean room for a Medical Officer as the dedicated,
+   throughput healer later.
+5. **Medical Officer would be the NINTH commission** (after Bounty Hunter and Marine, both
+   banked). Each addition dilutes the others unless it owns a verb nobody else has — worth
+   tracking as the list grows rather than discovering at nine.
+
 ---
 
 ## Suggested order
@@ -231,8 +267,9 @@ player. Everything after it depends on what the pass decides.
 
 ## Banked, not in the list
 
-**Bounty Hunter** (7th) and **Marine** (8th, heavy-armour warrior at Orivel) are designed
-in `docs/professions.md` but absent from `Professions.LIST`. The Marine's note is explicit
+**Bounty Hunter** (7th), **Marine** (8th, heavy-armour warrior at Orivel) and now a
+possible **Medical Officer** (9th, the dedicated healer — see Science above) are designed or
+seeded but absent from `Professions.LIST`. The Marine's note is explicit
 that it must not be "Guardian with bigger numbers" — worth re-reading before either is
 started, and neither should begin before the tutorial line through Epharon and the Gate is
 verified.
