@@ -471,8 +471,8 @@ effective against each.
 |---|---|
 | **Impact** | the baseline — kinetic, no rider |
 | **Heat** | **applies Heat stacks**, the armor-stripping mechanic in `docs/armor_and_penetration.md` |
-| **Antimatter** | *(signature effect undecided)* |
-| **Radiation** | *(signature effect undecided)* |
+| **Antimatter** | **the anti-HULL answer** — 125% hull, **75% shields *and* armor** |
+| **Radiation** | **the anti-SHIELD answer** — 125% shields, extended regen cut, builds **Contamination** |
 
 **Heat is deliberately one concept, not two.** Taking Heat damage is what builds Heat on
 the target, so the damage type and the armor mechanic are the same system seen from two
@@ -483,8 +483,64 @@ is a rider a weapon inflicts. **EMP is an EFFECT, not a type** — any weapon ma
 regardless of what damage it deals. Heat happens to be both, because Heat damage is
 precisely what builds Heat stacks; that is a deliberate overlap, not the pattern.
 
-Effects known so far: **Heat stacks** (strips armor DR), **EMP** (the natural blinder —
-see Range), and **DoT** via `damage_cycle`. The 10-debuff cap governs effects, not types.
+Effects known so far: **Heat stacks** (strips armor DR), **EMP** (the hard blind — see
+Range), **Contamination** (Radiation, below), and **DoT** via `damage_cycle`. The
+10-debuff cap governs effects, not types.
+
+##### Contamination — Radiation's second half
+
+Radiation builds **Contamination** on a target **hit while unshielded**. Contamination
+degrades *everything* by a single scaled percentage: turn rate, acceleration, turret
+traverse, sensor reach, shield regen, energy recharge.
+
+**Why "everything slightly" rather than "one system at random":** a per-system debuff needs
+a separate implementation each, is invisible when it hits something the pilot was not
+using, and in a group reads as frustration rather than tactics. One stat degrading
+everything is a single implementation, always felt, and scales smoothly with exposure.
+
+**THE MAXIMUM DEGRADE IS VERY MINOR** (user) — think a handful of percent at full
+Contamination, not a crippling stack. This is deliberate and it is what keeps the mechanic
+honest: it degrades *everything at once*, so even a small number is felt across turning,
+tracking, seeing and recharging simultaneously. Push it higher and it stops being attrition
+and becomes a soft disable — which is EMP's job, not Radiation's. A ship soaking Radiation
+should feel like it is *wearing down*, never like it is being switched off.
+
+**It is CUMULATIVE and SLOW to decay** — which is what separates it from Heat. Heat is a
+ramp you lose the moment you break off; Contamination lingers, so you fly *away* from a
+Radiation fight still degraded. That lingering is the memorable part.
+
+**This is what stops Radiation falling off a cliff.** Because the pipeline is strictly
+shields to armor to hull, a shield preference would otherwise mean "strong for five
+seconds, then 75% for the rest of the fight". Contamination makes it a TRANSITION instead:
+shields up it breaks them and holds them down, shields down it grinds. Radiation is the
+**attrition** type.
+
+> **THE DEATH-SPIRAL TRAP, and why it is already closed.** Contamination degrades sensors;
+> weapon range is capped by sensor reach; so radiation could in principle disarm a target
+> and leave it unable to answer. The range rule already prevents it —
+> `min(weapon_range, max(VISUAL_RANGE, sensor_reach))` — because **the visual floor holds
+> even at zero sensors.** Radiation shortens your reach; it can never take your guns. That
+> also gives the two effects a clean split: **EMP is the HARD blind** that drops below the
+> floor, **Contamination is the SOFT degrade** that never does. Keep it that way.
+
+##### One layer, one owner
+
+Each defensive layer has exactly **one** answer, so nothing overlaps:
+
+| Answer | Beats | Mechanism |
+|---|---|---|
+| **Impact** | nothing | the baseline |
+| **Heat** | makes armor easier *for everyone* | strips armor DR (armor spec) |
+| **HESH** *(weapon attribute)* | **armor** | +% damage to plate |
+| **Antimatter** | **hull** | 125% hull, 75% shields and armor |
+| **Radiation** | **shields** | 125% shields, extended regen cut, Contamination |
+
+**Antimatter is the FINISHER**, not a generalist. An earlier draft had it at 125% against
+armor *and* hull with 75% against shields — but shields are the smallest pool, they
+regenerate, and plenty of ships (every V-Shrike build, `pirate_raider`) carry none at all.
+Its penalty would have barely existed while its bonus applied to everything that matters,
+making it the default pick. It also duplicated HESH, which already owns anti-armor. Paying
+75% against *both* outer layers gives it a real weakness and pairs it with Penetration.
 
 Keep resistances **modest — around ±25%, not ×0/×2.** Strong resistances make players
 carry one weapon per type and swap between fights, which is tedious rather than tactical.
@@ -615,11 +671,10 @@ accessibility goal but not the whole of it — those three deserve the same pass
    level and quality itself? That is the one remaining double-dip: the pilot's level would
    scale a number that already grew with the item's level. Cleanest is probably that gear
    power comes from gear and the pilot's level scales the *pilot* — but it is a real fork.
-2. **What are Antimatter's and Radiation's signature effects?** Impact is the baseline and
-   Heat has a job. If the other two are only resistance-profile entries they are numbers
-   rather than identities — each wants either a rider effect or a distinctive resistance
-   story (Antimatter as the answer to shields? Radiation as the answer to crew and
-   systems rather than plating?).
+2. **How much does Contamination degrade, and how slowly does it decay?** The shape is
+   settled (cumulative, lingering, everything by one scaled percentage); the numbers are
+   not. It needs a cap, and it needs a readout — an invisible degrade is an invisible
+   mechanic, which makes it another customer for the computer-as-data-tier idea.
 3. **What happens at the 10-debuff cap** — is a new debuff refused, or does the oldest
    fall off?
 4. **Do defences scale on level+quality too, and on what curve?** Named here because
