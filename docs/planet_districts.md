@@ -74,6 +74,50 @@ worth what it costs — shown, not told.
 
 ---
 
+## HOW LANDING PICKS A DISTRICT — authored APPROACH TRIGGERS (user, 2026-07-25)
+
+**The quadrant you come down on decides the region.** Not a menu: you fly to the part of
+the planet you want, which makes the sprite the map and the approach a real decision.
+
+**The regions are AUTHORED AS TRIGGERS, per planet** — the user hand-places them, the
+same way prop colliders are hand-authored (`scenes/ground/colliders/<key>.tscn`). This
+beats computing pie slices in code: a planet's biomes are not evenly quartered, the art
+decides where the tundra actually ends, and a human eye placing a shape against the
+sprite gets that right the first time.
+
+### The contract (so authoring and code meet)
+
+One scene per planet: **`scenes/flight/regions/<planet>.tscn`**
+
+- Root: `Node2D`.
+- One **`Area2D` child per district**, each **named for its region id** — for Orivel:
+  `megacity`, `tundra`, `desert`, `swamp`. The node NAME is the id the ground side
+  loads, so it must match the region scene's key exactly.
+- Each Area2D holds a `CollisionPolygon2D` (or a `CollisionShape2D` — either is fine).
+- **Authored in SOURCE PIXELS about the planet's centre**, exactly like the prop
+  colliders, so the same shape works at any `radius_mult`: the loader scales by the
+  planet's radius the way `collider_points()` scales by sprite scale.
+- Shapes should reach OUTWARD past the surface — you are landing from space, so the
+  trigger is the approach corridor, not the ground footprint. Overlap at the seams is
+  fine and expected.
+
+### The rules code will apply
+
+- On landing, the district is whichever trigger the ship is inside.
+- **Overlapping triggers:** the one whose centre is closest to the ship's approach
+  bearing wins. Seams should never refuse a landing.
+- **No trigger matched** (a gap, or a planet with no region scene at all): fall back to
+  the planet's `default_region`. Epharon has exactly one region and needs no scene —
+  a single-district world is the fallback case, not a special case.
+- A planet with no region scene and no districts behaves exactly as it does today.
+
+### Why this generalises
+
+Any planet with multiple regions gets a scene; any planet without one keeps working.
+Percival's three districts are the same authoring job with a different sprite, and the
+Quarn Wastes being air-only is expressed by simply not giving the Wastes a door from its
+neighbours — the trigger still lands you there.
+
 ## Open, to settle when regions resume
 
 - How landing chooses a district: an orbital selection (pick a quadrant on approach) vs
