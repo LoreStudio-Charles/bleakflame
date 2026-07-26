@@ -53,6 +53,12 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_wvgdv"]
+script = ExtResource("1_yavjm")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+
 [resource]
 script = ExtResource("2_rnxwn")
 display_name = "Kestrel"
@@ -65,5 +71,5 @@ cargo_base = 8.0
 price = 3000
 trait_id = "long_sight"
 trait_description = "Long Sight: sensor ranges +25%; contacts are identified one grade sooner."
-hardpoints = Array[ExtResource("1_yavjm")]([SubResource("Resource_d2j2o"), SubResource("Resource_fgyac"), SubResource("Resource_lu04b"), SubResource("Resource_5j3m0"), SubResource("Resource_0i6pb"), SubResource("Resource_8oqi3"), SubResource("Resource_iopye"), SubResource("Resource_215gp")])
+hardpoints = Array[ExtResource("1_yavjm")]([SubResource("Resource_d2j2o"), SubResource("Resource_fgyac"), SubResource("Resource_lu04b"), SubResource("Resource_5j3m0"), SubResource("Resource_0i6pb"), SubResource("Resource_8oqi3"), SubResource("Resource_iopye"), SubResource("Resource_215gp"), SubResource("Resource_wvgdv")])
 silhouette = PackedVector2Array(19, 0, 2, -4, -13, -6, -10, 0, -13, 6, 2, 4)

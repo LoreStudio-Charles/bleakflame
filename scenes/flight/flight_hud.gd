@@ -699,7 +699,7 @@ class GroupOverlay:
 		if _refresh > 0.0:
 			return
 		_refresh = 0.4
-		var reach: float = maxf(COMM_FLOOR, float(ship.stats.get("sensor_range", 0.0)))
+		var reach: float = ship.sensor_reach(COMM_FLOOR)   # blind = nobody on the roster
 		var friends: Array[Node2D] = []
 		for group in ["player_team", "friendly_targets"]:
 			for node in get_tree().get_nodes_in_group(group):

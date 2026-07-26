@@ -47,6 +47,12 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_j63dp"]
+script = ExtResource("1_nwe0y")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+
 [resource]
 script = ExtResource("2_1ctwf")
 display_name = "Mule"
@@ -59,5 +65,5 @@ cargo_base = 60.0
 price = 3000
 trait_id = "packrat"
 trait_description = "Packrat: cargo components 25% lighter; jettisoned cargo can be re-scooped."
-hardpoints = Array[ExtResource("1_nwe0y")]([SubResource("Resource_pxafd"), SubResource("Resource_cg0m4"), SubResource("Resource_sor6v"), SubResource("Resource_3ttca"), SubResource("Resource_b2ihv"), SubResource("Resource_exjhr"), SubResource("Resource_oslme")])
+hardpoints = Array[ExtResource("1_nwe0y")]([SubResource("Resource_pxafd"), SubResource("Resource_cg0m4"), SubResource("Resource_sor6v"), SubResource("Resource_3ttca"), SubResource("Resource_b2ihv"), SubResource("Resource_exjhr"), SubResource("Resource_oslme"), SubResource("Resource_j63dp")])
 silhouette = PackedVector2Array(14, 0, 9, -9, -14, -10, -18, -4, -18, 4, -14, 10, 9, 9)

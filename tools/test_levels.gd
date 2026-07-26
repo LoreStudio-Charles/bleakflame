@@ -25,6 +25,7 @@ func _ready() -> void:
 	_case_ratio_is_relative_not_absolute()
 	_case_zero_and_missing_levels_are_safe()
 	_case_spawners_actually_pass_the_level()
+	_case_no_sensors_means_blind()
 
 	if failures == 0:
 		print("test_levels: ALL PASS")
@@ -157,6 +158,38 @@ func _case_spawners_actually_pass_the_level() -> void:
 			deep.stats.hull_hp, plain.stats.hull_hp])
 	plain.queue_free()
 	deep.queue_free()
+
+
+## NO SENSORS BLINDS YOU — AND BUYS YOU NOTHING (user, 2026-07-25).
+##
+## Missing a component costs exactly that component. GOING DARK is taking them ALL
+## offline at once, and that total shutdown is what pays for the low signature. An
+## earlier pass let a sensorless hull count as "running silent", handing it dark's
+## stealth while it kept shields, engines and guns — a large free benefit for
+## leaving off the cheapest part on the ship. Both halves are pinned here.
+func _case_no_sensors_means_blind() -> void:
+	var seeing := _ship(SampleBuilds.escort_goshawk(), 0)
+	if seeing.sensor_reach(600.0) <= 0.0:
+		_fail("the escort build shipped blind — _make's default sensor did not fit")
+	if seeing.runs_silent():
+		_fail("an ordinary ship reports as running silent")
+
+	var blind := _ship(_blinded(SampleBuilds.escort_goshawk()), 0)
+	if blind.sensor_reach(600.0) != 0.0:
+		_fail("a hull with no sensor still perceives %.0fu — the floor is masking blindness" % 			blind.sensor_reach(600.0))
+	# THE HALF THAT MATTERS: blind must not be stealthy.
+	if blind.runs_silent():
+		_fail("a blind ship is treated as running silent — it would get dark's stealth for free")
+	seeing.queue_free()
+	blind.queue_free()
+
+
+## Strip the sensor out of a build, whatever socket it landed in.
+func _blinded(b: ShipBuild) -> ShipBuild:
+	for i in b.hull.hardpoints.size():
+		if b.hull.hardpoints[i].slot_type == HardpointDef.SlotType.SENSOR:
+			b.slots.erase(i)
+	return b
 
 
 ## A hull with an unset (0) level must not blow the ratio up or divide by zero.

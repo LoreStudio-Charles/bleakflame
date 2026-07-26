@@ -92,6 +92,13 @@ offset = Vector2(-35, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_bemir"]
+script = ExtResource("1_ddxp8")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+mark = 3
+
 [resource]
 script = ExtResource("2_g2cil")
 display_name = "Supercruiser"
@@ -104,5 +111,5 @@ level = 35
 cargo_base = 40.0
 trait_id = "line_of_battle"
 trait_description = "Line of Battle: a wall of the Reach — built to stand in the lane and trade fire. The main batteries gut a cruiser; its point-defense turrets swat the gnats the big guns can't track. Escorts extend the screen, but it dies hard alone."
-hardpoints = Array[ExtResource("1_ddxp8")]([SubResource("Resource_s5mqf"), SubResource("Resource_dj8o0"), SubResource("Resource_8wb6e"), SubResource("Resource_13nb7"), SubResource("Resource_gieys"), SubResource("Resource_80hlb"), SubResource("Resource_j4x1a"), SubResource("Resource_ekcsc"), SubResource("Resource_k7wcx"), SubResource("Resource_pnhfj"), SubResource("Resource_wwdfd"), SubResource("Resource_ttvy3"), SubResource("Resource_lwuxw")])
+hardpoints = Array[ExtResource("1_ddxp8")]([SubResource("Resource_s5mqf"), SubResource("Resource_dj8o0"), SubResource("Resource_8wb6e"), SubResource("Resource_13nb7"), SubResource("Resource_gieys"), SubResource("Resource_80hlb"), SubResource("Resource_j4x1a"), SubResource("Resource_ekcsc"), SubResource("Resource_k7wcx"), SubResource("Resource_pnhfj"), SubResource("Resource_wwdfd"), SubResource("Resource_ttvy3"), SubResource("Resource_lwuxw"), SubResource("Resource_bemir")])
 silhouette = PackedVector2Array(115, 0, 80, -18, 20, -30, -60, -32, -100, -20, -110, 0, -100, 20, -60, 32, 20, 30, 80, 18)

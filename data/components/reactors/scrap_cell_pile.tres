@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_q748l")
-power_output = 40.0
+power_output = 52.0
 energy_capacity = 80.0
 energy_recharge = 1.0
 trail_color = Color(0.75, 0.62, 0.35, 1)

@@ -394,10 +394,12 @@ func _physics_process(delta: float) -> void:
 func _prey_valid(node: BuildShip, base_reach := AGGRO_RANGE) -> bool:
 	if node.is_in_group("player_ship") and (parley or Standing.shoal_open()):
 		return false   # safe passage: the Krayt parley, or you're the Shoal's now
-	# Signature drop: a ship running dark is seen only up close — distant hunters
-	# lose the contact (but anything on top of it still has eyes).
+	# Signature drop: a ship running SILENT is seen only up close — distant hunters
+	# lose the contact (but anything on top of it still has eyes). Silent covers
+	# both the deliberate [K] Going Dark and a hull carrying no sensors at all,
+	# which radiates nothing whether it meant to or not.
 	var reach := base_reach
-	if node.has_method("is_dark") and node.is_dark():
+	if node.has_method("runs_silent") and node.runs_silent():
 		reach *= 0.4
 	return node != null and is_instance_valid(node) and not node.dead \
 		and not node.is_hidden() and node.get("docked_at") == null \

@@ -60,6 +60,13 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_ruib5"]
+script = ExtResource("1_n70x1")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+mark = 2
+
 [resource]
 script = ExtResource("2_4bwpy")
 display_name = "Goshawk"
@@ -71,5 +78,5 @@ level = 12
 cargo_base = 14.0
 trait_id = "hunting_pair"
 trait_description = "Hunting Pair: goshawks work a hedgerow in twos — one flushes, one waits. Faster than the gunships and better armed than anything that can catch it."
-hardpoints = Array[ExtResource("1_n70x1")]([SubResource("Resource_0kyev"), SubResource("Resource_f813f"), SubResource("Resource_pqxm8"), SubResource("Resource_3ripd"), SubResource("Resource_i2mrh"), SubResource("Resource_iaa0b"), SubResource("Resource_horqo"), SubResource("Resource_b02s8"), SubResource("Resource_8g6qh")])
+hardpoints = Array[ExtResource("1_n70x1")]([SubResource("Resource_0kyev"), SubResource("Resource_f813f"), SubResource("Resource_pqxm8"), SubResource("Resource_3ripd"), SubResource("Resource_i2mrh"), SubResource("Resource_iaa0b"), SubResource("Resource_horqo"), SubResource("Resource_b02s8"), SubResource("Resource_8g6qh"), SubResource("Resource_ruib5")])
 silhouette = PackedVector2Array(30, 0, 16, -8, -4, -22, -18, -20, -14, -6, -26, -4, -26, 4, -14, 6, -18, 20, -4, 22, 16, 8)

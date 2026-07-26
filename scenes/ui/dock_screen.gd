@@ -538,9 +538,13 @@ func _build_armory_tab() -> void:
 	root.add_child(_armory_filter_row)
 	var fgroup := ButtonGroup.new()
 	_add_filter_button("All", -1, fgroup)
+	# SENSOR is listed even though it is last in the enum (new types append there,
+	# never insert — the values are serialized in hull .tres files). Without a
+	# filter of its own a sensor is unfindable except under "All", which for the
+	# one component a ship cannot fly without is the wrong place to hide it.
 	for t in [HardpointDef.SlotType.WEAPON, HardpointDef.SlotType.ENGINE,
 			HardpointDef.SlotType.REACTOR, HardpointDef.SlotType.DEFENSE,
-			HardpointDef.SlotType.SYSTEM]:
+			HardpointDef.SlotType.SENSOR, HardpointDef.SlotType.SYSTEM]:
 		_add_filter_button(HardpointDef.SlotType.keys()[t].capitalize(), t, fgroup)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)

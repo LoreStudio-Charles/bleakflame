@@ -48,6 +48,13 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_ti17c"]
+script = ExtResource("1_vsc7r")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+mark = 2
+
 [resource]
 script = ExtResource("2_8min8")
 display_name = "Dowager"
@@ -61,5 +68,5 @@ cargo_base = 34.0
 price = 5500
 trait_id = "old_girl"
 trait_description = "The Old Girl: she isn't a dancer. More stomp than step. Forty years of patches, one gun worth the bragging, half her systems running on faith — but full of memories, though."
-hardpoints = Array[ExtResource("1_vsc7r")]([SubResource("Resource_sieg4"), SubResource("Resource_04eal"), SubResource("Resource_lwomy"), SubResource("Resource_4kpnx"), SubResource("Resource_yrv4x"), SubResource("Resource_m4wq4"), SubResource("Resource_orya6")])
+hardpoints = Array[ExtResource("1_vsc7r")]([SubResource("Resource_sieg4"), SubResource("Resource_04eal"), SubResource("Resource_lwomy"), SubResource("Resource_4kpnx"), SubResource("Resource_yrv4x"), SubResource("Resource_m4wq4"), SubResource("Resource_orya6"), SubResource("Resource_ti17c")])
 silhouette = PackedVector2Array(28, 0, 20, -11, -6, -16, -24, -12, -28, -4, -28, 4, -24, 12, -6, 16, 20, 11)

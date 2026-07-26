@@ -47,6 +47,12 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_ok432"]
+script = ExtResource("1_h6uxo")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+
 [resource]
 script = ExtResource("2_q6gqk")
 display_name = "Sparrowhawk"
@@ -58,5 +64,5 @@ cargo_base = 12.0
 price = 3500
 trait_id = "knife_fighter"
 trait_description = "Knife-fighter: weapon gimbal arcs are 50% wider on this hull."
-hardpoints = Array[ExtResource("1_h6uxo")]([SubResource("Resource_w13xu"), SubResource("Resource_6d3bx"), SubResource("Resource_ix6fl"), SubResource("Resource_0yyly"), SubResource("Resource_gjyjh"), SubResource("Resource_8yl28"), SubResource("Resource_jgd0e")])
+hardpoints = Array[ExtResource("1_h6uxo")]([SubResource("Resource_w13xu"), SubResource("Resource_6d3bx"), SubResource("Resource_ix6fl"), SubResource("Resource_0yyly"), SubResource("Resource_gjyjh"), SubResource("Resource_8yl28"), SubResource("Resource_jgd0e"), SubResource("Resource_ok432")])
 silhouette = PackedVector2Array(18, 0, 3, -6, -8, -10, -14, -4, -14, 4, -8, 10, 3, 6)

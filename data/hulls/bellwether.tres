@@ -87,6 +87,13 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_ealu3"]
+script = ExtResource("1_nupq6")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+mark = 3
+
 [resource]
 script = ExtResource("2_xscby")
 display_name = "Bellwether"
@@ -98,5 +105,5 @@ level = 15
 cargo_base = 400.0
 trait_id = "convoy_heart"
 trait_description = "Convoy Heart: everything else on the lane is arranged around her. She is worth more than her escort, slower than her attackers, and perfectly aware of both."
-hardpoints = Array[ExtResource("1_nupq6")]([SubResource("Resource_3ioti"), SubResource("Resource_5jcbs"), SubResource("Resource_q8p4j"), SubResource("Resource_3gep3"), SubResource("Resource_x2svn"), SubResource("Resource_rm7s5"), SubResource("Resource_xw1a7"), SubResource("Resource_j2557"), SubResource("Resource_kk8dt"), SubResource("Resource_ynvux"), SubResource("Resource_xkv26"), SubResource("Resource_ncyu5")])
+hardpoints = Array[ExtResource("1_nupq6")]([SubResource("Resource_3ioti"), SubResource("Resource_5jcbs"), SubResource("Resource_q8p4j"), SubResource("Resource_3gep3"), SubResource("Resource_x2svn"), SubResource("Resource_rm7s5"), SubResource("Resource_xw1a7"), SubResource("Resource_j2557"), SubResource("Resource_kk8dt"), SubResource("Resource_ynvux"), SubResource("Resource_xkv26"), SubResource("Resource_ncyu5"), SubResource("Resource_ealu3")])
 silhouette = PackedVector2Array(58, 0, 48, -20, -20, -34, -52, -26, -60, -10, -60, 10, -52, 26, -20, 34, 48, 20)

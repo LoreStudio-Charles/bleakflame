@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_bhy3q")
-power_output = 120.0
+power_output = 152.0
 energy_capacity = 240.0
 energy_recharge = 2.5
 trail_color = Color(0.8, 0.45, 0.95, 1)

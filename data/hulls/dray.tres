@@ -65,6 +65,13 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_frkk3"]
+script = ExtResource("1_lxgx8")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+mark = 2
+
 [resource]
 script = ExtResource("2_72flh")
 display_name = "Dray"
@@ -76,5 +83,5 @@ level = 8
 cargo_base = 140.0
 trait_id = "steady_hand"
 trait_description = "Steady Hand: a hauler holds course when it is shot at, because the cargo is the job. Turret rings fore and aft do the flinching for her."
-hardpoints = Array[ExtResource("1_lxgx8")]([SubResource("Resource_16uig"), SubResource("Resource_7bu46"), SubResource("Resource_lanht"), SubResource("Resource_l5wst"), SubResource("Resource_nh8nf"), SubResource("Resource_14a8p"), SubResource("Resource_e0k2n"), SubResource("Resource_t7t48"), SubResource("Resource_wfb2t")])
+hardpoints = Array[ExtResource("1_lxgx8")]([SubResource("Resource_16uig"), SubResource("Resource_7bu46"), SubResource("Resource_lanht"), SubResource("Resource_l5wst"), SubResource("Resource_nh8nf"), SubResource("Resource_14a8p"), SubResource("Resource_e0k2n"), SubResource("Resource_t7t48"), SubResource("Resource_wfb2t"), SubResource("Resource_frkk3")])
 silhouette = PackedVector2Array(26, 0, 20, -12, -14, -18, -28, -12, -30, 0, -28, 12, -14, 18, 20, 12)

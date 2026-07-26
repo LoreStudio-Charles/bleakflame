@@ -333,7 +333,7 @@ func _process(_delta: float) -> void:
 		# Discovery is a SENSOR product: reach = sensor range (600 floor),
 		# multiplied by a fitted survey scanner. A sensor-boat Kestrel with
 		# a Prospector suite charts secrets from far outside their teeth.
-		var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
+		var reach := ship.sensor_reach(600.0)   # blind ships chart nothing
 		if ship.scanner_fitted:
 			reach *= 1.5
 		var found := PoiMap.tick_discovery(ship.global_position, reach)
@@ -589,7 +589,7 @@ func _tick_flight_lessons() -> void:
 		if m.def != null and m.def.magazine > 0:
 			carrying_ordnance = true
 			break
-	var reach := maxf(600.0, float(ship.stats.get("sensor_range", 0.0)))
+	var reach := ship.sensor_reach(600.0)   # blind ships chart nothing
 	Tutor.observe({
 		"flying": true,
 		"has_ore": has_ore,

@@ -31,21 +31,41 @@ func _init() -> void:
 		checked += 1
 		var name: String = h.display_name if h.display_name != "" else path.get_file()
 
-		# --- THE COUPLING: one, and LAST ---
-		# Last matters as much as present: hardpoint indices are serialized into
-		# save files and SampleBuilds fit-maps, so a coupling inserted mid-list
-		# would silently re-type every slot after it.
+		# --- THE APPENDED SOCKETS: one coupling, one sensor, both AFTER the rest ---
+		# Every hull carries a Universal Coupling (ability chips) and a Sensor
+		# Mount (without which it is blind and, per BuildShip.runs_silent,
+		# effectively always running dark). Both are appended by the generator
+		# rather than authored per hull.
+		#
+		# THE ORDER RULE is not "coupling last" — it is that NO AUTHORED SOCKET
+		# EVER SITS AFTER THEM. Hardpoint indices are serialized into save files
+		# and SampleBuilds fit-maps, so anything inserted ahead of a weapon or
+		# engine silently re-types it. Appending is safe in any order; inserting
+		# never is.
 		var couplings := 0
-		var last_is_coupling := false
+		var sensors := 0
+		var appended_at := -1     # first coupling/sensor seen
+		var authored_after := ""  # an authored socket sitting after one — the bug
 		for i in h.hardpoints.size():
-			if h.hardpoints[i].slot_type == HardpointDef.SlotType.COUPLING:
-				couplings += 1
-				last_is_coupling = (i == h.hardpoints.size() - 1)
+			var t: int = h.hardpoints[i].slot_type
+			if t == HardpointDef.SlotType.COUPLING or t == HardpointDef.SlotType.SENSOR:
+				if t == HardpointDef.SlotType.COUPLING:
+					couplings += 1
+				else:
+					sensors += 1
+				if appended_at < 0:
+					appended_at = i
+			elif appended_at >= 0 and authored_after == "":
+				authored_after = h.hardpoints[i].display_name
 		if couplings != 1:
 			print("FAIL: %s has %d Universal Couplings (want exactly 1) — a hull with no coupling can hold no ability chips" % [name, couplings])
 			failures += 1
-		elif not last_is_coupling:
-			print("FAIL: %s has its coupling mid-list; it must be APPENDED LAST or every slot index after it shifts" % name)
+		if sensors != 1:
+			print("FAIL: %s has %d Sensor Mounts (want exactly 1) — a hull with no sensor slot must trade cargo for eyes" % [name, sensors])
+			failures += 1
+		if authored_after != "":
+			print("FAIL: %s authors '%s' AFTER an appended socket — every index from there is re-typed on load" % [
+				name, authored_after])
 			failures += 1
 
 		# --- ART BUDGET: the silhouette must fit the size band's canvas ---

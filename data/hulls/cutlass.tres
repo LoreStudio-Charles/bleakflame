@@ -46,6 +46,12 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_nsdp7"]
+script = ExtResource("1_bhnlq")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+
 [resource]
 script = ExtResource("2_gsni2")
 display_name = "Cutlass"
@@ -58,5 +64,5 @@ cargo_base = 6.0
 price = 3800
 trait_id = "closing_talon"
 trait_description = "Closing Talon: born to chase, built to catch."
-hardpoints = Array[ExtResource("1_bhnlq")]([SubResource("Resource_1x4sc"), SubResource("Resource_4nvu2"), SubResource("Resource_guiji"), SubResource("Resource_sewf6"), SubResource("Resource_coasj"), SubResource("Resource_igad5"), SubResource("Resource_c1vrg")])
+hardpoints = Array[ExtResource("1_bhnlq")]([SubResource("Resource_1x4sc"), SubResource("Resource_4nvu2"), SubResource("Resource_guiji"), SubResource("Resource_sewf6"), SubResource("Resource_coasj"), SubResource("Resource_igad5"), SubResource("Resource_c1vrg"), SubResource("Resource_nsdp7")])
 silhouette = PackedVector2Array(14, -13, 4, -15, -8, -11, -13, 0, -8, 11, 4, 15, 14, 13, 6, 9, -2, 6, -5, 0, -2, -6, 6, -9)

@@ -27,6 +27,12 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_fyl4e"]
+script = ExtResource("1_5quhf")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+
 [resource]
 script = ExtResource("2_f5wx1")
 display_name = "Wasp"
@@ -37,5 +43,5 @@ grade = 1
 cargo_base = 2.0
 trait_id = "stinger"
 trait_description = "Stinger: barely more than an engine with a gun. Fast, fragile, furious."
-hardpoints = Array[ExtResource("1_5quhf")]([SubResource("Resource_3jh8s"), SubResource("Resource_5xb7k"), SubResource("Resource_kvg7y"), SubResource("Resource_f4cer")])
+hardpoints = Array[ExtResource("1_5quhf")]([SubResource("Resource_3jh8s"), SubResource("Resource_5xb7k"), SubResource("Resource_kvg7y"), SubResource("Resource_f4cer"), SubResource("Resource_fyl4e")])
 silhouette = PackedVector2Array(10, 0, -2, -5, -8, -3, -8, 3, -2, 5)

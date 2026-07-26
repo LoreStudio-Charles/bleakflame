@@ -603,7 +603,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Cycle sensor-range contacts in a group, nearest first, wrapping. The
 ## reliable complement to clicking at things that jink at 300 units/second.
 func _cycle_target(group: String) -> void:
-	var sensor := maxf(600.0, float(stats.get("sensor_range", 0.0)))
+	var sensor := sensor_reach(600.0)   # 0 with no sensor fitted: blind is blind
 	var candidates: Array[Node2D] = []
 	for node in get_tree().get_nodes_in_group(group):
 		if node == self or node.get("dead") == true:
@@ -1120,6 +1120,13 @@ func _end_soft_hide() -> void:
 
 # --- Going Dark: systems offline, in-flight Processor Bus re-flash ------------
 func is_dark() -> bool:
+	return dark
+
+
+## Only the DELIBERATE shutdown drops your signature. Flying blind does not: see
+## BuildShip.runs_silent for why lacking one component must never pay out the
+## benefit of having them all off.
+func runs_silent() -> bool:
 	return dark
 
 

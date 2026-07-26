@@ -50,6 +50,13 @@ offset = Vector2(-2, 0)
 slot_type = 5
 mark = 5
 
+[sub_resource type="Resource" id="Resource_cppou"]
+script = ExtResource("1_hj3m5")
+display_name = "Sensor Mount"
+offset = Vector2(2, 0)
+slot_type = 6
+mark = 2
+
 [resource]
 script = ExtResource("2_jkwv8")
 display_name = "Vulture"
@@ -62,5 +69,5 @@ level = 5
 cargo_base = 20.0
 trait_id = "carrion_lord"
 trait_description = "Carrion Lord: slow, patient, and armed like a grudge."
-hardpoints = Array[ExtResource("1_hj3m5")]([SubResource("Resource_jvesi"), SubResource("Resource_1w7rm"), SubResource("Resource_f5mdm"), SubResource("Resource_a458m"), SubResource("Resource_dgoa5"), SubResource("Resource_cp6y1"), SubResource("Resource_sxp71")])
+hardpoints = Array[ExtResource("1_hj3m5")]([SubResource("Resource_jvesi"), SubResource("Resource_1w7rm"), SubResource("Resource_f5mdm"), SubResource("Resource_a458m"), SubResource("Resource_dgoa5"), SubResource("Resource_cp6y1"), SubResource("Resource_sxp71"), SubResource("Resource_cppou")])
 silhouette = PackedVector2Array(30, 0, 12, -14, -16, -20, -30, -8, -30, 8, -16, 20, 12, 14)

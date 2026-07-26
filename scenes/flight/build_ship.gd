@@ -294,6 +294,38 @@ func _random_variant(hull_name: String) -> String:
 	return pool.pick_random() if not pool.is_empty() else ""
 
 
+## MISSING A COMPONENT COSTS YOU EXACTLY THAT COMPONENT (user, 2026-07-25):
+##   no sensors  -> blind (see sensor_reach)      no thrusters -> no thrust
+##   no shields  -> no rechargeable array         no weapons   -> no guns/ordnance
+##   no armor    -> no ablative layer             no chips     -> no abilities
+##   no modules  -> lose whatever they enhanced
+##
+## GOING DARK is taking ALL of it offline AT ONCE, on purpose, and the payment for
+## that total shutdown is what buys the benefits: energy recovers fast, radar print
+## drops, the heat signature goes, and the bus goes cold enough to swap chips in
+## flight.
+##
+## SO SILENCE IS NOT A SIDE EFFECT OF BLINDNESS. An earlier pass had a sensorless
+## hull count as "running silent", which handed it dark's stealth (hunters hold it
+## at 0.4x range) while it kept shields, engines and guns — a large free benefit
+## for omitting the cheapest part on the ship. The signature drop is earned by
+## having EVERYTHING off, never by lacking one thing.
+func runs_silent() -> bool:
+	return false
+
+
+## How far this ship can PERCEIVE, or 0.0 with no sensor fitted.
+##
+## `floor_r` is the usable minimum for a ship that HAS eyes — a hull should not be
+## unplayable just because its sensor is cheap. It deliberately does NOT apply to
+## a hull with none: blind has to mean blind, or "no sensors" is a stat with no
+## consequence. Every "how far can this ship see" read goes through here so that
+## consequence lives in one place instead of five scattered maxf() calls.
+func sensor_reach(floor_r: float) -> float:
+	var r := float(stats.get("sensor_range", 0.0))
+	return 0.0 if r <= 0.0 else maxf(floor_r, r)
+
+
 ## Tints the hull art (sprite modulate or polygon color, whichever is active).
 ## SELF_MODULATE, NOT MODULATE (2026-07-25). `modulate` cascades to CHILDREN, and
 ## every decal is a child of the hull sprite — the Guardian stripe, the livery

@@ -42,7 +42,6 @@ static func _create(index: int) -> ShipBuild:
 				1: "res://data/components/engines/drifter_ion.tres",
 				2: "res://data/components/engines/drifter_ion.tres",
 				3: "res://data/components/reactors/hearth_fusion.tres",
-				4: "res://data/components/systems/wayfarer_sensors.tres",
 				6: "res://data/components/systems/strapdown_cargo_pod.tres",
 				7: "res://data/components/couplings/standard_coupling.tres",
 			})
@@ -54,7 +53,6 @@ static func _create(index: int) -> ShipBuild:
 				2: "res://data/components/engines/vectorjet.tres",
 				3: "res://data/components/reactors/hearth_fusion.tres",
 				4: "res://data/components/defense/veil_shield.tres",
-				5: "res://data/components/systems/wayfarer_sensors.tres",
 				6: "res://data/components/systems/strapdown_cargo_pod.tres",
 				# JUNK HULL, JUNK COUPLING: the Rooster is Flotsam-grade, and its
 				# bus is the cheapest thing that works. Upgrading it is one of the
@@ -70,7 +68,6 @@ static func _create(index: int) -> ShipBuild:
 				2: "res://data/components/engines/afterjet_sprint.tres",
 				3: "res://data/components/reactors/hearth_fusion.tres",
 				4: "res://data/components/defense/veil_shield.tres",
-				5: "res://data/components/systems/wayfarer_sensors.tres",
 				6: "res://data/components/couplings/standard_coupling.tres",
 			})
 		5:
@@ -110,7 +107,7 @@ static func trader_mule() -> ShipBuild:
 		3: "res://data/components/defense/veil_shield.tres",
 		4: "res://data/components/defense/patchplate_armor.tres",
 		5: "res://data/components/systems/strapdown_cargo_pod.tres",
-	})
+	}, TIN_EAR)
 
 
 ## Pirate loadouts — enemy variety is just other builds over the same data.
@@ -122,7 +119,7 @@ static func pirate_raider() -> ShipBuild:
 		1: "res://data/components/engines/drifter_ion.tres",
 		2: "res://data/components/engines/drifter_ion.tres",
 		3: "res://data/components/reactors/scrap_cell_pile.tres",
-	})
+	}, TIN_EAR)
 
 
 static func pirate_brawler() -> ShipBuild:
@@ -132,7 +129,7 @@ static func pirate_brawler() -> ShipBuild:
 		3: "res://data/components/engines/vectorjet.tres",
 		4: "res://data/components/reactors/scrap_cell_pile.tres",
 		5: "res://data/components/defense/patchplate_armor.tres",
-	})
+	}, TIN_EAR)
 
 
 static func pirate_wasp() -> ShipBuild:
@@ -140,7 +137,7 @@ static func pirate_wasp() -> ShipBuild:
 		0: "res://data/components/weapons/vk2_autocannon.tres",
 		1: "res://data/components/engines/vectorjet.tres",
 		2: "res://data/components/reactors/scrap_cell_pile.tres",
-	})
+	}, TIN_EAR)
 
 
 ## Mini-boss: flies gear the shop doesn't sell — killing it is the only way
@@ -153,7 +150,7 @@ static func pirate_vulture() -> ShipBuild:
 		3: "res://data/components/reactors/overdrive_bottle.tres",
 		4: "res://data/components/defense/aegis_composite.tres",
 		5: "res://data/components/defense/bulwark_plating.tres",
-	})
+	}, TIN_EAR)
 
 
 ## Station guard wing: same hulls the Reach flies, kept in navy trim.
@@ -211,9 +208,12 @@ static func galean_supercruiser() -> ShipBuild:
 		8: "res://data/components/reactors/keelstone_fusion.tres",     # Capital Reactor (Mk3)
 		9: "res://data/components/defense/bulwark_plating.tres",       # Armor Belt Port
 		10: "res://data/components/defense/aegis_composite.tres",      # Armor Belt Starboard
-		11: "res://data/components/systems/wayfarer_sensors.tres",     # Command Deck
+		# Ship's stores. The Command Deck used to hold the sensor suite; sensors
+		# have their own mount now, so this socket carries what a capital on a long
+		# patrol actually needs in it.
+		11: "res://data/components/systems/strapdown_cargo_pod.tres",  # Command Deck
 		12: "res://data/components/couplings/standard_coupling.tres",  # Coupling
-	})
+	}, AUGUR)
 
 
 ## Elite variant: the base line ship with the EXPERIMENTAL (purple) Sentinel Radar
@@ -246,7 +246,7 @@ static func lane_dray() -> ShipBuild:
 		5: "res://data/components/defense/patchplate_armor.tres",
 		6: "res://data/components/systems/falsebottom_hold.tres",
 		7: "res://data/components/systems/strapdown_cargo_pod.tres",
-	})
+	}, TIN_EAR)
 
 
 ## The convoy's heart: worth more than its escort, slower than its attackers.
@@ -264,8 +264,7 @@ static func lane_bellwether() -> ShipBuild:
 		7: "res://data/components/defense/bulwark_plating.tres",
 		8: "res://data/components/systems/falsebottom_hold.tres",
 		9: "res://data/components/systems/falsebottom_hold.tres",
-		10: "res://data/components/systems/wayfarer_sensors.tres",      # bridge
-	})
+	}, TIN_EAR)
 
 
 ## Hired escort, light. Cheap, plentiful, and flown by someone who intends to
@@ -277,7 +276,6 @@ static func escort_harrier() -> ShipBuild:
 		2: "res://data/components/engines/vectorjet.tres",
 		3: "res://data/components/reactors/hearth_fusion.tres",
 		4: "res://data/components/defense/veil_shield.tres",
-		5: "res://data/components/systems/wayfarer_sensors.tres",
 	})
 
 
@@ -293,7 +291,6 @@ static func escort_goshawk() -> ShipBuild:
 		4: "res://data/components/reactors/overdrive_bottle.tres",
 		5: "res://data/components/defense/aegis_composite.tres",
 		6: "res://data/components/defense/patchplate_armor.tres",
-		7: "res://data/components/systems/wayfarer_sensors.tres",
 	})
 
 
@@ -310,7 +307,7 @@ static func vshrike_harrier() -> ShipBuild:
 		2: "res://data/components/engines/afterjet_sprint.tres",
 		3: "res://data/components/reactors/hearth_fusion.tres",
 		4: "res://data/components/defense/patchplate_armor.tres",
-	})
+	}, TIN_EAR)
 
 
 ## The one that kills the convoy. Looted Overcharged Cell feeding looted lances —
@@ -324,7 +321,7 @@ static func vshrike_goshawk() -> ShipBuild:
 		4: "res://data/components/reactors/overdrive_bottle.tres",
 		5: "res://data/components/defense/patchplate_armor.tres",
 		6: "res://data/components/defense/patchplate_armor.tres",
-	})
+	}, TIN_EAR)
 
 
 ## RECLUSE — the elite. A named hunting pair that works the stretch of road just
@@ -348,7 +345,7 @@ static func vshrike_goshawk_elite() -> ShipBuild:
 		# what it takes, which is the whole reason it is on this road. (It also
 		# drew the last 6 points of power the reactor did not have.)
 		7: "res://data/components/systems/strapdown_cargo_pod.tres",
-	})
+	}, AUGUR)
 
 
 ## Every NPC build on the lane, by name — so a test can validate them all and a
@@ -365,9 +362,38 @@ static func lane_builds() -> Dictionary:
 	}
 
 
-static func _make(hull_path: String, fits: Dictionary) -> ShipBuild:
+## Fits a sensor into the hull's SENSOR mount, wherever that landed.
+##
+## BY SLOT TYPE, NEVER BY INDEX. The sensor mount is appended per hull by the seed
+## generator, so its index differs from hull to hull and moves the moment anyone
+## authors another hardpoint. Every build here would have needed hand-editing;
+## worse, a stale index fits a sensor into a cargo bay and the only symptom is a
+## ship that quietly cannot see.
+static func _eyes(b: ShipBuild, path: String) -> ShipBuild:
+	if b.hull == null:
+		return b
+	for i in b.hull.hardpoints.size():
+		if b.hull.hardpoints[i].slot_type == HardpointDef.SlotType.SENSOR:
+			b.slots[i] = load(path)
+			break
+	return b
+
+
+## Sensor stock, so no build has to name a path to have eyes.
+const WAYFARER := "res://data/components/systems/wayfarer_sensors.tres"
+const TIN_EAR := "res://data/components/systems/tinear_sensor_set.tres"   # crappy but present
+const AUGUR := "res://data/components/systems/augur_sensor_array.tres"    # reads a contact's ROLE
+const BLIND := ""   # deliberately none — see VShrikeShip
+
+
+## `sensor` DEFAULTS TO EYES. A blind ship is a real state now (BuildShip.runs_silent
+## halves how far anything can hold it), so it must be a CHOICE someone typed, never
+## something a build fell into by forgetting a line. Pass BLIND to mean it.
+static func _make(hull_path: String, fits: Dictionary, sensor := WAYFARER) -> ShipBuild:
 	var b := ShipBuild.new()
 	b.hull = load(hull_path)
 	for index in fits:
 		b.slots[index] = load(fits[index])
+	if sensor != BLIND:
+		_eyes(b, sensor)
 	return b

@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_rfwyv")
-power_output = 70.0
+power_output = 92.0
 energy_capacity = 140.0
 energy_recharge = 1.5
 display_name = "Hearth Fusion Core"

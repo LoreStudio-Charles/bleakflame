@@ -285,7 +285,7 @@ func _generate_components() -> void:
 	var r := ReactorDefS.new()
 	r.display_name = "Scrap-Cell Pile"
 	r.grade = G.SALVAGE
-	r.mark = 1; r.mass = 10.0; r.power_output = 40.0
+	r.mark = 1; r.mass = 10.0; r.power_output = 52.0
 	r.energy_capacity = 80.0; r.energy_recharge = 1.0
 	r.trail_color = Color(0.75, 0.62, 0.35)
 	r.description = "Salvaged cells wired in defiance of several manuals."
@@ -294,7 +294,7 @@ func _generate_components() -> void:
 	r = ReactorDefS.new()
 	r.display_name = "Hearth Fusion Core"
 	r.grade = G.STANDARD
-	r.mark = 1; r.mass = 12.0; r.power_output = 70.0
+	r.mark = 1; r.mass = 12.0; r.power_output = 92.0
 	r.energy_capacity = 140.0; r.energy_recharge = 1.5
 	r.trail_color = Color(0.55, 0.75, 1.0)
 	r.description = "The steady blue everyone learned to fly by."
@@ -303,7 +303,7 @@ func _generate_components() -> void:
 	r = ReactorDefS.new()
 	r.display_name = "Overcharged Cell"
 	r.grade = G.EXPERIMENTAL
-	r.mark = 2; r.mass = 16.0; r.power_output = 120.0
+	r.mark = 2; r.mass = 16.0; r.power_output = 152.0
 	r.energy_capacity = 240.0; r.energy_recharge = 2.5
 	r.trail_color = Color(0.80, 0.45, 0.95)
 	r.description = "Runs 40% past rated containment. The paperwork says don't."
@@ -320,7 +320,7 @@ func _generate_components() -> void:
 	r = ReactorDefS.new()
 	r.display_name = "Keelstone Fusion Plant"
 	r.grade = G.ADVANCED
-	r.mark = 3; r.mass = 34.0; r.power_output = 260.0
+	r.mark = 3; r.mass = 34.0; r.power_output = 300.0
 	r.energy_capacity = 420.0; r.energy_recharge = 3.2
 	r.trail_color = Color(0.62, 0.82, 1.0)
 	r.description = "Capital-grade fusion, built around the keel rather than bolted to it. Freight lines and navies buy the same plant for the same reason: nothing aboard should ever have to wait its turn for power."
@@ -388,6 +388,19 @@ func _generate_components() -> void:
 	s.description = "A discriminating suite: it does not just find a ship, it reads the shape of what that ship is DOING — the repair rig, the shield projector, the tangle launcher. Knowing which one to kill first is worth more than the extra range."
 	_save(s, "res://data/components/systems/augur_sensor_array.tres")
 
+	# TIN-EAR SENSOR SET — deliberately BAD eyes, and the cheapest thing that
+	# counts as eyes at all. "A hauler can have crappy sensors, that's great and
+	# probably correct" (user): the interesting failure state is flying with NO
+	# sensors, not with poor ones, so there has to be a floor a freight company
+	# would actually buy.
+	s = SystemDefS.new()
+	s.display_name = "Tin-Ear Sensor Set"
+	s.grade = G.SALVAGE
+	s.mark = 1; s.mass = 2.0; s.power_draw = 3.0; s.sensor_range = 700.0
+	s.tags = PackedStringArray(["sensor"])
+	s.description = "Short-range, second-hand, and honest about it. You will see the rock before you hit it and the raider once it is already close. Every hauler on the lane carries one, because the alternative is flying deaf."
+	_save(s, "res://data/components/systems/tinear_sensor_set.tres")
+
 	s = SystemDefS.new()
 	s.display_name = "Strapdown Cargo Pod"
 	s.grade = G.SALVAGE
@@ -450,6 +463,31 @@ func _save_hull(h: Resource, path: String) -> void:
 		hps.append(_hardpoint("Universal Coupling", Vector2(-2, 0),
 			HardpointDefS.SlotType.COUPLING, 5))
 		h.hardpoints.assign(hps)
+
+	# EVERY HULL GETS EYES OF ITS OWN (user, 2026-07-25). A sensor must never have
+	# to beat cargo for a socket — the Dray's only system slots were its two Cargo
+	# Bays, so fitting eyes cost it a hold. Appended AFTER the coupling for the
+	# same reason the coupling is appended at all: every index before it stays put,
+	# so saves and SampleBuilds fit-maps do not shift underfoot.
+	#
+	# The MARK scales with the hull, which quietly gates the good eyes: the Mk2
+	# Augur array (role identification) needs a MEDIUM or better to carry it, so a
+	# starter cannot read a specialist's role until it has grown into a real ship.
+	var has_sensor := false
+	for hp in h.hardpoints:
+		if hp.slot_type == HardpointDefS.SlotType.SENSOR:
+			has_sensor = true
+			break
+	if not has_sensor:
+		var mark := 1
+		match h.size_band:
+			HullDefS.SizeBand.MEDIUM: mark = 2
+			HullDefS.SizeBand.HEAVY, HullDefS.SizeBand.SUPER_HEAVY, \
+			HullDefS.SizeBand.SUPER_HEAVY_PLUS: mark = 3
+		var with_eyes: Array = Array(h.hardpoints)
+		with_eyes.append(_hardpoint("Sensor Mount", Vector2(2, 0),
+			HardpointDefS.SlotType.SENSOR, mark))
+		h.hardpoints.assign(with_eyes)
 	# A hull whose silhouette or hardpoints overflow its size band's art canvas
 	# can't be drawn correctly. Fail loudly at seed time, not in the shipyard.
 	if not h.fits_art_budget():

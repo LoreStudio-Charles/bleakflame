@@ -3,10 +3,16 @@ extends Resource
 ## One socket on a hull. Slot type constrains what fits; mark is the maximum
 ## component size (downfitting smaller components is always allowed).
 
-## COUPLING is appended LAST on purpose: these values are serialized in hull
-## .tres files, so inserting anywhere else would silently re-type every existing
-## hardpoint on disk.
-enum SlotType { WEAPON, ENGINE, REACTOR, DEFENSE, SYSTEM, COUPLING }
+## NEW TYPES GO ON THE END, ALWAYS. These values are serialized as integers in
+## hull .tres files, so inserting anywhere else silently re-types every existing
+## hardpoint on disk — a Reactor Cradle quietly becomes a Defense Bay.
+##
+## SENSOR is its own slot (2026-07-25, user) rather than another SYSTEM: without
+## sensors a ship is blind, so a sensor must never have to win a fight against
+## cargo for a socket. The Dray's only system slots were its two Cargo Bays —
+## fitting eyes cost it a hold, which is not a decision anyone should be asked to
+## make.
+enum SlotType { WEAPON, ENGINE, REACTOR, DEFENSE, SYSTEM, COUPLING, SENSOR }
 
 @export var display_name := ""
 @export var offset := Vector2.ZERO       # position relative to hull center

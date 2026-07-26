@@ -53,5 +53,8 @@ func stat_summary() -> String:
 	return "   ".join(parts)
 
 
+## SENSORS RIDE THEIR OWN SLOT (2026-07-25, user). Keyed off the existing
+## "sensor" tag rather than a new class, so every sensor in the game moved across
+## with no .tres surgery and anything tagged later follows automatically.
 func slot_type() -> HardpointDef.SlotType:
-	return HardpointDef.SlotType.SYSTEM
+	return HardpointDef.SlotType.SENSOR if has_tag("sensor") else HardpointDef.SlotType.SYSTEM

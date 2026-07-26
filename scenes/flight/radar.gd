@@ -26,7 +26,7 @@ func _process(_delta: float) -> void:
 
 
 func _radar_range() -> float:
-	return maxf(SENSOR_FLOOR, ship.stats.get("sensor_range", 0.0))
+	return ship.sensor_reach(SENSOR_FLOOR)   # 0 = no sensor = an empty scope
 
 
 func _to_radar(world_pos: Vector2, clamp_to_rim: bool) -> Variant:

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SystemDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/system_def.gd" id="1_k14eb"]
+
+[resource]
+script = ExtResource("1_k14eb")
+tags = PackedStringArray("sensor")
+sensor_range = 700.0
+display_name = "Tin-Ear Sensor Set"
+description = "Short-range, second-hand, and honest about it. You will see the rock before you hit it and the raider once it is already close. Every hauler on the lane carries one, because the alternative is flying deaf."
+grade = 1
+mass = 2.0
+power_draw = 3.0
+affix_ids = PackedStringArray()
