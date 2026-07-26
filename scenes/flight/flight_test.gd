@@ -214,7 +214,7 @@ func _ready() -> void:
 		# the hook is itself the dev gate — a release export skips this whole block,
 		# so /cash & friends are simply unknown commands there.
 		Chat.dev_command = _run_dev_command
-		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /livery <colour> /ruler /heartbeat /rearm"
+		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /vshrike /livery <colour> /ruler /heartbeat /rearm"
 
 	_populate_world()
 
@@ -1358,6 +1358,15 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			_spawn_galean_fleet(ahead)
 			_dev_feedback("Galean Navy fleet spawned ~900u DEAD AHEAD (fly forward; it's on radar)")
 			return true
+		"vshrike", "shrike":
+			# Look at the widow livery without flying the whole lane. Spawns a
+			# raiding pair — a Goshawk and its Harrier — so the black-hull-plus-red-
+			# mark reads at both sizes side by side.
+			var at := ship.global_position + Vector2.RIGHT.rotated(ship.rotation) * 800.0
+			_spawn_vshrike(at, SampleBuilds.vshrike_goshawk(), AIShip.Tactic.BOOM_ZOOM)
+			_spawn_vshrike(at + _jitter(260.0), SampleBuilds.vshrike_harrier(), AIShip.Tactic.ORBIT)
+			_dev_feedback("V-Shrike pair spawned ~800u DEAD AHEAD — black hulls, one red hourglass")
+			return true
 		"livery":
 			# /livery <colour> — paint the TARGETED ship's deck chevron. Colour is a
 			# name (red/blue/gold/white…) or a hex code (#0077FF). from_string returns
@@ -1644,6 +1653,19 @@ func _respawn_guardian_later(kind: String, i: int) -> void:
 	await get_tree().create_timer(30.0).timeout
 	if is_inside_tree():
 		_spawn_guardian(kind, i)
+
+
+## A V-SHRIKE raider (docs/the_long_lane.md). Its own class so the widow livery
+## and the refusal to talk live in ONE place, not in every spawn site — the lane
+## builder will call this too.
+func _spawn_vshrike(pos: Vector2, build: ShipBuild,
+		p_tactic: AIShip.Tactic = AIShip.Tactic.ORBIT) -> VShrikeShip:
+	var raider := VShrikeShip.new()
+	raider.position = pos
+	add_child(raider)
+	raider.setup_vshrike(build, p_tactic)
+	raider.died.connect(_grant_kill_xp.bind(raider, "brawler"))
+	return raider
 
 
 func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = []) -> void:

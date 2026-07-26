@@ -139,6 +139,36 @@ The Gap's owners, and a deliberate contrast with everything the Reach has met so
 5. **The V-Shrike** as an AI variant that never hails, over the existing pirate
    behaviours. The FITS already say it — see below.
 
+### The widow livery (user, 2026-07-25)
+
+The V-Shrike are **black widow spiders**: hulls are near-**black** carrying a **single
+point of red** — the widow's hourglass, set aft on the deck where the abdomen would be.
+One mark, nothing else. No chevron, no stripes, no random skin.
+
+It reads because everything else in this sky is coloured — the Reach's rusty oranges,
+Guardian blue, Galean ivory, the Shoal's scavenged mismatch. A black hull is a *hole* in
+that, and the red is the only thing you get to recognise before it fires. Same job the
+silence does on the comm channel: everyone else announces themselves.
+
+`scenes/flight/vshrike_ship.gd` (`VShrikeShip extends AIShip`). Dev-summon a pair with
+**`/vshrike`**. Test: `tools/test_vshrike.tscn`.
+
+Two things that had to be got right, both sabotage-verified:
+
+- **The mark works on an ART-LESS hull.** Every other livery in the codebase gives up
+  when there is no sprite (`BuildShip.apply_livery` returns early on a null texture) —
+  and none of the four Long Lane hulls have art yet. So the mark scales off the sprite
+  when there is one and off the authored **silhouette** when there isn't. Written to the
+  usual pattern it would have been correct, committed, and invisible on exactly the ships
+  it was drawn for.
+- **A rare AI SPECIALIST is still black.** `AIShip._roll_specialty` repaints the hull
+  (mender green / warden blue / binder amber) so it can be identified before it acts, and
+  it runs *after* setup applies the faction tint — roughly one V-Shrike in eight spawned
+  out of its own livery. The livery wins; the specialist stays legible through its on-use
+  `_flash_note` callout. **What is lost is the advance warning**, and if that matters in
+  play the fix is to recolour the *hourglass* per specialty rather than the hull — same
+  information, ship stays black.
+
 ### The V-Shrike fits say it before any dialogue does
 
 `vshrike_harrier` and `vshrike_goshawk` carry **no shields and no sensors**. Every slot

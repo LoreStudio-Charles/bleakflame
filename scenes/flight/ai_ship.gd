@@ -95,6 +95,9 @@ const BREAK_MIN_INTERVAL := 6.0
 
 var tactic := Tactic.ORBIT
 var preferred_range := 200.0
+## Set TRUE before setup() to keep this ship off the shared random pirate skin
+## pool, so a faction with its own colours stays uniform. See VShrikeShip.
+var faction_livery := false
 ## World-anchored waypoint loop flown while not engaged. Pirates live in
 ## places and travel between them — they are traffic, not a gauntlet.
 var patrol_points: Array[Vector2] = []
@@ -222,7 +225,11 @@ func _announce(verb: String) -> void:
 func setup(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 		tint: Color = Color(0.85, 0.52, 0.46)) -> void:
 	enemy_group = "player_team"
-	use_variant_skin = true
+	# The shared pirate skin pool is rust-and-orange. A faction that wears its OWN
+	# livery (the V-Shrike are black) sets `faction_livery` before calling setup,
+	# because a livery only means anything if it is the same every time.
+	if not faction_livery:
+		use_variant_skin = true
 	apply_build(new_build)
 	set_hull_tint(tint)
 	tactic = p_tactic
