@@ -1,0 +1,75 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_n70x1"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_4bwpy"]
+
+[sub_resource type="Resource" id="Resource_0kyev"]
+script = ExtResource("1_n70x1")
+display_name = "Port Nose Gun"
+offset = Vector2(20, -5)
+mark = 2
+
+[sub_resource type="Resource" id="Resource_f813f"]
+script = ExtResource("1_n70x1")
+display_name = "Starboard Nose Gun"
+offset = Vector2(20, 5)
+mark = 2
+
+[sub_resource type="Resource" id="Resource_pqxm8"]
+script = ExtResource("1_n70x1")
+display_name = "Dorsal Turret"
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_3ripd"]
+script = ExtResource("1_n70x1")
+display_name = "Main Drive"
+offset = Vector2(-24, 0)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_i2mrh"]
+script = ExtResource("1_n70x1")
+display_name = "Reactor Housing"
+offset = Vector2(-10, 0)
+slot_type = 2
+mark = 2
+
+[sub_resource type="Resource" id="Resource_iaa0b"]
+script = ExtResource("1_n70x1")
+display_name = "Defense Bay Port"
+offset = Vector2(8, -10)
+slot_type = 3
+mark = 2
+
+[sub_resource type="Resource" id="Resource_horqo"]
+script = ExtResource("1_n70x1")
+display_name = "Defense Bay Starboard"
+offset = Vector2(8, 10)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_b02s8"]
+script = ExtResource("1_n70x1")
+display_name = "Utility Bay"
+offset = Vector2(-4, -12)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_8g6qh"]
+script = ExtResource("1_n70x1")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_4bwpy")
+display_name = "Goshawk"
+category = "Fighter"
+size_band = 1
+mass = 130.0
+hull_hp = 280.0
+level = 12
+cargo_base = 14.0
+trait_id = "hunting_pair"
+trait_description = "Hunting Pair: goshawks work a hedgerow in twos — one flushes, one waits. Faster than the gunships and better armed than anything that can catch it."
+hardpoints = Array[ExtResource("1_n70x1")]([SubResource("Resource_0kyev"), SubResource("Resource_f813f"), SubResource("Resource_pqxm8"), SubResource("Resource_3ripd"), SubResource("Resource_i2mrh"), SubResource("Resource_iaa0b"), SubResource("Resource_horqo"), SubResource("Resource_b02s8"), SubResource("Resource_8g6qh")])
+silhouette = PackedVector2Array(30, 0, 16, -8, -4, -22, -18, -20, -14, -6, -26, -4, -26, 4, -14, 6, -18, 20, -4, 22, 16, 8)

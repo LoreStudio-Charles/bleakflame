@@ -9,3 +9,4 @@ description = "Slow to spool, cheap to feed."
 grade = 1
 mass = 8.0
 power_draw = 10.0
+affix_ids = PackedStringArray()

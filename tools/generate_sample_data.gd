@@ -170,7 +170,7 @@ func _generate_components() -> void:
 		"A hail of small answers to small problems.")
 	pd.projectile_speed = 1100.0
 	pd.weapon_range = 380.0
-	pd.traverse_override = 540.0
+	pd.traverse = 540.0   # authored: a PD array's whole point is out-tracking its mark
 	pd.bolt_color = Color(0.7, 0.9, 1.0)   # ice-white sparks
 	pd.bolt_scale = 0.55
 	_save(pd, "res://data/components/weapons/skeet_pd_array.tres")
@@ -179,8 +179,9 @@ func _generate_components() -> void:
 	# The fleet's own guns — "good tech for the navy, not the newbie garbage". A
 	# proper tier above fringe salvage: ADVANCED (blue) standard issue, with one
 	# EXPERIMENTAL (purple) piece the fleet only mounts on elite variants. Marks are
-	# capital (3-4): the traverse rule (360/mark) makes the Mk4 lances murder on a
-	# cruiser and helpless against a fighter, which is why the Mk1 PD + escorts exist.
+	# capital (3-4). The Mk4 lances keep the DERIVED traverse (90 deg/s): murder on
+	# a cruiser, helpless against a fighter, which is why PD mounts and escorts
+	# exist at all. The Palisade flak is the deliberate exception — see its note.
 	# Pale-gold/ivory livery matches Orivel and the Confederacy.
 
 	# AEGIS LANCE BATTERY — Mk4 LASER, the main + spinal armament. Beam (hit-scan),
@@ -222,6 +223,42 @@ func _generate_components() -> void:
 	sentinel.bolt_color = Color(0.6, 0.85, 1.0)   # radar blue
 	sentinel.bolt_scale = 1.7
 	_save(sentinel, "res://data/components/weapons/sentinel_radar_battery.tres")
+
+	# PALISADE FLAK BATTERY — Mk4 ANTI-FIGHTER (user, 2026-07-25). The weapon the
+	# old derived-traverse rule made impossible: a BIG gun built to shred small
+	# fast things. It slews at 420 deg/s where its Mk4 neighbours crawl at 90, and
+	# it pays for that in reach — 340 units against the Aegis Lance's 1000. A
+	# fighter inside the wall dies; a cruiser outside it is untouched, because the
+	# flak simply cannot get there.
+	#
+	# Proximity-fuzed on purpose: flak has never been about hitting, it is about
+	# filling the sky with bursts. The small blast is what makes it murder on
+	# something jinking, and the low per-shot damage is what stops it being an
+	# all-purpose main gun.
+	var flak := _weapon("Palisade Flak Battery", G.ADVANCED, 4, 13.0, 9.0, 12.0, 0.16,
+		"Galean anti-fighter mount: a fence of proximity-fuzed bursts thrown up around the hull. It cannot reach a ship of the line and was never meant to — it is here for the ones that get close enough to matter.")
+	flak.traverse = 420.0        # authored: big, and fast — the whole point
+	flak.projectile_speed = 1400.0
+	flak.weapon_range = 340.0    # the price of the tracking
+	flak.blast_radius = 28.0
+	flak.blast_falloff = 0.5
+	flak.bolt_color = Color(1.0, 0.78, 0.45)   # burst-gold
+	flak.bolt_scale = 0.9
+	_save(flak, "res://data/components/weapons/palisade_flak_battery.tres")
+
+	# DROVER DEFENSE TURRET — the civilian freight turret, and the reason an armed
+	# hauler is annoying rather than safe. Mk2 so it physically fits a real ring,
+	# with an AUTHORED, honestly mediocre 240 deg/s: it CAN follow a fighter that
+	# jinks, it just can't make it regret much. Freight lines buy these by the
+	# pallet; nobody has ever been proud of one.
+	var drover := _weapon("Drover Defense Turret", G.STANDARD, 2, 9.0, 12.0, 7.0, 0.35,
+		"Standard freight-line defensive mount. Slow, plain, and bolted to every hauler on the lane — enough to make a raider work for it, never enough to make one leave.")
+	drover.traverse = 240.0
+	drover.projectile_speed = 1000.0
+	drover.weapon_range = 480.0
+	drover.bolt_color = Color(0.95, 0.85, 0.6)
+	drover.bolt_scale = 0.9
+	_save(drover, "res://data/components/weapons/drover_defense_turret.tres")
 
 	var e := EngineDefS.new()
 	e.display_name = "Drifter Ion Drive"
@@ -271,6 +308,23 @@ func _generate_components() -> void:
 	r.trail_color = Color(0.80, 0.45, 0.95)
 	r.description = "Runs 40% past rated containment. The paperwork says don't."
 	_save(r, "res://data/components/reactors/overdrive_bottle.tres")
+
+	# KEELSTONE FUSION PLANT — the first Mk3 CAPITAL reactor (2026-07-25). It was
+	# missing: the Supercruiser hull has a Mk3 "Capital Reactor" housing and the
+	# heaviest plant in the game was a Mk2, so the fleet flagship was fitted with
+	# an Overcharged Cell it could not actually feed — 134 load against 120
+	# capacity, an illegal build that only ever flew because NPC fits skip the
+	# refit screen's validation. tools/test_hulls.gd now catches that class.
+	# Sized to run a capital's batteries AND its drives with headroom to spare,
+	# because a ship of the line brings its own power station.
+	r = ReactorDefS.new()
+	r.display_name = "Keelstone Fusion Plant"
+	r.grade = G.ADVANCED
+	r.mark = 3; r.mass = 34.0; r.power_output = 260.0
+	r.energy_capacity = 420.0; r.energy_recharge = 3.2
+	r.trail_color = Color(0.62, 0.82, 1.0)
+	r.description = "Capital-grade fusion, built around the keel rather than bolted to it. Freight lines and navies buy the same plant for the same reason: nothing aboard should ever have to wait its turn for power."
+	_save(r, "res://data/components/reactors/keelstone_fusion.tres")
 
 	var d := DefenseDefS.new()
 	d.display_name = "Patchplate Armor"
@@ -340,35 +394,47 @@ func _generate_components() -> void:
 	s.extra = {"scan_range": 380.0, "scan_time": 3.2}
 	s.description = "Target something and press [1]: rocks reveal their ore, ships and stranger things yield Scan Data the station lab pays for."
 
-	# PRIVATEER signature module: cloak. profession_lock keeps it in Vyper's
-	# crew's hands — the Armory won't fit it without the Privateer commission.
-	# tag "cloak" -> the Abilities "cloak" ability -> memorize into a gem.
-	s = SystemDefS.new()
-	s.display_name = "Umbral Cloak Field"
-	s.grade = G.ADVANCED
-	s.mark = 1; s.mass = 4.0; s.power_draw = 8.0
-	s.tags = PackedStringArray(["cloak"])
-	s.profession_lock = "privateer"
-	s.extra = {"cloak_duration": 6.0, "cloak_cooldown": 14.0}
-	s.description = "Privateer tech. Bend light around the hull: hostiles lose their lock for a few seconds. Firing a weapon collapses the field."
-	_save(s, "res://data/components/systems/umbral_cloak_field.tres")
-
-	# GUARDIAN signature module: Bulwark Projector. Sold by Ruel's quartermaster;
-	# tag "bulwark" -> the Abilities "bulwark" ability. Braces self + allies.
-	s = SystemDefS.new()
-	s.display_name = "Bulwark Projector"
-	s.grade = G.ADVANCED
-	s.mark = 1; s.mass = 5.0; s.power_draw = 9.0
-	s.tags = PackedStringArray(["bulwark"])
-	s.profession_lock = "guardian"
-	s.extra = {"bulwark_duration": 5.0, "bulwark_cooldown": 18.0,
-		"bulwark_radius": 420.0, "bulwark_reduction": 0.5}
-	s.description = "Guardian tech. Throw a blue damage-reduction dome over yourself and every ally in range for 5s — the brace for a boss's alpha strike."
-	_save(s, "res://data/components/systems/bulwark_projector.tres")
+	# THE PROFESSION SIGNATURE MODULES ARE GONE — they are CHIPS now, and the
+	# chips are hand-authored under data/components/chips/ (bulwark_projector,
+	# umbral_cloak_field, ...), which is what the quartermasters actually stock
+	# (Professions.wares) and what the ability book reads.
+	#
+	# This generator used to ALSO write module copies to data/components/systems/,
+	# the same vestigial shape the Prospector Survey Scanner was deleted for. They
+	# were unobtainable by construction: profession-locked, so the open Armory
+	# refuses them, while no quartermaster sells that path. Re-seeding the data
+	# resurrected two dead files and turned test_abilities red — which is exactly
+	# how it should behave. Do not re-add them here; edit the chips.
 
 	# The Vector Decoupling Computer was removed 2026-07-19 (user decision).
 	# Disconnected flight stays in the engine, gated on the "flight_decoupler"
 	# tag — it returns later on EXOTIC-grade thrusters and/or an exotic hull.
+
+
+## Saves a hull, appending the UNIVERSAL COUPLING first if it hasn't authored
+## its own. Every hull carries one — it's the rack the ability chips ride in.
+##
+## THIS EXISTS BECAUSE REGENERATING USED TO DESTROY IT. The coupling hardpoint
+## lived only in the .tres files as a hand-edit, so re-seeding the data silently
+## stripped the chip rack off every hull in the game and no test noticed. It is
+## APPENDED LAST (never authored mid-list) so existing hardpoint indices stay
+## stable — the same reason SlotType.COUPLING is last in its enum.
+func _save_hull(h: Resource, path: String) -> void:
+	var has_coupling := false
+	for hp in h.hardpoints:
+		if hp.slot_type == HardpointDefS.SlotType.COUPLING:
+			has_coupling = true
+			break
+	if not has_coupling:
+		var hps: Array = Array(h.hardpoints)
+		hps.append(_hardpoint("Universal Coupling", Vector2(-2, 0),
+			HardpointDefS.SlotType.COUPLING, 5))
+		h.hardpoints.assign(hps)
+	# A hull whose silhouette or hardpoints overflow its size band's art canvas
+	# can't be drawn correctly. Fail loudly at seed time, not in the shipyard.
+	if not h.fits_art_budget():
+		push_error("%s overflows the %s art canvas" % [h.display_name, h.size_band])
+	_save(h, path)
 
 
 func _hardpoint(name: String, offset: Vector2, type: int, mark: int,
@@ -390,6 +456,7 @@ func _generate_hulls() -> void:
 	fighter.display_name = "Sparrowhawk"
 	fighter.grade = GradesS.Grade.SALVAGE   # everything so far is second-hand
 	fighter.category = "Fighter"
+	fighter.level = 3   # Sparrowhawk
 	fighter.size_band = HullDefS.SizeBand.LIGHT
 	fighter.mass = 40.0
 	fighter.hull_hp = 120.0
@@ -410,12 +477,13 @@ func _generate_hulls() -> void:
 		_hardpoint("Defense Bay", Vector2(2, 0), T.DEFENSE, 1),
 	]
 	fighter.hardpoints.assign(fighter_hps)
-	_save(fighter, "res://data/hulls/sparrowhawk.tres")
+	_save_hull(fighter, "res://data/hulls/sparrowhawk.tres")
 
 	var scout := HullDefS.new()
 	scout.display_name = "Kestrel"
 	scout.grade = GradesS.Grade.SALVAGE   # everything so far is second-hand
 	scout.category = "Scout"
+	scout.level = 2   # Kestrel
 	scout.size_band = HullDefS.SizeBand.LIGHT
 	scout.mass = 32.0
 	scout.hull_hp = 80.0
@@ -436,12 +504,13 @@ func _generate_hulls() -> void:
 		_hardpoint("Utility Bay B", Vector2(0, 3), T.SYSTEM, 1),
 	]
 	scout.hardpoints.assign(scout_hps)
-	_save(scout, "res://data/hulls/kestrel.tres")
+	_save_hull(scout, "res://data/hulls/kestrel.tres")
 
 	var freighter := HullDefS.new()
 	freighter.display_name = "Mule"
 	freighter.grade = GradesS.Grade.SALVAGE   # everything so far is second-hand
 	freighter.category = "Freighter"
+	freighter.level = 2   # Mule: rim hauler
 	freighter.size_band = HullDefS.SizeBand.LIGHT
 	freighter.mass = 70.0
 	freighter.hull_hp = 150.0
@@ -461,7 +530,7 @@ func _generate_hulls() -> void:
 		_hardpoint("Utility Bay", Vector2(4, 5), T.SYSTEM, 1),
 	]
 	freighter.hardpoints.assign(freighter_hps)
-	_save(freighter, "res://data/hulls/mule.tres")
+	_save_hull(freighter, "res://data/hulls/mule.tres")
 
 	# The starter: sits at the intersection of fighter/scout/freighter.
 	# Not as good as any of them — more versatile than all of them.
@@ -469,6 +538,7 @@ func _generate_hulls() -> void:
 	starter.display_name = "Rooster"
 	starter.grade = GradesS.Grade.FLOTSAM   # junk-tier: held together by habit
 	starter.category = "Multirole"
+	starter.level = 1   # the starter, by definition
 	starter.size_band = HullDefS.SizeBand.LIGHT
 	starter.mass = 45.0
 	starter.hull_hp = 110.0
@@ -489,7 +559,7 @@ func _generate_hulls() -> void:
 		_hardpoint("Utility Bay", Vector2(2, 7), T.SYSTEM, 1),
 	]
 	starter.hardpoints.assign(starter_hps)
-	_save(starter, "res://data/hulls/rooster.tres")
+	_save_hull(starter, "res://data/hulls/rooster.tres")
 
 	# The Cutlass: first true Interceptor — a crescent blade that closes on
 	# its prey. User-generated art; the claw is the nose.
@@ -497,6 +567,7 @@ func _generate_hulls() -> void:
 	interceptor.display_name = "Cutlass"
 	interceptor.grade = GradesS.Grade.SALVAGE   # everything so far is second-hand
 	interceptor.category = "Interceptor"
+	interceptor.level = 3   # Cutlass
 	interceptor.size_band = HullDefS.SizeBand.LIGHT
 	interceptor.mass = 34.0
 	interceptor.hull_hp = 90.0
@@ -517,13 +588,14 @@ func _generate_hulls() -> void:
 		_hardpoint("Utility Bay", Vector2(-2, -4), T.SYSTEM, 1),
 	]
 	interceptor.hardpoints.assign(interceptor_hps)
-	_save(interceptor, "res://data/hulls/cutlass.tres")
+	_save_hull(interceptor, "res://data/hulls/cutlass.tres")
 
 	# Enemy-only hulls (not in the shop or sample player builds).
 	var wasp := HullDefS.new()
 	wasp.display_name = "Wasp"
 	wasp.grade = GradesS.Grade.SALVAGE   # everything so far is second-hand
 	wasp.category = "Interceptor"
+	wasp.level = 1   # the weakest thing that flies
 	wasp.size_band = HullDefS.SizeBand.LIGHT
 	wasp.mass = 22.0
 	wasp.hull_hp = 55.0
@@ -538,7 +610,7 @@ func _generate_hulls() -> void:
 		_hardpoint("Cell Mount", Vector2(-2, 0), T.REACTOR, 1),
 	]
 	wasp.hardpoints.assign(wasp_hps)
-	_save(wasp, "res://data/hulls/wasp.tres")
+	_save_hull(wasp, "res://data/hulls/wasp.tres")
 
 	# First MEDIUM hull: 32px art budget, 64 world units. Twice the size of
 	# anything the player can fly in the MVP — the ladder made visible.
@@ -546,6 +618,7 @@ func _generate_hulls() -> void:
 	vulture.display_name = "Vulture"
 	vulture.grade = GradesS.Grade.SALVAGE   # everything so far is second-hand
 	vulture.category = "Gunship"
+	vulture.level = 5   # the rim mini-boss: top of the starting band
 	vulture.size_band = HullDefS.SizeBand.MEDIUM
 	vulture.mass = 150.0
 	vulture.hull_hp = 320.0
@@ -564,7 +637,7 @@ func _generate_hulls() -> void:
 		_hardpoint("Defense Bay Starboard", Vector2(2, 10), T.DEFENSE, 1),
 	]
 	vulture.hardpoints.assign(vulture_hps)
-	_save(vulture, "res://data/hulls/vulture.tres")
+	_save_hull(vulture, "res://data/hulls/vulture.tres")
 
 	# The Dowager: the FIRST medium a player can buy — a beaten-up smuggler's
 	# "old girl", junk for what a medium becomes but a real step up in the Reach.
@@ -574,6 +647,7 @@ func _generate_hulls() -> void:
 	dowager.display_name = "Dowager"
 	dowager.grade = GradesS.Grade.FLOTSAM   # junk-tier: held together by habit
 	dowager.category = "Gunboat"
+	dowager.level = 4   # the local ceiling a player can buy
 	dowager.size_band = HullDefS.SizeBand.MEDIUM
 	dowager.mass = 118.0
 	dowager.hull_hp = 230.0
@@ -593,15 +667,15 @@ func _generate_hulls() -> void:
 		_hardpoint("Smuggler's Hold", Vector2(-4, -6), T.SYSTEM, 1),
 	]
 	dowager.hardpoints.assign(dowager_hps)
-	_save(dowager, "res://data/hulls/dowager.tres")
+	_save_hull(dowager, "res://data/hulls/dowager.tres")
 
 	# SUPERCRUISER — the first true capital hull (SUPER_HEAVY), the Galean Navy's
 	# line-of-battle ship and the reason the Orivel drydocks exist. Two size bands
 	# above anything else (Vulture/Dowager top out at MEDIUM). A Mk4 CRUISER
 	# (user, 2026-07-24) — the first Galean Confederacy capital tier (their navy runs
 	# a whole line: scouts/fighters -> bombers/gunships -> supercruisers/carriers).
-	# Mixed-mark batteries: Mk4 mains punch, Mk1 point-defense (traverse 360/mark =
-	# 360 deg/s) actually swats fighters — lethal solo, better with escorts. NPC
+	# Mixed batteries: Mk4 mains punch at 90 deg/s, Mk1 point-defense actually swats
+	# fighters — lethal solo, better with escorts. NPC
 	# fleet for now (price 0, not for sale until the capital shipyard opens); level
 	# 35 is a display seam until level-scaling lands in main. Aligns with the
 	# GALEAN CONFEDERACY faction when that's built.
@@ -639,4 +713,167 @@ func _generate_hulls() -> void:
 		_hardpoint("Universal Coupling", Vector2(-35, 0), T.COUPLING, 5),
 	]
 	cruiser.hardpoints.assign(cruiser_hps)
-	_save(cruiser, "res://data/hulls/supercruiser.tres")
+	_save_hull(cruiser, "res://data/hulls/supercruiser.tres")
+
+	# ==== THE LONG LANE (docs/the_long_lane.md, user 2026-07-25) ====
+	# Freight between Orivel and the rim is a different voyage from the little
+	# station<->colony hop, and it should LOOK like one. Four hulls flying the
+	# capital run: two haulers worth escorting and two escorts worth hiring.
+	#
+	# ALL FOUR ARE STANDARD GRADE (green) — a visible tier above the Reach's
+	# grey/white salvage. That IS the point: these are factory hulls owned by
+	# freight companies and escort outfits out of the capital, not scrap the
+	# fringe keeps flying out of habit. Killing one in the Gap is how a rim
+	# pilot first sees clean gear, since loot is the victim's actual build.
+	#
+	# NOT FOR SALE YET (price 0), like the Supercruiser: the Reach station caps
+	# berths at MEDIUM, and a STANDARD medium would walk straight past the
+	# Dowager, which is deliberately the local ceiling. Setting a price is the
+	# one-line change when the capital shipyard opens.
+	#
+	# TURRET NOTE: traverse is AUTHORED per weapon now (WeaponDef.traverse), so a
+	# ring's MARK says how big a gun it can hold and the GUN says what it can
+	# track. Haulers get real Mk2/Mk3 rings carrying the Drover Defense Turret —
+	# 240 deg/s, which follows a jinking fighter and barely scratches it. An armed
+	# hauler is annoying, never safe, and the balance lever is the gun, not the
+	# mount: refit the same ring with something meaner and the calculus changes.
+
+	# HARRIER — the light escort. Long-winged, cheap, and bought by the dozen;
+	# the ship you see FOUR of, never one. Lean slot set (two fixed guns) so it
+	# is a different animal from the Sparrowhawk knife-fighter rather than a
+	# strictly better one — it trades the third gun for a utility bay.
+	var harrier := HullDefS.new()
+	harrier.display_name = "Harrier"
+	harrier.grade = GradesS.Grade.STANDARD
+	harrier.level = 6
+	harrier.category = "Fighter"
+	harrier.size_band = HullDefS.SizeBand.LIGHT
+	harrier.mass = 38.0
+	harrier.hull_hp = 105.0
+	harrier.cargo_base = 6.0
+	harrier.price = 0
+	harrier.trait_id = "wing_discipline"
+	harrier.trait_description = "Wing Discipline: built to fly in a wing and priced to be replaced. Alone it is a nuisance; in fours it is a fence."
+	# LIGHT band: 16px art canvas = 32 world units max extent.
+	harrier.silhouette = PackedVector2Array([
+		Vector2(16, 0), Vector2(6, -4), Vector2(-6, -14), Vector2(-12, -12),
+		Vector2(-10, -3), Vector2(-14, 0), Vector2(-10, 3), Vector2(-12, 12),
+		Vector2(-6, 14), Vector2(6, 4)])
+	var harrier_hps: Array = [
+		_hardpoint("Port Wing Gun", Vector2(4, -6), T.WEAPON, 1, 35.0),
+		_hardpoint("Starboard Wing Gun", Vector2(4, 6), T.WEAPON, 1, 35.0),
+		_hardpoint("Main Drive", Vector2(-12, 0), T.ENGINE, 2),
+		_hardpoint("Reactor Cradle", Vector2(-4, 0), T.REACTOR, 1),
+		_hardpoint("Defense Bay", Vector2(1, 0), T.DEFENSE, 1),
+		_hardpoint("Utility Bay", Vector2(-1, -8), T.SYSTEM, 1),
+	]
+	harrier.hardpoints.assign(harrier_hps)
+	_save_hull(harrier, "res://data/hulls/harrier.tres")
+
+	# GOSHAWK — the real escort, and the pirate you should be afraid of. Named
+	# for the sparrowhawk's bigger cousin ON PURPOSE: the ladder is legible from
+	# the name alone. Twin Mk2 nose guns to hurt, plus a Mk1 dorsal turret
+	# (360 deg/s) that covers the six a fixed-arc fighter cannot — which is what
+	# makes it an ESCORT rather than just a heavier interceptor.
+	var goshawk := HullDefS.new()
+	goshawk.display_name = "Goshawk"
+	goshawk.grade = GradesS.Grade.STANDARD
+	goshawk.level = 12
+	goshawk.category = "Fighter"
+	goshawk.size_band = HullDefS.SizeBand.MEDIUM
+	goshawk.mass = 130.0
+	goshawk.hull_hp = 280.0
+	goshawk.cargo_base = 14.0
+	goshawk.price = 0
+	goshawk.trait_id = "hunting_pair"
+	goshawk.trait_description = "Hunting Pair: goshawks work a hedgerow in twos — one flushes, one waits. Faster than the gunships and better armed than anything that can catch it."
+	# MEDIUM band: 32px art canvas = 64 world units max extent.
+	goshawk.silhouette = PackedVector2Array([
+		Vector2(30, 0), Vector2(16, -8), Vector2(-4, -22), Vector2(-18, -20),
+		Vector2(-14, -6), Vector2(-26, -4), Vector2(-26, 4), Vector2(-14, 6),
+		Vector2(-18, 20), Vector2(-4, 22), Vector2(16, 8)])
+	var goshawk_hps: Array = [
+		_hardpoint("Port Nose Gun", Vector2(20, -5), T.WEAPON, 2, 30.0),
+		_hardpoint("Starboard Nose Gun", Vector2(20, 5), T.WEAPON, 2, 30.0),
+		_hardpoint("Dorsal Turret", Vector2(0, 0), T.WEAPON, 1, 360.0),
+		_hardpoint("Main Drive", Vector2(-24, 0), T.ENGINE, 2),
+		_hardpoint("Reactor Housing", Vector2(-10, 0), T.REACTOR, 2),
+		_hardpoint("Defense Bay Port", Vector2(8, -10), T.DEFENSE, 2),
+		_hardpoint("Defense Bay Starboard", Vector2(8, 10), T.DEFENSE, 1),
+		_hardpoint("Utility Bay", Vector2(-4, -12), T.SYSTEM, 1),
+	]
+	goshawk.hardpoints.assign(goshawk_hps)
+	_save_hull(goshawk, "res://data/hulls/goshawk.tres")
+
+	# DRAY — the medium freighter, and the workhorse of the lane. A dray is the
+	# flat cart that hauls the load, which is the whole personality: it carries
+	# more than four Mules and answers with two fast, feeble turret rings. It
+	# cannot win a fight; it can make one expensive enough to be worth breaking
+	# off. Mule -> Dray -> Bellwether is the freight ladder.
+	var dray := HullDefS.new()
+	dray.display_name = "Dray"
+	dray.grade = GradesS.Grade.STANDARD
+	dray.level = 8
+	dray.category = "Freighter"
+	dray.size_band = HullDefS.SizeBand.MEDIUM
+	dray.mass = 190.0
+	dray.hull_hp = 300.0
+	dray.cargo_base = 140.0
+	dray.price = 0
+	dray.trait_id = "steady_hand"
+	dray.trait_description = "Steady Hand: a hauler holds course when it is shot at, because the cargo is the job. Turret rings fore and aft do the flinching for her."
+	dray.silhouette = PackedVector2Array([
+		Vector2(26, 0), Vector2(20, -12), Vector2(-14, -18), Vector2(-28, -12),
+		Vector2(-30, 0), Vector2(-28, 12), Vector2(-14, 18), Vector2(20, 12)])
+	var dray_hps: Array = [
+		_hardpoint("Dorsal Turret Ring", Vector2(4, -8), T.WEAPON, 2, 360.0),
+		_hardpoint("Ventral Turret Ring", Vector2(4, 8), T.WEAPON, 2, 360.0),
+		_hardpoint("Main Drive", Vector2(-26, 0), T.ENGINE, 2),
+		_hardpoint("Reactor Cradle", Vector2(-12, 0), T.REACTOR, 2),
+		_hardpoint("Defense Bay Fore", Vector2(14, 0), T.DEFENSE, 2),
+		_hardpoint("Defense Bay Aft", Vector2(-20, 0), T.DEFENSE, 1),
+		_hardpoint("Cargo Bay A", Vector2(-2, -14), T.SYSTEM, 2),
+		_hardpoint("Cargo Bay B", Vector2(-2, 14), T.SYSTEM, 2),
+	]
+	dray.hardpoints.assign(dray_hps)
+	_save_hull(dray, "res://data/hulls/dray.tres")
+
+	# BELLWETHER — the heavy freighter, and the convoy's reason to exist. The
+	# bellwether is the animal the flock follows, which is exactly what this is:
+	# the ship the escorts are formed around and the one the V-Shrike cross the
+	# Gap for. Slow, enormously valuable, three turrets that are not enough.
+	# NOTE she is HEAVY, so the MEDIUM-capped Reach station can never berth her
+	# (DockingPad.max_size_band) — she runs Orivel's bays and Epharon's surface,
+	# which is precisely why the little station still sees Mules.
+	var bellwether := HullDefS.new()
+	bellwether.display_name = "Bellwether"
+	bellwether.grade = GradesS.Grade.STANDARD
+	bellwether.level = 15
+	bellwether.category = "Freighter"
+	bellwether.size_band = HullDefS.SizeBand.HEAVY
+	bellwether.mass = 420.0
+	bellwether.hull_hp = 900.0
+	bellwether.cargo_base = 400.0
+	bellwether.price = 0
+	bellwether.trait_id = "convoy_heart"
+	bellwether.trait_description = "Convoy Heart: everything else on the lane is arranged around her. She is worth more than her escort, slower than her attackers, and perfectly aware of both."
+	# HEAVY band: 64px art canvas = 128 world units max extent.
+	bellwether.silhouette = PackedVector2Array([
+		Vector2(58, 0), Vector2(48, -20), Vector2(-20, -34), Vector2(-52, -26),
+		Vector2(-60, -10), Vector2(-60, 10), Vector2(-52, 26), Vector2(-20, 34),
+		Vector2(48, 20)])
+	var bellwether_hps: Array = [
+		_hardpoint("Dorsal Turret Ring", Vector2(10, -18), T.WEAPON, 3, 360.0),
+		_hardpoint("Ventral Turret Ring", Vector2(10, 18), T.WEAPON, 3, 360.0),
+		_hardpoint("Aft Turret", Vector2(-40, 0), T.WEAPON, 2, 360.0),
+		_hardpoint("Main Drive", Vector2(-54, -12), T.ENGINE, 3),
+		_hardpoint("Auxiliary Drive", Vector2(-54, 12), T.ENGINE, 2),
+		_hardpoint("Reactor Housing", Vector2(-26, 0), T.REACTOR, 3),
+		_hardpoint("Armor Belt Port", Vector2(0, -26), T.DEFENSE, 3),
+		_hardpoint("Armor Belt Starboard", Vector2(0, 26), T.DEFENSE, 2),
+		_hardpoint("Cargo Hold Fore", Vector2(32, 0), T.SYSTEM, 3),
+		_hardpoint("Cargo Hold Aft", Vector2(-10, 0), T.SYSTEM, 3),
+		_hardpoint("Bridge", Vector2(44, 0), T.SYSTEM, 2),
+	]
+	bellwether.hardpoints.assign(bellwether_hps)
+	_save_hull(bellwether, "res://data/hulls/bellwether.tres")

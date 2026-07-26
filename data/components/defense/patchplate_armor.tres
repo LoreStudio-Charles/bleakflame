@@ -9,3 +9,4 @@ display_name = "Patchplate Armor"
 description = "Overlapping wreck-plates. Rattles at speed — that's the drawback affix talking."
 grade = 0
 mass = 12.0
+affix_ids = PackedStringArray()

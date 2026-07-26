@@ -1,6 +1,6 @@
 # The Long Lane — Orivel ↔ the Rim
 
-**Designed with the user 2026-07-25. Spec complete; NOT built.**
+**Designed with the user 2026-07-25. SHIPS BUILT 2026-07-25; the lane itself is next.**
 
 Today the Reach has one trade lane and one hauler class (the Mule). Orivel is ~100k out,
 so the capital run is a different kind of voyage from the station↔colony hop, and it
@@ -44,9 +44,66 @@ Fighters serve BOTH sides — the same hull flies as a hired escort and as a rai
 is both cheap to build and true to the setting: out here the difference between an escort
 and a pirate is who is paying.
 
-Turret note: `WeaponMount` traverse is 360/mark deg/s, so a freighter's turret should be
-LOW mark — it swats a fighter that sits still, not one that jinks. That is the balance
-lever if armed haulers turn out to be too safe.
+### The hulls as built
+
+| Hull | Band | Level | Role |
+|---|---|---|---|
+| **Harrier** | LIGHT | 6 | light escort / pirate — cheap, plentiful, two fixed guns |
+| **Goshawk** | MEDIUM | 12 | the real escort / the dangerous pirate — twin lances + a PD turret |
+| **Dray** | MEDIUM | 8 | the lane workhorse — two turret rings, deep hold |
+| **Bellwether** | HEAVY | 15 | the convoy's heart — three turrets and still not enough |
+
+All four are **STANDARD grade** (green), a visible tier above the rim's grey/white salvage:
+these are factory hulls owned by capital freight companies and escort outfits, not scrap
+the fringe flies out of habit. Killing one in the Gap is how a rim pilot first sees clean
+gear, since loot is the victim's actual build. None are for sale yet (`price 0`) — the
+Reach station caps berths at MEDIUM and a STANDARD medium would walk straight past the
+Dowager, which is deliberately the local ceiling.
+
+`Goshawk` is named for the sparrowhawk's larger cousin on purpose — the ladder is legible
+from the name alone. Freight goes **Mule → Dray → Bellwether**.
+
+Note the Bellwether is HEAVY, so the MEDIUM-capped Reach station can never berth her. She
+runs Orivel's landing bays and Epharon's surface, which is exactly why the little station
+still only ever sees Mules.
+
+### Turret note — CORRECTED 2026-07-25
+
+The first draft of this doc had the rationale backwards. `traverse_speed()` is `360/mark`,
+so a **low** mark slews *fast* (Mk1 = 360°/s) and a capital Mk4 crawls at 90°/s.
+
+That derivation is now gone: **traverse is an authored per-weapon stat** (`WeaponDef.traverse`,
+0 = fall back to `360/mark`). `mark` says how BIG a gun is; it no longer silently decides
+what that gun can hit. The old rule made "big" and "slow" the same word, which forbade the
+most obvious weapon in the genre — a large mount built to shred small fast things.
+
+Two weapons came out of that change:
+
+- **Palisade Flak Battery** (Mk4, Advanced) — 420°/s and 340 range, against the Aegis
+  Lance's 90°/s and 1000. Proximity-fuzed, low per-shot damage. A fighter inside the wall
+  dies; a cruiser outside it is untouched, because the flak simply cannot reach.
+- **Drover Defense Turret** (Mk2, Standard) — the civilian freight mount. 240°/s and 7
+  damage: it *can* follow a jinking fighter and it *can't* make one leave. This is what
+  keeps an armed hauler annoying rather than safe, and it is the balance lever — refit the
+  same ring with something meaner and the convoy stops needing an escort.
+
+The pillar the old rule protected is still load-bearing and still true of **artillery**:
+long reach and heavy per-shot damage belong on slow mounts, so escorts and point-defense
+have a reason to exist. Anything that tracks well gives up range, damage, or both.
+
+### Level bands (user, 2026-07-25)
+
+Ships are meant to be levelled by region, not all sitting at 1:
+
+- **Starting area (the Reach rim): 1–5.** Rooster/Wasp 1, Mule/Kestrel 2,
+  Sparrowhawk/Cutlass 3, Dowager 4, Vulture 5 (the rim's mini-boss ceiling).
+- **The Long Lane: 6–15.** Harrier 6, Dray 8, Goshawk 12, Bellwether 15.
+- **The Navy: 35–40.** Supercruiser 35.
+
+**The DATA is set; the CURVE is not.** `HullDef.level` is still a display seam — nothing
+scales off it yet, which is why every ship currently fights as though it were level 1.
+Deciding what a level is *worth* (hull/damage per level, and whether components carry
+levels too) is the open balance decision. See "power levels" in the next-steps list.
 
 ## The V-SHRIKE — new canon (user, 2026-07-25)
 
@@ -69,17 +126,27 @@ The Gap's owners, and a deliberate contrast with everything the Reach has met so
   cargo, they can be bought or truced. A player learns the difference by who answers the
   comm — and learns to dread the ones who don't.
 
-## Build order (when it resumes)
+## Build order
 
-1. **Hulls first** — 4 `HullDef` .tres via `tools/generate_sample_data.gd` (it is the
-   seed generator; hand edits get overwritten, so add them THERE), plus `SampleBuilds`
-   entries. Silhouettes render until art lands, as the Dowager already does.
-2. **Turret fit** on the freighters — wide-arc mounts, low mark.
+1. ~~**Hulls first**~~ — DONE. Four `HullDef` .tres via `tools/generate_sample_data.gd`
+   (the seed generator; hand edits get overwritten, so they went THERE). Silhouettes
+   render until art lands, as the Dowager already does.
+2. ~~**Turret fit** on the freighters~~ — DONE, via authored traverse rather than low
+   marks. `SampleBuilds.lane_builds()` holds all six NPC fits.
 3. **The lane** — waypoint route between the rim and Orivel, haulers running it.
 4. **The three bands** — Guardian leash from the rim, Navy leash from Orivel, and
    nothing in the middle.
 5. **The V-Shrike** as an AI variant that never hails, over the existing pirate
-   behaviours.
+   behaviours. The FITS already say it — see below.
+
+### The V-Shrike fits say it before any dialogue does
+
+`vshrike_harrier` and `vshrike_goshawk` carry **no shields and no sensors**. Every slot
+that could have gone to surviving a fight or seeing one coming went to guns instead. They
+do not plan to be shot at, because they do not plan to leave anyone able to shoot. The
+escort versions of the same two hulls carry both — flown by people who intend to go home.
+
+That contrast is the whole faction, expressed in data, before a line of writing exists.
 
 Escort CONTRACTS (fly cover for a convoy across the Gap) fall out of this almost free
 once the lane exists, and are the obvious first use of it.

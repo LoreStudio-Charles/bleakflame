@@ -40,7 +40,7 @@ display_name = "Utility Bay"
 offset = Vector2(4, 5)
 slot_type = 4
 
-[sub_resource type="Resource" id="Resource_cplhull"]
+[sub_resource type="Resource" id="Resource_oslme"]
 script = ExtResource("1_nwe0y")
 display_name = "Universal Coupling"
 offset = Vector2(-2, 0)
@@ -49,14 +49,15 @@ mark = 5
 
 [resource]
 script = ExtResource("2_1ctwf")
-grade = 1
 display_name = "Mule"
 category = "Freighter"
 mass = 70.0
 hull_hp = 150.0
+grade = 1
+level = 2
 cargo_base = 60.0
 price = 3000
 trait_id = "packrat"
 trait_description = "Packrat: cargo components 25% lighter; jettisoned cargo can be re-scooped."
-hardpoints = Array[ExtResource("1_nwe0y")]([SubResource("Resource_pxafd"), SubResource("Resource_cg0m4"), SubResource("Resource_sor6v"), SubResource("Resource_3ttca"), SubResource("Resource_b2ihv"), SubResource("Resource_exjhr"), SubResource("Resource_cplhull")])
+hardpoints = Array[ExtResource("1_nwe0y")]([SubResource("Resource_pxafd"), SubResource("Resource_cg0m4"), SubResource("Resource_sor6v"), SubResource("Resource_3ttca"), SubResource("Resource_b2ihv"), SubResource("Resource_exjhr"), SubResource("Resource_oslme")])
 silhouette = PackedVector2Array(14, 0, 9, -9, -14, -10, -18, -4, -18, 4, -14, 10, 9, 9)

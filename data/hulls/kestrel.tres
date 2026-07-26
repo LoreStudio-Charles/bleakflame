@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="HullDef" format=3 uid="uid://b6dvwx661twa2"]
+[gd_resource type="Resource" script_class="HullDef" format=3]
 
-[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_yavjm"]
-[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_rnxwn"]
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_yavjm"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_rnxwn"]
 
 [sub_resource type="Resource" id="Resource_d2j2o"]
 script = ExtResource("1_yavjm")
@@ -46,7 +46,7 @@ display_name = "Utility Bay B"
 offset = Vector2(0, 3)
 slot_type = 4
 
-[sub_resource type="Resource" id="Resource_cplhull"]
+[sub_resource type="Resource" id="Resource_215gp"]
 script = ExtResource("1_yavjm")
 display_name = "Universal Coupling"
 offset = Vector2(-2, 0)
@@ -55,13 +55,15 @@ mark = 5
 
 [resource]
 script = ExtResource("2_rnxwn")
-grade = 1
 display_name = "Kestrel"
 category = "Scout"
 mass = 32.0
 hull_hp = 80.0
+grade = 1
+level = 2
 cargo_base = 8.0
 price = 3000
 trait_id = "long_sight"
 trait_description = "Long Sight: sensor ranges +25%; contacts are identified one grade sooner."
-hardpoints = Array[ExtResource("1_yavjm")]([SubResource("Resource_d2j2o"), SubResource("Resource_fgyac"), SubResource("Resource_lu04b"), SubResource("Resource_5j3m0"), SubResource("Resource_0i6pb"), SubResource("Resource_8oqi3"), SubResource("Resource_iopye"), SubResource("Resource_cplhull")])
+hardpoints = Array[ExtResource("1_yavjm")]([SubResource("Resource_d2j2o"), SubResource("Resource_fgyac"), SubResource("Resource_lu04b"), SubResource("Resource_5j3m0"), SubResource("Resource_0i6pb"), SubResource("Resource_8oqi3"), SubResource("Resource_iopye"), SubResource("Resource_215gp")])
+silhouette = PackedVector2Array(19, 0, 2, -4, -13, -6, -10, 0, -13, 6, 2, 4)

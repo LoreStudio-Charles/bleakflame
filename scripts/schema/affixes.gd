@@ -168,7 +168,9 @@ static func _mutate(comp: ComponentDef, id: String) -> void:
 		"swift":
 			comp.projectile_speed *= 1.3
 		"tracking":
-			comp.traverse_override = comp.traverse_speed() * 1.6
+			# Reads the CURRENT speed first, so this lifts an authored traverse
+			# as happily as a mark-derived one.
+			comp.traverse = comp.traverse_speed() * 1.6
 		"deeprack":
 			comp.magazine = int(comp.magazine * 1.5)
 		"keen":

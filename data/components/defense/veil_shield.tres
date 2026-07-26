@@ -11,3 +11,4 @@ display_name = "Veil Shield Projector"
 description = "A soap-bubble against the dark. Regenerates; armor doesn't."
 mass = 6.0
 power_draw = 16.0
+affix_ids = PackedStringArray()

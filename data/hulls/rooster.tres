@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="HullDef" format=3 uid="uid://c12cbp7h7jmhr"]
+[gd_resource type="Resource" script_class="HullDef" format=3]
 
-[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_hkus5"]
-[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_r1qe6"]
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_hkus5"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_r1qe6"]
 
 [sub_resource type="Resource" id="Resource_cjtaw"]
 script = ExtResource("1_hkus5")
@@ -44,7 +44,7 @@ display_name = "Utility Bay"
 offset = Vector2(2, 7)
 slot_type = 4
 
-[sub_resource type="Resource" id="Resource_cplhull"]
+[sub_resource type="Resource" id="Resource_j48ry"]
 script = ExtResource("1_hkus5")
 display_name = "Universal Coupling"
 offset = Vector2(-2, 0)
@@ -53,13 +53,14 @@ mark = 5
 
 [resource]
 script = ExtResource("2_r1qe6")
-grade = 0
 display_name = "Rooster"
 category = "Multirole"
 mass = 45.0
 hull_hp = 110.0
+grade = 0
 cargo_base = 24.0
 price = 1800
 trait_id = "jack_of_all"
 trait_description = "Jack of All Trades: no bonuses, no penalties, no excuses."
-hardpoints = Array[ExtResource("1_hkus5")]([SubResource("Resource_cjtaw"), SubResource("Resource_261b4"), SubResource("Resource_gc2mm"), SubResource("Resource_fucth"), SubResource("Resource_3cyfj"), SubResource("Resource_wl15d"), SubResource("Resource_7i7vu"), SubResource("Resource_cplhull")])
+hardpoints = Array[ExtResource("1_hkus5")]([SubResource("Resource_cjtaw"), SubResource("Resource_261b4"), SubResource("Resource_gc2mm"), SubResource("Resource_fucth"), SubResource("Resource_3cyfj"), SubResource("Resource_wl15d"), SubResource("Resource_7i7vu"), SubResource("Resource_j48ry")])
+silhouette = PackedVector2Array(16, 0, 6, -8, -8, -11, -15, -5, -15, 5, -8, 11, 6, 8)

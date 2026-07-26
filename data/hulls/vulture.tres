@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="HullDef" format=3 uid="uid://b32ucx8xfjpv3"]
+[gd_resource type="Resource" script_class="HullDef" format=3]
 
-[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_hj3m5"]
-[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_jkwv8"]
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_hj3m5"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_jkwv8"]
 
 [sub_resource type="Resource" id="Resource_jvesi"]
 script = ExtResource("1_hj3m5")
@@ -43,7 +43,7 @@ display_name = "Defense Bay Starboard"
 offset = Vector2(2, 10)
 slot_type = 3
 
-[sub_resource type="Resource" id="Resource_cplhull"]
+[sub_resource type="Resource" id="Resource_sxp71"]
 script = ExtResource("1_hj3m5")
 display_name = "Universal Coupling"
 offset = Vector2(-2, 0)
@@ -52,13 +52,15 @@ mark = 5
 
 [resource]
 script = ExtResource("2_jkwv8")
-grade = 1
 display_name = "Vulture"
 category = "Gunship"
 size_band = 1
 mass = 150.0
 hull_hp = 320.0
+grade = 1
+level = 5
 cargo_base = 20.0
 trait_id = "carrion_lord"
 trait_description = "Carrion Lord: slow, patient, and armed like a grudge."
-hardpoints = Array[ExtResource("1_hj3m5")]([SubResource("Resource_jvesi"), SubResource("Resource_1w7rm"), SubResource("Resource_f5mdm"), SubResource("Resource_a458m"), SubResource("Resource_dgoa5"), SubResource("Resource_cp6y1"), SubResource("Resource_cplhull")])
+hardpoints = Array[ExtResource("1_hj3m5")]([SubResource("Resource_jvesi"), SubResource("Resource_1w7rm"), SubResource("Resource_f5mdm"), SubResource("Resource_a458m"), SubResource("Resource_dgoa5"), SubResource("Resource_cp6y1"), SubResource("Resource_sxp71")])
+silhouette = PackedVector2Array(30, 0, 12, -14, -16, -20, -30, -8, -30, 8, -16, 20, 12, 14)

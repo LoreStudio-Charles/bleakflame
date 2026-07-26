@@ -1,19 +1,20 @@
 [gd_resource type="Resource" script_class="WeaponDef" format=3]
 
-[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_navgun"]
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_oqmcq"]
 
 [resource]
-script = ExtResource("1_navgun")
+script = ExtResource("1_oqmcq")
 damage = 34.0
 fire_interval = 0.22
 projectile_speed = 1500.0
 weapon_range = 820.0
 bolt_color = Color(1, 0.85, 0.4, 1)
 bolt_scale = 1.1
+homing_by_band = PackedFloat32Array()
 display_name = "Galean Naval Autocannon"
 description = "Confederacy secondary armament: a fast-cycling autocannon that answers what the main lances are too slow to catch."
-grade = 3
 mark = 3
+grade = 3
 mass = 10.0
 power_draw = 5.0
 affix_ids = PackedStringArray()

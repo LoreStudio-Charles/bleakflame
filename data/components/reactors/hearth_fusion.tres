@@ -4,9 +4,10 @@
 
 [resource]
 script = ExtResource("1_rfwyv")
+power_output = 70.0
 energy_capacity = 140.0
 energy_recharge = 1.5
-power_output = 70.0
 display_name = "Hearth Fusion Core"
 description = "The steady blue everyone learned to fly by."
 mass = 12.0
+affix_ids = PackedStringArray()

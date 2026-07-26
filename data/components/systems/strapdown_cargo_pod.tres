@@ -10,3 +10,4 @@ display_name = "Strapdown Cargo Pod"
 description = "Space for loot. Draws nothing but patience."
 grade = 1
 mass = 4.0
+affix_ids = PackedStringArray()

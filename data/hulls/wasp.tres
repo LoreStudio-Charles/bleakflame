@@ -20,7 +20,7 @@ display_name = "Cell Mount"
 offset = Vector2(-2, 0)
 slot_type = 2
 
-[sub_resource type="Resource" id="Resource_cplhull"]
+[sub_resource type="Resource" id="Resource_f4cer"]
 script = ExtResource("1_5quhf")
 display_name = "Universal Coupling"
 offset = Vector2(-2, 0)
@@ -29,13 +29,13 @@ mark = 5
 
 [resource]
 script = ExtResource("2_f5wx1")
-grade = 1
 display_name = "Wasp"
 category = "Interceptor"
 mass = 22.0
 hull_hp = 55.0
+grade = 1
 cargo_base = 2.0
 trait_id = "stinger"
 trait_description = "Stinger: barely more than an engine with a gun. Fast, fragile, furious."
-hardpoints = Array[ExtResource("1_5quhf")]([SubResource("Resource_3jh8s"), SubResource("Resource_5xb7k"), SubResource("Resource_kvg7y"), SubResource("Resource_cplhull")])
+hardpoints = Array[ExtResource("1_5quhf")]([SubResource("Resource_3jh8s"), SubResource("Resource_5xb7k"), SubResource("Resource_kvg7y"), SubResource("Resource_f4cer")])
 silhouette = PackedVector2Array(10, 0, -2, -5, -8, -3, -8, 3, -2, 5)

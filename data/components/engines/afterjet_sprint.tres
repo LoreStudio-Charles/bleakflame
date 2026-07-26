@@ -12,3 +12,4 @@ mark = 2
 grade = 3
 mass = 14.0
 power_draw = 26.0
+affix_ids = PackedStringArray()

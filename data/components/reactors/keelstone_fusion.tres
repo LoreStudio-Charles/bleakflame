@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ReactorDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/reactor_def.gd" id="1_n6532"]
+
+[resource]
+script = ExtResource("1_n6532")
+power_output = 260.0
+energy_capacity = 420.0
+energy_recharge = 3.2
+trail_color = Color(0.62, 0.82, 1, 1)
+display_name = "Keelstone Fusion Plant"
+description = "Capital-grade fusion, built around the keel rather than bolted to it. Freight lines and navies buy the same plant for the same reason: nothing aboard should ever have to wait its turn for power."
+mark = 3
+grade = 3
+mass = 34.0
+affix_ids = PackedStringArray()

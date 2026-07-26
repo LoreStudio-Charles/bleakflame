@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="WeaponDef" format=3]
 
-[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_aegis"]
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_xl5c7"]
 
 [resource]
-script = ExtResource("1_aegis")
+script = ExtResource("1_xl5c7")
 damage = 8.0
 fire_interval = 0.1
 projectile_speed = 2600.0
@@ -12,10 +12,11 @@ bolt_color = Color(1, 0.92, 0.66, 1)
 bolt_scale = 1.4
 beam = true
 beam_tail = 40.0
+homing_by_band = PackedFloat32Array()
 display_name = "Aegis Lance Battery"
 description = "Galean naval laser: a sustained ivory lance, instant on target. Line-standard, and it shows — steady, long-reaching, merciless to anything that lingers in the open."
-grade = 3
 mark = 4
+grade = 3
 mass = 12.0
 power_draw = 7.0
 affix_ids = PackedStringArray()

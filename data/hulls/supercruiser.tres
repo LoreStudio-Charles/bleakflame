@@ -1,112 +1,108 @@
 [gd_resource type="Resource" script_class="HullDef" format=3]
 
-[ext_resource type="Script" uid="uid://cd4i1qrp6wh1e" path="res://scripts/schema/hardpoint_def.gd" id="1_hp"]
-[ext_resource type="Script" uid="uid://dbnfd8bf8gvux" path="res://scripts/schema/hull_def.gd" id="2_hull"]
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_ddxp8"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_g2cil"]
 
-[sub_resource type="Resource" id="hp_lance"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_s5mqf"]
+script = ExtResource("1_ddxp8")
 display_name = "Spinal Lance"
 offset = Vector2(100, 0)
 mark = 4
 arc_deg = 45.0
 
-[sub_resource type="Resource" id="hp_bat_d"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_dj8o0"]
+script = ExtResource("1_ddxp8")
 display_name = "Dorsal Main Battery"
 offset = Vector2(35, -16)
 mark = 4
 arc_deg = 360.0
 
-[sub_resource type="Resource" id="hp_bat_v"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_8wb6e"]
+script = ExtResource("1_ddxp8")
 display_name = "Ventral Main Battery"
 offset = Vector2(35, 16)
 mark = 4
 arc_deg = 360.0
 
-[sub_resource type="Resource" id="hp_pd_p"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_13nb7"]
+script = ExtResource("1_ddxp8")
 display_name = "Port Point-Defense"
 offset = Vector2(-15, -30)
-mark = 1
 arc_deg = 360.0
 
-[sub_resource type="Resource" id="hp_pd_s"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_gieys"]
+script = ExtResource("1_ddxp8")
 display_name = "Starboard Point-Defense"
 offset = Vector2(-15, 30)
-mark = 1
 arc_deg = 360.0
 
-[sub_resource type="Resource" id="hp_sec"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_80hlb"]
+script = ExtResource("1_ddxp8")
 display_name = "Secondary Battery"
 offset = Vector2(-45, 0)
 mark = 3
 arc_deg = 360.0
 
-[sub_resource type="Resource" id="hp_drive_m"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_j4x1a"]
+script = ExtResource("1_ddxp8")
 display_name = "Main Drive"
 offset = Vector2(-100, -12)
 slot_type = 1
 mark = 3
 
-[sub_resource type="Resource" id="hp_drive_a"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_ekcsc"]
+script = ExtResource("1_ddxp8")
 display_name = "Auxiliary Drive"
 offset = Vector2(-100, 12)
 slot_type = 1
 mark = 3
 
-[sub_resource type="Resource" id="hp_reactor"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_k7wcx"]
+script = ExtResource("1_ddxp8")
 display_name = "Capital Reactor"
 offset = Vector2(-60, 0)
 slot_type = 2
 mark = 3
 
-[sub_resource type="Resource" id="hp_belt_p"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_pnhfj"]
+script = ExtResource("1_ddxp8")
 display_name = "Armor Belt Port"
 offset = Vector2(5, -22)
 slot_type = 3
 mark = 3
 
-[sub_resource type="Resource" id="hp_belt_s"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_wwdfd"]
+script = ExtResource("1_ddxp8")
 display_name = "Armor Belt Starboard"
 offset = Vector2(5, 22)
 slot_type = 3
 mark = 3
 
-[sub_resource type="Resource" id="hp_command"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_ttvy3"]
+script = ExtResource("1_ddxp8")
 display_name = "Command Deck"
 offset = Vector2(60, 0)
 slot_type = 4
 mark = 3
 
-[sub_resource type="Resource" id="hp_coupling"]
-script = ExtResource("1_hp")
+[sub_resource type="Resource" id="Resource_lwuxw"]
+script = ExtResource("1_ddxp8")
 display_name = "Universal Coupling"
 offset = Vector2(-35, 0)
 slot_type = 5
 mark = 5
 
 [resource]
-script = ExtResource("2_hull")
+script = ExtResource("2_g2cil")
 display_name = "Supercruiser"
 category = "Cruiser"
 art_path = "res://assets/ships/galean-navy/cruiser-1.png"
 size_band = 3
 mass = 780.0
 hull_hp = 1800.0
-grade = 2
 level = 35
 cargo_base = 40.0
-price = 0
 trait_id = "line_of_battle"
 trait_description = "Line of Battle: a wall of the Reach — built to stand in the lane and trade fire. The main batteries gut a cruiser; its point-defense turrets swat the gnats the big guns can't track. Escorts extend the screen, but it dies hard alone."
+hardpoints = Array[ExtResource("1_ddxp8")]([SubResource("Resource_s5mqf"), SubResource("Resource_dj8o0"), SubResource("Resource_8wb6e"), SubResource("Resource_13nb7"), SubResource("Resource_gieys"), SubResource("Resource_80hlb"), SubResource("Resource_j4x1a"), SubResource("Resource_ekcsc"), SubResource("Resource_k7wcx"), SubResource("Resource_pnhfj"), SubResource("Resource_wwdfd"), SubResource("Resource_ttvy3"), SubResource("Resource_lwuxw")])
 silhouette = PackedVector2Array(115, 0, 80, -18, 20, -30, -60, -32, -100, -20, -110, 0, -100, 20, -60, 32, 20, 30, 80, 18)
-hardpoints = Array[ExtResource("1_hp")]([SubResource("hp_lance"), SubResource("hp_bat_d"), SubResource("hp_bat_v"), SubResource("hp_pd_p"), SubResource("hp_pd_s"), SubResource("hp_sec"), SubResource("hp_drive_m"), SubResource("hp_drive_a"), SubResource("hp_reactor"), SubResource("hp_belt_p"), SubResource("hp_belt_s"), SubResource("hp_command"), SubResource("hp_coupling")])

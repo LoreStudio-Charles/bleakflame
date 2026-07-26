@@ -4,11 +4,12 @@
 
 [resource]
 script = ExtResource("1_q748l")
+power_output = 40.0
 energy_capacity = 80.0
 energy_recharge = 1.0
-power_output = 40.0
 trail_color = Color(0.75, 0.62, 0.35, 1)
 display_name = "Scrap-Cell Pile"
 description = "Salvaged cells wired in defiance of several manuals."
 grade = 1
 mass = 10.0
+affix_ids = PackedStringArray()

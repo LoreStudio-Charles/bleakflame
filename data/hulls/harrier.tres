@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_xcoq4"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_ivea6"]
+
+[sub_resource type="Resource" id="Resource_l5bak"]
+script = ExtResource("1_xcoq4")
+display_name = "Port Wing Gun"
+offset = Vector2(4, -6)
+arc_deg = 35.0
+
+[sub_resource type="Resource" id="Resource_v4ibo"]
+script = ExtResource("1_xcoq4")
+display_name = "Starboard Wing Gun"
+offset = Vector2(4, 6)
+arc_deg = 35.0
+
+[sub_resource type="Resource" id="Resource_irdrw"]
+script = ExtResource("1_xcoq4")
+display_name = "Main Drive"
+offset = Vector2(-12, 0)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_khmpt"]
+script = ExtResource("1_xcoq4")
+display_name = "Reactor Cradle"
+offset = Vector2(-4, 0)
+slot_type = 2
+
+[sub_resource type="Resource" id="Resource_v7w3g"]
+script = ExtResource("1_xcoq4")
+display_name = "Defense Bay"
+offset = Vector2(1, 0)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_0ahfm"]
+script = ExtResource("1_xcoq4")
+display_name = "Utility Bay"
+offset = Vector2(-1, -8)
+slot_type = 4
+
+[sub_resource type="Resource" id="Resource_h2ykf"]
+script = ExtResource("1_xcoq4")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_ivea6")
+display_name = "Harrier"
+category = "Fighter"
+mass = 38.0
+hull_hp = 105.0
+level = 6
+cargo_base = 6.0
+trait_id = "wing_discipline"
+trait_description = "Wing Discipline: built to fly in a wing and priced to be replaced. Alone it is a nuisance; in fours it is a fence."
+hardpoints = Array[ExtResource("1_xcoq4")]([SubResource("Resource_l5bak"), SubResource("Resource_v4ibo"), SubResource("Resource_irdrw"), SubResource("Resource_khmpt"), SubResource("Resource_v7w3g"), SubResource("Resource_0ahfm"), SubResource("Resource_h2ykf")])
+silhouette = PackedVector2Array(16, 0, 6, -4, -6, -14, -12, -12, -10, -3, -14, 0, -10, 3, -12, 12, -6, 14, 6, 4)

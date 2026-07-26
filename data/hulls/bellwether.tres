@@ -1,0 +1,102 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_nupq6"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_xscby"]
+
+[sub_resource type="Resource" id="Resource_3ioti"]
+script = ExtResource("1_nupq6")
+display_name = "Dorsal Turret Ring"
+offset = Vector2(10, -18)
+mark = 3
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_5jcbs"]
+script = ExtResource("1_nupq6")
+display_name = "Ventral Turret Ring"
+offset = Vector2(10, 18)
+mark = 3
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_q8p4j"]
+script = ExtResource("1_nupq6")
+display_name = "Aft Turret"
+offset = Vector2(-40, 0)
+mark = 2
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_3gep3"]
+script = ExtResource("1_nupq6")
+display_name = "Main Drive"
+offset = Vector2(-54, -12)
+slot_type = 1
+mark = 3
+
+[sub_resource type="Resource" id="Resource_x2svn"]
+script = ExtResource("1_nupq6")
+display_name = "Auxiliary Drive"
+offset = Vector2(-54, 12)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_rm7s5"]
+script = ExtResource("1_nupq6")
+display_name = "Reactor Housing"
+offset = Vector2(-26, 0)
+slot_type = 2
+mark = 3
+
+[sub_resource type="Resource" id="Resource_xw1a7"]
+script = ExtResource("1_nupq6")
+display_name = "Armor Belt Port"
+offset = Vector2(0, -26)
+slot_type = 3
+mark = 3
+
+[sub_resource type="Resource" id="Resource_j2557"]
+script = ExtResource("1_nupq6")
+display_name = "Armor Belt Starboard"
+offset = Vector2(0, 26)
+slot_type = 3
+mark = 2
+
+[sub_resource type="Resource" id="Resource_kk8dt"]
+script = ExtResource("1_nupq6")
+display_name = "Cargo Hold Fore"
+offset = Vector2(32, 0)
+slot_type = 4
+mark = 3
+
+[sub_resource type="Resource" id="Resource_ynvux"]
+script = ExtResource("1_nupq6")
+display_name = "Cargo Hold Aft"
+offset = Vector2(-10, 0)
+slot_type = 4
+mark = 3
+
+[sub_resource type="Resource" id="Resource_xkv26"]
+script = ExtResource("1_nupq6")
+display_name = "Bridge"
+offset = Vector2(44, 0)
+slot_type = 4
+mark = 2
+
+[sub_resource type="Resource" id="Resource_ncyu5"]
+script = ExtResource("1_nupq6")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_xscby")
+display_name = "Bellwether"
+category = "Freighter"
+size_band = 2
+mass = 420.0
+hull_hp = 900.0
+level = 15
+cargo_base = 400.0
+trait_id = "convoy_heart"
+trait_description = "Convoy Heart: everything else on the lane is arranged around her. She is worth more than her escort, slower than her attackers, and perfectly aware of both."
+hardpoints = Array[ExtResource("1_nupq6")]([SubResource("Resource_3ioti"), SubResource("Resource_5jcbs"), SubResource("Resource_q8p4j"), SubResource("Resource_3gep3"), SubResource("Resource_x2svn"), SubResource("Resource_rm7s5"), SubResource("Resource_xw1a7"), SubResource("Resource_j2557"), SubResource("Resource_kk8dt"), SubResource("Resource_ynvux"), SubResource("Resource_xkv26"), SubResource("Resource_ncyu5")])
+silhouette = PackedVector2Array(58, 0, 48, -20, -20, -34, -52, -26, -60, -10, -60, 10, -52, 26, -20, 34, 48, 20)

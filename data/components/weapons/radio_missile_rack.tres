@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="WeaponDef" format=3]
 
-[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_radio"]
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_lld0k"]
 
 [resource]
-script = ExtResource("1_radio")
+script = ExtResource("1_lld0k")
 damage = 150.0
 fire_interval = 1.3
 projectile_speed = 1200.0
@@ -16,12 +16,11 @@ hit_bonus = 5.0
 blast_radius = 20.0
 blast_falloff = 0.7
 homing = 150.0
-homing_by_band = PackedFloat32Array(3.0, 3.0, 3.0, 3.0, 3.0)
-seek_nearest = false
+homing_by_band = PackedFloat32Array(3, 3, 3, 3, 3)
 display_name = "Radio-Guided Missile Rack"
 description = "Command-guided to whatever you've got locked — pick a target, and four heavy warheads WILL find it. The reload's dear and it goes dumb if your mark slips the leash. Use them to leave, not to hunt."
-grade = 3
 mark = 2
+grade = 3
 mass = 8.0
 power_draw = 6.0
 affix_ids = PackedStringArray()

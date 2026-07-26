@@ -5,9 +5,24 @@ extends ComponentDef
 @export var fire_interval := 0.3         # seconds between shots
 @export var projectile_speed := 900.0
 @export var weapon_range := 700.0
-## Turret traverse in deg/s. 0 = use the size formula: big guns track slowly,
-## which is what lets small ships dance inside a capital ship's arcs.
-@export var traverse_override := 0.0
+## TURRET TRAVERSE in deg/s — how fast this weapon's mount slews, and therefore
+## what it can actually hit. 0 = derive from size (360/mark), which stays the
+## sensible default for any gun nobody has thought hard about.
+##
+## AUTHORED, NOT DERIVED (user, 2026-07-25). `mark` says how BIG a gun is; it
+## should not silently also decide what that gun can track. Deriving traverse
+## made "big" and "slow" the same word, which forbade the most obvious weapon in
+## the genre: a large, expensive mount whose whole job is shredding small fast
+## things. A weapon now STATES its tracking and PAYS for it elsewhere — the
+## Palisade Flak Battery is a Mk4 that slews at 420 deg/s and reaches barely a
+## third as far as the Mk4 lance bolted beside it.
+##
+## THE PILLAR THIS STILL PROTECTS: an ARTILLERY piece must not be able to swat
+## fighters. That is the only reason escorts and point-defense exist, and it is
+## what the entire convoy design on the Long Lane rests on. So the trade is load-
+## bearing, not decorative: long reach and heavy per-shot damage belong on the
+## SLOW mounts, and anything that tracks well gives up one or both.
+@export var traverse := 0.0
 ## Ore extracted per bolt from mineable asteroids. Mining lasers are weapons
 ## (weapon slot, weapon rules) that trade combat damage for yield — combat
 ## guns chip rock at a fraction of their damage instead.
@@ -62,7 +77,7 @@ extends ComponentDef
 
 
 func traverse_speed() -> float:
-	return traverse_override if traverse_override > 0.0 else 360.0 / mark
+	return traverse if traverse > 0.0 else 360.0 / mark
 
 
 func stat_summary() -> String:

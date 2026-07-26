@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_swiqo"]
+
+[resource]
+script = ExtResource("1_swiqo")
+damage = 12.0
+fire_interval = 0.16
+projectile_speed = 1400.0
+weapon_range = 340.0
+traverse = 420.0
+bolt_color = Color(1, 0.78, 0.45, 1)
+bolt_scale = 0.9
+blast_radius = 28.0
+blast_falloff = 0.5
+homing_by_band = PackedFloat32Array()
+display_name = "Palisade Flak Battery"
+description = "Galean anti-fighter mount: a fence of proximity-fuzed bursts thrown up around the hull. It cannot reach a ship of the line and was never meant to — it is here for the ones that get close enough to matter."
+mark = 4
+grade = 3
+mass = 13.0
+power_draw = 9.0
+affix_ids = PackedStringArray()

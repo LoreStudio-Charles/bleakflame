@@ -9,3 +9,4 @@ display_name = "Vectorjet Thruster"
 description = "Reliable gimbal-nozzle workhorse."
 mass = 9.0
 power_draw = 14.0
+affix_ids = PackedStringArray()

@@ -1,0 +1,80 @@
+[gd_resource type="Resource" script_class="HullDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/hardpoint_def.gd" id="1_lxgx8"]
+[ext_resource type="Script" path="res://scripts/schema/hull_def.gd" id="2_72flh"]
+
+[sub_resource type="Resource" id="Resource_16uig"]
+script = ExtResource("1_lxgx8")
+display_name = "Dorsal Turret Ring"
+offset = Vector2(4, -8)
+mark = 2
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_7bu46"]
+script = ExtResource("1_lxgx8")
+display_name = "Ventral Turret Ring"
+offset = Vector2(4, 8)
+mark = 2
+arc_deg = 360.0
+
+[sub_resource type="Resource" id="Resource_lanht"]
+script = ExtResource("1_lxgx8")
+display_name = "Main Drive"
+offset = Vector2(-26, 0)
+slot_type = 1
+mark = 2
+
+[sub_resource type="Resource" id="Resource_l5wst"]
+script = ExtResource("1_lxgx8")
+display_name = "Reactor Cradle"
+offset = Vector2(-12, 0)
+slot_type = 2
+mark = 2
+
+[sub_resource type="Resource" id="Resource_nh8nf"]
+script = ExtResource("1_lxgx8")
+display_name = "Defense Bay Fore"
+offset = Vector2(14, 0)
+slot_type = 3
+mark = 2
+
+[sub_resource type="Resource" id="Resource_14a8p"]
+script = ExtResource("1_lxgx8")
+display_name = "Defense Bay Aft"
+offset = Vector2(-20, 0)
+slot_type = 3
+
+[sub_resource type="Resource" id="Resource_e0k2n"]
+script = ExtResource("1_lxgx8")
+display_name = "Cargo Bay A"
+offset = Vector2(-2, -14)
+slot_type = 4
+mark = 2
+
+[sub_resource type="Resource" id="Resource_t7t48"]
+script = ExtResource("1_lxgx8")
+display_name = "Cargo Bay B"
+offset = Vector2(-2, 14)
+slot_type = 4
+mark = 2
+
+[sub_resource type="Resource" id="Resource_wfb2t"]
+script = ExtResource("1_lxgx8")
+display_name = "Universal Coupling"
+offset = Vector2(-2, 0)
+slot_type = 5
+mark = 5
+
+[resource]
+script = ExtResource("2_72flh")
+display_name = "Dray"
+category = "Freighter"
+size_band = 1
+mass = 190.0
+hull_hp = 300.0
+level = 8
+cargo_base = 140.0
+trait_id = "steady_hand"
+trait_description = "Steady Hand: a hauler holds course when it is shot at, because the cargo is the job. Turret rings fore and aft do the flinching for her."
+hardpoints = Array[ExtResource("1_lxgx8")]([SubResource("Resource_16uig"), SubResource("Resource_7bu46"), SubResource("Resource_lanht"), SubResource("Resource_l5wst"), SubResource("Resource_nh8nf"), SubResource("Resource_14a8p"), SubResource("Resource_e0k2n"), SubResource("Resource_t7t48"), SubResource("Resource_wfb2t")])
+silhouette = PackedVector2Array(26, 0, 20, -12, -14, -18, -28, -12, -30, 0, -28, 12, -14, 18, 20, 12)

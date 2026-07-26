@@ -179,11 +179,15 @@ static func guardian_sparrowhawk() -> ShipBuild:
 
 
 static func guardian_vulture() -> ShipBuild:
+	# Overcharged Cell, not a Hearth: with the Twinlance, the sprint drive and a
+	# shield all drawing at once this hull needed 74 against the Hearth's 70 —
+	# an illegal fit that flew anyway because AI builds skip the refit screen.
+	# The harbor pays its defenders, so it pays for the bigger plant.
 	return _make("res://data/hulls/vulture.tres", {
 		0: "res://data/components/weapons/twinlance_pulse.tres",
 		1: "res://data/components/weapons/vk2_autocannon.tres",
 		2: "res://data/components/engines/afterjet_sprint.tres",
-		3: "res://data/components/reactors/hearth_fusion.tres",
+		3: "res://data/components/reactors/overdrive_bottle.tres",
 		4: "res://data/components/defense/veil_shield.tres",
 		5: "res://data/components/defense/bulwark_plating.tres",
 	})
@@ -204,7 +208,7 @@ static func galean_supercruiser() -> ShipBuild:
 		5: "res://data/components/weapons/naval_autocannon.tres",      # Secondary
 		6: "res://data/components/engines/afterjet_sprint.tres",       # Main Drive
 		7: "res://data/components/engines/afterjet_sprint.tres",       # Aux Drive
-		8: "res://data/components/reactors/overdrive_bottle.tres",     # Capital Reactor
+		8: "res://data/components/reactors/keelstone_fusion.tres",     # Capital Reactor (Mk3)
 		9: "res://data/components/defense/bulwark_plating.tres",       # Armor Belt Port
 		10: "res://data/components/defense/aegis_composite.tres",      # Armor Belt Starboard
 		11: "res://data/components/systems/wayfarer_sensors.tres",     # Command Deck
@@ -219,6 +223,121 @@ static func galean_supercruiser_elite() -> ShipBuild:
 	var b := galean_supercruiser()
 	b.slots[1] = load("res://data/components/weapons/sentinel_radar_battery.tres")
 	return b
+
+
+## ==== THE LONG LANE (docs/the_long_lane.md) ====
+## Traffic on the Orivel run. Everything here is NPC for now, so no Universal
+## Coupling is fitted — chips are a pilot's business and the AI has no book.
+##
+## The lane's whole shape lives in these fits: haulers carry Drover turrets that
+## TRACK but barely bite (240 deg/s, 7 damage), so a freighter can annoy a raider
+## and never drive one off. That is what makes an escort worth paying for, and it
+## is why the Gap is dangerous rather than merely empty.
+
+
+## The lane workhorse. Two turret rings, a deep hold, and no ambitions.
+static func lane_dray() -> ShipBuild:
+	return _make("res://data/hulls/dray.tres", {
+		0: "res://data/components/weapons/drover_defense_turret.tres",  # dorsal ring
+		1: "res://data/components/weapons/drover_defense_turret.tres",  # ventral ring
+		2: "res://data/components/engines/vectorjet.tres",
+		3: "res://data/components/reactors/hearth_fusion.tres",
+		4: "res://data/components/defense/veil_shield.tres",
+		5: "res://data/components/defense/patchplate_armor.tres",
+		6: "res://data/components/systems/falsebottom_hold.tres",
+		7: "res://data/components/systems/strapdown_cargo_pod.tres",
+	})
+
+
+## The convoy's heart: worth more than its escort, slower than its attackers.
+## Three turrets is a LOT of turrets and still not enough, which is the point —
+## she survives by being surrounded, not by being armed.
+static func lane_bellwether() -> ShipBuild:
+	return _make("res://data/hulls/bellwether.tres", {
+		0: "res://data/components/weapons/drover_defense_turret.tres",  # dorsal ring
+		1: "res://data/components/weapons/drover_defense_turret.tres",  # ventral ring
+		2: "res://data/components/weapons/drover_defense_turret.tres",  # aft turret
+		3: "res://data/components/engines/afterjet_sprint.tres",
+		4: "res://data/components/engines/vectorjet.tres",
+		5: "res://data/components/reactors/keelstone_fusion.tres",      # Mk3 housing, Mk3 plant
+		6: "res://data/components/defense/aegis_composite.tres",
+		7: "res://data/components/defense/bulwark_plating.tres",
+		8: "res://data/components/systems/falsebottom_hold.tres",
+		9: "res://data/components/systems/falsebottom_hold.tres",
+		10: "res://data/components/systems/wayfarer_sensors.tres",      # bridge
+	})
+
+
+## Hired escort, light. Cheap, plentiful, and flown by someone who intends to
+## go home — shield fitted, sensors fitted, nothing exotic.
+static func escort_harrier() -> ShipBuild:
+	return _make("res://data/hulls/harrier.tres", {
+		0: "res://data/components/weapons/vk2_autocannon.tres",
+		1: "res://data/components/weapons/vk2_autocannon.tres",
+		2: "res://data/components/engines/vectorjet.tres",
+		3: "res://data/components/reactors/hearth_fusion.tres",
+		4: "res://data/components/defense/veil_shield.tres",
+		5: "res://data/components/systems/wayfarer_sensors.tres",
+	})
+
+
+## Hired escort, medium — the ship a convoy is actually paying for. Twin
+## Twinlances forward, and a Skeet PD on the dorsal ring to cover the hauler's
+## six, which is the difference between an escort and a heavier interceptor.
+static func escort_goshawk() -> ShipBuild:
+	return _make("res://data/hulls/goshawk.tres", {
+		0: "res://data/components/weapons/twinlance_pulse.tres",
+		1: "res://data/components/weapons/twinlance_pulse.tres",
+		2: "res://data/components/weapons/skeet_pd_array.tres",         # dorsal turret
+		3: "res://data/components/engines/afterjet_sprint.tres",
+		4: "res://data/components/reactors/overdrive_bottle.tres",
+		5: "res://data/components/defense/aegis_composite.tres",
+		6: "res://data/components/defense/patchplate_armor.tres",
+		7: "res://data/components/systems/wayfarer_sensors.tres",
+	})
+
+
+## ---- V-SHRIKE ----
+## The Gap's owners. They do not raise comms; they hit, take, and destroy.
+## The FITS say it before any dialogue does: no shields and no sensors on either
+## hull — every slot that could have gone to surviving a fight or seeing one
+## coming went to the guns instead. They do not plan to be shot at, because they
+## do not plan to leave anyone able to shoot.
+static func vshrike_harrier() -> ShipBuild:
+	return _make("res://data/hulls/harrier.tres", {
+		0: "res://data/components/weapons/vk2_autocannon.tres",
+		1: "res://data/components/weapons/vk2_autocannon.tres",
+		2: "res://data/components/engines/afterjet_sprint.tres",
+		3: "res://data/components/reactors/hearth_fusion.tres",
+		4: "res://data/components/defense/patchplate_armor.tres",
+	})
+
+
+## The one that kills the convoy. Looted Overcharged Cell feeding looted lances —
+## the V-Shrike build nothing and take everything.
+static func vshrike_goshawk() -> ShipBuild:
+	return _make("res://data/hulls/goshawk.tres", {
+		0: "res://data/components/weapons/twinlance_pulse.tres",
+		1: "res://data/components/weapons/twinlance_pulse.tres",
+		2: "res://data/components/weapons/skeet_pd_array.tres",
+		3: "res://data/components/engines/afterjet_sprint.tres",
+		4: "res://data/components/reactors/overdrive_bottle.tres",
+		5: "res://data/components/defense/patchplate_armor.tres",
+		6: "res://data/components/defense/patchplate_armor.tres",
+	})
+
+
+## Every NPC build on the lane, by name — so a test can validate them all and a
+## spawner can pick one without hardcoding the roster twice.
+static func lane_builds() -> Dictionary:
+	return {
+		"lane_dray": lane_dray(),
+		"lane_bellwether": lane_bellwether(),
+		"escort_harrier": escort_harrier(),
+		"escort_goshawk": escort_goshawk(),
+		"vshrike_harrier": vshrike_harrier(),
+		"vshrike_goshawk": vshrike_goshawk(),
+	}
 
 
 static func _make(hull_path: String, fits: Dictionary) -> ShipBuild:
