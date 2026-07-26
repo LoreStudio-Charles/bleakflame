@@ -493,6 +493,32 @@ carry one weapon per type and swap between fights, which is tedious rather than 
 first customer for the *computer as a data tier* idea (§9.5) — reading a target's
 resistance profile should be a capability you buy.
 
+##### Type icons (user, 2026-07-26)
+
+Damage type shows as an **icon on the weapon tooltip**:
+
+| Type | Icon | Colour |
+|---|---|---|
+| **Impact** | bullet | **steel / pale grey** — see note |
+| **Heat** | flame | orange |
+| **Antimatter** | vortex | dark blue |
+| **Radiation** | radio wave | purple |
+
+**These are SHAPE-distinct, not merely colour-distinct**, which satisfies the project's
+standing colourblind rule (`grades.gd`: colours always pair with a second channel). Dark
+blue and purple sit close on the wheel, but a spiral against concentric arcs reads
+regardless of how they are perceived. Keep that property if the set ever grows.
+
+**Impact is NOT pure black.** Every panel in the game is a dark `UiTheme` surface, so a
+black icon is nearly invisible on it. Steel/pale grey, or black with a light outline.
+
+**Show the icon AND the name** in the tooltip body. An icon alone is unlearnable the first
+time it is seen, and the tooltip is exactly where the player is doing that learning.
+
+**Drop-in art**, matching the existing convention (`assets/icons/components/`,
+`assets/icons/materials/`): `assets/icons/damage/<type>.png`, resolved by name with a
+procedural fallback, so art lands with no code change.
+
 #### Range
 
 ```
@@ -563,8 +589,14 @@ What follows from that:
   mode.
 - **A rung at every level and grade, available to anyone.** If accessible play requires
   one commission, or only exists on a Mk3 gun, it is not accessibility — it is a build.
-- **Damage ceiling on par with assisted projectile**, so the choice costs nothing but the
-  ceiling that practice would have raised.
+- **Slightly less damage than the skill classes — and the gap must live in the CEILING,
+  not the baseline.** The user's framing: an FCS player should *never feel punished*, while
+  a high-skill player feels *slightly rewarded*. Those are the same numbers with opposite
+  feelings. If the gap is baked into the baseline, FCS reads as a permanent tax on people
+  who need it; if it is what practice unlocks on top, FCS feels complete and the skilled
+  player feels earned. **Build it as a ceiling.**
+- **It leans heavily on Gunnery**, which is the skill that replaces the reflexes — so the
+  progression path is real and investable rather than a flat handout.
 
 Note this does **not** conflict with "evasion is a deterministic profile shrink, not an
 RNG miss" — that rule governs *evasion*, which continues to work exactly that way for the
