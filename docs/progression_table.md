@@ -18,7 +18,10 @@ tables drift the moment anyone rebalances, and a table that disagrees with its n
 is worse than no table at all.
 
 Columns, in order: `level`, `level_factor`, `hull_*` (5 size bands), then Mk I–V blocks of
-`shield_hp`, `shield_regen`, `armor_hp`, `armor_dr`, `dps`, `dot_dps`.
+`shield_hp`, `shield_regen`, `ablative_cap`, `armor_dr`, `dps`, `dot_dps`.
+
+(`ablative_cap` was `armor_hp` until 2026-07-26. Armor stopped being a pool; the column
+survives as the capacity of **ablative** plate — see §4.)
 
 This file is the *reasoning*; the CSVs are the arithmetic. Every number below was read back
 out of the generated files rather than computed by hand, so the two cannot disagree.
@@ -241,19 +244,34 @@ armor and hull irrelevant, because `SHIELD_REGEN_DELAY` is a fixed 2.5s that doe
 
 ---
 
-## 4. Armor — value and DR
+## 4. Armor — DR only, plus ablative capacity
 
-Base by mark, at **L1, Standard**:
+**Revised 2026-07-26: armor has no hit-point pool.** Armor is DR and nothing else. A pool
+that *also* mitigates grows on two axes while every other layer grows on one, which quietly
+makes armor the only layer worth fitting — the trap is written up in `combat_space.md` §9.9.
+Dropping the pool resolves it structurally instead of by capping the curve.
+
+So armor scales on **exactly one thing**, like everything else: the DR curve below.
+
+### ABLATIVE CAPACITY — the one pool left on this layer
+
+Ablative plate (`armor_and_penetration.md` §2) trades permanence for strength: +10% DR,
+consumed in proportion to the damage it *prevented*. How much prevented damage it holds
+before its DR reaches zero is a pool, and scales like one. Base by mark, at **L1,
+Standard** — the old armor-HP anchor, same numbers, new meaning:
 
 | Mark | I | II | III | IV | V |
 |---|---|---|---|---|---|
-| Armor HP | **80** | 145 | 250 | 420 | 680 |
+| Ablative capacity | **80** | 145 | 250 | 420 | 680 |
 
-(Anchored on Bulwark Plating's 80.) Value scales exactly like a pool:
+(Anchored on Bulwark Plating's 80.)
 
 ```
-armor_hp = mark_base × level_factor × grade_factor
+ablative_cap = mark_base × level_factor × grade_factor
 ```
+
+This is the `ablative_cap_mk*` block in the CSVs (renamed from `armor_hp_mk*`). **Standard
+plate has no such column at all** — it never runs out.
 
 ### DR — the curve
 

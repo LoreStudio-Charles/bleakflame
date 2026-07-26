@@ -1,234 +1,243 @@
 # Armor as Mitigation — and the weapons that answer it
 
-**Designed with the user 2026-07-26. SPEC COMPLETE; NOT BUILT.** Every open question is
-answered — this is buildable as written, bar two small ordering points flagged in "The
-resolution order". Nothing here is implemented yet.
+**Designed with the user 2026-07-26. SPEC COMPLETE; NOT BUILT.**
+
+**Revised 2026-07-26 (second pass): ARMOR IS DR ONLY.** It is no longer a hit-point pool
+that also mitigates. The ablative feel returns as an armor *type* you can choose, not as
+the default behaviour of all plate.
 
 ---
 
-## The problem
+## The problem it solves
 
-Right now **armor is only extra HP**. `BuildShip.take_damage` is a flat cascade —
-shields absorb, then armor, then hull — so a point of armor and a point of hull are
-worth exactly the same, and "armored" is just "bigger". Nothing about a weapon cares
-what layer it is chewing through, so there is no such thing as a good anti-armor gun.
-
-## The rule
-
-**Armor also MITIGATES: it reduces the damage absorbed by the armor itself.**
-
-The mitigation is strictly layer-local, and that boundary is the whole design:
-
-| layer | armor DR applies? |
-|---|---|
-| shields | **no** |
-| armor | **YES** — only while the weapon is striking the armor itself |
-| hull | **no** |
-
-So a heavily-armored ship is not globally tougher. It is tougher *for exactly as long as
-its armor lasts*, and stripping the armor is a real objective rather than a formality.
-This also gives shields and armor genuinely different characters: shields are a
-regenerating pool, armor is an ablating wall that fights back.
-
-## Weapon attributes that answer armor
-
-Three ways for a weapon to be good against armor, each a different verb.
-
-### Heat (`#`)
-
-Weapons with Heat apply **stacks of Heat** on hit.
-
-- Each stack reduces the target's **armor DR by 10%**, capped at **80%**.
-- Armor carries a **heat dissipation rate** — usually **3**, meaning 3 seconds.
-
-Heat is the *sustained fire* answer: it rewards staying on target, and it decays if you
-break off. A slow heavy weapon will not heat anything; a fast-cycling one melts a wall
-open for whatever is shooting beside it. Good on a support gun.
-
-### Penetration (`#`)
-
-**The first `#` damage penetrates the armor; the rest lands on the armor.**
-
-Penetration is the *flat* answer, and it is strongest against thin or heavily-mitigating
-armor — a weapon with penetration 20 pays no attention to the first 20 points of wall
-regardless of how good that wall is. It scales badly against big pools, which keeps it
-from being universally correct.
-
-### HESH (`##%`)
-
-**Does `##%` more damage to armor.** Usually **30%**.
-
-The blunt answer: no cleverness, just a shell shaped to hurt plate. Weak against
-shields and hull, so carrying one is a real loadout commitment rather than a free
-upgrade.
+Today **armor is only extra HP**. `BuildShip.take_damage` is a flat cascade — shields
+absorb, then armor, then hull — so a point of armor and a point of hull are worth exactly
+the same, and "armored" is just "bigger". Nothing about a weapon cares what layer it is
+chewing through, so there is no such thing as a good anti-armor gun.
 
 ---
 
-## Resolved rules (user, 2026-07-26)
+## 1. The model
 
-### 1 — Heat dissipation is SECONDS PER POINT
+**Armor has no pool. Armor is a percentage.**
 
-`heat_dissipation` is how long one point of Heat takes to shed, so **lower is better
-armor**. At HD 1 the plate drops a point every second; at the usual HD 3 it drops one
-every three. Take 3 stacks against HD 1 armor and your reduction improves by 1 every
-second, all of it gone in 3.
+```
+1.  shields absorb first, UNREDUCED — they are energy, plating does not help them
+2.  whatever passes the shields is reduced by ARMOR DR
+3.  the remainder hits the HULL
+```
 
-It is a RAMP, not a cliff — break off and the wall cools gradually, so the pressure is
-to stay on target rather than to land one perfect burst.
+So armor **protects the hull** and never touches shields. Two pools (shield, hull) and one
+modifier (armor), instead of three pools pretending to be different from each other.
 
-### 2 — Penetration goes to the HULL
+**Why DR-only rather than pool-and-DR:** a pool that also mitigates is two systems doing
+one job, and it makes armor scale on two axes at once while everything else scales on one
+(see `combat_space.md` §9.9 — armor would quietly become the only layer worth fitting).
+DR-only is simpler, and it makes armor *reliable*: it is still working in minute three.
 
-The first `penetration` damage **hits the hull directly**. DR then reduces what is left,
-and the reduced remainder is absorbed by armor.
+### The DR curve
 
-So penetration hurts the ship through an intact wall. That is a strong claim, made on
-purpose: it is the answer to armor you cannot out-damage, and it scales badly against
-big pools, which stops it being universally correct.
+Both level and grade feed one rating, which flattens toward a hard cap so armor can never
+run away:
 
-### 3 — DR does NOT stack: you get the LOWEST
+```
+rating = level + grade_tier × 10 + mark × 5
+dr     = DR_CAP × rating / (rating + K)          DR_CAP 0.40,  K 40
+```
 
-With several plates fitted you get the **lowest DR of all of them** — because by Murphy's
-Law that is where the shot lands.
+≈5% at level 1 in Flotsam, ≈31% at level 60 in Exotic Mk V, hard-capped at 40%. Numbers
+and the full table in `docs/progression_table.md`.
 
-Elegant, and it does real work: mixing one cheap plate into a good suit actively hurts
-you, so armor is a matched set rather than a pile. It also removes any stacking-toward-
-immunity question.
+---
 
-### 4 — HESH is a separate, armor-only damage packet
+## 2. ABLATIVE PLATE — the type that trades permanence for strength
 
-- The `hesh_bonus` % is computed off base damage and applied **first**.
-- That bonus can **only ever damage armor**.
-- Against **shields** it does nothing — and it is *lost*, not deferred: even if the
-  shield breaks on that hit, the HESH portion does not carry through.
-- Against **hull** it is lost.
-- HESH damage **exceeding the armor pool is wasted** and does not spill into hull.
-- **DR reduces the HESH bonus and the base damage by the same percentage.**
-- Once the anti-armor portion resolves, the rest of the hit behaves normally.
+**+10% DR fresh, sliding to −5% spent** (user, 2026-07-26). It starts stronger than
+standard plate and fails as it protects.
 
-### 5 — Heat: 8 stacks, 80% hard cap
+```
+ABLATIVE_FRESH = +0.10
+ABLATIVE_SPENT = -0.05
 
-Stacks cap at **8**, and **80% is the hard ceiling** on DR reduction regardless.
+effective_dr = base_dr + lerp(ABLATIVE_SPENT, ABLATIVE_FRESH, integrity)
+```
 
-The per-stack magnitude is a WEAPON stat, not a constant — the usual 10% × 8 reaches the
-cap exactly, but a weak emitter applying 4% a stack tops out far short of it and simply
-cannot strip good armor. That is the intended texture: heat weapons have a *reach*, and
-only good ones reach the ceiling.
+Spent plate is **slightly worse than bare standard plate** — a spent shell still hanging on
+the hull, adding nothing and costing a little. Not a catastrophe: since base DR runs
+~5%–31%, a spent plate almost never goes net negative (only the absolute floor, L1 Flotsam
+Mk1 at 5.2% base, lands near zero), and a maxed suit barely notices (L60 Exotic Mk5:
+31.4% → **26.4%**).
 
-*(Tuning note, not a blocker: 8 stacks × 4% is 32%, where the sketch said 40%. Whether a
-weak weapon's ceiling is stack-count × magnitude, or its own authored ceiling, is a knob
-to settle when the numbers go in.)*
+> **THE CROSSOVER IS AT 33% INTEGRITY.** Ablative beats standard plate while
+> `lerp(−0.05, +0.10, t) > 0`, i.e. `t > 0.05/0.15` = **0.333** — so it is the better plate
+> for the **first two thirds of its capacity** and only falls behind in the last third.
+>
+> That is the number to judge it by in playtest, and it is a genuinely favourable trade:
+> you get the +10% for most of a fight and pay for it at the repair counter rather than in
+> the fight itself. **The repair bill is therefore doing most of the balancing work here** —
+> if ablative feels strictly better than standard plate, raise the integrity price before
+> touching these two constants.
+>
+> An earlier draft used −25%, which put the crossover at 71% and made ablative worse for
+> most of its life — a trap rather than a trade. Rejected for that reason. Note the knobs
+> are non-obvious: changing `ablative_capacity` moves how long the window lasts in *seconds*
+> and never moves the crossover.
 
-### 6 — Reporting is a GEAR TIER, not a given
+### It wears out BECAUSE it worked
 
-Whether the player can *see* Heat depends on the armor:
+**Integrity depletes in proportion to the damage it PREVENTED**, not the damage you took.
+A plate that saved you 400 damage has spent 400 of its capacity; a plate that was never
+shot at is untouched.
+
+That is causally satisfying in a way a generic durability counter is not — the plate is
+literally ablating away in proportion to how much it did for you. It also means the
+degradation curve needs no special shaping: heavy fights eat it fast, light ones barely
+mark it.
+
+`ablative_capacity` (how much *prevented* damage it holds) scales on both axes like any
+pool — see `progression_table.md`.
+
+### Who wants it
+
+This is the counterpart to the **mitigation affinities** in `combat_space.md` §9.9:
+
+| | wants | because |
+|---|---|---|
+| **Marine** (stacking DR) | **standard plate** | permanence — still there in minute three, which is the whole identity |
+| **A strike pilot** | **ablative** | alpha protection for a short decisive fight |
+
+Same slot, two philosophies, and the choice reads off the pilot rather than off a
+spreadsheet.
+
+### It costs more to repair — deliberately
+
+**Ablative plate is a RUNNING COST.** Restoring integrity is dearer than any other repair
+in the game, priced per point of integrity restored and scaled by the plate's grade and
+mark.
+
+That gives the economy something it currently lacks: **a defensive consumable.** Ordnance
+is the only sink today — guns cost nothing to run and defence costs nothing at all. This
+makes protection something you pay for every time it saves you, and it gives docking a job
+beyond being a save point (repair bills at 1c/pt hull and 0.5c/pt armor are currently
+background noise nobody notices).
+
+It also characterises the fitting economically: **ablative suits a pilot who wins fast, or
+one who is rich.** Grind out a long fight in it and you feel it at the counter.
+
+> **KEEP THE EXISTING GUARD.** `CLAUDE.md`: *"partial repairs if broke — never refused."*
+> That matters more here than anywhere else. Without it a broke pilot with spent plate
+> flies worse, takes more damage and earns less — and with DR-only armor a spent plate
+> means the mitigation is **gone**, not merely thinner.
+
+---
+
+## 3. The weapons that answer armor
+
+Three answers, and under the new model they divide cleanly into **two general and one
+specialist**.
+
+### Heat (`#`) — the sustained-fire answer
+
+Weapons with Heat apply **stacks** on hit; each strips **10% of armor DR**, capped at
+**80%** reduction. Armor sheds one point of Heat every `heat_dissipation` seconds — so
+**lower is better armor**, and the usual 3 means a point every three seconds.
+
+It is a **ramp, not a cliff**: break off and the wall cools gradually, so the pressure is
+to stay on target. Stacks cap at **8**, and the per-stack magnitude is a *weapon* stat — a
+weak emitter tops out far short of the ceiling and simply cannot strip good plate.
+
+**Works against both armor types.** Heat is the answer to *mitigation itself*.
+
+### Penetration (`#`) — the flat answer
+
+**The first `#` damage ignores DR entirely and lands on the hull.** The remainder is
+reduced normally.
+
+Strongest against *heavily-mitigating* armor and unmoved by how good the plate is, which
+makes it the answer to armor you cannot out-damage. It scales badly against big hull pools,
+which stops it being universally correct.
+
+**Works against both armor types.**
+
+### HESH (`##%`) — the anti-ABLATIVE specialist
+
+**HESH strips INTEGRITY**, at `##%` (usually 30%) above the rate ordinary damage would.
+
+Against **ablative plate** it is devastating: it collapses the thing that plate depends on,
+and a HESH loadout can strip a fresh ablative fit in a fraction of the fight it should have
+survived. Against **standard DR-only plate** it does nothing special — there is no
+integrity to attack.
+
+**That is deliberate.** HESH is a *counter-pick*, not a general upgrade: it beats a
+specific choice, and it is dead weight against the other. In a game where loadouts are
+visible, having a weapon that punishes a known fitting is better design than a third
+generic damage bonus — and it means ablative plate carries a real, learnable weakness
+rather than being strictly-better-when-fresh.
+
+---
+
+## 4. Reporting integrity is a GEAR TIER
+
+Whether you can *see* your remaining integrity depends on the armor:
 
 | armor | what it tells you |
 |---|---|
 | crappy | **nothing.** It does not report. |
-| good | carries sensors your computer can read and display |
-| great | adds a **hazard flash** and an **audible ping** |
+| good | feeds your computer a readout |
+| great | adds a **hazard flash** and an **audible ping** as it nears failure |
 
-And the computer gets swagger of its own: **the computer may limit what data your systems
-and modules can surface at all.** A great suit wired to a cheap computer still cannot
-tell you much.
+And the **computer may limit what any module can surface at all** — a great suit on a cheap
+computer still cannot tell you much.
 
-This is the same principle as sensor-gated role identification — information is a
-capability you buy, not a free HUD element — and it deserves its own spec, because it
-generalises past armor to every module that produces data. See below.
+**This is where that tier stops being a nice-to-have.** Not knowing how much ablative plate
+you have left is genuine tension: cheap plate leaves you guessing whether you can take one
+more pass, and finding out costs you the pass. Good plate turns that into information you
+bought.
+
+Same principle as sensor-gated role identification — information is a capability, not a
+free HUD element — and it generalises past armor to every module that produces data.
 
 ---
 
-## Adjacent system: the COMPUTER as a data tier
+## 5. Where it attaches
 
-Falls out of answer 6 and is worth building as its own thing.
+- **`BuildShip.take_damage`** — the cascade. Shields absorb unreduced; the remainder is
+  scaled by armor DR; the rest hits hull. `armor` as a pool goes away.
+- **`DefenseDef`** — gains `damage_reduction`, `heat_dissipation` (seconds per point, lower
+  is better), `ablative` (bool), `ablative_capacity`, and a `reporting` tier. `Kind.ARMOR`
+  and `Kind.COMPOSITE` use them — **which finally makes `DefenseDef.kind` a live stat**;
+  it is read by nothing today.
+- **`ShipStats`** — must keep armor as a *rating and a type*, not a summed pool.
+- **`WeaponDef`** — gains `heat`, `heat_per_stack`, `penetration`, `hesh_bonus`, all
+  defaulting to 0 so every existing weapon is unchanged and the system is opt-in per gun.
+- **Integrity** is per-ship state that decays only on use — no tick needed, unlike Heat.
+- **Dock repair** — a new, dearer line item for integrity.
 
-Modules *produce* data; the **computer decides how much of it reaches you**. That gives
-the long-unused `"computer"` tag a job, makes a cheap computer a real bottleneck on an
-expensive suit, and gives every future telemetry feature one consistent gate instead of
-each inventing its own.
+---
 
-It also sits naturally beside what already exists: `role_id_range` on sensors already
-gates *contact* identification the same way. Armor heat, ordnance counts, enemy energy
-state, module cooldowns — all the same question, asked once.
+## 6. Consequences elsewhere
 
-**Not specced yet.** Worth its own doc before any of it is built.
+**The ship/ground contrast inverts.** Both combat docs currently headline *"ship armor
+ABLATES, character armor MITIGATES."* Under this model **both mitigate**, and the honest
+framing becomes: *everything mitigates; ships can opt into ablative plate that trades
+permanence for strength.* The ground's **barrier** remains the pure ablating pool on that
+side.
 
-## The resolution order
+**`ShipStats` armor aggregation changes shape** — the per-plate rule (*you get the LOWEST
+DR of all fitted plates, because Murphy's Law says that is where the shot lands*) still
+holds, and still needs per-plate data rather than one summed number.
 
-Written out because every rule above is about *when* something applies, and prose hides
-ordering bugs that pseudocode cannot.
+---
 
-```
-on hit(base, weapon, target):
+## 7. Open
 
-    # HESH is computed up front, off BASE, and is a SEPARATE armor-only packet.
-    hesh = base * weapon.hesh_bonus
-
-    # --- SHIELD LAYER ---------------------------------------------------
-    # Shields know nothing about armor. No DR, no penetration, no HESH.
-    absorbed = min(target.shield, base)
-    target.shield -= absorbed
-    base         -= absorbed
-    if absorbed > 0:
-        hesh = 0        # HESH struck a shield: LOST, even if the shield broke
-
-    # --- ARMOR LAYER ----------------------------------------------------
-    # DR is the LOWEST of the fitted plates, softened by current Heat stacks.
-    dr = lowest_dr(target.armor_plates)
-    dr *= (1 - min(0.80, target.heat_stacks * weapon.heat_per_stack))
-
-    # Penetration bypasses the wall entirely and lands on the ship.
-    pen   = min(weapon.penetration, base)
-    base -= pen
-    target.hull -= pen
-
-    # Everything else is mitigated, then eaten by the plate.
-    to_armor      = base * (1 - dr)
-    hesh_to_armor = hesh * (1 - dr)          # same DR, same hit
-
-    armor_taken  = min(target.armor, to_armor + hesh_to_armor)
-    target.armor -= armor_taken
-
-    # BASE overflow carries to hull; HESH overflow is WASTED.
-    overflow    = max(0, to_armor - target.armor_before)
-    target.hull -= overflow
-
-    target.heat_stacks = min(8, target.heat_stacks + weapon.heat)
-```
-
-**One thing the spec does not state, flagged rather than guessed:** whether
-**penetration also bypasses SHIELDS**. The order above says no — shields absorb first,
-and penetration is an armor-layer interaction — which keeps shields as the clean outer
-answer and stops penetration being a universal solvent. If penetration should punch
-through a live shield too, that is a one-line move and a very different weapon.
-
-Second, smaller: whether **HESH overflow is wasted against the armor POOL or against
-what the plate can absorb this tick**. The order above uses the pool.
-
-## Where it attaches
-
-- `BuildShip.take_damage` — the cascade at the centre of it; today it is 10 lines with
-  no notion of which layer a hit is landing on.
-- `DefenseDef` — gains `damage_reduction`, `heat_dissipation` (SECONDS PER POINT, so
-  lower is better) and a `reporting` tier (none / readout / hazard-flash+ping). Only
-  `Kind.ARMOR` and `Kind.COMPOSITE` use them.
-- `WeaponDef` — gains `heat` (stacks applied per hit), `heat_per_stack` (the % of DR each
-  stack strips — a WEAPON stat, so weak emitters cannot reach the 80% ceiling),
-  `penetration` and `hesh_bonus`. All default to 0, so every existing weapon behaves
-  exactly as it does today and the system is opt-in per gun.
-- Heat is per-SHIP state with a decay timer, so it needs a tick — `BuildShip` already has
-  `tick_common`. Decay is one point per `heat_dissipation` seconds.
-- `lowest_dr()` needs the FITTED PLATES, not the summed pool: `ShipStats` aggregates
-  armor into one number today and would have to keep the per-plate DRs to find the
-  minimum.
-
-## Why it is worth doing
-
-It makes the existing arsenal mean something it currently does not. The Ferro Cutter is
-a sustained beam (Heat). The Bombard's fat warhead is blunt (HESH). The Aegis Lance is a
-precision instrument (Penetration). None of that needs new weapons — it needs the three
-numbers above filled in on the ones already shipped, which is the same trick the turret
-traverse pass pulled: a stat that turns a flat list into a set of answers.
-
-It also gives the Long Lane's freighters a reason to exist as targets. A Bellwether with
-a real armor belt is not a fat HP bar; it is a wall the V-Shrike need the right gun for.
+1. ~~Does spent ablative fall to zero DR, or to some floor?~~ **ANSWERED 2026-07-26: to
+   −5%** — a spent shell is slightly worse than bare plate, not a liability. Crossover at
+   33% integrity, so it is the better plate for two thirds of its life. See §2.
+2. **Repair pricing.** Dearer than everything else, scaled by grade and mark — the actual
+   numbers want setting alongside the rest of the economy.
+3. **Does anything restore integrity in the field?** A Science or Trader ability is the
+   obvious candidate, and it would give the support commissions a defensive job.
+4. **Heat vs ablative** — Heat strips DR, and ablative DR is already scaled by integrity.
+   The two multiply, so a hot *and* spent plate is worth almost nothing. That is probably
+   correct, but it is the harshest interaction in the system and wants watching.

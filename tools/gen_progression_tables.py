@@ -63,7 +63,10 @@ HULL_BAND = {             # doubles per band, matching the art-canvas budget
 }
 SHIELD_HP = [60, 110, 190, 320, 520]        # by mark I..V
 SHIELD_REGEN = [4.0, 5.4, 7.2, 9.6, 12.8]
-ARMOR_HP = [80, 145, 250, 420, 680]
+# Armor has NO POOL any more (2026-07-26) -- it is DR only. This column survives
+# as the capacity of ABLATIVE plate: how much PREVENTED damage it absorbs before
+# its integrity, and therefore its DR, reaches zero. Same anchor, new meaning.
+ABLATIVE_CAP = [80, 145, 250, 420, 680]
 WEAPON_DPS = [20, 34, 58, 98, 166]
 
 # Sub-linear exponents. Regen must NOT keep pace with the shield pool, or a
@@ -74,8 +77,9 @@ DOT_SCALE = 0.60          # recurring damage trades immediacy for total
 DOT_EXP = 0.80            # ...and scales more slowly too
 
 # --- armor DR: both axes through a flattening curve to a HARD cap ---------
-# DR multiplies the pool, so it can never be a straight multiplier or armor
-# outgrows every other layer. Marine affinity raises DR_CAP, never the rating.
+# DR is now ALL armor is, so the cap is the only thing standing between a
+# maxed fit and invulnerability. Marine affinity raises DR_CAP, never the rating
+# (the rating's far end is flat, so adding there would feel like nothing).
 DR_CAP = 0.40
 DR_K = 40.0
 
@@ -139,7 +143,7 @@ def headings():
     cols = ["level", "reachable_now", "level_factor", "xp_total", "xp_this_level",
             "group_min", "group_max"]
     cols += ["hull_" + b for b in HULL_BAND]
-    for prefix in ("shield_hp", "shield_regen", "armor_hp", "armor_dr", "dps", "dot_dps"):
+    for prefix in ("shield_hp", "shield_regen", "ablative_cap", "armor_dr", "dps", "dot_dps"):
         cols += ["%s_%s" % (prefix, m) for m in MARKS]
     return cols
 
@@ -158,7 +162,7 @@ def rows_for(grade_factor, grade_tier):
         row += [round(HULL_BAND[b] * pool) for b in HULL_BAND]
         row += [round(v * pool) for v in SHIELD_HP]
         row += [round(v * regen, 2) for v in SHIELD_REGEN]
-        row += [round(v * pool) for v in ARMOR_HP]
+        row += [round(v * pool) for v in ABLATIVE_CAP]
         row += [round(armor_dr(level, grade_tier, m) * 100, 1) for m in range(1, 6)]
         row += [round(v * pool, 1) for v in WEAPON_DPS]
         row += [round(v * dot, 1) for v in WEAPON_DPS]

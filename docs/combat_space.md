@@ -8,8 +8,10 @@ source. Status tags are load-bearing:
 - **DEAD** — exists on a schema but *nothing reads it*. Do not balance around these.
 
 For ground combat see `docs/combat_ground.md`. The two are deliberately separate systems
-and should not be reasoned about together — most notably, **ship armor ABLATES and
-character armor MITIGATES**.
+and should not be reasoned about together. **Both armors MITIGATE** (revised 2026-07-26 —
+armor is now DR-only on both sides); what differs is that a ship can *opt into* **ablative
+plate**, which trades permanence for strength, and the ground's ablating pool is the
+**barrier**, which is not armor at all.
 
 ---
 
@@ -298,10 +300,11 @@ decide an argument.
    a component nobody needs to buy. (This is what the `maxf(600, sensor_range)` floors
    were: sensing handed out free, which made the Tin-Ear set worthless.)
 
-2. **The layers are different MATERIALS, not one HP bar.** Shields regenerate and stop
-   everything. Armor ablates *and* mitigates, and can be answered by the right weapon.
-   Hull is the thing you are protecting. Rules are **layer-local** — armor's mitigation
-   never applies to shields or hull.
+2. **The layers are different MATERIALS, not one HP bar.** Shields are a pool that
+   regenerates and stops everything. **Armor is not a pool at all — it is mitigation**,
+   and it can be answered by the right weapon. Hull is the thing you are protecting.
+   The layer-local rule: **shields absorb unreduced; armor DR protects the hull.**
+   Plating does nothing for an energy screen.
 
 3. **Information is a capability you buy.** Detection, role identification, telemetry —
    all gear, all gated, and silence is the honest answer when you cannot tell. Never
@@ -348,21 +351,27 @@ more than the mechanism.
 
 The target, per `docs/armor_and_penetration.md` (spec complete, not built):
 
-| layer | mitigates? | ablates? | answered by |
+| layer | is a pool? | mitigates? | answered by |
 |---|---|---|---|
-| Shield | no | yes (pool) | anything; it is the clean outer answer |
-| **Armor** | **YES — layer-local DR** | yes (pool) | **Heat / Penetration / HESH** |
-| Hull | no | it *is* the ship | getting through the above |
+| Shield | **yes**, and it regenerates | no — absorbs unreduced | anything; it is the clean outer answer |
+| **Armor** | **NO** | **YES — DR on everything bound for the hull** | **Heat / Penetration** (and **HESH** vs ablative) |
+| Hull | it *is* the ship | no | getting through the above |
 
-So an armored ship is not globally tougher — it is tougher **for exactly as long as its
-armor lasts**, which makes stripping armor a real objective and gives shields and armor
-genuinely different characters.
+Two pools and one modifier, rather than three pools pretending to differ. An armored ship
+is not bigger — it is **reliably** harder to hurt, and stays that way in minute three.
+
+**ABLATIVE PLATE is the opt-in exception**: **+10% DR fresh, sliding to −5% spent**, with
+integrity consumed in proportion to the damage it *prevented*. Strength traded for
+permanence, and the only defence in the game with a running cost: restoring integrity is the
+dearest repair on the board. Crossover vs standard plate sits at **33% integrity**, so it is
+the better plate for two thirds of its life — which means **the repair bill, not the DR
+curve, is what balances it**. See `armor_and_penetration.md` §2.
 
 **This resurrects a currently-dead stat.** `DefenseDef.kind` is read by nothing today, and
 `ShipStats` collapses every plate into one `armor_hp` number. The spec's rule — *you get
 the LOWEST DR of all fitted plates, because Murphy's Law says that is where the shot
 lands* — needs **per-plate** data. So implementing armor means `kind` becomes live and
-`ShipStats` must keep the individual plates, not just their sum.
+`ShipStats` must keep the individual plates as **ratings and types**, not a summed pool.
 
 ### 9.4 Weapons declare their answers
 
@@ -582,16 +591,27 @@ Each defensive layer has exactly **one** answer, so nothing overlaps:
 |---|---|---|
 | **Impact** | nothing | the baseline |
 | **Heat** | makes armor easier *for everyone* | strips armor DR (armor spec) |
-| **HESH** *(weapon attribute)* | **armor** | +% damage to plate |
-| **Antimatter** | **hull** | 125% hull, 75% shields and armor |
+| **Penetration** *(weapon attribute)* | **armor** | the first `#` damage ignores DR entirely |
+| **HESH** *(weapon attribute)* | **ablative plate only** | strips **integrity** ~30% faster than ordinary damage |
+| **Antimatter** | **hull** | 125% hull, 75% shields; armor DR counts ×1.25 against it |
 | **Radiation** | **shields** | 125% shields, extended regen cut, Contamination |
 
 **Antimatter is the FINISHER**, not a generalist. An earlier draft had it at 125% against
 armor *and* hull with 75% against shields — but shields are the smallest pool, they
 regenerate, and plenty of ships (every V-Shrike build, `pirate_raider`) carry none at all.
 Its penalty would have barely existed while its bonus applied to everything that matters,
-making it the default pick. It also duplicated HESH, which already owns anti-armor. Paying
-75% against *both* outer layers gives it a real weakness and pairs it with Penetration.
+making it the default pick. Paying a penalty at *both* outer layers gives it a real
+weakness and pairs it with Penetration, which is what now owns general anti-armor.
+
+> **The armor multipliers had to be restated when armor lost its pool** (2026-07-26).
+> "75% effective against armor" has no meaning against a percentage — there is no plate
+> pool to be less effective on. It becomes a **DR modifier** instead: armor mitigates
+> *harder* against antimatter. Same intent, expressible under the new model.
+
+**HESH is the one deliberate counter-pick.** Every other answer here works against every
+target; HESH beats **ablative plate specifically** and is an ordinary weapon against
+standard plate. That is the price ablative pays for its +10%, and it is better design than
+a third generic anti-armor bonus — see `docs/armor_and_penetration.md` §3.
 
 Keep resistances **modest — around ±25%, not ×0/×2.** Strong resistances make players
 carry one weapon per type and swap between fights, which is tedious rather than tactical.
@@ -746,35 +766,42 @@ defences scale on neither collapses time-to-kill to nothing.
 | Layer | Properties that scale |
 |---|---|
 | **Shields** | value **and** regen |
-| **Armor** | value **and** DR |
+| **Armor** | **DR** (there is no armor value — revised 2026-07-26) |
 | **Hull** | value |
 
-#### BOTH axes drive BOTH properties (user, 2026-07-26)
+#### BOTH axes drive each layer (user, 2026-07-26)
 
-Level **and** grade improve each layer's numbers. One property per layer:
+Level **and** grade improve every layer. One property per layer:
 
 | Layer | Scales | The property it gets |
 |---|---|---|
 | **Shields** | value **+ regen** | regeneration — it comes back |
-| **Armor** | value **+ DR** | damage reduction — it mitigates |
+| **Armor** | **DR only** | damage reduction — it mitigates, and it never runs out |
 | **Hull** | value | **a bigger raw number**, and nothing else |
 
-**EACH LAYER IS INDEPENDENT.** Armor's DR applies to damage landing **on armor** and
-nowhere else — it does not touch shield numbers and it does not touch hull numbers. This is
-the layer-local rule from the armor spec restated, because it is the single easiest thing
-to get wrong when the numbers go in.
+**EACH LAYER IS INDEPENDENT.** Armor's DR reduces damage **bound for the hull** and nothing
+else — shields absorb unreduced, and DR never changes the hull's own number. This is the
+layer-local rule from the armor spec restated, because it is the single easiest thing to
+get wrong when the numbers go in.
 
-#### THE ONE REAL TRAP — pools may scale on both axes, DR may not
+**Ablative plate is the sole exception** and scales on a third quantity: its
+`ablative_capacity` — how much *prevented* damage it holds before its DR reaches zero — is
+a pool, and scales on both axes like one.
 
-The distinction that keeps this balanced:
+#### THE TRAP THIS AVOIDS — why armor lost its pool
+
+The original design gave armor a **value and DR both**, and that was the flaw:
 
 - **POOLS scale multiplicatively on both axes, safely.** A pool is a pool: doubling shield
   value doubles effective HP, and since weapons scale on level and quality too, offense and
   defence stay matched. Numbers get big; they stay proportionate.
-- **DR CANNOT, because DR multiplies the pool.** Armor value doubling *and* DR climbing
-  means effective armor durability grows on two axes at once while shields and hull grow on
-  one. Armor quietly becomes the only layer worth fitting, and every other defensive choice
-  stops mattering.
+- **A POOL THAT ALSO MITIGATES CANNOT, because DR multiplies the pool.** Armor value
+  doubling *and* DR climbing means effective armor durability grows on two axes at once
+  while shields and hull grow on one. Armor quietly becomes the only layer worth fitting,
+  and every other defensive choice stops mattering.
+
+**Dropping the pool resolves it structurally** rather than by capping the curve: armor
+scales on exactly one thing, like everything else. The cap (40%) stays as a second belt.
 
 **So DR takes both axes through a DIMINISHING CURVE TO A HARD CAP**, not a straight
 multiplier. Level and grade feed a single plating rating; the rating maps through a

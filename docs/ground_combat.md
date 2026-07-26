@@ -49,7 +49,12 @@ Derived v1 stats:
 
 ## Damage model — the one deliberate divergence (user)
 
-- **Ship armor ABLATES**: a pool that soaks and depletes (unchanged).
+- ~~**Ship armor ABLATES**: a pool that soaks and depletes.~~ **NO LONGER TRUE
+  (2026-07-26).** Ship armor became DR-only too, so this is not a divergence any more —
+  armor mitigates in both systems. See `docs/armor_and_penetration.md`. **Nothing on the
+  ground changes**; the ship side moved to meet it. The one asymmetry left is that a ship
+  may fit **ablative plate** (+10% DR that exhausts as it works); characters have no
+  equivalent, and should only get one if it earns its place on its own.
 - **Character armor MITIGATES**: worn plating REDUCES incoming damage and does not
   deplete. `taken = max(1, raw * (1 - mitigation))`, mitigation capped (~60%?) so
   nothing is unkillable. Barrier soaks before health; mitigation applies to what

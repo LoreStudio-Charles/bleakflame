@@ -10,10 +10,17 @@ source. Status tags:
 For space combat see `docs/combat_space.md`. **Keep the two apart.** The headline
 difference is deliberate:
 
-> **Ship armor ABLATES. Character armor MITIGATES.**
-> A ship's armor is a pool that gets chewed away. A character's armor is a percentage
-> that never depletes. The ablating pool on the ground is the **barrier**, and it is a
-> separate thing that plating does not protect.
+> **BOTH ARMORS MITIGATE. The ablating pool on each side is a different layer.**
+> Revised 2026-07-26: ship armor lost its hit-point pool and became DR-only, exactly like
+> character armor, so the old headline ("ship armor ABLATES, character armor MITIGATES")
+> is no longer true. Armor is a percentage in both systems. What ablates is the **shield**
+> in space and the **barrier** on the ground — and in both cases it is *energy*, which
+> plating does not protect.
+>
+> The real difference is now narrower and more interesting: **a ship can opt into
+> ABLATIVE PLATE** (+10% DR that exhausts as it works, and costs the most to repair —
+> `docs/armor_and_penetration.md` §2). There is no character equivalent, and if one is
+> ever wanted it should be argued for on its own merits rather than inherited.
 
 ---
 
