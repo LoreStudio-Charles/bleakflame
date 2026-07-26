@@ -75,7 +75,7 @@ Same pipeline, no `source` (so ramming never sets kill credit).
 | **Shield** | `DefenseDef.shield_hp`, summed | **Yes** — `shield_regen` hp/s, after 2.5s untouched | Zeroed every tick while Going Dark |
 | **Armor** | `DefenseDef.armor_hp`, summed | **No** — only `repair()` and Going Dark | Ablative only today |
 | **Hull** | `HullDef.hull_hp` **only** | No | Components never add hull |
-| **Evasion** | `Pilot.evasion()`, player only | — | See the coverage gap below |
+| **Evasion** | `Pilot.evasion()`, player only | — | Shrinks the **hit profile** for every weapon test |
 | **`_dmg_reduction`** | Bulwark only | — | The only multiplier |
 
 `repair()` fills **hull first**, then armor. **Never shields.**
@@ -123,20 +123,22 @@ effectively shortens a missile's reach.
 1. A collapsing pulse tail returns immediately — **it can no longer hit anything**.
 2. Homing steer (speed preserved, direction rotated).
 3. Move; decrement life. At life 0: detonate if it has a blast, else expire.
-4. **Proximity fuze** (blast weapons only): detonates within `blast × 0.7 + target radius`.
-   A point check at the current position — **no sweep, and evasion is ignored**.
+4. **Proximity fuze** (blast weapons only): detonates within
+   `blast × 0.7 + hit_profile_of(target)`. A point check at the current position — **no
+   sweep**, but evasion counts.
 5. **Swept segment test** against `prev → now`, so fast bolts cannot tunnel:
    ```
-   radius = target.hit_radius × (1 − evasion) + grace
+   radius = BuildShip.hit_profile_of(target) + grace     # = hit_radius × (1 − evasion)
    ```
-   **Evasion is a deterministic profile shrink, not a dodge roll.** `grace` is 5.0 for
-   player mounts, 0.0 for AI, plus the weapon's `hit_bonus`.
+   **Evasion is a deterministic profile shrink, not a dodge roll**, and all four weapon
+   tests share the same helper. `grace` is 5.0 for player mounts, 0.0 for AI, plus the
+   weapon's `hit_bonus`.
 6. Asteroids use the same sweep with **no evasion and no grace**, and block everyone's fire.
 
 ### Blast falloff — exact
 
 ```
-d = max(distance_to_target_centre − target.hit_radius, 0)      # surface distance
+d = max(distance_to_target_centre − hit_profile_of(target), 0)   # surface distance
 if d ≤ blast:  damage × lerp(1.0, blast_falloff, d / blast)
 ```
 
@@ -148,8 +150,9 @@ target group plus rocks, excluding the shooter.
 ### Beams
 
 Ray along the barrel, max `weapon_range`, nearest valid target wins, damage once per
-`fire_interval`. **Beams cannot miss once you are in the ray** — no evasion, no
-`hit_bonus`, no blast.
+`fire_interval`. **Beams cannot miss once you are in the ray** — but the ray tests against
+the evasion-shrunk profile, so an evasive target is a narrower ray to be in. No
+`hit_bonus` (that stays projectile-only) and no blast.
 
 ### Aim assist — player only
 
@@ -166,9 +169,10 @@ bends by up to `ASSIST_SNAP_DEG 7°` toward it. **AI never gets this.**
 - **A mount fires along its current rotation whether or not it has finished slewing.**
   There is no "out of arc, hold fire" check, so traverse lag causes real misses.
 
-> **Coverage gaps worth knowing:** `evasion` is read in exactly **one place** — the bolt
-> sweep. Beams, splash, the proximity fuze, collisions and every ability ignore it
-> entirely. `hit_bonus` likewise never reaches beams.
+> **Coverage:** evasion now applies to all four weapon tests — bolt sweep, proximity
+> fuze, beam ray and blast surface distance — via `hit_profile_of`. It deliberately does
+> NOT apply to collisions (physical), Cinderweb's bite (designed as unavoidable terror),
+> or abilities. `hit_bonus` still never reaches beams.
 
 ---
 
