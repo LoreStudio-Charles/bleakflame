@@ -33,21 +33,17 @@ func setup_vshrike(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT) -> voi
 	apply_widow_mark()
 
 
-## RARE AI SPECIALISTS REPAINT THE HULL to advertise themselves (AIShip tints a
-## mender green, a warden blue, a binder amber) so "kill the mender first" can be
-## learned before it acts rather than in hindsight. Good rule, bad fit here: it
-## fires on ~13% of eligible hulls, which would have spawned roughly one V-Shrike
-## in eight in GREEN — out of its own livery, on the one faction whose whole read
-## is a black hull and a single red mark.
+## NOTE ON SPECIALISTS. Rare AI specialists used to advertise themselves by
+## repainting the hull (mender green / warden blue / binder amber), which fired on
+## ~13% of eligible hulls and spawned roughly one V-Shrike in eight out of its own
+## livery. This class briefly carried a `_roll_specialty` override to paint the
+## black back on.
 ##
-## THE LIVERY WINS. A specialist stays legible through its on-use `_flash_note`
-## callout, which is the channel that survives; what is lost is the advance
-## warning. If that trade turns out to matter in play, the fix is to recolour the
-## HOURGLASS per specialty rather than the hull — same information, and the ship
-## stays black.
-func _roll_specialty() -> void:
-	super()
-	set_hull_tint(HULL_BLACK)
+## THAT OVERRIDE IS GONE because the cause is: role is SENSOR DATA now (user,
+## 2026-07-25 — Ship.classify + SystemDef.role_id_range), so nothing repaints a
+## hull to announce a role and hull colour means FACTION, exclusively. The guard
+## survives as a test rather than as code, since there is no longer anything to
+## guard against — only something to notice if it ever comes back.
 
 
 ## THE HOURGLASS — two triangles meeting at a waist, laid along the hull's spine

@@ -368,6 +368,26 @@ func _generate_components() -> void:
 	s.description = "Sees farther than you can run."
 	_save(s, "res://data/components/systems/wayfarer_sensors.tres")
 
+	# AUGUR SENSOR ARRAY — the first suite that IDENTIFIES A CONTACT'S ROLE
+	# (user, 2026-07-25): blue quality, level 10, so it is a capability you go and
+	# buy rather than something every hull gets free. Rare AI specialists used to
+	# advertise themselves by repainting their hulls, which gave the read away
+	# unconditionally AND collided with faction livery.
+	#
+	# It SEES further (2400) than it UNDERSTANDS (1800) on purpose: a contact
+	# appears at the rim of sensors and stays an unknown quantity until you close
+	# on it. That gap is the whole reason this is a range and not a flag.
+	s = SystemDefS.new()
+	s.display_name = "Augur Sensor Array"
+	s.grade = G.ADVANCED
+	s.level = 10
+	s.mark = 2; s.mass = 5.0; s.power_draw = 12.0
+	s.sensor_range = 2400.0
+	s.role_id_range = 1800.0
+	s.tags = PackedStringArray(["sensor"])
+	s.description = "A discriminating suite: it does not just find a ship, it reads the shape of what that ship is DOING — the repair rig, the shield projector, the tangle launcher. Knowing which one to kill first is worth more than the extra range."
+	_save(s, "res://data/components/systems/augur_sensor_array.tres")
+
 	s = SystemDefS.new()
 	s.display_name = "Strapdown Cargo Pod"
 	s.grade = G.SALVAGE

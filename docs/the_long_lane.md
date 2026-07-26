@@ -161,13 +161,32 @@ Two things that had to be got right, both sabotage-verified:
   when there is one and off the authored **silhouette** when there isn't. Written to the
   usual pattern it would have been correct, committed, and invisible on exactly the ships
   it was drawn for.
-- **A rare AI SPECIALIST is still black.** `AIShip._roll_specialty` repaints the hull
-  (mender green / warden blue / binder amber) so it can be identified before it acts, and
-  it runs *after* setup applies the faction tint — roughly one V-Shrike in eight spawned
-  out of its own livery. The livery wins; the specialist stays legible through its on-use
-  `_flash_note` callout. **What is lost is the advance warning**, and if that matters in
-  play the fix is to recolour the *hourglass* per specialty rather than the hull — same
-  information, ship stays black.
+- **A rare AI SPECIALIST is still black.** `AIShip._roll_specialty` used to repaint the
+  hull (mender green / warden blue / binder amber), and it ran *after* setup applied the
+  faction tint — roughly one V-Shrike in eight spawned out of its own livery. **That was
+  fixed at the root** rather than papered over here: role is sensor data now, so nothing
+  repaints a hull to announce a role and hull colour means faction, exclusively. See
+  below.
+
+### Role is sensor data, not paint (user, 2026-07-25)
+
+Advertising a specialist by hull colour was wrong twice: it collided with faction
+livery over the same channel, and it handed the read out for free.
+
+A contact's ROLE is now read by the **targeting computer** — `TARGET: Goshawk [MENDER]`,
+plus a classification ring inside the target bracket in the role's colour (the exact
+shades the hull used to wear: same information, new channel).
+
+It is a **capability you buy**: a suite that publishes `SystemDef.role_id_range`, which
+arrives at **ADVANCED (blue) grade, level 10+** — today the **Augur Sensor Array**. It
+*sees* 2400 and *understands* 1800, because detecting a ship and knowing what it does are
+different jobs; a contact at the rim of sensors stays an unknown quantity until you close
+on it. When it can't tell, the HUD says nothing — an unclassified contact must never read
+as a confirmed ordinary one.
+
+This also gave `ComponentDef` a **`level`** field (all items should carry one and
+eventually scale like hulls; the field is real where a capability gates on it, the stat
+scaling is not applied yet).
 
 ### The V-Shrike fits say it before any dialogue does
 

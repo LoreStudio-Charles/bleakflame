@@ -7,6 +7,19 @@ extends ComponentDef
 @export var tags: PackedStringArray = []
 @export var cargo_capacity := 0.0
 @export var sensor_range := 0.0
+## ROLE IDENTIFICATION (user, 2026-07-25) — how far this suite can read a
+## contact's ROLE (a rare AI specialist: mender / warden / binder), 0 = it can't.
+##
+## A SEPARATE, SHORTER REACH than `sensor_range` on purpose: detecting a ship and
+## understanding what it does are different jobs. A contact appears at the edge of
+## sensors and stays an unknown quantity until you close — which is the
+## interesting state, and it is why this is a range rather than a flag.
+##
+## THIS IS A CAPABILITY YOU BUY. Ordinary sensors leave it at 0; it arrives at
+## ADVANCED (blue) grade and level 10+, on the Augur Sensor Array. Role used to be
+## painted on every specialist's hull for free, which both gave it away
+## unconditionally and fought with faction livery for the same channel.
+@export var role_id_range := 0.0
 ## A profession id (Professions) that alone may FIT this system, or "" for
 ## anyone. Signature modules (cloak = "privateer") gate on the commission; the
 ## Armory refuses to fit it otherwise, visibly. Fitted gear keeps working if you
@@ -31,6 +44,8 @@ func stat_summary() -> String:
 		parts.append("+%.0f cargo hold" % cargo_capacity)
 	if sensor_range > 0.0:
 		parts.append("sensor range %.0f" % sensor_range)
+	if role_id_range > 0.0:
+		parts.append("identifies contact ROLE to %.0f" % role_id_range)
 	if has_tag("flight_decoupler"):
 		parts.append("unlocks Disconnected flight")
 	if not tags.is_empty():

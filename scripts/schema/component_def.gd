@@ -8,6 +8,12 @@ extends Resource
 @export_multiline var description := ""
 @export_range(1, 5) var mark := 1
 @export var grade := Grades.Grade.STANDARD
+## The same second axis HullDef carries: GRADE is quality, LEVEL is tier. A
+## high-level part can out-perform a physically larger one, so mark stops being
+## the only ladder. Mostly a display/authoring seam (nothing scales off it yet —
+## see docs/progression_table.md), but it is REAL where a capability is gated on
+## it: role identification needs a sensor at ADVANCED grade and level 10+.
+@export var level := 1
 @export var mass := 1.0
 @export var power_draw := 0.0            # reactors are the only producers
 ## Optional sprite drawn on the hull at the hardpoint (weapons, armor, engines).

@@ -19,6 +19,10 @@ static func aggregate(build: ShipBuild) -> Dictionary:
 		"armor_hp": 0.0,
 		"dps": 0.0,
 		"sensor_range": 0.0,
+		# How far a contact's ROLE can be read (a rare AI specialist). A SHORTER
+		# reach than sensor_range: seeing a ship and knowing what it does are
+		# different jobs. 0 = you cannot; it arrives on ADVANCED, level-10+ sensors.
+		"role_id_range": 0.0,
 		# Miner sensor: range at which mineable rock paints the radar. 0 by default;
 		# the Miner commission grants it (ship.apply_build), and gear may add later.
 		"ore_sense": 0.0,
@@ -46,6 +50,7 @@ static func aggregate(build: ShipBuild) -> Dictionary:
 		elif comp is SystemDef:
 			s.cargo += comp.cargo_capacity
 			s.sensor_range = maxf(s.sensor_range, comp.sensor_range)
+			s.role_id_range = maxf(s.role_id_range, comp.role_id_range)
 	# CHIPS in the Coupling carry their own mass and may ship hardware of their
 	# own (the Killshot coilgun's optics), so they aggregate too.
 	for chip in build.chips:
@@ -54,6 +59,9 @@ static func aggregate(build: ShipBuild) -> Dictionary:
 		s.mass += chip.mass
 		s.power_draw += chip.power_draw
 		s.sensor_range = maxf(s.sensor_range, chip.sensor_range)
+		# No role_id_range from chips: that stat lives on SystemDef (the sensor
+		# suite), and a chip is an AbilityChipDef. If a chip should ever grant
+		# role identification, give AbilityChipDef the field first.
 	s["accel"] = s.thrust / s.mass if s.mass > 0.0 else 0.0
 	s["power_margin"] = s.power_output - s.power_draw
 	return s

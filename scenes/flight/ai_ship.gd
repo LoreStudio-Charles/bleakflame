@@ -133,12 +133,30 @@ func _roll_specialty() -> void:
 	if stats.mass < SPECIALIST_MIN_MASS or randf() >= SPECIALIST_CHANCE:
 		return
 	specialty = [Specialty.MENDER, Specialty.WARDEN, Specialty.BINDER][randi() % 3]
-	# Wear it: a specialist must be identifiable BEFORE it acts, or the lesson
-	# ("kill the mender first") can only ever be learned in hindsight.
+	# A specialist is still identifiable BEFORE it acts — the lesson ("kill the
+	# mender first") has to be learnable in advance. It just is NOT advertised by
+	# repainting the hull any more (user, 2026-07-25).
+	#
+	# WHY THE HULL WAS THE WRONG CHANNEL: hull colour also carries FACTION, and
+	# the two fought. A rolled specialty overwrote the V-Shrike's black livery,
+	# spawning roughly one in eight out of its own colours. One channel cannot
+	# answer both "who are they" and "what does this one do".
+	#
+	# ROLE IS SENSOR DATA NOW — see Ship.classify(). Your targeting computer names
+	# it, and only when your sensors actually reach the mark, so a better sensor
+	# suite buys something concrete and the Kestrel's "Long Sight" means what it
+	# says. Hull colour goes back to meaning faction, exclusively.
+
+
+## The colour this role reads as on the TARGETING display — the classification
+## ring around a scanned mark. These are the shades the hull used to wear, kept
+## deliberately: the information is unchanged, only the channel moved.
+func specialty_color() -> Color:
 	match specialty:
-		Specialty.MENDER: set_hull_tint(Color(0.55, 0.86, 0.60))
-		Specialty.WARDEN: set_hull_tint(Color(0.55, 0.70, 0.95))
-		Specialty.BINDER: set_hull_tint(Color(0.86, 0.72, 0.42))
+		Specialty.MENDER: return Color(0.55, 0.86, 0.60)
+		Specialty.WARDEN: return Color(0.55, 0.70, 0.95)
+		Specialty.BINDER: return Color(0.86, 0.72, 0.42)
+	return Color.WHITE
 
 
 func specialty_name() -> String:

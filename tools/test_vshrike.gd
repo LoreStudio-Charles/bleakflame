@@ -17,6 +17,7 @@ func _ready() -> void:
 	_case_no_random_pirate_skin()
 	_case_mark_is_not_reapplied_twice()
 	_case_a_specialist_is_still_black()
+	_case_role_is_sensor_data_not_paint()
 
 	print("test_vshrike: %s" % ("ALL PASS" if _fails == 0 else "%d FAILURE(S)" % _fails))
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -134,3 +135,45 @@ func _case_a_specialist_is_still_black() -> void:
 			_fail("a %s V-Shrike is %s, not black — the specialist repaint escaped the livery" % [
 				s.specialty_name(), tint])
 	s.queue_free()
+
+
+## ROLE IS A CAPABILITY YOU BUY (user, 2026-07-25). Reading a contact's role takes
+## a sensor that publishes role_id_range — ADVANCED grade, level 10+ — and it is a
+## RANGE, so a distant contact stays an unknown quantity. Asserted through a real
+## TestShip because the gate has to hold where it is actually consulted.
+func _case_role_is_sensor_data_not_paint() -> void:
+	var mark := _raider(SampleBuilds.vshrike_goshawk())
+	mark.specialty = AIShip.Specialty.MENDER
+	mark.global_position = Vector2(400.0, 0.0)
+
+	var pilot := TestShip.new()
+	add_child(pilot)
+	pilot.apply_build(SampleBuilds.get_build(3))   # Rooster: stock Wayfarer sensors
+	pilot.global_position = Vector2.ZERO
+	if pilot.classify(mark) != "":
+		_fail("a stock sensor identified a role — the capability must be bought, not free")
+
+	# Fit the Augur array: same contact, now legible.
+	var augur := SampleBuilds.get_build(3)
+	augur.slots[5] = load("res://data/components/systems/augur_sensor_array.tres")
+	pilot.apply_build(augur)
+	if float(pilot.stats.get("role_id_range", 0.0)) <= 0.0:
+		_fail("the Augur array published no role_id_range — the stat never reached ShipStats")
+	elif pilot.classify(mark) != "Mender":
+		_fail("the Augur array could not identify a Mender at 400u, got '%s'" % pilot.classify(mark))
+
+	# Out past its reach it goes back to unknown — silence, not "ordinary".
+	mark.global_position = Vector2(9000.0, 0.0)
+	if pilot.classify(mark) != "":
+		_fail("role was identified far beyond role_id_range — the range gate does nothing")
+
+	# An ordinary ship never reports a role, however good the sensors.
+	var plain := _raider(SampleBuilds.vshrike_harrier())
+	plain.specialty = AIShip.Specialty.NONE
+	plain.global_position = Vector2(300.0, 0.0)
+	if pilot.classify(plain) != "":
+		_fail("a non-specialist reported a role")
+
+	mark.queue_free()
+	plain.queue_free()
+	pilot.queue_free()

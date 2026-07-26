@@ -1952,6 +1952,36 @@ func _on_death() -> void:
 		mount.set_physics_process(false)
 
 
+## SENSOR CLASSIFICATION (user, 2026-07-25) — the ROLE of a contact, or "" if
+## this ship cannot tell. Returns e.g. "Mender".
+##
+## Role used to be painted on the enemy's hull. It isn't any more, because hull
+## colour already carries FACTION and the two fought over the same channel — a
+## rolled specialty repainted V-Shrike out of their black livery. Role is SENSOR
+## DATA: your targeting computer reads it off the mark.
+##
+## IT IS A CAPABILITY YOU BUY, not a property of owning any sensor: it needs a
+## suite that publishes `role_id_range` (SystemDef), which arrives at ADVANCED
+## (blue) grade and level 10+ — today the Augur Sensor Array. A stock Wayfarer
+## sees plenty and understands nothing.
+##
+## And it is a RANGE, shorter than plain detection: a contact appears at the rim
+## of sensors and stays an unknown quantity until you close on it.
+##
+## Silence is the honest answer when you cannot tell — the HUD says nothing
+## rather than implying the target is ordinary.
+func classify(t: Node) -> String:
+	if t == null or not is_instance_valid(t) or not t.has_method("specialty_name"):
+		return ""
+	var role: String = t.specialty_name()
+	if role == "":
+		return ""
+	var reach := float(stats.get("role_id_range", 0.0))
+	if reach <= 0.0 or reach < global_position.distance_to(t.global_position):
+		return ""
+	return role
+
+
 ## Four rotating corner arcs bracketing the selected target, sized to it —
 ## plus the LEAD PIP: the point to fly the nose through so fixed guns connect.
 func _draw_target_marker() -> void:
@@ -1971,6 +2001,15 @@ func _draw_target_marker() -> void:
 	for i in 4:
 		var a := spin + TAU * i / 4.0
 		_target_marker.draw_arc(Vector2.ZERO, r, a, a + TAU * 0.14, 8, color, 1.6)
+
+	# CLASSIFICATION RING — a role read off the mark by a sensor suite that can
+	# do it, drawn INSIDE the corner arcs in the role's colour (the shades these
+	# specialists used to wear as hull paint; the information is unchanged, only
+	# the channel moved). A full ring rather than more arcs, so it never reads as
+	# part of the bracket itself.
+	if target.has_method("specialty_color") and classify(target) != "":
+		_target_marker.draw_arc(Vector2.ZERO, r * 0.82, 0.0, TAU, 28,
+			target.specialty_color(), 1.4)
 
 	# (The lead pip rides a ring around the SHIP, not the target — see _draw.)
 

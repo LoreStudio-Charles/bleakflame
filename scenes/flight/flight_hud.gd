@@ -473,6 +473,12 @@ func _target_text() -> String:
 		name_text = "Station"
 	# Range is targeting-computer data — it belongs right on the mark.
 	var rng := int(round(ship.global_position.distance_to(t.global_position)))
+	# ROLE is targeting-computer data too, and only if the sensor suite can read it
+	# (Ship.classify — needs an ADVANCED L10+ array). Nothing shows when it can't:
+	# an unclassified contact must not read as a confirmed ordinary one.
+	var role := ship.classify(t)
+	if role != "":
+		name_text += " [%s]" % role.to_upper()
 	var out := "TARGET: %s   %d u" % [name_text, rng]
 	if ship.scanning():
 		out += "\nSCANNING %d%%" % int(ship.scan_fraction() * 100.0)
