@@ -76,8 +76,21 @@ func _case_livery_on_an_art_hull() -> void:
 	var s := _raider(SampleBuilds.pirate_brawler())
 	if s._hull_sprite == null:
 		print("NOTE: Sparrowhawk art missing — sprite branch not exercised")
-	elif _mark_polys(s).size() != 2:
+		s.queue_free()
+		return
+	if _mark_polys(s).size() != 2:
 		_fail("art hull got %d hourglass polygons, want 2" % _mark_polys(s).size())
+
+	# THE MARK MUST SURVIVE THE TINT. `modulate` cascades to children and every
+	# decal is a child of the hull sprite, so tinting through it multiplied the
+	# hourglass by the hull black and rendered the faction's one point of red as
+	# effectively BLACK. Assert what actually reaches the screen: the mark's own
+	# colour times whatever the sprite multiplies its children by.
+	var bleed: Color = s._hull_sprite.modulate
+	for p in _mark_polys(s):
+		var on_screen := Color(p.color.r * bleed.r, p.color.g * bleed.g, p.color.b * bleed.b)
+		if on_screen.r < 0.5 or on_screen.r < on_screen.b * 3.0:
+			_fail("the hourglass renders as %s, not red — the hull tint is bleeding into its decals" % on_screen)
 	s.queue_free()
 
 

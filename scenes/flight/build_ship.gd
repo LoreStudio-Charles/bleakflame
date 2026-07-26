@@ -295,9 +295,23 @@ func _random_variant(hull_name: String) -> String:
 
 
 ## Tints the hull art (sprite modulate or polygon color, whichever is active).
+## SELF_MODULATE, NOT MODULATE (2026-07-25). `modulate` cascades to CHILDREN, and
+## every decal is a child of the hull sprite — the Guardian stripe, the livery
+## chevron, the V-Shrike hourglass. So tinting through `modulate` multiplied the
+## decals too, and the V-Shrike's red mark (0.80, 0.05, 0.09) times their black
+## hull (0.13, 0.12, 0.15) came out effectively BLACK: the single point of red
+## that is the entire faction read, erased by the tint meant to carry it.
+##
+## It was invisible until now only because no lane hull has art yet — the
+## silhouette path tints `_hull_visual.color`, which is a fill and does not
+## cascade. The bug would have appeared the day the PNGs dropped in.
+##
+## `self_modulate` colours this node alone, so decals keep their authored colour.
+## The cloak/stealth veil is unaffected: set_veil uses the SHIP's modulate, which
+## still cascades over hull and decals alike, which is what it wants.
 func set_hull_tint(tint: Color) -> void:
 	if _hull_sprite != null:
-		_hull_sprite.modulate = tint
+		_hull_sprite.self_modulate = tint
 	else:
 		_hull_visual.color = tint
 
