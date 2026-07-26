@@ -162,7 +162,7 @@ denied:
 The ladder is not a property of the item. **It is a function of what the item IS and who
 caught you with it.** Same cargo, different jurisdictions, completely different day:
 
-| | **Alien tech** (Warden, Drakhar) | **Weapons** | |
+| | **Alien tech** (Warden / Dhakar) | **Weapons** | |
 |---|---|---|---|
 | **Galean Navy** | **confiscation** — they *want* it | **annihilation** | |
 | **Isolationists** | **annihilation** | **annihilation** | |
@@ -185,20 +185,38 @@ caught you with it.** Same cargo, different jurisdictions, completely different 
 space it crosses** — which makes route choice a *political* decision rather than a
 navigational one, and gives the Long Lane's three bands a second meaning on top of danger.
 
-> **THE DRAKHAR — "the dark inversion of the Wardens" (user, 2026-07-26). NEW LORE, and
-> Saga-weight.** Not a misspelling of the **Threshers**, who are already banked in
-> `threats_wardens.md` as the swarm horror that converts worlds into hive — a different
-> flavour of dread entirely, described in *contrast* to the Wardens rather than as their
-> mirror.
->
-> This is a significant addition. The Wardens are the tragic-but-RIGHT jailers; an
-> inversion of them is a large claim about the Saga — jailers who are wrong, or who want
-> the Convergence, or who built the prison for another reason entirely.
->
-> **It belongs in `docs/the_convergence.md`, the declared source of truth for Saga
-> material, before it is leaned on here.** Contraband tiers can wait; "which alien tech"
-> turns out to matter, because the Navy's appetite for a given source is a
-> characterisation choice per source.
+### The two alien techs are NOT equivalent — Warden vs DHAKAR
+
+**The DHAKAR** (`the_convergence.md` §8, "the true final enemy") are the Wardens' **dark
+mirror** — the same crystalline space-folding tech, their sworn enemies, whatever the
+Wardens split from. **They want the Leviathans free.** Not nihilists: *power junkies*, who
+believe they can trap the Leviathans at the instant of Convergence and drink the dark
+matter forever.
+
+That makes the two techs mean completely different things to hold:
+
+| | What it is | What holding it says |
+|---|---|---|
+| **Warden relic** | the jailers' work | evidence of **the crime** — proof someone has been at the locks |
+| **Dhakar relic** | the enemy's work | evidence of **COLLABORATION** |
+
+**And that second row is not a metaphor.** §8 is explicit: the Wardens execute humanity
+*because they assume we are **Dhakar collaborators*** — "who else deliberately breaks four
+locks?" The entire genocide is a case of mistaken identity on exactly this point.
+
+So Dhakar contraband is not a customs matter. **It is the single piece of physical evidence
+for the charge the species is already being executed over.** Anyone who understands that —
+and by the late Saga, that is the Wardens, the Confederacy's intelligence arm, and the
+player — should treat it as the most dangerous object in the game.
+
+That also fixes the annihilation tier properly: the harshest penalty is not for *value* or
+even for *danger*, but for **implication**. The cargo that gets you annihilated is the
+cargo that makes you look like you are on the wrong side of an extinction event.
+
+> **Note on the name:** the user wrote "Drakhar"; the canon spelling is **DHAKAR**
+> (`the_convergence.md` §8, `threats_wardens.md`). Working alternates recorded there: the
+> Sundered, the Umbral, the Vhakar. Not to be confused with the **Threshers**, the banked
+> System-3 swarm horror — a different threat entirely.
 
 ### Alien tech is the annihilation tier — and the reason is the Convergence
 
@@ -287,8 +305,9 @@ has — worth tracking as the list grows rather than noticing at ten.
 5. **Does fitted contraband get confiscated, or does the whole ship?** Taking a fitted
    module is far harsher than taking cargo, and may be too harsh for a first offence —
    which is part of why the ladder escalates rather than jumping.
-6. **WHO ARE THE DRAKHAR?** Named as a second alien-tech source and otherwise undocumented.
-   Needed before contraband tiers can be authored.
+6. **Does Dhakar tech get its own tier above Warden tech?** They are not equivalent — see
+   above. Warden relics implicate you in the crime; Dhakar relics implicate you in
+   *collaboration*, which is the charge the Wardens are already executing humanity over.
 7. **Who are the isolationists?** Named here as the faction that annihilates for alien tech.
    No such faction exists in `Professions.LIST` or the lore docs yet — this may be the
    Quarn, may be a Galean political bloc, or may be new.
