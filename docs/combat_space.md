@@ -537,16 +537,45 @@ meaningless and nothing forbids it. **Make it an explicit `delivery` enum.**
 | **Assisted projectile** | Gunnery skill and tracking computers assist | mid | assist + `traverse_mult` exist |
 | **Tracking projectile** | tracking lives in the weapon, no skill needed | **lower** — the price of not aiming | `homing` exists |
 | **Hitscan** | instant hit, flash or beam as pure visual | **highest** — hardest to aim | `beam` exists |
-| **Die-roll** | hit or miss on **Gunnery alone**, no physical tracking | on par with assisted | **new** |
+| **Fire-control** | hit or miss on **Gunnery alone**, no physical tracking | on par with assisted | **new** |
 
-The die-roll class wants a fiction that justifies *not aiming* — designated fire,
-fire-control batteries, over-horizon work — so it reads as a different kind of weapon
-rather than an unreliable version of the others. **Show the miss**: a visible MISS is
-honest, a bolt silently passing through a target reads as a bug.
+#### Fire-control is an ACCESSIBILITY PATH — that is its purpose
+
+**The reason this class exists (user, 2026-07-26):** so that players with special needs,
+or who cannot make playing games a career and develop the reflexes to match, can still
+play — and specifically **play socially with friends**. It is not a weapon flavour. Treat
+every decision below as an accessibility requirement, not a balance knob.
+
+What follows from that:
+
+- **It looks like a normal weapon.** Fire-control still shows its projectile or beam. The
+  ship must not visually announce that this player is using a different system.
+- **A miss is shown by the SHOT GOING WIDE**, not by a "MISS" label. The information lands
+  either way; a clinical popup marks the player out and a bolt silently passing through a
+  hull reads as a bug. Show the round pass wide, or the beam splash off the plating.
+- **HIGH hit chance, LOW spread** — around 85–95% with Gunnery, not a swingy roll. This
+  matters far more in a group than solo: if your damage is a coin-flip while your friends'
+  is steady, you are *the unreliable one*, which is precisely the social experience the
+  option exists to prevent. It should feel like a steady weapon that occasionally misses.
+- **NEVER called "die-roll" in player-facing text.** In fiction it is **fire-control**:
+  the ship's computer aims and you designate. That fits the established targeting-computer
+  fiction, and someone choosing it should read a legitimate tech path rather than an easy
+  mode.
+- **A rung at every level and grade, available to anyone.** If accessible play requires
+  one commission, or only exists on a Mk3 gun, it is not accessibility — it is a build.
+- **Damage ceiling on par with assisted projectile**, so the choice costs nothing but the
+  ceiling that practice would have raised.
 
 Note this does **not** conflict with "evasion is a deterministic profile shrink, not an
 RNG miss" — that rule governs *evasion*, which continues to work exactly that way for the
-three physical classes. The die-roll class resolves on its own axis.
+three physical classes. Fire-control resolves on its own axis.
+
+**The wider audit.** The game already has an unusually low-reflex foundation: the mouse
+never aims weapons, nose-locked mounts make steering the aiming, targets are selected by
+RMB/TAB rather than tracked by hand, and creep-docking is always safe. The remaining
+twitch-dependent surfaces are **dodging incoming fire**, the **landing minigame's**
+velocity and angle checks, and **Hyperslide**. Fire-control is the biggest piece of the
+accessibility goal but not the whole of it — those three deserve the same pass.
 
 #### Open questions
 
