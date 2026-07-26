@@ -22,12 +22,110 @@ const HULL_BLACK := Color(0.13, 0.12, 0.15)
 ## a warning label, because it is one.
 const WIDOW_RED := Color(0.80, 0.05, 0.09)
 
+## A NAMED hunter's callsign ("Recluse"), or "" for the rank and file.
+##
+## THE NAME IS THE WHOLE VENGEANCE LOOP. A pilot killed by an anonymous black
+## fighter has been beaten by the game; a pilot killed by RECLUSE has been beaten
+## by somebody, and can go back for them. So the callsign is what the HUD shows on
+## the mark and what Nemesis keys the grudge to.
+##
+## A PAIR SHARES ONE CALLSIGN on purpose — Recluse hunts as two hulls and one
+## animal. Either one that kills you writes the same grudge, and killing either
+## settles it.
+var callsign := ""
+
+
+## Where the Navy's reach begins, published by flight_test (the AIShip.station_pos
+## pattern). Vector2.INF = nobody has said, so the navy term is simply skipped.
+static var navy_pos := Vector2.INF
+
+# --- THE RAIDER'S DOCTRINE (user, 2026-07-25) ---
+# Recluse is a COMMERCE RAIDER, not a duellist. It is on this road for cargo, and
+# it would rather take a fat hauler than win a fight. That single preference does
+# a lot of characterisation for free: the V-Shrike are here to TAKE, and combat is
+# just the toll.
+#
+# It also makes the Mule frightening to fly. A pilot who is the only cargo in the
+# lane IS the convoy, and gets hunted accordingly.
+const CARGO_WEIGHT := 1.5      # hold size is the whole appeal; bigger is better
+const ALONE_BONUS := 250.0     # anyone alone out here is worth taking, cargo or not
+const ESCORT_FEAR := 60.0      # per ally near the mark — a screen is a deterrent,
+                               # never a veto: a fat enough hauler is still worth it
+const NAVY_DREAD := 12000.0    # inside this of the Navy's reach, prey looks poisoned
+const NAVY_WEIGHT := 0.05
+const DISTANCE_COST := 0.02    # mild: it will cross the lane for a good enough mark
+## Allies this close to a mark count as its screen.
+const SCREEN_R := 1400.0
+
+
+## HOW A RAIDER RANKS A MARK. Pure and static so the doctrine can be tested
+## without a world: cargo is the draw, isolation is the opportunity, the Navy is
+## the deterrent, and distance is a tiebreak.
+##
+## Deliberately a SCORE and not a filter. "Only attack freighters" would make
+## Recluse ignore a lone fighter, and "anyone alone in the lane is in danger" is
+## the rule that keeps the whole road tense rather than just the cargo runs.
+static func rank_prey(cargo: float, allies_near: int, navy_dist: float,
+		my_dist: float) -> float:
+	var score := maxf(0.0, cargo) * CARGO_WEIGHT
+	if allies_near <= 0:
+		score += ALONE_BONUS
+	else:
+		score -= float(allies_near) * ESCORT_FEAR
+	if navy_dist < NAVY_DREAD:
+		score -= (NAVY_DREAD - navy_dist) * NAVY_WEIGHT
+	return score - maxf(0.0, my_dist) * DISTANCE_COST
+
+
+## Named hunters pick by doctrine; the rank and file keep the ordinary
+## nearest-target behaviour. A whole faction of fussy raiders would read as
+## broken AI rather than as character.
+func _pick_prey() -> BuildShip:
+	if callsign == "":
+		return super()
+	var best: BuildShip = null
+	var best_score := -INF
+	for node in get_tree().get_nodes_in_group("player_team"):
+		var bs := node as BuildShip
+		if bs == null or not _prey_valid(bs):
+			continue
+		var navy_d := INF
+		if navy_pos.is_finite():
+			navy_d = bs.global_position.distance_to(navy_pos)
+		var score := rank_prey(_hold_size(bs), _screen_around(bs), navy_d,
+			global_position.distance_to(bs.global_position))
+		if score > best_score:
+			best_score = score
+			best = bs
+	return best
+
+
+## How much this mark can be carrying — the reason to bother.
+func _hold_size(bs: BuildShip) -> float:
+	return float(bs.stats.get("cargo", 0.0)) if bs.stats != null else 0.0
+
+
+## Friendly hulls close enough to a mark to answer for it. The mark itself does
+## not count as its own escort.
+func _screen_around(bs: BuildShip) -> int:
+	var n := 0
+	for node in get_tree().get_nodes_in_group("player_team"):
+		var other := node as BuildShip
+		if other == null or other == bs or other.dead:
+			continue
+		if other.global_position.distance_to(bs.global_position) <= SCREEN_R:
+			n += 1
+	return n
+
+
 var _widow_mark: Node2D = null
 
 
 ## Stands up a V-Shrike raider: the pirate brain, the widow's colours, and the
-## refusal to talk.
-func setup_vshrike(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT) -> void:
+## refusal to talk. Pass a `name` to make it a named hunter.
+func setup_vshrike(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
+		name_tag: String = "") -> void:
+	callsign = name_tag
 	faction_livery = true      # keep off the shared rust-and-orange skin pool
 	setup(new_build, p_tactic, HULL_BLACK)
 	apply_widow_mark()

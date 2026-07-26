@@ -327,6 +327,30 @@ static func vshrike_goshawk() -> ShipBuild:
 	})
 
 
+## RECLUSE — the elite. A named hunting pair that works the stretch of road just
+## short of the Navy's leash, which is exactly where a pilot pushing for Orivel
+## thinks they have nearly made it. Everything the rank and file gave up for guns,
+## this one kept AND armed: a shield, real armor, and the Advanced lances.
+##
+## It is deliberately over-gunned for the lane band. Recluse is not a difficulty
+## step, it is a wall with a name — the thing that kills your first Orivel run and
+## gives you a reason to come back. See scripts/nemesis.gd.
+static func vshrike_goshawk_elite() -> ShipBuild:
+	return _make("res://data/hulls/goshawk.tres", {
+		0: "res://data/components/weapons/twinlance_pulse.tres",
+		1: "res://data/components/weapons/twinlance_pulse.tres",
+		2: "res://data/components/weapons/skeet_pd_array.tres",         # dorsal turret
+		3: "res://data/components/engines/afterjet_sprint.tres",
+		4: "res://data/components/reactors/overdrive_bottle.tres",      # Mk2 housing's ceiling
+		5: "res://data/components/defense/aegis_composite.tres",
+		6: "res://data/components/defense/veil_shield.tres",
+		# A HOLD, not sensors. Recluse is a commerce raider — it carries space for
+		# what it takes, which is the whole reason it is on this road. (It also
+		# drew the last 6 points of power the reactor did not have.)
+		7: "res://data/components/systems/strapdown_cargo_pod.tres",
+	})
+
+
 ## Every NPC build on the lane, by name — so a test can validate them all and a
 ## spawner can pick one without hardcoding the roster twice.
 static func lane_builds() -> Dictionary:
@@ -337,6 +361,7 @@ static func lane_builds() -> Dictionary:
 		"escort_goshawk": escort_goshawk(),
 		"vshrike_harrier": vshrike_harrier(),
 		"vshrike_goshawk": vshrike_goshawk(),
+		"vshrike_goshawk_elite": vshrike_goshawk_elite(),
 	}
 
 

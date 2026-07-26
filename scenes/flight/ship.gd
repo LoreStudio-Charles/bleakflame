@@ -1947,9 +1947,30 @@ func _normal_physics(delta: float) -> void:
 func _on_death() -> void:
 	cargo.clear()
 	commodities.clear()
+	_record_nemesis()
 	visible = false
 	for mount in _mounts:
 		mount.set_physics_process(false)
+
+
+## THE GAME REMEMBERS WHO KILLED YOU (scripts/nemesis.gd). Dying to an anonymous
+## black fighter is losing to the game; dying to RECLUSE is losing to somebody,
+## and somebody can be gone back for. So a death to a NAMED hunter opens a grudge
+## and writes it into the captain's log.
+##
+## Only named hunters count. An ordinary pirate killing you is just the lane being
+## the lane — handing every wasp a vendetta would make the one that matters
+## worthless.
+func _record_nemesis() -> void:
+	var killer := _last_attacker
+	if not is_instance_valid(killer):
+		return
+	var tag := str(killer.get("callsign")) if "callsign" in killer else ""
+	if tag == "":
+		return
+	var lvl: int = killer.level() if killer.has_method("level") else 0
+	Nemesis.record_defeat(tag, tag, lvl, Research.day)
+	Research.journal.append({"day": Research.day, "text": Nemesis.defeat_line(tag)})
 
 
 ## SENSOR CLASSIFICATION (user, 2026-07-25) — the ROLE of a contact, or "" if

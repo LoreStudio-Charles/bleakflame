@@ -1661,15 +1661,17 @@ func _respawn_guardian_later(kind: String, i: int) -> void:
 ## and the refusal to talk live in ONE place, not in every spawn site.
 func _spawn_vshrike(pos: Vector2, build: ShipBuild,
 		p_tactic: AIShip.Tactic = AIShip.Tactic.ORBIT,
-		route: Array[Vector2] = [], level: int = 0) -> VShrikeShip:
+		route: Array[Vector2] = [], level: int = 0, name_tag: String = "") -> VShrikeShip:
 	var raider := VShrikeShip.new()
 	raider.position = pos
 	add_child(raider)
 	raider.patrol_points = route
 	# BEFORE setup: apply_build is where the level scales the pools.
 	raider.spawn_level = level
-	raider.setup_vshrike(build, p_tactic)
+	raider.setup_vshrike(build, p_tactic, name_tag)
 	raider.died.connect(_grant_kill_xp.bind(raider, "brawler"))
+	if name_tag != "":
+		raider.died.connect(_on_named_hunter_died.bind(raider))
 	return raider
 
 
@@ -1704,6 +1706,12 @@ const ESCORT_LIVERY := Color(0.25, 0.70, 0.58)
 ## second way — the geography IS the difficulty curve, and a raider met deep in
 ## the Gap is genuinely worse than one met at its mouth. It is also the reason
 ## `spawn_level` was built relative: one Harrier .tres covers the whole span.
+## RECLUSE, the named elite pair. Its leg stops short of LANE_NAVY_LEG on purpose:
+## the Navy would gun it down, so it hunts the last unpatrolled ground before help.
+const RECLUSE := "Recluse"
+const RECLUSE_LEVEL := 25
+const RECLUSE_LEG := Vector2(0.55, 0.73)
+
 const LANE_LEVEL := Vector2(6, 15)     # the Long Lane's band
 const NAVY_LEVEL := Vector2(35, 40)    # the Navy's, at the capital end
 
@@ -1765,6 +1773,39 @@ func _spawn_long_lane() -> void:
 	var gap := _lane_leg(LANE_GAP_LEG.x, LANE_GAP_LEG.y, 3)
 	_spawn_gap_raider(SampleBuilds.vshrike_goshawk(), AIShip.Tactic.BOOM_ZOOM, gap, 0.40)
 	_spawn_gap_raider(SampleBuilds.vshrike_harrier(), AIShip.Tactic.ORBIT, gap, 0.60)
+
+	# RECLUSE — the named elite pair (docs/the_long_lane.md). Two Goshawks at
+	# LEVEL 25, far above the lane's band, hunting the stretch just SHORT of the
+	# Navy's leash: exactly where a pilot pushing for Orivel thinks they have
+	# nearly made it. You die within sight of safety, and you die to something
+	# with a NAME. That name is the whole point -- see scripts/nemesis.gd.
+	# Tell the raiders where the law starts, so their doctrine can steer around it.
+	VShrikeShip.navy_pos = _lane_point(LANE_NAVY_LEG.x)
+	var hunt := _lane_leg(RECLUSE_LEG.x, RECLUSE_LEG.y, 3)
+	for i in 2:
+		_spawn_vshrike(_lane_point(lerpf(RECLUSE_LEG.x, RECLUSE_LEG.y, 0.3 + 0.4 * i))
+			+ _jitter(600.0), SampleBuilds.vshrike_goshawk_elite(),
+			AIShip.Tactic.BOOM_ZOOM, hunt, RECLUSE_LEVEL, RECLUSE)
+
+
+## A named hunter died. If it owed you, the debt closes — loudly, because the
+## whole arc was built on you remembering it.
+##
+## Gated on killed_by_player: a Guardian or the Cinderweb finishing your nemesis
+## is NOT your revenge, and claiming it would be the game congratulating you for
+## someone else's work.
+func _on_named_hunter_died(raider: VShrikeShip) -> void:
+	if not is_instance_valid(raider) or raider.callsign == "":
+		return
+	if not raider.killed_by_player():
+		return
+	if not Nemesis.avenge(raider.callsign, Research.day):
+		return   # it never touched you; no debt, no ceremony
+	Research.journal.append({"day": Research.day,
+		"text": Nemesis.avenged_line(raider.callsign)})
+	if ship != null and is_instance_valid(ship):
+		ship._flash_note("✔ %s — DEBT PAID" % raider.callsign.to_upper())
+	Sfx.play("jingle")
 
 
 ## A hauler running the capital road. Same living-world rule as the short lanes:

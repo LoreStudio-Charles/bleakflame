@@ -235,6 +235,46 @@ This also gave `ComponentDef` a **`level`** field (all items should carry one an
 eventually scale like hulls; the field is real where a capability gates on it, the stat
 scaling is not applied yet).
 
+### RECLUSE — the named elite, and the vengeance hook (user, 2026-07-25)
+
+A brown recluse to pair with the black widow. **Two Goshawks at level 25**, sharing one
+callsign, hunting `t` 0.55–0.73 — the last unpatrolled ground *just short of the Navy's
+leash*, which is exactly where a pilot pushing for Orivel thinks they have nearly made
+it. You die within sight of safety.
+
+**The name is the whole mechanic.** Dying to an anonymous black fighter is losing to the
+game; dying to RECLUSE is losing to *somebody*, and somebody can be gone back for. So the
+callsign shows on the target readout before the fight, and `scripts/nemesis.gd` records
+the grudge after it: who, what level, how many times, persisted under save key `nemesis`
+and written into the captain's log in the pilot's own voice. Kill it later and the debt
+closes — loudly, but **only if it actually killed you**, and only by *your* guns. A
+Guardian finishing your nemesis is not your revenge.
+
+Built general, not one-off: any named hunter can take you, so two pilots tell different
+stories about the same road. Recluse is simply the first one placed. Repeat deaths deepen
+the grudge rather than replacing it, and a settled hunter that comes back and kills again
+re-opens it.
+
+**The raider's doctrine** (`VShrikeShip.rank_prey`, pure and static). Recluse is a
+commerce raider, not a duellist — it scores marks rather than taking the nearest:
+
+- **cargo is the draw**, and bigger is better (Bellwether ≫ Dray ≫ Mule)
+- **isolation is the opportunity** — anyone alone on this road is worth taking, cargo or
+  not, which is what keeps the whole lane tense rather than only the freight runs
+- **the Navy is the deterrent** — a mark near the law is poisoned, and that outweighs
+  cargo: a Bellwether under the Navy's guns rates below a Mule in open road
+- **a screen deters, never vetoes** — a fat enough hauler is still worth the escort,
+  which is what lets the convoy set-piece happen at all
+
+So a player alone in a Mule *is* the convoy, and gets hunted accordingly. Rank-and-file
+V-Shrike keep ordinary nearest-target behaviour; a whole faction of fussy raiders would
+read as broken AI rather than as character.
+
+`tools/test_nemesis.tscn` asserts each of those rules as its own case, plus the grudge
+lifecycle and its save round-trip. Sabotage-verified four ways — zeroing cargo weight,
+zeroing the Navy dread, zeroing the isolation bonus, and turning the escort penalty into
+a veto each fail a different assertion.
+
 ### The V-Shrike fits say it before any dialogue does
 
 `vshrike_harrier` and `vshrike_goshawk` carry **no shields and no sensors**. Every slot

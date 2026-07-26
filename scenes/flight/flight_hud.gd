@@ -463,6 +463,12 @@ func _target_text() -> String:
 	var name_text := "contact"
 	if t is BuildShip and t.build != null:
 		name_text = t.build.hull.display_name
+		# A NAMED hunter reads by its callsign, not its hull class. The name is
+		# what makes a death personal enough to come back from (Nemesis), so it
+		# has to be on the mark before the fight, not only in the log after it.
+		var tag := str(t.get("callsign")) if "callsign" in t else ""
+		if tag != "":
+			name_text = "%s  «%s»" % [tag, name_text]
 	elif t is MineableAsteroid:
 		name_text = "Asteroid — " + (t.survey_text() if t.surveyed else "unsurveyed")
 	elif t is TargetDrone:

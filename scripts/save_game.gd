@@ -57,6 +57,7 @@ static func save_game(ship: TestShip) -> void:
 		"tracker": MissionTracker.to_dict(),
 		"research": Research.to_dict(),
 		"quests": Quests.to_dict(),
+		"nemesis": Nemesis.to_dict(),
 		"pilot": Pilot.to_dict(),
 		"comms": Comms.to_dict(),
 		"standing": Standing.to_dict(),
@@ -131,6 +132,7 @@ static func load_game() -> void:
 	MissionTracker.from_dict(data.get("tracker", {}))
 	Research.from_dict(data.get("research", {}))
 	Quests.from_dict(data.get("quests", {}))
+	Nemesis.from_dict(data.get("nemesis", {}))
 	# Pre-pilot saves: mark created with defaults, or veterans would be
 	# marched through registration they never signed up for.
 	if data.has("pilot"):
