@@ -749,57 +749,66 @@ defences scale on neither collapses time-to-kill to nothing.
 | **Armor** | value **and** DR |
 | **Hull** | value |
 
-#### The split worth making: LEVEL makes it BIGGER, QUALITY makes it BETTER
+#### BOTH axes drive BOTH properties (user, 2026-07-26)
 
-A suggestion rather than a decision, but it does a lot of work:
+Level **and** grade improve each layer's numbers. One property per layer:
 
-| Axis | Governs | Shields | Armor | Hull |
-|---|---|---|---|---|
-| **Level** | size — the pool | shield HP | armor HP | hull HP |
-| **Quality** | character — the qualitative property | **regen rate** | **DR** | — |
+| Layer | Scales | The property it gets |
+|---|---|---|
+| **Shields** | value **+ regen** | regeneration — it comes back |
+| **Armor** | value **+ DR** | damage reduction — it mitigates |
+| **Hull** | value | **a bigger raw number**, and nothing else |
 
-Why it is worth it:
+**EACH LAYER IS INDEPENDENT.** Armor's DR applies to damage landing **on armor** and
+nowhere else — it does not touch shield numbers and it does not touch hull numbers. This is
+the layer-local rule from the armor spec restated, because it is the single easiest thing
+to get wrong when the numbers go in.
 
-- **It gives GRADE its own identity** instead of "more of the same". A high-level Flotsam
-  plate is a big, crude wall; a low-level Exotic plate is small but excellent. That is a
-  genuine choice rather than a strict ladder, and it makes the grade ladder legible on
-  sight.
-- **It matches what already exists in the world.** The Long Lane's hulls are STANDARD while
-  the rim flies SALVAGE — a distinction that is currently pure flavour and would become
-  mechanical for free.
-- **It reinforces the armor spec's lowest-DR rule.** If DR rides quality, mixing one cheap
-  plate into a good suit is punished exactly as intended, and for a legible reason.
+#### THE ONE REAL TRAP — pools may scale on both axes, DR may not
 
-#### TRAP 1 — DR and value both scaling is QUADRATIC
+The distinction that keeps this balanced:
 
-Pool growth is linear. **DR growth is multiplicative on effective HP.** If armor's value
-doubles and its DR climbs 10% → 50% across a career, effective armor durability grows far
-faster than shields or hull, and armor quietly becomes the only layer worth fitting.
+- **POOLS scale multiplicatively on both axes, safely.** A pool is a pool: doubling shield
+  value doubles effective HP, and since weapons scale on level and quality too, offense and
+  defence stay matched. Numbers get big; they stay proportionate.
+- **DR CANNOT, because DR multiplies the pool.** Armor value doubling *and* DR climbing
+  means effective armor durability grows on two axes at once while shields and hull grow on
+  one. Armor quietly becomes the only layer worth fitting, and every other defensive choice
+  stops mattering.
 
-**DR must scale much more slowly than value, and hard-cap.** A whole-game range of roughly
-5% → 35% is the shape; the pool can grow normally underneath it. Under the level/quality
-split above this happens naturally, since DR only advances through the seven grade tiers
-rather than sixty levels.
+**So DR takes both axes through a DIMINISHING CURVE TO A HARD CAP**, not a straight
+multiplier. Level and grade feed a single plating rating; the rating maps through a
+flattening curve:
 
-#### TRAP 2 — shield regen outrunning the fixed delay
+```
+dr = DR_CAP * rating / (rating + K)
+```
 
-`SHIELD_REGEN_DELAY` is a flat **2.5s** and is not proposed to scale. If regen scales
-aggressively, high-tier shields refill fully in the first quiet moment, and **armor and
-hull stop mattering** because nothing ever gets through the outer layer.
+- Both axes contribute, as intended.
+- Early rating is worth much more than late rating.
+- **It can approach the cap and never exceed it**, at any level or grade.
+- A whole-game range of roughly **5% → 35%**, hard-capped well under 50%.
 
-**Regen should scale conservatively relative to value.** A bigger shield that refills at a
-similar rate is a straightforwardly better shield; a bigger shield that *also* refills
-proportionally faster is a different, much stronger thing.
+**Shield regen wants the same treatment for the same reason** — it is a *rate*, not a pool,
+and `SHIELD_REGEN_DELAY` is a fixed 2.5s that is not proposed to scale. Regen scaling
+multiplicatively on both axes means high-tier shields refill completely in the first quiet
+moment, and armor and hull stop mattering because nothing ever reaches them. Regen scales
+**sub-linearly relative to value**: a bigger shield that refills at a similar rate is
+straightforwardly better; one that also refills proportionally faster is a different and
+much stronger thing.
+
+**Hull is the clean case.** Value only, both axes, no curve needed — nothing multiplies it,
+so it can simply grow.
 
 (Radiation's extended regen cut gets proportionally more valuable as regen scales, which is
 a good pressure and needs no special handling.)
 
 #### Hull stays plain — deliberately
 
-Hull scales on value alone and gains no second property. That is the point: **hull is the
+Hull scales on value and gains **no second property**. That is the point: **hull is the
 thing you are protecting**, and its featurelessness is what makes shields and armor
 interesting to reason about. Resist giving it innate DR or a regen trickle; each would blur
-a layer that earns its place by being simple.
+a layer that earns its place by being simple, and DR in particular belongs to armor alone.
 
 #### What does NOT scale here
 
