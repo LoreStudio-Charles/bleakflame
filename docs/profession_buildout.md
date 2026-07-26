@@ -298,7 +298,15 @@ player. Everything after it depends on what the pass decides.
 
 **Bounty Hunter** (7th), **Marine** (8th, heavy-armour warrior at Orivel) and now a
 possible **Medical Officer** (9th, the dedicated healer — see Science above) are designed or
-seeded but absent from `Professions.LIST`. The Marine's note is explicit
+seeded but absent from `Professions.LIST`.
+
+**MITIGATION AFFINITIES (user, 2026-07-26)** — some commissions do better with a particular
+defensive layer, so a profession changes *which build is correct*. **Marine: stacking
+natural DR**, favouring heavy armor and minimal shields. **Science Officer: shield-only
+mitigation**, so their shields hold far longer and nothing helps their other layers. Full
+treatment in `docs/combat_space.md` §9.9, including why this finally distinguishes the
+Marine from the Guardian — Guardian DR is **active and burst** (Bulwark, on a cooldown),
+Marine DR is **passive and stacking**. Same resource, opposite cadence, not confusable. The Marine's note is explicit
 that it must not be "Guardian with bigger numbers" — worth re-reading before either is
 started, and neither should begin before the tutorial line through Epharon and the Gate is
 verified.

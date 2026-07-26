@@ -803,6 +803,57 @@ so it can simply grow.
 (Radiation's extended regen cut gets proportionally more valuable as regen scales, which is
 a good pressure and needs no special handling.)
 
+#### Professions have MITIGATION AFFINITIES (user, 2026-07-26)
+
+Some commissions do better with a particular layer, so **a profession changes which BUILD
+is correct** rather than just adding numbers to whatever you were flying. That is the point
+of the affinity: two pilots of different commissions should be fitted differently, and be
+recognisable for it.
+
+| Commission | Affinity | The build it implies |
+|---|---|---|
+| **Marine** *(banked)* | **stacking natural DR** | heavy armor, **minimal or no shields** |
+| **Science Officer** | **shield-only mitigation** | shields stay up far longer; **nothing helps their other layers** |
+
+##### Marine — raise the CAP, do not stack past it
+
+Stacking DR runs straight into the hard cap that exists to stop armor dominating every
+other defensive choice. Two readings, and they are very different:
+
+- Marine DR **adds to the rating** → it climbs the same diminishing curve and quietly does
+  very little at the top, which will feel like a broken perk.
+- Marine DR **raises the CAP** → the curve keeps its shape, and a Marine's ceiling is
+  genuinely higher than anyone else's (say 35% → 50%).
+
+**Recommend raising the cap.** It gives the Marine a real, legible ceiling advantage without
+creating a second stacking system beside the first.
+
+**If it stacks DURING combat** — the longer they hold, the tougher they get — that is very
+Marine, and it produces counter-play for free: **Heat strips armor DR**, so a Heat weapon is
+the answer to a dug-in Marine. Worth building on purpose rather than discovering.
+
+##### Science — this is a deliberate EXCEPTION to "shields do not mitigate"
+
+Everywhere else in this document, shields are a pure pool: they absorb and regenerate, and
+mitigation belongs to armor. **Science Officers are the exception**, and it should be
+written as one rather than left to read as a contradiction: a shield-only DR that helps
+their outer layer and *nothing else*.
+
+The inversion is the appeal — armor mitigates for everyone, shields mitigate only for
+Science — and it means a Science ship is genuinely built the other way round from a Marine.
+
+##### Why this answers the Marine's oldest risk
+
+The Marine was banked with an explicit warning: *it must not be "Guardian with bigger
+numbers"*. Affinity settles that. **Guardian's DR is ACTIVE and BURST** — Bulwark, on
+demand, on a cooldown, currently the only `_dmg_reduction` source in the game. **Marine's is
+PASSIVE and STACKING.** Same resource, opposite cadence: one is a button you press at the
+right moment, the other is a wall that thickens while you stand in it. They are not
+confusable.
+
+Not every commission needs an affinity, and hull deliberately has none — nobody specialises
+in the layer that is just "the ship".
+
 #### Hull stays plain — deliberately
 
 Hull scales on value and gains **no second property**. That is the point: **hull is the
