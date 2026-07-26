@@ -146,7 +146,12 @@ func _think(delta: float) -> void:
 
 	# PACK COURAGE: alone it hangs back at the edge of its notice range and chitters;
 	# with a packmate nearby it commits.
-	if not _pack_near() and global_position.distance_to(prey.global_position) > 150.0:
+	# PACK COURAGE — but a CORNERED scrit has no hesitation to spend. This is the ground
+	# echo of a SPACE rule (a lone hunter hangs back until the odds improve), and it does
+	# not belong in a sealed room: the last survivor of the cave pack simply refused to
+	# close (playtest: "one of the Scrit didn't attack"). Trapped means committed — the
+	# same flag that stops it fleeing stops it dithering.
+	if not cornered and not _pack_near() 			and global_position.distance_to(prey.global_position) > 150.0:
 		auto_attack = false
 		move_to(home.lerp(prey.global_position, 0.35))
 		return

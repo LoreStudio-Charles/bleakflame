@@ -114,6 +114,25 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	_chk(not caged.auto_attack, "the SAME scrit routs the moment it has somewhere to run")
 
+	# A CORNERED scrit also does not DITHER. Pack courage makes a lone scavenger hang back
+	# until the odds improve — a space-combat instinct that has no business in a sealed
+	# room, where it left the last survivor circling out of reach instead of finishing the
+	# fight. Alone, far from its prey, cornered: it must still come.
+	var solo := Scrit.new()
+	add_child(solo)
+	solo.setup_scrit(Vector2(13000, 13000))
+	solo.cornered = true
+	var lone_prey := GroundCharacter.new()
+	lone_prey.setup("res://assets/characters/PilotM")
+	add_child(lone_prey)
+	lone_prey.team = "player_team"
+	lone_prey.add_to_group("player_walker")
+	lone_prey.global_position = Vector2(13000, 13300)   # 300 out: past the courage cutoff
+	for _i in 10:
+		await get_tree().physics_frame
+	_chk(solo.auto_attack and solo.combat_target == lone_prey,
+		"a lone CORNERED scrit commits instead of hanging back")
+
 	# ---- 5) THE TOWN IS SANCTUARY ----
 	var g2 := Scrit.new()
 	add_child(g2)

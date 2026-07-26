@@ -454,7 +454,13 @@ func _process(delta: float) -> void:
 		_enforce_heat()
 		_tick_footdust()
 		_tick_ambush()
-		_poll_combat()
+	# COMBAT POLLS EVERYWHERE, INDOORS INCLUDED (playtest 2026-07-25: "you can't attack
+	# inside a building"). It sat in the exterior-only branch above, so the moment the
+	# campaign put a fight INSIDE a room — the wrecked cave — the player could not select,
+	# engage, toggle weapons, cycle targets, kneel or fire a technique. Exactly the shape
+	# of the tutor bug from earlier today: a system trapped in the else-branch, unnoticed
+	# until content walked indoors.
+	_poll_combat()
 	_tick_techniques(delta)   # cooldowns run indoors too — a room is not a time-out
 	# The tutor observes EVERYWHERE — indoors too (user bug: opening Bram's shop inside
 	# the market fired used_market, but the lesson only advanced after stepping back
