@@ -146,13 +146,45 @@ the exploration half pays exactly what everyone else gets.
 *Next:* `scan_value_mult` on Scan Data pricing, and Deep Sensor Sweep — which now has an
 obvious mechanical home in `role_id_range` and the Augur array.
 
-### Trader — the only working perk
+### Trader — the only working perk, and the DRUID (user, 2026-07-26)
 
 Trade buy/sell genuinely scales with level, which makes the Trader the one commission
 whose non-combat identity is real. Repair Drone and Decoy are built; Blackout is built but
 withheld; the second Tender node is **explicitly undesigned**.
 
-*Next:* design that second heal, and decide whether Blackout comes back.
+**THE IDENTITY: a Druid.** The Trader progresses into a choice between two support modes —
+**DoT and debuffs**, or **heal-over-time and buffs**. Not two commissions; two ways to play
+one.
+
+This maps onto the tree that already exists. **Tender (Healing)** becomes the HoT-and-buff
+line, and its `built: false`, explicitly *undesigned* T2 node now has an obvious answer:
+**the heal-over-time**. The debuff line becomes the other branch.
+
+**The bus is already the opt-in mechanism.** Five slots; wire DoT chips or HoT chips. No
+sub-commission, no lock, no new machinery — and a Trader re-specs by re-wiring at dock,
+which fits the established "wire, not memorize" idiom exactly.
+
+Two supporting facts already in the data: the Trader carries the **highest `energy_regen`
+(1.35)**, which is exactly what a sustained-casting support wants, and the **lowest
+`combat_tier` (0.01)**, which is what a support should have.
+
+*Next:* design the heal-over-time on Tender T2, and **move Blackout off the Tender branch**
+— it is a debuff sitting on the healing line, which the Druid split makes plainly wrong.
+
+### Radiation cleansing — Science first, then Trader (user, 2026-07-26)
+
+Contamination (`docs/combat_space.md`) decays over ~15–25 minutes and clears at dock, so a
+**field cleanse** is a real ability with a real job.
+
+**Science Officer gets it first.** It fits the researcher fiction, and Science currently has
+the thinnest identity of the six — its `insight` perk is dead and its two built abilities
+are generic. "The commission that scrubs rads" is a genuine job.
+
+**Trader second**, arriving through the buff/heal half of the Druid split above.
+
+Note the defensive value is **not** the 5% stat recovery — it is that a clean ship is
+**harder to lock down**, since contamination is what makes control land harder. Cleansing is
+a counter to controllers, not a stat-restore.
 
 ### Science Officer — the researcher who doesn't research faster
 
@@ -167,7 +199,9 @@ identity payoff.
 ## Suggested order
 
 1. **Wire the five dead effects** (mining yield, salvage luck, scan value, insight,
-   gunnery arcs). Cheap, and it makes three commissions real.
+   gunnery arcs). Cheap, and it makes three commissions real. Note `insight` belongs to
+   Science, which is also the first owner of rad cleansing — the two together finally give
+   that commission a shape.
 2. **Give each commission one ground technique.** Biggest felt-identity gain per unit of
    work; the effects all already exist on `GroundCharacter`.
 3. **Decide the tree question** — real progression, or an honest shelf. Everything else

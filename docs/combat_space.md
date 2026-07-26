@@ -529,6 +529,32 @@ tracking, seeing and recharging simultaneously. Push it higher and it stops bein
 and becomes a soft disable — which is a CONTROL ABILITY's job, not a weapon's. A ship soaking Radiation
 should feel like it is *wearing down*, never like it is being switched off.
 
+##### Working values — TEST AT 5%, READY TO BOOST TO 10%
+
+| | value | reasoning |
+|---|---|---|
+| **Build** | **~0.025% per hit** | Hundredths at a time. A VK-2 fires 4/sec, so ~30s of sustained fire lands ~3% and the cap takes a committed ~200 hits. At 0.01% it would need 500 hits — two minutes of continuous fire — and would never be reached in a real fight. |
+| **Cap** | **5%** — *tunable to 10%* | Deliberately tested low first. If it does not land, raise it; do not start high. |
+| **Decay** | **~0.01% per 3s tick** | ~0.0033%/s, so a 3% dose clears in ~15 minutes and a full 5% in ~25. This is the "long long decay" — contamination is the one stat that **follows you home** between fights. |
+| **Docking** | **clears it entirely** | Otherwise the only counterplay to a 25-minute debuff is waiting, which is not gameplay. It also makes a FIELD cleanse valuable precisely because you often cannot dock. |
+
+**Contamination is a single accumulating POOL, not a debuff stack.** Every Radiation source
+feeds the same number, so it never consumes one of the 10 debuff slots and group focus-fire
+compounds properly.
+
+> **THE HONEST RISK, recorded so it is watched rather than discovered:** at 5%, the direct
+> stat effect is **below the perception threshold**. A 5% turn-rate change is ~2.0 → 1.9
+> rad/s; nobody feels that, and spreading it across six stats does not make six imperceptible
+> changes perceptible. So the direct degrade **cannot be where the value lives.** Two things
+> must carry it:
+>
+> - **The control synergy**, which may be a MEANINGFUL number (e.g. tangle duration +20% at
+>   full contamination) even while the stat drag stays tiny. The gunner is not visibly
+>   weakening the target — they are setting it up.
+> - **The readout.** A subliminal effect with no display is an effect that does not exist.
+>   This is the strongest case yet for the computer-as-data-tier idea: your ship should tell
+>   you your own rad load.
+
 **It is CUMULATIVE and SLOW to decay** — which is what separates it from Heat. Heat is a
 ramp you lose the moment you break off; Contamination lingers, so you fly *away* from a
 Radiation fight still degraded. That lingering is the memorable part.
@@ -701,10 +727,9 @@ accessibility goal but not the whole of it — those three deserve the same pass
    level and quality itself? That is the one remaining double-dip: the pilot's level would
    scale a number that already grew with the item's level. Cleanest is probably that gear
    power comes from gear and the pilot's level scales the *pilot* — but it is a real fork.
-2. **How much does Contamination degrade, and how slowly does it decay?** The shape is
-   settled (cumulative, lingering, everything by one scaled percentage); the numbers are
-   not. It needs a cap, and it needs a readout — an invisible degrade is an invisible
-   mechanic, which makes it another customer for the computer-as-data-tier idea.
+2. **Does 5% Contamination land, or does it need 10%?** Working values are recorded above;
+   the cap is deliberately being tested low first. The open part is whether the control
+   synergy and the readout carry the mechanic while the stat drag stays subliminal.
 3. **What happens at the 10-debuff cap** — is a new debuff refused, or does the oldest
    fall off?
 4. **Do defences scale on level+quality too, and on what curve?** Named here because
