@@ -554,7 +554,20 @@ func apply_movement(thrust: Vector2, delta: float, speed_mult := 1.0, boosting :
 				if int(get_instance_id()) % 2 == 1:
 					side = -side
 				away = (away + side * 1.8).normalized()
-			var want := (dir + away * SEPARATION_WEIGHT).normalized()
+			# NOTHING IS WORTH FLYING INTO A PLANET (2026-07-26). The blend above is
+			# a NUDGE: with `away` opposite `dir`, `dir + away * 0.85` still points
+			# along `dir` — it brakes slightly while the hull ploughs on. That is
+			# right for a station (bumping one costs a little hull) and fatally
+			# wrong for a gravity well, so a pirate chasing a hauler toward the
+			# colony would ride its intent straight into the surface. Widening
+			# avoid_radius never fixed it because the weight, not the reach, was
+			# the limit.
+			#
+			# So the weight ESCALATES with how deep the ship is in a LETHAL field
+			# until avoidance overrides intent outright. Only bodies that kill
+			# count — see hazard_urgency().
+			var weight := lerpf(SEPARATION_WEIGHT, HAZARD_WEIGHT, hazard_urgency())
+			var want := (dir + away * weight).normalized()
 			thrust = want * thrust.length()
 			# TURN THE NOSE, not just the thrust vector. These AI steer by
 			# rotation — `rotation = rotate_toward(...)` then
@@ -567,7 +580,7 @@ func apply_movement(thrust: Vector2, delta: float, speed_mult := 1.0, boosting :
 				_turn_speed * delta * AVOID_TURN_GAIN)
 	velocity += thrust * delta
 	velocity *= exp(-drift_damp * delta)
-	velocity = velocity.limit_length(_max_speed * speed_mult)
+	velocity = velocity.limit_length(_max_speed * speed_mult * limp_speed_mult())
 	var pre := velocity
 	move_and_slide()
 	if get_slide_collision_count() > 0:
@@ -585,6 +598,56 @@ func apply_movement(thrust: Vector2, delta: float, speed_mult := 1.0, boosting :
 ## Deliberately soft — SEPARATION_WEIGHT keeps it a nudge, not an autopilot, so
 ## contact still happens occasionally. It should look like flying, not like a
 ## force field.
+## HOW BADLY THIS SHIP NEEDS TO GET OUT — 0 in clear space, 1 inside a lethal field.
+##
+## Only bodies that KILL are counted. Scraping a station or another hull costs a
+## little hull and a bounce; entering a planetoid's gravity well costs the ship, so
+## the two cannot share one avoidance strength. `separation_dir()` normalizes its
+## sum and therefore throws away exactly this information — a ship deep in the well
+## gets the same unit push as one grazing the far edge. This puts the urgency back.
+##
+## Ramps from 0 at the body's `avoid_radius` to 1 just outside its `grav_r`, and
+## stays 1 inside. Keyed off `grav_r` (duck-typed), which only planetoids publish,
+## so nothing else is caught by it.
+func hazard_urgency() -> float:
+	var worst := 0.0
+	for st in get_tree().get_nodes_in_group("planetoids"):
+		if not is_instance_valid(st) or not (st is Node2D):
+			continue
+		var lethal: float = float(st.get("grav_r") if st.get("grav_r") != null else 0.0)
+		if lethal <= 0.0:
+			continue
+		var reach: float = float(st.get("avoid_radius") if st.get("avoid_radius") != null
+			else lethal * 1.9)
+		var inner := lethal * 1.15
+		if reach <= inner:
+			continue
+		var d := global_position.distance_to((st as Node2D).global_position)
+		worst = maxf(worst, clampf((reach - d) / (reach - inner), 0.0, 1.0))
+		if worst >= 1.0:
+			break
+	return worst
+
+
+## Top-speed multiplier from structural damage — see the LIMP_* constants.
+##
+## STEPS, NOT A RAMP, on purpose. A smooth curve is invisible: the pilot never
+## notices the moment the decision changed, which is the entire point of the
+## mechanic. A step is felt, and the project's rule that every rejection must be
+## VISIBLE applies here too — losing a quarter of your speed is a rejection of the
+## plan you had. Ship announces the crossings; the AI just gets slower.
+func limp_speed_mult() -> float:
+	var full := float(stats.get("hull_hp", 0.0))
+	if full <= 0.0:
+		return 1.0
+	var frac := hull / full
+	if frac <= LIMP_CRIPPLED_AT:
+		return LIMP_CRIPPLED_MULT
+	if frac <= LIMP_HURT_AT:
+		return LIMP_HURT_MULT
+	return 1.0
+
+
 func separation_dir() -> Vector2:
 	var away := Vector2.ZERO
 	var react := velocity.length() * AVOID_REACT_TIME
@@ -672,7 +735,38 @@ const AVOID_LOOKAHEAD := 320.0
 ## How hard proximity avoidance pulls against the ship's own intent. Low on
 ## purpose: the user asked for fewer collisions, NOT none — "I don't mind it
 ## happening sometimes". Raise toward 1.0 for pilots who never touch anything.
+## ---- A HOLED SHIP CANNOT RUN (user, 2026-07-26) ----
+##
+## Below 30% hull you lose a quarter of your top speed; below 10%, half. Applies to
+## the PLAYER AND EVERY AI equally — it is a property of a broken ship, not a
+## difficulty setting.
+##
+## WHAT IT BUYS: fleeing stops being a free option always available at the bottom of
+## the health bar and becomes a DECISION ABOUT TIMING. Break off at 40% and you get
+## away; ride it to 15% hoping to win and the escape you were counting on is not
+## there any more. It also makes chases resolve — the loser of an exchange gets
+## slower, so a pursuit ends instead of dribbling out over 10km.
+##
+## KEYED ON HULL, NOT TOTAL EFFECTIVE HP. Shields regenerate and armor is mitigation;
+## hull is the structural layer that does NOT come back without a dock, so it is the
+## only one that can honestly mean "this ship is wrecked". A ship with flat shields
+## and an intact hull is in trouble, not crippled.
+##
+## MAX SPEED ONLY — never acceleration or turn rate. Losing accel and turn would read
+## as broken controls and take the fight away from the player as well as the escape;
+## a lower ceiling reads as engines that cannot hold full output, which is the fiction
+## and leaves the ship responsive enough to still be flown well.
+const LIMP_HURT_AT := 0.30
+const LIMP_HURT_MULT := 0.75
+const LIMP_CRIPPLED_AT := 0.10
+const LIMP_CRIPPLED_MULT := 0.50
+
 const SEPARATION_WEIGHT := 0.85
+## Avoidance weight at full hazard_urgency(). Above 1.0 on purpose: at 4.0 the
+## blend `dir + away * 4` points essentially along `away`, so a ship inside a
+## gravity well turns and runs REGARDLESS of what it was chasing. The escalation
+## is smooth, so ordinary flying near a planet is still only nudged.
+const HAZARD_WEIGHT := 4.0
 ## How hard avoidance may fight the behaviour's own steering for the nose. Above
 ## 1.0 so a ship about to hit something turns away FASTER than its brain turns it
 ## back — otherwise the two cancel and it grinds along the obstacle.

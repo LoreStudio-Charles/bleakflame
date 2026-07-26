@@ -7,7 +7,19 @@ extends BuildShip
 ## All combat capability still comes from the ShipBuild — tactics are the only
 ## hand-authored part of an enemy.
 
-enum Tactic { ORBIT, BOOM_ZOOM }
+## HOW A HULL FIGHTS IS AUTHORED, NOT DERIVED (2026-07-26).
+##
+## ORBIT and STRAFE were briefly one tactic that chose between circling and passes
+## by comparing top speed against turn rate. That inferred a DESIGN DECISION from
+## two physics numbers, so slowing the wasp by 85 units silently converted it from
+## an interceptor into a circler — exactly the trap `WeaponDef.traverse` was
+## authored to escape, where `mark` was quietly deciding what a gun could hit.
+##
+## A hull now STATES how it fights. Geometry only vetoes: a ship told to ORBIT that
+## physically cannot hold the ring falls back to passes (see can_hold_orbit), so a
+## bad pairing degrades gracefully instead of wobbling.
+## STRAFE is APPENDED — never insert, the values are passed around as ints.
+enum Tactic { ORBIT, BOOM_ZOOM, STRAFE }
 
 ## ---- RARE SPECIALISTS (2026-07-22) ----
 ##
@@ -31,6 +43,18 @@ const SPECIALIST_CHANCE := 0.13
 ## Never on the smallest hulls — a specialist should read as someone's veteran,
 ## not a random wasp, and it keeps early tutorial-adjacent fights clean.
 const SPECIALIST_MIN_MASS := 40.0
+## AND NEVER BELOW THIS LEVEL (user, 2026-07-26: "remove special abilities below
+## level 5 — we don't really have a counter yet").
+##
+## A mender, warden or binder is a PUZZLE, and a puzzle with no available answer is
+## just a wall: the player's own counters are chips, which the level gate now puts
+## at level 5 (docs/gear_levels.md), so anything earlier asks a question the pilot
+## has no tools to answer. This lines the enemy's abilities up with the player's.
+##
+## With the current postings that means the planet ring (levels 1-3) is clean and
+## specialists begin around the Shoal and the belt — difficulty as a property of
+## the map, which is what the postings were for.
+const SPECIALIST_MIN_LEVEL := 5
 
 const MENDER_CD := 9.0
 const MENDER_HEAL := 55.0
@@ -92,6 +116,54 @@ const HEAVY_MASS := 100.0
 ## seconds — which is what CREATES tail-chases. Getting behind an enemy is
 ## the reward for winning the exchange, not something orbit geometry allows.
 const BREAK_MIN_INTERVAL := 6.0
+## Turn back once the gap is this many x preferred_range. Comfortably under the 2.2
+## re-engage threshold, so a ship finishes its extend already inside the band it
+## wants to fight in rather than having to close all over again.
+##
+## 1.55, tightened from 1.8 (user, 2026-07-26: "a tiny bit more aggression is all
+## they need, which would also make them easier to kill — a net positive on both
+## danger and reward"). That framing is the reason this is the knob rather than
+## damage or hull: a shorter leg means they are back in your face sooner AND
+## spend less of the fight out of your guns.
+const EXTEND_TURN_AT := 1.55
+## Safety net only — the DISTANCE above is what normally ends an extend.
+const EXTEND_MAX_TIME := 0.9
+## Headroom required before a hull commits to a circle instead of strafing passes.
+##
+## 0.75, not 0.9 (user, 2026-07-26: "I don't mind having the wasp strafe if that
+## makes more sense… slower strafing may be a good tactic"). STRAFING IS NOT THE
+## BUG — a light interceptor slashing past and coming round again is exactly right
+## for a wasp, and orbiting everything that can technically manage it would erase
+## the difference between an interceptor and a brawler. The bug was that the strafe
+## accomplished nothing, which was a SPEED problem.
+##
+## So the bar is set high enough that only hulls genuinely built to sit in someone's
+## face take the circle. Today: the Sparrowhawk brawler orbits, the wasp and the
+## Kestrel raider strafe. A ship riding right at its turn limit would wobble and
+## drift wide anyway, which looks worse than a clean pass.
+const ORBIT_FEASIBLE := 0.75
+## The closing rate an attack run aims for, in units/sec. Roughly "cross the firing
+## envelope in about a second" — fast enough to still read as a slashing pass, slow
+## enough that the guns get a say.
+const PASS_CLOSING_SPEED := 260.0
+## Never fully cut thrust on a run: a dead-stopped attacker is a free kill, and a
+## drifting one cannot correct its aim.
+const PASS_MIN_THROTTLE := 0.2
+## HOW MUCH PUNISHMENT BREAKS THE NERVE, as a fraction of max hull.
+##
+## This was a 12% roll PER DAMAGE INSTANCE, which made courage a function of the
+## PLAYER'S FIRE RATE: two slugthrowers land ~4 hits/sec, so the real break chance
+## was ~40%/sec and pirates turned tail almost on contact. A faster gun literally
+## made enemies more cowardly. Accumulated damage is fire-rate independent and
+## readable: they run when they have actually been hurt.
+##
+## RAISED 0.35 -> 0.50 (user, 2026-07-26) for the same reason as EXTEND_TURN_AT:
+## holding their nerve longer is simultaneously more threatening and more killable.
+## A pirate that routs at a third of its hull takes its remaining two thirds away
+## with it — the player ate the risk and does not get the kill. Half is a real
+## beating and still leaves the break-and-run tail-chase intact for the pilot who
+## earns it.
+const BREAK_DAMAGE_FRACTION := 0.50
 
 var tactic := Tactic.ORBIT
 var preferred_range := 200.0
@@ -107,6 +179,8 @@ var _jink_timer := 0.0
 var _extend_timer := 0.0
 var _break_timer := 0.0
 var _break_cd := 0.0
+## Damage taken since the last break — see BREAK_DAMAGE_FRACTION.
+var _dmg_since_break := 0.0
 var _weave_phase := randf() * TAU
 ## Perimeter ships aren't passive: every so often one peels off the ring for
 ## a single slashing pass through the fight, then extends back out. Pressure
@@ -130,7 +204,9 @@ func _ready() -> void:
 func _roll_specialty() -> void:
 	if specialty != Specialty.NONE or build == null:
 		return
-	if stats.mass < SPECIALIST_MIN_MASS or randf() >= SPECIALIST_CHANCE:
+	if stats.mass < SPECIALIST_MIN_MASS or level() < SPECIALIST_MIN_LEVEL:
+		return
+	if randf() >= SPECIALIST_CHANCE:
 		return
 	specialty = [Specialty.MENDER, Specialty.WARDEN, Specialty.BINDER][randi() % 3]
 	# A specialist is still identifiable BEFORE it acts — the lesson ("kill the
@@ -326,7 +402,7 @@ func _physics_process(delta: float) -> void:
 				_orbit_dir *= -1.0
 
 		match tactic:
-			Tactic.ORBIT:
+			Tactic.ORBIT, Tactic.STRAFE:
 				# STRAFING PASS, not a nose-glued orbit (user, 2026-07-23 — "strafe
 				# past me, turn and strafe back from the other direction"). Circling a
 				# slow/stationary mark can't work: at preferred_range the orbit rate
@@ -338,20 +414,59 @@ func _physics_process(delta: float) -> void:
 					# Too far to strafe: close the gap head-on first.
 					rotation = rotate_toward(rotation, to_prey.angle(), _turn_speed * delta)
 					thrust = Vector2.RIGHT.rotated(rotation) * _accel
+				elif tactic == Tactic.ORBIT and can_hold_orbit():
+					# IT STAYS ON YOU (2026-07-26, user: "they never stick around
+					# enough to press their speed advantage… my shields recharge by
+					# the time they come back").
+					#
+					# A pass-and-extend fighter gives its prey a REST between passes,
+					# and rest is the enemy of threat: a 28hp shield regenerating at
+					# 2/s is whole again in 14 seconds, so an attacker that leaves for
+					# that long can never accumulate pressure no matter how hard it
+					# hits. It reads as scenery rather than danger.
+					#
+					# So a hull that CAN physically hold the circle now does, instead
+					# of falling back to passes. Nose stays on the mark (guns track)
+					# while thrust runs the tangent, with a radial term holding the
+					# ring. The pass-and-extend below is now the FALLBACK for ships too
+					# fast to turn at their own fighting range — see can_hold_orbit.
+					rotation = rotate_toward(rotation, to_prey.angle(), _turn_speed * delta)
+					var to_mark := to_prey.normalized()
+					var ring := (dist - preferred_range) / maxf(1.0, preferred_range)
+					var go := to_mark.orthogonal() * _orbit_dir \
+						+ to_mark * clampf(ring, -0.9, 0.9)
+					thrust = go.normalized() * _accel
 				elif _extend_timer > 0.0:
 					# Blew past — keep running out, then turn back the OTHER way.
+					#
+					# THE EXTEND IS CAPPED BY DISTANCE, NOT TIME (2026-07-26, user:
+					# wasps "never stick around enough to press their speed
+					# advantage"). It used to run a fixed 0.5-0.9s at full thrust,
+					# which means THE FASTER THE SHIP, THE FURTHER IT RAN — a wasp at
+					# 733 speed put 366-660 units between itself and the fight and
+					# then had to fly all of it back, buying ~1s of shooting per
+					# ~1.5s of travel. The one hull built to press an advantage was
+					# the one the rule punished hardest, so it read as weather
+					# rather than a threat.
+					#
+					# Turning at a DISTANCE means a fast ship whips around sooner and
+					# is on you MORE, which is what a speed advantage should buy. The
+					# timer stays only as a safety net for a ship that somehow cannot
+					# open the gap (boxed in, tangled, out-accelerated).
 					_extend_timer -= delta
 					thrust = Vector2.RIGHT.rotated(rotation) * _accel
-					if _extend_timer <= 0.0:
+					if _extend_timer <= 0.0 or dist > preferred_range * EXTEND_TURN_AT:
+						_extend_timer = 0.0
 						_orbit_dir *= -1.0
 				else:
 					# Run the pass: nose tracks the mark (guns on target), thrust
 					# leans off-axis so we slide past its flank, not into it.
 					rotation = rotate_toward(rotation, to_prey.angle(), _turn_speed * delta)
 					var fwd := Vector2.RIGHT.rotated(rotation)
-					thrust = (fwd + fwd.orthogonal() * _orbit_dir * 0.6).normalized() * _accel
+					thrust = (fwd + fwd.orthogonal() * _orbit_dir * 0.6).normalized() \
+						* _accel * pass_throttle(to_prey, prey)
 					if dist < preferred_range:
-						_extend_timer = randf_range(0.5, 0.9)   # abreast — extend past
+						_extend_timer = EXTEND_MAX_TIME   # abreast — extend past
 			Tactic.BOOM_ZOOM:
 				if _extend_timer > 0.0:
 					# Blow through and keep running before turning back.
@@ -464,6 +579,49 @@ func _attack_slot_open(prey: BuildShip) -> bool:
 	return true
 
 
+## THROTTLE THE ATTACK RUN BY *CLOSING* SPEED, NOT ABSOLUTE SPEED (user, 2026-07-26:
+## "try to match velocity so they slow if you're approaching each other and they try
+## to speed up if they are chasing").
+##
+## TIME ON TARGET IS GOVERNED BY RELATIVE VELOCITY, which is why trimming top speeds
+## kept helping less than it should have: two ships meeting head-on at 380 and 250
+## have a 630 closing rate and cross the whole firing envelope in a blink, however
+## slow either one is on its own. Conversely an attacker chasing a fleeing target
+## has a NEGATIVE closing rate and wants everything it has.
+##
+## So the pass aims for a target closing rate: back off when the gap is collapsing
+## too fast, full thrust when the mark is running away. Applies only to the attack
+## run — the EXIT stays full thrust, so they still leave briskly and come back
+## around. Never drops to zero (a dead-stopped attacker is a free kill), and the
+## ceiling stays 1.0 so this can only ever slow a pass down, never make one faster
+## than the hull already was.
+func pass_throttle(to_prey: Vector2, prey: Node2D) -> float:
+	if prey == null or not is_instance_valid(prey):
+		return 1.0
+	var prey_v: Vector2 = prey.velocity if "velocity" in prey else Vector2.ZERO
+	# + = the gap is closing, - = the mark is pulling away.
+	var closing := (velocity - prey_v).dot(to_prey.normalized())
+	return clampf(1.0 - (closing - PASS_CLOSING_SPEED) / PASS_CLOSING_SPEED,
+		PASS_MIN_THROTTLE, 1.0)
+
+
+## CAN THIS HULL PHYSICALLY HOLD A CIRCLE AT ITS OWN FIGHTING RANGE?
+##
+## Circling at radius r demands an angular rate of speed/r, and a hull can only
+## turn at `_turn_speed`. The wasp is the case that made this worth knowing: at 733
+## speed it needed 6.11 rad/s to circle at 120 units and had 4.50, so the orbit was
+## GEOMETRICALLY IMPOSSIBLE and it fell back to strafing passes — which is what put
+## it out of the fight long enough for the player's shields to refill. It was too
+## fast to fight at the range it wanted to fight at.
+##
+## Ships that can hold the ring stay on their prey; only the ones that genuinely
+## cannot are forced into pass-and-extend. That makes speed a real trade rather
+## than a pure advantage: outrun your own turn rate and you lose the ability to
+## keep the pressure on.
+func can_hold_orbit() -> bool:
+	return _max_speed / maxf(1.0, preferred_range) <= _turn_speed * ORBIT_FEASIBLE
+
+
 func take_damage(amount: float, source: Node = null) -> void:
 	var had_shield := shield > 0.0
 	super(amount, source)
@@ -472,9 +630,17 @@ func take_damage(amount: float, source: Node = null) -> void:
 	# Shield cracked — or bare hull chewed — and the nerve goes: turn tail.
 	# Winning the exchange hands the player a fleeing target instead of an
 	# endless circle; the chase is the reward.
-	if (had_shield and shield <= 0.0) or (not had_shield and randf() < 0.12):
+	#
+	# The bare-hull case now runs on ACCUMULATED damage rather than a per-hit roll,
+	# so it takes a real bite to break them and the player's rate of fire no longer
+	# decides how brave they are (see BREAK_DAMAGE_FRACTION).
+	_dmg_since_break += amount
+	var chewed: bool = not had_shield \
+		and _dmg_since_break >= stats.hull_hp * BREAK_DAMAGE_FRACTION
+	if (had_shield and shield <= 0.0) or chewed:
 		_break_timer = randf_range(2.5, 4.0)
 		_break_cd = BREAK_MIN_INTERVAL
+		_dmg_since_break = 0.0
 		_sweep = false   # a punished sweep becomes a rout
 		_sweep_extend = 0.0
 

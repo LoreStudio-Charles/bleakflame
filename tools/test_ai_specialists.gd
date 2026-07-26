@@ -21,6 +21,10 @@ func _ready() -> void:
 	_case_only_pirates_specialize()
 	_case_rescue_standing_must_be_earned()
 	_case_ships_keep_their_distance()
+	_case_nothing_chases_prey_into_a_gravity_well()
+	_case_courage_does_not_depend_on_rate_of_fire()
+	_case_fighting_style_is_authored_not_derived()
+	_case_a_holed_ship_cannot_run()
 	_case_shadow_escort_trails_and_hangs_back()
 	_case_shadow_escort_commits_on_spring()
 	_case_miner_ore_sense_is_a_commission_perk()
@@ -51,6 +55,11 @@ func _case_rarity() -> void:
 	var specialists := 0
 	var total := 300
 	var probe := _pirate()
+	# SPECIALISTS ARE LEVEL-GATED NOW (SPECIALIST_MIN_LEVEL, user 2026-07-26), so a
+	# rim-level probe can never roll one and this case would report 0% forever —
+	# passing as "rare" while actually measuring the gate. Age the probe past the
+	# floor so what is under test is still the CHANCE.
+	probe.spawn_level = AIShip.SPECIALIST_MIN_LEVEL
 	for i in total:
 		probe.specialty = AIShip.Specialty.NONE
 		probe._roll_specialty()
@@ -549,3 +558,203 @@ func _ok(cond: bool, what: String) -> void:
 	_checks += 1
 	if not cond:
 		_fails.append(what)
+
+
+## NOTHING CHASES PREY INTO A GRAVITY WELL (2026-07-26).
+##
+## Stationing pirates around Epharon made an old weakness lethal: telemetry went
+## from ~1 planet-surface crash per boot to ~2, and the crashers were pirates riding
+## a pursuit straight into the planet. Widening `avoid_radius` had never fixed it,
+## because REACH was not the limit — WEIGHT was. `separation_dir()` returns a
+## normalized push and apply_movement blended it at a flat 0.85, so `dir + away*0.85`
+## with `away` opposite `dir` STILL POINTS ALONG `dir`: the ship brakes a little and
+## ploughs on. Correct for a station, fatal for a planet.
+##
+## Both halves are asserted, because either alone passes while the bug is live:
+## the urgency ramp itself, AND that apply_movement actually reverses a committed
+## pursuit. (A correct helper nobody consults is a failure this project has paid
+## for before.)
+func _case_nothing_chases_prey_into_a_gravity_well() -> void:
+	# PARKED FAR OUT, like _case_ships_keep_their_distance. A planet dropped at the
+	# origin sits on top of every pirate the earlier cases left lying around, and
+	# hoovers them into its own gravity well mid-test.
+	var HOME := Vector2(-90000, -90000)
+	var planet := Planetoid.new()
+	planet.position = HOME
+	add_child(planet)
+
+	var hunter := AIShip.new()
+	add_child(hunter)
+	hunter.setup(SampleBuilds.pirate_raider(), AIShip.Tactic.ORBIT)
+
+	# --- the ramp: 0 out in clear space, 1 inside the well ---
+	hunter.global_position = HOME + Vector2(planet.avoid_radius * 2.0, 0.0)
+	_ok(hunter.hazard_urgency() == 0.0,
+		"clear of the planet the hazard ramp reads 0 (got %.2f)" % hunter.hazard_urgency())
+
+	hunter.global_position = HOME + Vector2(planet.grav_r * 0.8, 0.0)
+	_ok(hunter.hazard_urgency() >= 0.999,
+		"inside the gravity well the ramp is saturated (got %.2f)" % hunter.hazard_urgency())
+
+	# Between the two it must actually RAMP, not step — an ordinary pass near the
+	# planet should still be a nudge, or every hauler would flinch off the lane.
+	hunter.global_position = HOME + Vector2(planet.avoid_radius * 0.95, 0.0)
+	var mid := hunter.hazard_urgency()
+	_ok(mid > 0.0 and mid < 0.5,
+		"just inside avoid_radius is a NUDGE, not an override (got %.2f)" % mid)
+
+	# --- the wiring: a committed pursuit INTO the planet must be turned around ---
+	# Deep in the well, thrusting straight at the core — the exact frame that used
+	# to end in a crash.
+	hunter.global_position = HOME + Vector2(planet.grav_r * 0.9, 0.0)
+	hunter.velocity = Vector2.ZERO
+	var into_planet := Vector2.LEFT * 400.0          # dead at the core
+	hunter.apply_movement(into_planet, 0.05)
+	_ok(hunter.velocity.x > 0.0,
+		"a pursuit aimed into the well still drove the ship inward (velocity %s) — "
+		% hunter.velocity + "avoidance must OVERRIDE intent this close, not blend with it")
+
+	planet.queue_free()
+	hunter.queue_free()
+
+
+## BREAKING THE NERVE IS ABOUT DAMAGE, NOT BULLET COUNT (2026-07-26).
+##
+## The bare-hull break was a 12% roll PER DAMAGE INSTANCE, so a pilot with a
+## fast-firing gun made every pirate in the sky braver or more cowardly purely by
+## fire rate — two slugthrowers land ~4 hits/sec, which is ~40% per second. Pirates
+## turned tail almost on contact, which is a large part of why they read as "running
+## in and out" rather than fighting.
+##
+## The assertion is EQUIVALENCE: the same total damage must produce the same
+## outcome whether it arrives in one shell or twenty. That is the property a
+## per-hit roll cannot have.
+func _case_courage_does_not_depend_on_rate_of_fire() -> void:
+	var one := _pirate()
+	var many := _pirate()
+	one.shield = 0.0
+	many.shield = 0.0
+	var bite: float = one.stats.hull_hp * AIShip.BREAK_DAMAGE_FRACTION
+
+	# A NIBBLE must not rout anyone, however many pellets it is chopped into.
+	for _i in 20:
+		many.take_damage(bite * 0.2 / 20.0)
+	_ok(many._break_timer <= 0.0,
+		"20 tiny hits totalling a fifth of the break threshold did NOT rout it")
+
+	# The same real bite, delivered two ways, must land the same.
+	#
+	# Deliberately 1.1x the threshold rather than exactly on it: summing 40
+	# fractional hits lands a hair under a bare `bite` through pure float
+	# accumulation, so an exact-threshold test decides on rounding noise instead of
+	# on the rule. (It passed at BREAK_DAMAGE_FRACTION 0.35 and failed at 0.50 for
+	# precisely that reason — the tuning did not change the behaviour, only which
+	# side of the epsilon the sum fell on.) The EQUIVALENCE is what matters, and
+	# giving it headroom is what makes it about the rule.
+	one.take_damage(bite * 1.1)
+	for _i in 20:
+		many.take_damage(bite * 0.9 / 20.0)   # tops the earlier 0.2 up to 1.1x
+	_ok(one._break_timer > 0.0, "one heavy shell past the threshold breaks them")
+	_ok(many._break_timer > 0.0,
+		"the SAME damage as twenty light hits breaks them too — fire rate must not "
+		+ "decide how brave a pirate is")
+
+	# An extend must end on DISTANCE, comfortably inside the re-engage band, or a
+	# fast ship spends its speed leaving the fight instead of pressing it.
+	_ok(AIShip.EXTEND_TURN_AT < 2.2,
+		"ships turn back (%.1fx) before the re-engage threshold (2.2x), so they "
+		% AIShip.EXTEND_TURN_AT + "finish an extend already inside their fighting band")
+
+
+## HOW A HULL FIGHTS IS AUTHORED (2026-07-26, user: "I don't mind having the wasp
+## strafe if that makes more sense").
+##
+## This was briefly DERIVED — circle if top speed vs turn rate allowed it, else make
+## passes. Then trimming the wasp by 85 units of speed silently converted it from an
+## interceptor into a circler, which is the exact failure `WeaponDef.traverse` was
+## authored to escape (`mark` quietly deciding what a gun could hit). Tuning a
+## physics number must not rewrite a design decision.
+##
+## So the tactic is stated, and geometry only VETOES: a hull told to ORBIT that
+## cannot hold the ring falls back to passes rather than wobbling.
+func _case_fighting_style_is_authored_not_derived() -> void:
+	var wasp := AIShip.new()
+	add_child(wasp)
+	wasp.setup(SampleBuilds.pirate_wasp(), AIShip.Tactic.STRAFE)
+	wasp.preferred_range = 120.0
+	_ok(wasp.tactic == AIShip.Tactic.STRAFE,
+		"the wasp is AUTHORED as a strafer — a light interceptor slashes past")
+
+	# THE POINT: it strafes because it was told to, NOT because it is too fast to
+	# circle. At 383 it is comfortably slow enough to hold the ring, so if tactic
+	# were still inferred from geometry this hull would now be circling.
+	_ok(wasp.can_hold_orbit(),
+		"...and it strafes even though it COULD circle (%.2f rad/s needed, %.2f "
+		% [wasp._max_speed / wasp.preferred_range, wasp._turn_speed]
+		+ "available) — speed no longer decides the design")
+
+	# THE WASP MUST STAY SLOW ENOUGH TO MATTER. Its whole problem was outrunning its
+	# own usefulness, so guard the speed itself: re-engine it and this fails loudly
+	# rather than the wasp quietly going back to being scenery.
+	_ok(wasp._max_speed < 460.0,
+		"the wasp tops out at %.0f — much past this its passes throw it far enough "
+		% wasp._max_speed + "out for the player's shields to fully regenerate between them")
+
+	# ORBIT still means ORBIT for a hull that can hold it.
+	var heavy := AIShip.new()
+	add_child(heavy)
+	heavy.setup(SampleBuilds.pirate_vulture(), AIShip.Tactic.ORBIT)
+	_ok(heavy.tactic == AIShip.Tactic.ORBIT, "the Vulture is authored to sit on you")
+
+	wasp.queue_free()
+	heavy.queue_free()
+
+
+## A HOLED SHIP CANNOT RUN (user, 2026-07-26): below 30% hull you lose a quarter of
+## your top speed, below 10% you lose half.
+##
+## The point is that FLEEING BECOMES A TIMING DECISION rather than a free option
+## always waiting at the bottom of the health bar — break off at 40% and you get
+## away, ride it to 15% and the escape you were counting on is gone.
+##
+## Asserted through apply_movement, not just the helper, because a correct
+## multiplier nobody consults is a failure this project has already paid for (the
+## separation-avoidance pass shipped exactly that way and guardians kept ramming
+## the station).
+func _case_a_holed_ship_cannot_run() -> void:
+	var s := _pirate()
+	var full: float = s.stats.hull_hp
+
+	s.hull = full
+	_ok(is_equal_approx(s.limp_speed_mult(), 1.0), "an intact ship runs at full speed")
+	s.hull = full * 0.5
+	_ok(is_equal_approx(s.limp_speed_mult(), 1.0),
+		"half hull is NOT crippled — the penalty must not creep up on a ship that "
+		+ "is merely losing")
+	s.hull = full * 0.25
+	_ok(is_equal_approx(s.limp_speed_mult(), BuildShip.LIMP_HURT_MULT),
+		"under 30%% hull costs a quarter of top speed (got %.2f)" % s.limp_speed_mult())
+	s.hull = full * 0.05
+	_ok(is_equal_approx(s.limp_speed_mult(), BuildShip.LIMP_CRIPPLED_MULT),
+		"under 10%% hull costs half (got %.2f)" % s.limp_speed_mult())
+
+	# THE WIRING. Drive a wreck flat-out and its actual velocity must be capped.
+	var wreck := _pirate()
+	wreck.global_position = Vector2(70000, 70000)     # clear of everything parked earlier
+	wreck.hull = wreck.stats.hull_hp * 0.05
+	wreck.velocity = Vector2.ZERO
+	for _i in 200:
+		wreck.apply_movement(Vector2.RIGHT * 9999.0, 0.05)
+	var healthy := _pirate()
+	healthy.global_position = Vector2(74000, 74000)
+	healthy.velocity = Vector2.ZERO
+	for _i in 200:
+		healthy.apply_movement(Vector2.RIGHT * 9999.0, 0.05)
+	_ok(wreck.velocity.length() < healthy.velocity.length() * 0.75,
+		"a crippled hull actually FLIES slower (%.0f vs %.0f) — the multiplier has "
+		% [wreck.velocity.length(), healthy.velocity.length()]
+		+ "to reach apply_movement, not just exist")
+
+	s.queue_free()
+	wreck.queue_free()
+	healthy.queue_free()

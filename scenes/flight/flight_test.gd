@@ -23,6 +23,26 @@ const VERGE_CENTER := Vector2(-6000, 2600)
 const VERGE_COUNT := 14   # trimmed (was 22): aurite_min 6 still guarantees the payoff
 const VERGE_SEED := 0x5A17E
 
+## PIRATE POSTINGS — where a pirate LIVES decides its beat AND how hard it hits
+## (user, 2026-07-26: "difficult to find pirates to test combat with").
+##
+## THE PROBLEM: every ambient pirate homed to the Rust Shoal and flew one long
+## leg to the planet approach, so a dozen hulls were smeared across ~15k units of
+## sky and a pilot could fly the trade run without meeting one. They were also all
+## effectively LEVEL 1, because nothing ever set `spawn_level` on them — the
+## relative-scaling machinery existed and had no ambient caller.
+##
+## Postings fix both at once, and they do it WITHOUT breaking the living-world
+## pillar: these are still authored PLACES with world-anchored routes, just more
+## of them and closer to where a new pilot actually flies. Difficulty is a
+## PROPERTY OF THE MAP — fly further from the planet and the band climbs.
+const PIRATE_BANDS := {
+	"planet": Vector2i(1, 3),       # the colony approach — a new pilot's proving ground
+	"shoal": Vector2i(4, 6),        # the Rust Shoal and the dark north of it
+	"south_belt": Vector2i(4, 6),   # below the Drift Belt, never inside it
+	"haunt": Vector2i(8, 9),        # the Vulture, and it sweeps in on occasion
+}
+
 ## ORIVEL — the Galean capital, the HEART of Cinder Reach. We start on the fringe;
 ## Orivel is ~10x the fringe->Epharon distance out, on the FAR side of the station
 ## from the colony (a clean -10x the planet's position). ~3x Epharon's size. A
@@ -238,7 +258,21 @@ func _populate_world() -> void:
 		# Start mid-route: the world is already in motion, not queued at home.
 		_spawn_pirate(route[randi() % route.size()] + _jitter(500.0), kind, route)
 	var vulture_route := _patrol_route("vulture")
-	_spawn_pirate(vulture_route[0] + _jitter(700.0), "vulture", vulture_route)
+	_spawn_pirate(vulture_route[0] + _jitter(700.0), "vulture", vulture_route, "haunt")
+	# THE POSTED PATROLS (user, 2026-07-26). Placed by BAND, nearest-and-softest
+	# first, so a pilot who never leaves the colony run still finds a fight and a
+	# pilot who pushes out finds a harder one. Counts are deliberately weighted to
+	# the planet: that is the beat a new pilot actually flies, and scarcity there
+	# was the whole complaint.
+	for kind in ["wasp", "wasp", "raider", "raider", "brawler"]:
+		var pr := _posting_route("planet")
+		_spawn_pirate(pr[randi() % pr.size()] + _jitter(500.0), kind, pr, "planet")
+	for kind in ["raider", "raider", "brawler"]:
+		var sr := _posting_route("shoal")
+		_spawn_pirate(sr[randi() % sr.size()] + _jitter(500.0), kind, sr, "shoal")
+	for kind in ["raider", "wasp", "brawler"]:
+		var br := _posting_route("south_belt")
+		_spawn_pirate(br[randi() % br.size()] + _jitter(500.0), kind, br, "south_belt")
 	_spawn_belt(BELT_CENTER, BELT_COUNT, BELT_SEED, 4)
 	_spawn_belt(VERGE_CENTER, VERGE_COUNT, VERGE_SEED, 6)
 	# Trader-guild lane traffic: civilian haulers running the trade lane (east) and
@@ -1208,11 +1242,75 @@ func _patrol_route(kind: String) -> Array[Vector2]:
 		"wasp":
 			return [PIRATE_DEN + _jitter(400.0), LANE_B + _jitter(700.0)]
 		"vulture":
+			# ...AND IT SWEEPS IN (user, 2026-07-26). The old beat was three points
+			# in the far eastern dark, so the Vulture was a rumour you had to go
+			# looking for. One inner leg on the planet approach means it passes
+			# through inhabited space on its own schedule — the pilot doesn't hunt
+			# it, it turns up. Still homes to the haunt, so it is not ambient noise.
 			return [VULTURE_HAUNT + _jitter(400.0), Vector2(9200, 1200) + _jitter(600.0),
+				Vector2(8000, 2600) + _jitter(500.0),
 				Vector2(12400, 4200) + _jitter(600.0)]
 		_:
 			return [PIRATE_DEN + _jitter(400.0), LANE_B + _jitter(500.0),
 				Vector2(7600, 4600) + _jitter(500.0)]
+
+
+## The beat for a POSTING (see PIRATE_BANDS). Distinct from `_patrol_route`, which
+## keys off the HULL — a posting is a PLACE, and several hull kinds share one.
+func _posting_route(posting: String) -> Array[Vector2]:
+	match posting:
+		"planet":
+			# A RING ROUND EPHARON — SIX points, not four, and the count is load-bearing.
+			#
+			# `patrol_points` CYCLES (`(i+1) % size`), so a route is a closed polygon and
+			# the wrap-around leg is a real leg. A ring of N points at radius R passes
+			# within `R x cos(180/N)` of the centre: at N=4 that is 0.71R, so the first
+			# version of this — four points at ~4400 — sent ships down a chord that
+			# cleared the planet's core by 141 UNITS. Telemetry caught it immediately
+			# (planet-surface crashes went 0 -> 1 in a 400-frame boot, against a baseline
+			# the project had tuned to zero). N=6 gives 0.87R.
+			#
+			# R = 5000 then puts the closest any leg comes at ~4330, which is outside even
+			# the separation nudge (grav_r x 1.9 ~ 3950) — so they hold the beat instead
+			# of being shoved off it, and never approach the ~2080 gravity well at all.
+			# Jitter is 400 (not 600) because the 180-degree point passes 2000 from
+			# BELT_CENTER and the rocks scatter to 1100: 400 keeps them out of the field.
+			var ring: Array[Vector2] = []
+			for i in 6:
+				ring.append(planetoid.position
+					+ Vector2.RIGHT.rotated(TAU * float(i) / 6.0) * 5000.0 + _jitter(400.0))
+			return ring
+		"shoal":
+			# The den and the dark NORTH of it — deeper out, so the band climbs.
+			return [PIRATE_DEN + _jitter(400.0), Vector2(1400, -10200) + _jitter(700.0),
+				Vector2(4600, -9600) + _jitter(700.0)]
+		"south_belt":
+			# WELL BELOW the Drift Belt, never inside it (user was explicit), and
+			# PUSHED A FURTHER ~2800 SOUTH (user, 2026-07-26: near the belt "they
+			# become tedious while questing").
+			#
+			# The first placement cleared the belt's rocks but still ran within
+			# ~2300 of the Wayfinder DIG_SITE, so prospecting and the artifact haul
+			# — both slow, both deliberate, neither a fight the player chose —
+			# kept getting interrupted. Danger you opted into is content; danger
+			# that interrupts a mining run is a chore.
+			#
+			# Now every leg sits >5000 from BELT_CENTER and >5000 from DIG_SITE, so
+			# meeting these is a decision to head south rather than a tax on
+			# working the belt.
+			return [Vector2(3000, 12400) + _jitter(500.0), Vector2(5600, 13600) + _jitter(600.0),
+				Vector2(2400, 14600) + _jitter(600.0)]
+		_:
+			return _patrol_route("raider")
+
+
+## A level drawn from the posting's band. 0 (= the hull's own level) for anything
+## unposted, which is what every legacy caller wants.
+func _posting_level(posting: String) -> int:
+	if not PIRATE_BANDS.has(posting):
+		return 0
+	var band: Vector2i = PIRATE_BANDS[posting]
+	return randi_range(band.x, band.y)
 
 
 func _jitter(radius: float) -> Vector2:
@@ -1906,24 +2004,33 @@ func _respawn_gap_raider_later(build: ShipBuild, p_tactic: AIShip.Tactic,
 		_spawn_gap_raider(build, p_tactic, route, t)
 
 
-func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = []) -> void:
+## `posting` names WHERE this pirate lives (see PIRATE_BANDS). It sets the level
+## band and is remembered so a replacement is drawn from the SAME band — otherwise
+## the map's difficulty gradient would erode to level 1 as the world churned.
+## Empty = unposted, which keeps every legacy caller on the hull's own level.
+func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
+		posting: String = "") -> void:
 	var pirate := AIShip.new()
 	pirate.position = pos
 	add_child(pirate)
 	pirate.patrol_points = route
+	# BEFORE setup: apply_build is where the level scales the pools, so setting
+	# this afterwards would be a silent no-op (the same trap _spawn_vshrike notes).
+	pirate.spawn_level = _posting_level(posting)
 	match kind:
 		"brawler":
 			pirate.setup(SampleBuilds.pirate_brawler(), AIShip.Tactic.BOOM_ZOOM)
 		"wasp":
-			pirate.setup(SampleBuilds.pirate_wasp(), AIShip.Tactic.ORBIT, Color(0.95, 0.62, 0.3))
+			# STRAFE: a light interceptor slashes past and comes round again.
+			pirate.setup(SampleBuilds.pirate_wasp(), AIShip.Tactic.STRAFE, Color(0.95, 0.62, 0.3))
 			pirate.preferred_range = 120.0   # wasps knife-fight
 		"vulture":
 			# Variant skins are already pirate-colored; only a light menace tint.
 			pirate.setup(SampleBuilds.pirate_vulture(), AIShip.Tactic.ORBIT, Color(0.95, 0.8, 0.8))
 		_:
-			pirate.setup(SampleBuilds.pirate_raider(), AIShip.Tactic.ORBIT)
+			pirate.setup(SampleBuilds.pirate_raider(), AIShip.Tactic.STRAFE)
 	pirate.died.connect(_grant_kill_xp.bind(pirate, kind))
-	pirate.died.connect(_respawn_pirate_later.bind(kind))
+	pirate.died.connect(_respawn_pirate_later.bind(kind, posting))
 
 
 ## Kill XP by archetype — the seed the leveling system will grow from.
@@ -1972,13 +2079,16 @@ func _break_shoal_truce() -> void:
 	Sfx.play("static", -8.0)
 
 
-func _respawn_pirate_later(kind: String) -> void:
+func _respawn_pirate_later(kind: String, posting: String = "") -> void:
 	# Replacements launch from HOME and fly their route in — the world refills
 	# from places, never around the player. Travel time is the pacing.
 	await get_tree().create_timer(40.0 if kind == "vulture" else 15.0).timeout
 	if is_inside_tree():
-		var route := _patrol_route(kind)
-		_spawn_pirate(route[0] + _jitter(300.0), kind, route)
+		# A posted pirate refills its OWN posting, at its own band. Falling back to
+		# the hull route here would quietly relocate the planet and belt patrols to
+		# the Shoal over a long session and flatten every band back to level 1.
+		var route := _posting_route(posting) if posting != "" else _patrol_route(kind)
+		_spawn_pirate(route[0] + _jitter(300.0), kind, route, posting)
 
 
 ## Neutral Trader-guild hauler on a lane route. Phase 1: it just flies and can

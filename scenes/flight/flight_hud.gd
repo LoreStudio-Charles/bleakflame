@@ -485,7 +485,17 @@ func _target_text() -> String:
 	var role := ship.classify(t)
 	if role != "":
 		name_text += " [%s]" % role.to_upper()
-	var out := "TARGET: %s   %d u" % [name_text, rng]
+	# LEVEL is the basic threat read, and it rides free with the name and range
+	# (user, 2026-07-26: "a way of seeing pirate levels, so I know what level a
+	# pirate is"). Deliberately NOT gated behind a sensor tier the way ROLE is:
+	# role is a specialist's hidden job, level is how hard the thing hits, and a
+	# progression system nobody can see is one nobody can reason about. Any hull
+	# with a level reports it — pirate, guardian or hauler.
+	var lvl := 0
+	if t is BuildShip:
+		lvl = (t as BuildShip).level()
+	var lvl_text := "  L%d" % lvl if lvl > 0 else ""
+	var out := "TARGET: %s%s   %d u" % [name_text, lvl_text, rng]
 	if ship.scanning():
 		out += "\nSCANNING %d%%" % int(ship.scan_fraction() * 100.0)
 	elif ship.scanner_fitted:

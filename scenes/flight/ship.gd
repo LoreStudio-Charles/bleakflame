@@ -539,7 +539,32 @@ func take_damage(amount: float, source: Node = null) -> void:
 	# reply starts; if tight, you've been pointed at them and the trigger stays yours.
 	if target == null and source != null and is_instance_valid(source) 			and source.is_in_group(enemy_group):
 		target = source
+	var before := limp_speed_mult()
 	super(amount, source)
+	_note_limp(before)
+
+
+## LOSING A QUARTER OF YOUR TOP SPEED MUST BE ANNOUNCED.
+##
+## A holed ship runs slower (BuildShip.limp_speed_mult), and an unannounced speed cap
+## is the worst kind of silent rule: the pilot's escape plan quietly stops working and
+## the game reads as broken rather than as having made them pay for staying too long.
+## Every rejection is visible — and a cap on your top speed rejects the plan you had.
+##
+## Fires only on the frame the tier WORSENS, so a long fight at 20% hull does not
+## spam. Repairing back above a threshold is silent on purpose: good news does not
+## need to interrupt a fight.
+func _note_limp(before: float) -> void:
+	var now := limp_speed_mult()
+	if now >= before:
+		return
+	if now <= BuildShip.LIMP_CRIPPLED_MULT:
+		scan_note = "✕ HULL CRITICAL — engines at half power"
+	else:
+		scan_note = "✕ HULL BREACHED — engines at three-quarter power"
+	scan_note_t = 3.2
+	scan_note_fail = true
+	Sfx.play("hit", -2.0, 0.5)
 
 
 func cargo_used() -> float:
