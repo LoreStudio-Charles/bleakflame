@@ -35,17 +35,52 @@ Replace the formulas with a real table keyed by level band (e.g. 1–5, 6–10, 
 Author real rows from the hulls we have (wasp 55 / kestrel 80 / sparrowhawk 120
 at L1; Supercruiser 1800 at L35) + the weapons (Aegis Lance 80 dps base).
 
-## The open decision (blocks the HP half)
+## The open decision — RESOLVED 2026-07-25 (user), and WIRED
 
-Is a hull's **authored `hull_hp` the RAW (L1) value that gets scaled by
-`toughness_mult(level)`, or the FINAL level-scaled value?**
-- The Supercruiser's 1800 was authored as its *final* L35 HP, so applying
-  `toughness_mult(35)` on top would double-count (→ ~18,900).
-- Cleanest is probably: **authored hull_hp is the RAW value at the hull's `level`,
-  and the table normalises**, i.e. store base-at-L1 and let the curve produce the
-  rest. That means re-basing existing hulls when the table lands.
-Decide this first, then wire `toughness_mult` (and shield/armour) the same way
-`damage_mult` is wired now.
+**A hull's authored pools are what that ship FIELDS AT ITS OWN LEVEL.** The
+Supercruiser's 1800 is its level-35 hull; the Bellwether's 900 is her level-15
+hull. Nothing on disk is re-based and a `.tres` still shows what the ship
+actually has.
+
+Scaling is therefore **relative, not absolute**:
+
+    fielded = authored * toughness_mult(spawn_level) / toughness_mult(hull.level)
+
+`Progression.toughness_between(from, to)` is that ratio (guarded against a 0 or
+negative level, so an unset level can never blow it up).
+
+**Why this one.** The rejected alternative — authored HP is a raw level-1 value
+always multiplied by the curve — is a cleaner formula but forces a re-basing pass
+over every hull, and the Supercruiser's 1800 becomes ~183 in the file, which reads
+as nonsense to anyone who opens it. More importantly, the relative model is what
+lets ONE hull cover a whole region band. The user's spec is a RANGE per region
+(rim 1–5, the Long Lane 6–15, the Navy 35–40), and ranges need the same hull
+fielded at several levels rather than a separate `.tres` per level.
+
+### How it is wired
+
+- `BuildShip.spawn_level` (0 = "the hull's authored level", the default) —
+  set it BEFORE `apply_build`.
+- `BuildShip.level()` resolves spawn_level → hull.level → 1.
+- `apply_build` scales `hull_hp`, `armor_hp` and `shield_hp` by the ratio. It is a
+  **no-op for every existing spawn**, since nothing sets `spawn_level` yet.
+- `GuardianShip` now reads `level()` rather than `build.hull.level`, so a guardian
+  fielded at a region level hits as hard as it is tough.
+
+Test: `tools/test_levels.tscn` — goes through a REAL `BuildShip` rather than
+checking the formula in isolation, because a correct helper nobody calls is the
+exact failure this project has already paid for once. Sabotage-verified against
+both dead wiring and an absolute-scaling model.
+
+### Still open
+
+- **Damage** stays ABSOLUTE (`damage_mult(level)`, applied in GuardianShip only).
+  A weapon's `damage` was never authored "at" a level the way a hull's HP was, so
+  the ratio does not apply to it. `damage_between` exists for when something IS
+  authored at a known level.
+- Nothing yet SETS `spawn_level` — the region bands are still just authored hull
+  levels. The Long Lane spawner is the first natural caller.
+- Components carry `level`/`grade` seams that nothing scales off.
 
 ## Ties
 

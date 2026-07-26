@@ -55,10 +55,12 @@ func setup_guard(new_build: ShipBuild, ring_r: float) -> void:
 	_ring_dir = 1.0 if randf() < 0.5 else -1.0
 	set_hull_tint(Color(0.55, 0.68, 1.05))
 	_add_guard_livery()
-	# Damage scales with the hull's LEVEL (Progression) with the military 3x as a
+	# Damage scales with the ship's LEVEL (Progression) with the military 3x as a
 	# floor: a level-1 guardian still does 3x, but a level-35 capital does ~12x and
 	# instagibs level-1 pirates — the level gap finally means something.
-	var dmg := maxf(MILITARY_DMG, Progression.damage_mult(new_build.hull.level))
+	# Reads level() rather than the hull's authored level, so a guardian fielded at
+	# a region-appropriate spawn_level hits as hard as it is tough.
+	var dmg := maxf(MILITARY_DMG, Progression.damage_mult(level()))
 	for mount in _mounts:
 		mount.lead_factor = 0.6
 		mount.damage_mult = dmg

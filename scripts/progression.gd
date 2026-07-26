@@ -21,3 +21,34 @@ static func damage_mult(level: int) -> float:
 ## value; that's a table question, deferred.
 static func toughness_mult(level: int) -> float:
 	return 1.0 + maxf(0.0, float(level - 1)) * 0.28
+
+
+## RELATIVE scaling — the model the user chose 2026-07-25.
+##
+## A hull's authored pools are what that ship FIELDS AT ITS OWN LEVEL: the
+## Supercruiser's 1800 is its level-35 hull, the Bellwether's 900 is her level-15
+## hull. So nothing on disk needs re-basing, a .tres still shows what the ship
+## actually has, and spawning one at a DIFFERENT level scales from that baseline
+## rather than from level 1.
+##
+## That is what lets ONE hull cover a region's whole range — the rim runs 1-5 and
+## the Long Lane 6-15 without authoring a separate .tres per level.
+##
+## Guard the divide: an unset/0 level would otherwise blow the ratio up.
+static func toughness_between(from_level: int, to_level: int) -> float:
+	return _ratio(toughness_mult(from_level), toughness_mult(to_level))
+
+
+## Same idea for outgoing damage. NOTE this is NOT how weapons are scaled today:
+## weapon `damage` is authored raw and multiplied by the SHOOTER's absolute
+## damage_mult(level), because a gun's damage was never authored "at" a level the
+## way a hull's HP was. Use this only when scaling something whose damage IS
+## authored at a known level.
+static func damage_between(from_level: int, to_level: int) -> float:
+	return _ratio(damage_mult(from_level), damage_mult(to_level))
+
+
+static func _ratio(from_mult: float, to_mult: float) -> float:
+	if from_mult <= 0.0:
+		return 1.0
+	return to_mult / from_mult

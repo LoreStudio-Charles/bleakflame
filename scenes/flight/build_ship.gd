@@ -31,6 +31,12 @@ const REGEN_FLOOR := 0.3          # fallback backstop
 
 var build: ShipBuild
 var stats: Dictionary = {}
+## The level this ship is FIELDED at. 0 = "whatever its hull was authored at",
+## which is the default and keeps every existing spawn byte-identical. A spawner
+## sets this BEFORE apply_build to run the same hull hotter or colder — see
+## Progression.toughness_between for why that scales from the hull's own level
+## rather than from 1.
+var spawn_level := 0
 var enemy_group := ""          # the group this ship's weapons target
 var dead := false
 ## AI ships draw a random skin from assets/ships/variants/<hull>/ so every
@@ -77,10 +83,32 @@ var _dmg_reduction := 0.0
 var _bulwark_t := 0.0
 
 
+## The level this ship actually fights at: an explicit `spawn_level` if one was
+## set, else the level its hull was authored at, else 1.
+func level() -> int:
+	if spawn_level > 0:
+		return spawn_level
+	if build != null and build.hull != null:
+		return maxi(1, build.hull.level)
+	return 1
+
+
 func apply_build(new_build: ShipBuild) -> void:
 	add_to_group("ships")   # every hull is an obstacle to every other hull
 	build = new_build
 	stats = ShipStats.aggregate(build)
+
+	# LEVEL SCALING (user, 2026-07-25). A hull's authored pools are what it fields
+	# AT ITS OWN LEVEL, so this is a no-op for every ship that spawns at its hull's
+	# authored level — which is all of them until a spawner says otherwise. Set
+	# `spawn_level` before apply_build to field the same hull tougher or softer,
+	# which is how one .tres covers a whole region band (rim 1-5, Long Lane 6-15)
+	# instead of needing a separate hull per level.
+	if build.hull != null and level() != build.hull.level:
+		var t := Progression.toughness_between(build.hull.level, level())
+		stats.hull_hp *= t
+		stats.armor_hp *= t
+		stats.shield_hp *= t
 
 	_accel = stats.accel * ACCEL_SCALE
 	_max_speed = stats.accel * SPEED_SCALE
