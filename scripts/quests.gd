@@ -244,40 +244,89 @@ const QUESTS := [
 	# prereq — so the lead is handed where you already are, and the DESTINATION (the
 	# colony) is charted by the talk stage's venue. No orphaned "go somewhere you have
 	# never been to start a quest you cannot see".
-	{"id": "legend_check_in", "title": "Look In On Him", "giver": "odessa",
+	{"id": "legend_check_in", "title": "Look In On Him", "giver": "odessa", "layer": "campaign",
 		"requires": "ember_word",
-		"body": "Odessa wants someone to look in on an old friend at the colony's edge — a favour, she says, and she is careful to say it is nothing more than that.",
-		"briefing": "She pours you something you did not order and does not charge for it. \"There's a man on Epharon. Lives out past the domes in a hole in the rock, counts things nobody asked him to count.\" A pause exactly long enough to notice. \"I'd take it kindly if somebody looked in on him. He's owed a bottle and he's owed a visit, and I can't leave this bar.\" She slides the bottle across. \"Don't make a thing of it. Just... see how he is.\"",
-		"debrief": "\"He's alive, then.\" She takes the empty glass you didn't drink from and turns it over in her hands a moment too long. \"Good. That's good.\" She doesn't ask what he said, which is its own kind of answer.",
+		"body": "Odessa wants someone to look in on an old friend at the colony's edge. She calls it a favour. She is very careful to keep calling it that.",
+		"debrief": "\"He's alive, then.\"\n\nShe takes the glass you never drank from, turns it over in her hands a moment too long, and puts it back on the shelf unwashed.\n\n\"Good. That's good.\"\n\nShe doesn't ask what he said. You get the feeling she has been not-asking for years, and has become very good at it.",
+		# NO `briefing` STRING. The hand-off is a TALK STAGE so the player can PRESS her
+		# (user, 2026-07-25): she is afraid to name what frightens her, and pressing WELL
+		# may shake something loose — the hunters, maybe the word Ooshu. It is NOT
+		# guaranteed: asking bluntly closes her, and a closed Odessa is a real outcome the
+		# player keeps. She never gives up the Counter's identity here at any price.
 		"stages": [
-			{"kind": "talk", "npc": "hermit", "venue": "planet",
-				"step": "Land at Epharon and find the Counter in the cave past the domes.",
-				"flash": "The old man took the bottle without a word about who sent it. He knew.",
+			{"kind": "talk", "npc": "odessa", "venue": "station",
+				"step": "Hear Odessa out at Ember Row.",
+				"flash": "Odessa asked you to look in on a friend at the colony's edge. She was careful about how she asked.",
 				"dialogue": {
 					"start": {
-						"text": "The cave smells of cold rock and old machine oil. He's marking a wall that has no room left on it, and doesn't stop when your shadow falls across the marks.\n\n\"You're not the water run.\"",
+						"text": "Ember Row keeps its lights low because the drinkers prefer it and Odessa prefers the drinkers. She is polishing a glass that was clean when you walked in.\n\n\"There's a man on Epharon.\" She doesn't look up. \"Out past the domes, in a hole in the rock. Counts things nobody asked him to count.\"\n\nThe glass goes around again.\n\n\"I'd take it kindly if somebody looked in on him.\"",
 						"choices": [
-							{"text": "Odessa sent me. She sent this, too.", "next": "bottle"},
+							{"text": "Of course. I'll go.", "next": "accept", "style": "primary"},
+							{"text": "You're frightened of something.", "next": "worried"},
+							{"text": "Who is he, Odessa?", "next": "who"},
+						]},
+					"who": {
+						"text": "The rag stops. When she looks up her face has closed like a pressure hatch — and it is a practised motion, a thing she has done before, in a hurry.\n\n\"He's an old man who likes his quiet.\" She sets each word down separately, the way you would count out coins. \"That's who he is.\"\n\nShe goes back to the glass. \"Take the bottle or don't.\"",
+						"choices": [
+							{"text": "Alright. I'll go.", "next": "accept", "style": "primary"},
+						]},
+					"worried": {
+						"text": "She doesn't deny it. From Odessa that is a signed confession.\n\n\"Two nights back I had customers order top-shelf and not drink it.\" The rag goes around the same glass, the same way, three times. \"Sat where they could watch the door. Asked after the colony — not the freight, not the beast. After PEOPLE.\"\n\n\"Paid hard currency. Nobody pays hard currency.\"",
+						"choices": [
+							{"text": "Asking after HIM?", "next": "letslip"},
+							{"text": "Report it. The Board, the Guardians — somebody.", "next": "board"},
+							{"text": "I'll go see him.", "next": "accept", "style": "primary"},
+						]},
+					"board": {
+						"text": "A breath that doesn't become a laugh. \"And report what? That nobody in particular is looking for a man who isn't wanted for anything?\"\n\nShe finally meets your eyes. Hers are steady, and tired, and frightened, in that order.\n\n\"No. You go. You look in on him. You come back and you tell me he's fine.\" A beat. \"Then I get to believe it.\"",
+						"choices": [
+							{"text": "Alright. I'll go.", "next": "accept", "style": "primary"},
+						]},
+					"letslip": {
+						"text": "\"I don't know who they—\" She stops herself hard enough that you hear her teeth meet.\n\nThen, quieter, choosing the smaller of two truths:\n\n\"One of them was Ooshu. Masked. They don't come this far out.\" Her hand goes flat on the bar to stop it moving. \"I served them. They thanked me. And when I looked again the seats were empty and the glasses were still full and I never heard the door.\"\n\n\"Forget I said that. Please. Just go and see that he's well.\"",
+						"choices": [
+							{"text": "I'll go. And I'll be careful.", "next": "accept", "style": "primary"},
+						]},
+					"accept": {
+						"text": "She slides the bottle across — an old label, older than this bar. Something goes out of her shoulders when your hand closes on it.\n\n\"Don't make a thing of it. He'll want to talk about arithmetic.\" The ghost of something crosses her face and doesn't stay. \"Let him.\"",
+						"choices": [
+							{"text": "I'll bring word back.", "next": "end", "style": "primary"},
+						]},
+				}},
+			{"kind": "talk", "npc": "hermit", "venue": "planet",
+				"step": "Land at Epharon and find the Counter in the cave past the domes.",
+				"flash": "The old man took the bottle without a word about who sent it. He knew. And the newest marks on his wall are not the beast.",
+				"dialogue": {
+					"start": {
+						"text": "The cave is colder than the desert has any right to make it. Old machine oil, cold rock, and a wall of tally marks that ran out of wall a long time ago and started on the ceiling.\n\nHe is adding to it when your shadow reaches him. He doesn't stop.\n\n\"You're not the water run.\"",
+						"choices": [
+							{"text": "Odessa sent me. And this.", "next": "bottle"},
 							{"text": "Just looking in.", "next": "looking"},
 						]},
 					"looking": {
-						"text": "\"Nobody just looks in. Not out here.\" The marking stops. He still doesn't turn. \"Who sent you.\"",
+						"text": "\"Nobody just looks in.\" The chalk keeps moving. \"Not out here. Out here, everybody's sent.\"\n\nThe chalk stops.\n\n\"So. Who sent you.\"",
 						"choices": [
 							{"text": "Odessa. She sent this, too.", "next": "bottle"},
 						]},
 					"bottle": {
-						"text": "He turns then. Older than the voice, and something in the way he stands is wrong for a hermit — squared off, weight on the back foot, hands where he can see yours.\n\nHe looks at the bottle for a long moment. \"She remembers the label.\" He takes it, sets it down unopened. \"She shouldn't have sent anybody. Tell her that. Kindly.\"",
+						"text": "He turns — and he turns the way a hatch opens on a hinge somebody keeps oiled: square, weight on the back foot, hands empty and visible and READY. His eyes go past you to the cave mouth first. To the light. To how much of it you are standing in.\n\nThen he looks at the bottle, and for a moment he is only an old man.\n\n\"She remembers the label.\" He sets it down unopened. \"She shouldn't have sent anybody. Tell her that. Kindly.\"",
 						"choices": [
-							{"text": "She's worried about you.", "next": "worried", "style": "primary"},
+							{"text": "She's frightened for you.", "next": "worried", "style": "primary"},
 							{"text": "What are you counting?", "next": "counting"},
 						]},
 					"counting": {
-						"text": "\"The thing that breathes out past the rim. Eight minutes, some seconds that drift.\" He almost smiles. \"Everyone assumes it's madness. It's arithmetic. Madness would be not counting.\"",
+						"text": "\"The thing out past the rim. Eight minutes, some seconds that drift.\" He nods at the long columns. \"Everyone decides that's madness. It's arithmetic. Madness would be NOT counting.\"\n\nThe wall carries two kinds of marks. The long columns are the beast.\n\nThe short ones are by the door, at eye height, and the chalk on them is still bright.",
 						"choices": [
-							{"text": "She's worried about you.", "next": "worried", "style": "primary"},
+							{"text": "And the short ones?", "next": "shortmarks"},
+							{"text": "She's frightened for you.", "next": "worried", "style": "primary"},
+						]},
+					"shortmarks": {
+						"text": "He looks at them as though he has forgotten they are his.\n\n\"Ships,\" he says. \"Ones that come in slow. And don't land.\"\n\nHe cleans the chalk off his fingers, carefully, one at a time.\n\n\"Nothing to count yet. Four isn't a pattern.\"",
+						"choices": [
+							{"text": "She's frightened for you.", "next": "worried", "style": "primary"},
 						]},
 					"worried": {
-						"text": "\"She's right to be.\" He says it plainly, the way a man reads a gauge. Then, catching himself, softer: \"Tell her I'm well. Tell her the rock is dry and the counting keeps.\"\n\nAt the mouth of the cave he says one more thing, not quite to you.\n\n\"If anybody else comes asking after an old man out here — anybody at all — you'd be doing me a kindness not to remember the way.\"",
+						"text": "\"She's right to be.\" He says it the way you would read a gauge — no weight on it at all. Then he catches himself, and something kind comes into his voice, and somehow that is worse.\n\n\"Tell her I'm well. Tell her the rock is dry and the counting keeps.\"\n\nAt the mouth of the cave, with the light full on him, he says the last of it not quite to you.\n\n\"If anyone else comes asking after an old man out here — anyone at all — you'd be doing me a kindness not to remember the way.\"",
 						"choices": [
 							{"text": "Understood.", "next": "end", "style": "primary"},
 						]},

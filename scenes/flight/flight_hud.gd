@@ -529,7 +529,14 @@ func world_flash(color: Color, intensity: float, dur: float) -> void:
 ## Objective kind -> colour, matching the quest log's tints exactly so the two surfaces
 ## teach the same vocabulary: amber = the campaign spine, cyan = an expedition lead,
 ## plain = a side contract.
-const KIND_COLOR := {"campaign": "f2b859", "lead": "7fd3e0", "contract": "d8dce4"}
+## ONE COLOUR PER STORY LAYER (user, 2026-07-25), so the locked narrative vocabulary is
+## legible at a glance instead of every authored thing reading as one storyline:
+##   SAGA gold · CAMPAIGN purple · ARC blue · MISSION green · CONTRACT white
+## `lead` is not a story layer at all — it is an expedition — so it keeps its own cyan.
+const KIND_COLOR := {
+	"saga": "f2b859", "campaign": "b98ce0", "arc": "7aa7f0",
+	"mission": "76d18c", "contract": "d8dce4", "lead": "7fd3e0",
+}
 
 
 func _missions_line() -> String:
@@ -570,7 +577,10 @@ func _missions_line() -> String:
 ## an expedition lead (discovery).
 func _kind_glyph(kind: String) -> String:
 	match kind:
-		"campaign": return "◆"
+		"saga": return "◆"
+		"campaign": return "◈"
+		"arc": return "▲"
+		"mission": return "★"
 		"lead": return "◇"
 		_: return "•"
 

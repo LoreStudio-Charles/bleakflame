@@ -468,7 +468,7 @@ func _tick_npcs(delta: float) -> void:
 			node.move_to(home + Vector2(cos(ang), sin(ang)) * rad)
 
 
-## THE WARREN — the scrits' authored place, out past the east dunes (living-world rule:
+## THE WARREN — the scrit' authored place, out past the east dunes (living-world rule:
 ## enemies live somewhere, they don't spawn on you). Far enough out that a new pilot
 ## meets them by CHOOSING to roam; the town's light (Scrit.TOWN_SANCTUARY_R) keeps
 ## the streets safe regardless.
@@ -523,7 +523,7 @@ func _spawn_ambush() -> void:
 
 
 ## Hold until the pilot is close, then break cover together. One-shot: once sprung they
-## are ordinary scrits with an ordinary leash, so a survivor never re-hides.
+## are ordinary scrit with an ordinary leash, so a survivor never re-hides.
 func _tick_ambush() -> void:
 	if _ambush_sprung or _ambushers.is_empty():
 		return
@@ -541,7 +541,7 @@ func _tick_ambush() -> void:
 
 
 func _on_scrit_down(g: Scrit) -> void:
-	Wallet.xp += 6   # one spine: scrits pay the same currency as pirates (KILL_XP style)
+	Wallet.xp += 6   # one spine: scrit pay the same currency as pirates (KILL_XP style)
 	_flash("Scrit down  ·  +6 XP", 1.6)
 	if _player.combat_target == g:
 		_player.engage(null)
@@ -1186,7 +1186,7 @@ func _do_action(action: String) -> void:
 ## contract as a dock panel) and thaws when it closes — the ShopView owns Esc itself.
 ## The trade RULES live in TradeGoods, shared with the station dock; this only hosts.
 ## BRAM'S SHELF — the colony's first ground-gear stock (SALVAGE tier, docs/ground_combat.md).
-## Clean factory pieces; the affixed versions come off scrits. Only his counter stocks
+## Clean factory pieces; the affixed versions come off scrit. Only his counter stocks
 ## equipment — Imari is the Elder, not a shopkeep.
 const BRAM_GEAR: Array = [
 	"res://data/ground/dune_rifle.tres",

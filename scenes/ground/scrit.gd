@@ -13,7 +13,7 @@ const NOTICE_RANGE := 420.0
 const LEASH_RANGE := 950.0        # gives up beyond this from home and skulks back
 const FLEE_HEALTH := 0.3          # break-and-run below 30% — scavengers, not soldiers
 const PACK_RANGE := 260.0         # a scrit with a friend this close is BRAVE
-## The colony's light. Scrits stop dead at this radius from town center — the ground
+## The colony's light. Scrit stop dead at this radius from town center — the ground
 ## mirror of AIShip.SANCTUARY_R. Buildings sit within ~1000u of Vector2.ZERO.
 const TOWN_SANCTUARY_R := 1150.0
 

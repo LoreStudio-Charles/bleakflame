@@ -169,7 +169,7 @@ func _ready() -> void:
 	# ---- 10) THE DUNE AMBUSH: hidden, inert, and unfindable until it springs ----
 	# The whole point is that you get no tell, so "dormant" has to mean ALL of it: not
 	# drawn, not thinking, and NOT IN THE HOSTILE GROUP — otherwise TAB-cycle or a radar
-	# sweep names three scrits standing in empty sand before they've moved.
+	# sweep names three scrit standing in empty sand before they've moved.
 	var lurker := Scrit.new()
 	add_child(lurker)
 	lurker.setup_scrit(Vector2(20000, 20000))

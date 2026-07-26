@@ -48,7 +48,10 @@ static func trackables(ship) -> Array:
 			continue
 		var st: Dictionary = Quests.stage_def(id)
 		var key := campaign_key(id)
-		found[key] = {"key": key, "kind": "campaign",
+		# WHICH STORY LAYER (the locked vocabulary — docs: SAGA / CAMPAIGN / ARC /
+		# MISSION / CONTRACT). Quest defs declare `layer`; everything authored before
+		# the split is Saga (Movement I), so that is the default.
+		found[key] = {"key": key, "kind": str(qd.get("layer", "saga")),
 			"label": str(qd.get("title", id)),
 			"detail": str(st.get("step", "")),
 			"poi": _stage_poi(st)}

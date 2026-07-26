@@ -91,7 +91,7 @@ Why this is cheap for us — THE TEMPLATE INSIGHT: every humanoid we generate sh
 the SAME PixelLab mannequin skeleton and the SAME walking-4-frames template, so the
 hand lands on the same pixel for every character. **ONE anchor table per animation
 template serves the entire cast** — authored once (4 dirs × 4 frames = 16 entries),
-reused by Imari, Tam, scrits, everyone. New animation template = one more table.
+reused by Imari, Tam, scrit, everyone. New animation template = one more table.
 - Two grip poses per the user's spec: ONE-HAND (hip-side grip) and TWO-HAND
   (cross-body carry) — separate anchor columns in the same table.
 - Draw order by direction: south/east/west = weapon over body; north = behind.
@@ -172,7 +172,7 @@ Art banked: `assets/characters/Scrit` + `assets/portraits/scrit.png`.
 - Pack scavengers of the open roam: cowardly alone, brave in threes.
 - Live in authored PLACES (a warren past the heat-shimmer, spawned like the Rust
   Shoal pattern — never on-player). **The town is sanctuary** (mirror of the station
-  sanctuary rule): scrits never cross the colony's light.
+  sanctuary rule): scrit never cross the colony's light.
 - Behavior v1: skulk → pack up → rush → melee swipe → break-and-run at low HP
   (they're scavengers, not soldiers). They steal dropped loot if left alone (flavor
   hook, later).
@@ -205,7 +205,7 @@ Nothing else may hardcode death consequences.
    the walker + dresses the Main weapon (`fresh=false` keeps the health fraction — a
    vest swap is never a free heal). Dossier [P] gained an EQUIPMENT tab (9 rows,
    right-click unequip→hold, derived block alongside) and the Inventory tab's ONE
-   verb: right-click equips ground gear. Scrits clutch drops (22%,
+   verb: right-click equips ground gear. Scrit clutch drops (22%,
    `Scrit.DROP_POOL`, affix-rolled → ship hold). Tests: `tools/test_ground_gear.gd`
    (--script; two-hand rules sabotage-verified) + drop checks in test_ground_combat.
 2. GroundActor combat: health/barrier/mitigation, auto-attack, target/engage verbs — BUILT.

@@ -9,8 +9,14 @@ extends ScrollContainer
 ## to expand into quest text, completed steps, the current step and rewards. The
 ## COMPLETED tab stays a plain read-only history.
 
-const TINT := {"campaign": UiTheme.AMBER, "lead": UiTheme.ACCENT, "contract": UiTheme.TEXT}
-const GLYPH := {"campaign": "◆", "lead": "◇", "contract": "•"}
+## In lockstep with FlightHud.KIND_COLOR — the same layer reads the same colour in the
+## corner and in the log, or the vocabulary teaches nothing.
+const TINT := {
+	"saga": UiTheme.AMBER, "campaign": Color("b98ce0"), "arc": Color("7aa7f0"),
+	"mission": Color("76d18c"), "contract": UiTheme.TEXT, "lead": UiTheme.ACCENT,
+}
+const GLYPH := {"saga": "◆", "campaign": "◈", "arc": "▲", "mission": "★",
+	"lead": "◇", "contract": "•"}
 
 var ship: TestShip
 var mode := "active"   # "active" | "completed"
