@@ -294,22 +294,22 @@ func _random_variant(hull_name: String) -> String:
 	return pool.pick_random() if not pool.is_empty() else ""
 
 
-## MISSING A COMPONENT COSTS YOU EXACTLY THAT COMPONENT (user, 2026-07-25):
-##   no sensors  -> blind (see sensor_reach)      no thrusters -> no thrust
-##   no shields  -> no rechargeable array         no weapons   -> no guns/ordnance
-##   no armor    -> no ablative layer             no chips     -> no abilities
-##   no modules  -> lose whatever they enhanced
+## A COMPONENT PROVIDES SOMETHING — that is the whole reason a ship carries its
+## mass and power draw (user, 2026-07-26). Sensors sense, shields project, armor
+## ablates, thrusters thrust. Not having one means not getting what it gives, which
+## needs no rule; the rule worth enforcing is the INVERSE — never grant what a ship
+## has not equipped, because every free floor is a component nobody needs to buy.
 ##
-## GOING DARK is taking ALL of it offline AT ONCE, on purpose, and the payment for
-## that total shutdown is what buys the benefits: energy recovers fast, radar print
+## GOING DARK is taking ALL of it offline AT ONCE, on purpose, and paying that
+## total shutdown is what buys the benefits: energy recovers fast, radar print
 ## drops, the heat signature goes, and the bus goes cold enough to swap chips in
 ## flight.
 ##
 ## SO SILENCE IS NOT A SIDE EFFECT OF BLINDNESS. An earlier pass had a sensorless
-## hull count as "running silent", which handed it dark's stealth (hunters hold it
-## at 0.4x range) while it kept shields, engines and guns — a large free benefit
-## for omitting the cheapest part on the ship. The signature drop is earned by
-## having EVERYTHING off, never by lacking one thing.
+## hull count as "running silent", handing it dark's stealth (hunters hold it at
+## 0.4x range) while it kept shields, engines and guns — a large UNEARNED GRANT for
+## omitting the cheapest part on the ship. The signature drop is earned by having
+## everything off, never by lacking one thing.
 func runs_silent() -> bool:
 	return false
 
@@ -318,9 +318,10 @@ func runs_silent() -> bool:
 ##
 ## `floor_r` is the usable minimum for a ship that HAS eyes — a hull should not be
 ## unplayable just because its sensor is cheap. It deliberately does NOT apply to
-## a hull with none: blind has to mean blind, or "no sensors" is a stat with no
-## consequence. Every "how far can this ship see" read goes through here so that
-## consequence lives in one place instead of five scattered maxf() calls.
+## a hull with none, because a floor that applies to everyone is SENSING GRANTED
+## FREE: it made the Tin-Ear set worthless to buy. Every "how far can this ship
+## perceive" read goes through here, so the grant is paid for in one place rather
+## than leaking from five scattered maxf() calls.
 func sensor_reach(floor_r: float) -> float:
 	var r := float(stats.get("sensor_range", 0.0))
 	return 0.0 if r <= 0.0 else maxf(floor_r, r)
