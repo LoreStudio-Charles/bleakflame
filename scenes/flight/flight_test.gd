@@ -34,6 +34,10 @@ const ORIVEL := Vector2(-84000, -52000)
 ## 3x gravity well (radius ~6240), a stable parking orbit off the capital.
 const ORIVEL_ORBITAL := Vector2(-84000, -52000) + Vector2(8200, -3600)
 const ORIVEL_ORBITAL_OFFSET := Vector2(8200, -3600)
+## Where the home fleet holds station, relative to the outpost: off its flank and
+## clear of both the berths and Orivel's well, so a capital under way never drifts
+## through the drydocks it is protecting.
+const ORIVEL_FLEET_OFFSET := Vector2(2600, -1800)
 
 const DRONE_COUNT := 2
 ## Pirate kills that break Vyper's truce (Pilot.shoal_truce_kills). A promise, not
@@ -102,6 +106,17 @@ func _ready() -> void:
 	_outpost.position = ORIVEL + ORIVEL_ORBITAL_OFFSET
 	_outpost.z_index = -4
 	add_child(_outpost)
+
+	# THE HOME FLEET (2026-07-25). The capital was a landmark with nothing guarding it —
+	# a drydock ring and a defenceless world. The Galean Navy now STANDS THERE: a
+	# Supercruiser and its fighter screen holding station off the outpost, so arriving at
+	# Orivel reads as arriving somewhere that matters and is watched.
+	#
+	# Spawned at scene build, NOT on approach: these are a PLACE, like the Rust Shoal
+	# den and the Vulture haunt (the living-world rule — nothing spawns relative to the
+	# player). They are simply far enough out that you only meet them by flying there.
+	# `/fleet` still exists as the dev spawn for testing tactics near the station.
+	_spawn_galean_fleet(ORIVEL + ORIVEL_ORBITAL_OFFSET + ORIVEL_FLEET_OFFSET)
 
 	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
 	SaveGame.restore_ship(ship)
