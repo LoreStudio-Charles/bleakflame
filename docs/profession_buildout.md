@@ -219,15 +219,30 @@ Anomaly** that brings a ship back from before it was destroyed.
 The user has explicitly not planned this yet. Recorded so it is not lost, with the
 questions that will bite if they are answered late:
 
-1. **Does a rez erase a Nemesis grudge?** `Nemesis` records a defeat when a *named* hunter
-   kills you, and the whole vengeance arc hangs off that. If a rez wipes the record, hunters
-   like Recluse lose their teeth whenever a Science Officer is present. **Recommend the
-   grudge STANDS** — you were killed and somebody brought you back, which is a better story
-   than un-killing.
-2. **Self-rez or others-only?** A self-rez in solo play is simply a free life and drains
-   the stakes out of every encounter, Cinderweb included. **Others-only** keeps solo death
-   meaningful *and* becomes a strong reason to fly together — which is what the coop north
-   star wants. Ties to [[coop-campaign-northstar]].
+##### How the rez actually works (user, 2026-07-26)
+
+**IT DOES NOT UNDO THE DEATH. It mitigates the pain.** You died; that stands. What a rez
+does is bring you back **at your wreckage** — you recover from the ashes rather than
+restarting from the dock. If you have already respawned at the docks and someone rezzes
+you, **you are pulled back to the wreck.**
+
+- **Better rezzes mitigate more, and none of them mitigate everything.** That is the whole
+  ladder: a grade of rez is measured in how much of the loss it recovers.
+- **If XP loss is ever added, a rez recovers some of it** — never all.
+- **Being pulled through time may carry its own cost.** A natural home for that is the
+  effects axis already designed for Contamination: a temporal-displacement debuff that
+  lingers.
+
+This settles two questions that were open above, and settles them better than the
+alternatives:
+
+1. **The Nemesis grudge STANDS.** Because a rez never undoes the death, a named hunter that
+   killed you still killed you. Recluse keeps its teeth even with a Science Officer in the
+   wing, and the vengeance arc is untouched.
+2. **It is inherently others-only**, without needing a rule to say so — somebody else has
+   to pull you back. Solo play keeps the full weight of dying, and flying together buys
+   real mitigation. Exactly what the coop north star wants. Ties to
+   [[coop-campaign-northstar]].
 3. **"Temporal" makes time manipulation CANON.** The Saga's Wardens are already
    *space*-folders — the WayGate is their road — so folding time is a short step but a real
    one, and it constrains the Saga afterwards (if time can be rewound, why not rewind the
@@ -240,7 +255,21 @@ questions that will bite if they are answered late:
    maintenance, gradual; Science is *burst and utility* — rez, dispel, cleanse, situational
    oddities. That also leaves clean room for a Medical Officer as the dedicated,
    throughput healer later.
-5. **Medical Officer would be the NINTH commission** (after Bounty Hunter and Marine, both
+5. **THE CINDERWEB CANNOT BE REZZED FROM — and that is a feature.** A rez recovers you
+   from your wreckage, but `BuildShip.devour()` leaves **nothing**: no wreck, no cargo, a
+   dark implosion instead of an explosion. Being devoured is the one death with no ashes to
+   come back from. That is the beast's entire horror made mechanical, for free, and it
+   should be protected rather than patched.
+6. **A REZ NEEDS A DEATH PENALTY TO MITIGATE — so the penalty comes FIRST.** Ship death
+   currently costs cargo and nothing else; XP loss does not exist. A rez that "recovers some
+   of the loss" recovers nothing until there is a loss to recover, so **designing the death
+   penalty is a prerequisite, not a follow-up.** The ground half already anticipates this:
+   `GroundDeath.apply` drops the ship's commodities and its own comments mark XP loss and a
+   corpse entity as explicit TODO seams. Space has no equivalent at all.
+7. **The wreck IS the rez window.** However long a wreck persists is how long a rez remains
+   possible, which gives the mechanic a natural timer and real urgency without inventing
+   one. It also makes wreck persistence a gameplay parameter rather than a cleanup detail.
+8. **Medical Officer would be the NINTH commission** (after Bounty Hunter and Marine, both
    banked). Each addition dilutes the others unless it owns a verb nobody else has — worth
    tracking as the list grows rather than discovering at nine.
 
