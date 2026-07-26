@@ -421,7 +421,150 @@ Genuine forks — not to be guessed at.
    `interaction_radius()`; docking and scanning are still separate constants. Folding them
    in would make one module improve all three — which may be too much for one component.
 
-### 9.8 Reconciliation rule
+### 9.8 WEAPONS — the target design
+
+Designed with the user 2026-07-26. **None of this is built.** Sections 1–8 describe the
+weapons we have; this is the weapon system we are building toward.
+
+#### Damage
+
+**Level and QUALITY determine base damage** — a table or a curve, whichever proves easier
+to tune. Not a multiplier stacked on the pipeline: they produce the starting number.
+
+This is simply how gear is expected to behave. Nobody picks up a higher-level weapon
+expecting it to underperform the one in their bag, and an Experimental that hits like
+Salvage is a letdown, not a balance decision.
+
+Defences will scale on the same axes. That is a later section — we are documenting
+weapons here — but it is a **hard dependency**: offense scaling on level and quality while
+defence scales on neither collapses time-to-kill. Neither half ships alone.
+
+#### `damage_cycle` — instant vs recurring
+
+| Value | Meaning |
+|---|---|
+| `nil` | **Instant.** Damage lands once, on hit. The common case by far. |
+| `{duration, period}` | **Recurring.** Damage every `period` seconds for `duration` seconds. |
+
+Recurring weapons are **much rarer**, with **lower base damage and lower scaling** — the
+trade is that the total arrives over time instead of now. In fiction it is what sets a
+ship's interior alight, or an acid in the damage profile.
+
+**Stacking rules:**
+
+- Same DoT from the **same source** → **refreshes**.
+- Same DoT from a **different source** → a **separate effect**, even if it is the same
+  ability.
+- **One source, one stack** of a given DoT — and this applies per *line*, not just per
+  ability, so two ranks of the same line do not double up.
+- **Maximum 10 debuffs** on a target.
+
+`blight.gd` already implements a working DoT and should be the basis rather than a second
+implementation.
+
+#### `damage_type`
+
+Four to start. **Shields and hull may each carry resistances**, making them more or less
+effective against each.
+
+| Type | Role |
+|---|---|
+| **Impact** | the baseline — kinetic, no rider |
+| **Heat** | **applies Heat stacks**, the armor-stripping mechanic in `docs/armor_and_penetration.md` |
+| **Antimatter** | *(signature effect undecided)* |
+| **Radiation** | *(signature effect undecided)* |
+
+**Heat is deliberately one concept, not two.** Taking Heat damage is what builds Heat on
+the target, so the damage type and the armor mechanic are the same system seen from two
+ends rather than a name collision.
+
+**TYPES AND EFFECTS ARE SEPARATE AXES.** A *type* is what resistances answer; an *effect*
+is a rider a weapon inflicts. **EMP is an EFFECT, not a type** — any weapon may carry it
+regardless of what damage it deals. Heat happens to be both, because Heat damage is
+precisely what builds Heat stacks; that is a deliberate overlap, not the pattern.
+
+Effects known so far: **Heat stacks** (strips armor DR), **EMP** (the natural blinder —
+see Range), and **DoT** via `damage_cycle`. The 10-debuff cap governs effects, not types.
+
+Keep resistances **modest — around ±25%, not ×0/×2.** Strong resistances make players
+carry one weapon per type and swap between fights, which is tedious rather than tactical.
+
+**Resistances must be readable or they are invisible complexity.** This is the natural
+first customer for the *computer as a data tier* idea (§9.5) — reading a target's
+resistance profile should be a capability you buy.
+
+#### Range
+
+```
+effective_range = min(weapon_range, max(VISUAL_RANGE, sensor_reach))
+```
+
+Range **scales**, and is **limited by sensor reach** — but with a visual floor (~350–400)
+so you can always shoot what is close enough to see out the window. Without that floor,
+every combat ship is forced onto the best sensor and "a hauler can have crappy sensors"
+stops being true for anyone who fights.
+
+**Some sensors should extend weapon range** — a fire-control array is a weapons upgrade,
+not just a map upgrade.
+
+**A BLINDING EFFECT STILL KILLS YOUR DAMAGE.** The visual floor covers *having a cheap
+sensor*; it must not protect you from being actively blinded. A blind effect drops
+effective range below the floor — being blinded is supposed to be devastating.
+
+#### Rate of fire
+
+**Already exists as `fire_interval`** (seconds between shots); RoF is its reciprocal. No
+new stat — but the UI should *show* RoF, which reads far better than an interval.
+
+#### Traverse, magazine, mining
+
+- **Traverse** — no change. Authored per weapon (§9.4).
+- **Magazine** — roughly **twice as generous**, and scaling substantially with Mark.
+  Mechanics unchanged. Note `ammo_price` likely wants raising to keep the economy sink
+  intact, since bigger magazines mean fewer restock trips.
+- **Mining power** — **scales with the mining skill.** This wires `Pilot.mining_yield_mult()`,
+  which exists today and is called by nothing. `salvage_luck()` is the identical one-line
+  fix beside it.
+
+#### Delivery classes
+
+Four ways a weapon can reach its target. Today these are **overlapping booleans**
+(`beam`, `homing`, `beam_tail`) with undefined combinations — `beam + homing` is
+meaningless and nothing forbids it. **Make it an explicit `delivery` enum.**
+
+| Class | Aiming | Damage ceiling | Status |
+|---|---|---|---|
+| **Assisted projectile** | Gunnery skill and tracking computers assist | mid | assist + `traverse_mult` exist |
+| **Tracking projectile** | tracking lives in the weapon, no skill needed | **lower** — the price of not aiming | `homing` exists |
+| **Hitscan** | instant hit, flash or beam as pure visual | **highest** — hardest to aim | `beam` exists |
+| **Die-roll** | hit or miss on **Gunnery alone**, no physical tracking | on par with assisted | **new** |
+
+The die-roll class wants a fiction that justifies *not aiming* — designated fire,
+fire-control batteries, over-horizon work — so it reads as a different kind of weapon
+rather than an unreliable version of the others. **Show the miss**: a visible MISS is
+honest, a bolt silently passing through a target reads as a bug.
+
+Note this does **not** conflict with "evasion is a deterministic profile shrink, not an
+RNG miss" — that rule governs *evasion*, which continues to work exactly that way for the
+three physical classes. The die-roll class resolves on its own axis.
+
+#### Open questions
+
+1. **Does `Pilot.damage_mult()` still multiply weapon damage** once base damage carries
+   level and quality itself? That is the one remaining double-dip: the pilot's level would
+   scale a number that already grew with the item's level. Cleanest is probably that gear
+   power comes from gear and the pilot's level scales the *pilot* — but it is a real fork.
+2. **What are Antimatter's and Radiation's signature effects?** Impact is the baseline and
+   Heat has a job. If the other two are only resistance-profile entries they are numbers
+   rather than identities — each wants either a rider effect or a distinctive resistance
+   story (Antimatter as the answer to shields? Radiation as the answer to crew and
+   systems rather than plating?).
+3. **What happens at the 10-debuff cap** — is a new debuff refused, or does the oldest
+   fall off?
+4. **Do defences scale on level+quality too, and on what curve?** Named here because
+   weapons cannot ship without it.
+
+### 9.9 Reconciliation rule
 
 When this section and sections 1–8 disagree, **this section is the intent and the code is
 the bug.** Fix the code or change this section deliberately — never let them drift
