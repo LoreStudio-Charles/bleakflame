@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="DefenseDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/defense_def.gd" id="1_nmfvh"]
+
+[resource]
+script = ExtResource("1_nmfvh")
+kind = 0
+shield_hp = 95.0
+shield_regen = 6.0
+display_name = "Mirrorfield Projector"
+description = "A proper emitter with a proper capacitor bank. Comes back fast."
+grade = 3
+level = 5
+mass = 7.0
+power_draw = 20.0
+affix_ids = PackedStringArray()

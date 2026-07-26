@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EngineDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/engine_def.gd" id="1_7it2i"]
+
+[resource]
+script = ExtResource("1_7it2i")
+thrust = 640.0
+display_name = "Kickstart Thruster"
+description = "Someone welded a second injector on. It mostly holds."
+mark = 2
+grade = 1
+level = 2
+mass = 8.5
+power_draw = 12.0
+affix_ids = PackedStringArray()

@@ -12,5 +12,6 @@ display_name = "Overcharged Cell"
 description = "Runs 40% past rated containment. The paperwork says don't."
 mark = 2
 grade = 4
+level = 16
 mass = 16.0
 affix_ids = PackedStringArray()

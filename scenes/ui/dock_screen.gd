@@ -8,22 +8,30 @@ extends CanvasLayer
 
 const SHOP_STOCK := [
 	"res://data/components/weapons/junker_slugthrower.tres",
+	"res://data/components/weapons/hacksaw_scattergun.tres",
 	"res://data/components/weapons/vk2_autocannon.tres",
 	"res://data/components/weapons/twinlance_pulse.tres",
 	"res://data/components/weapons/ferro_cutter_beam.tres",
 	"res://data/components/weapons/bombard_rocket_pod.tres",
 	"res://data/components/weapons/heatseeker_missile_pod.tres",
 	"res://data/components/weapons/radio_missile_rack.tres",
+	"res://data/components/weapons/halberd_repeater.tres",
 	"res://data/components/engines/drifter_ion.tres",
+	"res://data/components/engines/kickstart_thruster.tres",
 	"res://data/components/engines/vectorjet.tres",
 	"res://data/components/engines/afterjet_sprint.tres",
+	"res://data/components/engines/quickstep_drive.tres",
 	"res://data/components/reactors/scrap_cell_pile.tres",
 	"res://data/components/reactors/hearth_fusion.tres",
 	"res://data/components/reactors/overdrive_bottle.tres",
 	"res://data/components/defense/patchplate_armor.tres",
+	"res://data/components/defense/sputter_screen.tres",
+	"res://data/components/defense/braceplate_armor.tres",
 	"res://data/components/defense/bulwark_plating.tres",
 	"res://data/components/defense/veil_shield.tres",
+	"res://data/components/defense/mirrorfield_projector.tres",
 	"res://data/components/defense/aegis_composite.tres",
+	"res://data/components/systems/tinear_sensor_set.tres",
 	"res://data/components/systems/wayfarer_sensors.tres",
 	"res://data/components/systems/strapdown_cargo_pod.tres",
 	"res://data/components/systems/falsebottom_hold.tres",
@@ -65,8 +73,21 @@ var _mend_box: VBoxContainer   # planet only: the Counter mends burned factions
 var _shop_grid: GridContainer
 var _armory_grid: GridContainer
 var _armory_detail: RichTextLabel
-var _armory_filter := -1               # -1 = all; else a HardpointDef.SlotType value
+var _armory_filter := -1               # -1 = all; FILTER_CHIPS; else a HardpointDef.SlotType
 var _armory_filter_row: HBoxContainer
+## CHIPS ARE NOT A SLOT TYPE. A chip is a SystemDef, so `slot_type()` reports SYSTEM
+## for chips and cargo pods alike and no slot filter can separate them — yet the
+## chip rack is the one shelf a pilot shops with a completely different question in
+## mind ("what can my ship DO?" rather than "what fits this socket?"). Sentinel
+## rather than a new SlotType, because adding one would change values serialized in
+## every hull .tres. Identified by what it GRANTS — see `_is_chip`.
+const FILTER_CHIPS := -2
+## Level range, inclusive. Gear is authored L1-5 today (docs/gear_levels.md), so the
+## default span shows everything and the control costs a new pilot nothing.
+var _armory_lvl_min := 1
+var _armory_lvl_max := 60
+var _lvl_min_spin: SpinBox
+var _lvl_max_spin: SpinBox
 var _cargo_grid: GridContainer
 var _stash_grid: GridContainer
 var _board_row: HBoxContainer
@@ -546,6 +567,8 @@ func _build_armory_tab() -> void:
 			HardpointDef.SlotType.REACTOR, HardpointDef.SlotType.DEFENSE,
 			HardpointDef.SlotType.SENSOR, HardpointDef.SlotType.SYSTEM]:
 		_add_filter_button(HardpointDef.SlotType.keys()[t].capitalize(), t, fgroup)
+	_add_filter_button("Chips", FILTER_CHIPS, fgroup)
+	_build_level_range_filter()
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -581,6 +604,98 @@ func _grid_in(parent: Node) -> GridContainer:
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(grid)
 	return grid
+
+
+## LEVEL RANGE — two SpinBoxes on the same filter bar.
+##
+## A dual-thumb RANGE SLIDER is the control this wants, and Godot ships no such
+## thing (HSlider is single-value), so it would be a bespoke widget with its own
+## drag/keyboard/focus handling to build and test. Two SpinBoxes cost almost
+## nothing, match the Armory's existing button-bar idiom, and are the more precise
+## instrument anyway when you know the number you want. Revisit the widget when
+## there is nothing more valuable to build (user, 2026-07-26).
+func _build_level_range_filter() -> void:
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(14, 0)
+	_armory_filter_row.add_child(spacer)
+
+	var tag := Label.new()
+	tag.text = "LEVEL"
+	tag.add_theme_font_size_override("font_size", 11)
+	tag.add_theme_color_override("font_color", UiTheme.AMBER)
+	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_armory_filter_row.add_child(tag)
+
+	_lvl_min_spin = _level_spin(_armory_lvl_min)
+	var dash := Label.new()
+	dash.text = "–"
+	dash.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_armory_filter_row.add_child(dash)
+	_lvl_max_spin = _level_spin(_armory_lvl_max)
+
+	# THE TWO ENDS CANNOT CROSS. Without this a pilot can set min 40 / max 5 and get
+	# a permanently empty shop with no visible reason why — the failure looks like a
+	# broken store, not a bad filter. Each end shoves the other rather than refusing
+	# the edit, so there is no rejected input to explain.
+	_lvl_min_spin.value_changed.connect(func(v: float) -> void:
+		_armory_lvl_min = int(v)
+		if _armory_lvl_min > _armory_lvl_max:
+			_armory_lvl_max = _armory_lvl_min
+			_lvl_max_spin.set_value_no_signal(_armory_lvl_max)
+		_refresh_armory())
+	_lvl_max_spin.value_changed.connect(func(v: float) -> void:
+		_armory_lvl_max = int(v)
+		if _armory_lvl_max < _armory_lvl_min:
+			_armory_lvl_min = _armory_lvl_max
+			_lvl_min_spin.set_value_no_signal(_armory_lvl_min)
+		_refresh_armory())
+
+
+func _level_spin(start: int) -> SpinBox:
+	var s := SpinBox.new()
+	s.min_value = 1
+	s.max_value = Pilot.MAX_LEVEL
+	s.value = start
+	s.custom_minimum_size = Vector2(58, 0)
+	s.add_theme_font_size_override("font_size", 11)
+	_armory_filter_row.add_child(s)
+	return s
+
+
+## A CHIP is anything that GRANTS AN ABILITY — the same question the ability
+## library asks, so the shelf and the bus can never disagree about what a chip is.
+## Deliberately not a folder check (`data/components/chips/`): a path is not a
+## property, and gear moves.
+static func _is_chip(comp: ComponentDef) -> bool:
+	if comp == null:
+		return false
+	var tags = comp.get("tags")
+	if tags == null:
+		return false
+	for t in tags:
+		if Abilities.id_for_tag(str(t)) != "":
+			return true
+	return false
+
+
+## THE ONE PLACE THE ARMORY DECIDES WHAT IT IS SHOWING. This test used to be
+## copy-pasted at all four grid-fill sites, so every new filter meant editing four
+## conditions that could silently drift apart.
+func _passes_armory_filter(comp: ComponentDef) -> bool:
+	if comp == null:
+		return false
+	var lvl := int(comp.level)
+	if lvl < _armory_lvl_min or lvl > _armory_lvl_max:
+		return false
+	if _armory_filter == -1:
+		return true
+	if _armory_filter == FILTER_CHIPS:
+		return _is_chip(comp)
+	# A chip reports SYSTEM, so an unfiltered "System" shelf would be half chips.
+	# Slot filters mean "what fits this socket", and the chip rack is its own tab.
+	if _armory_filter == HardpointDef.SlotType.SYSTEM and _is_chip(comp):
+		return false
+	return comp.slot_type() == _armory_filter
 
 
 func _add_filter_button(label: String, type: int, group: ButtonGroup) -> void:
@@ -1745,26 +1860,43 @@ func _dockside_talk() -> String:
 
 
 func _refresh_armory() -> void:
+	# COUNT WHAT WE ADD — do not ask the grid afterwards. `queue_free()` is
+	# DEFERRED to the end of the frame, so the cleared tiles are still children
+	# right now and `get_child_count()` reports the OLD fill plus the new one.
+	# The "nothing here" note below therefore never appeared when two refreshes
+	# landed in one frame (refresh() followed by a filter click), and it only
+	# looked correct in play because a frame usually elapses in between.
+	var shown_shop := 0
+	var shown_hold := 0
 	for c in _shop_grid.get_children():
 		c.queue_free()
 	for c in _armory_grid.get_children():
 		c.queue_free()
 	for path in SHOP_STOCK:
 		var comp: ComponentDef = load(path)
-		if _armory_filter == -1 or comp.slot_type() == _armory_filter:
+		if _passes_armory_filter(comp):
 			_shop_grid.add_child(_shop_tile(comp, path))
+			shown_shop += 1
 	# Faction gear (cloak, Crystalline Array, ...) is NOT open-market — it's sold
 	# by each profession's leader in the Pilot-tab QUARTERMASTER, never here.
 	for comp in ship.cargo:
-		if _armory_filter == -1 or comp.slot_type() == _armory_filter:
+		if _passes_armory_filter(comp):
 			_armory_grid.add_child(_goods_tile(comp, "hold"))
+			shown_hold += 1
 	for comp in Stash.items:
-		if _armory_filter == -1 or comp.slot_type() == _armory_filter:
+		if _passes_armory_filter(comp):
 			_armory_grid.add_child(_goods_tile(comp, "stash"))
-	if _shop_grid.get_child_count() == 0:
-		_empty_note(_shop_grid, "— nothing here —")
-	if _armory_grid.get_child_count() == 0:
-		_empty_note(_armory_grid, "— nothing in this category —")
+			shown_hold += 1
+	# SAY WHICH FILTER EMPTIED THE SHELF. "Nothing here" under a level range the
+	# pilot set three clicks ago reads as a broken shop; naming the band makes the
+	# cause the first thing they see. Every rejection must be visible.
+	var band := ""
+	if _armory_lvl_min > 1 or _armory_lvl_max < Pilot.MAX_LEVEL:
+		band = " for level %d–%d" % [_armory_lvl_min, _armory_lvl_max]
+	if shown_shop == 0:
+		_empty_note(_shop_grid, "— nothing here%s —" % band)
+	if shown_hold == 0:
+		_empty_note(_armory_grid, "— nothing in this category%s —" % band)
 
 
 ## The Armory's two grids, built from the SHARED ItemTile: the shop shelf (right-click
@@ -1911,11 +2043,19 @@ func _material_icon(key: String) -> Texture2D:
 
 
 func _empty_note(grid: Container, text: String) -> void:
-	if grid.get_child_count() == 0:
-		var lbl := Label.new()
-		lbl.text = text
-		lbl.add_theme_color_override("font_color", Color(0.38, 0.41, 0.5))
-		grid.add_child(lbl)
+	# COUNT ONLY LIVE CHILDREN. A grid is refilled by queue_free()-ing its tiles and
+	# adding new ones, and queue_free is DEFERRED to the end of the frame — so a
+	# grid that is logically empty still reports the whole previous fill until the
+	# frame ends. This guard therefore suppressed the note exactly when it was
+	# needed, and only looked right because a frame usually elapses between
+	# refreshes. Every caller of this helper had the bug.
+	for c in grid.get_children():
+		if not c.is_queued_for_deletion():
+			return
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_color_override("font_color", Color(0.38, 0.41, 0.5))
+	grid.add_child(lbl)
 
 
 ## One square of equipment in the Engineering hold/stash grid: click selects, right-click
@@ -2465,9 +2605,10 @@ func _on_fabricate() -> void:
 
 func _describe(comp: ComponentDef) -> String:
 	var gc := Grades.color(comp.grade).to_html(false)
-	var out := "[b][color=#%s]%s[/color][/b]  —  [color=#%s]Mk %d %s[/color]   mass %.0f   load %.0f   value %dc" % [
+	var out := "[b][color=#%s]%s[/color][/b]  —  [color=#%s]Mk %d %s[/color]   mass %.0f   load %.0f   value %dc\n%s" % [
 		gc, comp.display_name, gc,
-		comp.mark, Grades.display_name(comp.grade), comp.mass, comp.power_draw, comp.value()]
+		comp.mark, Grades.display_name(comp.grade), comp.mass, comp.power_draw, comp.value(),
+		ItemVisuals.level_line(comp)]
 	if comp.stat_summary() != "":
 		out += "\n" + comp.stat_summary()
 	var abil := _ability_line(comp)
@@ -2619,6 +2760,16 @@ func _fit_error(comp: ComponentDef, slot_index: int) -> String:
 	if comp is SystemDef and not (comp as SystemDef).fittable_by(Pilot.profession):
 		return "%s needs the %s commission to fit." % [comp.display_name,
 			Professions.display_name((comp as SystemDef).profession_lock)]
+	# LEVEL IS A REQUIREMENT TO EQUIP, not a label (user, 2026-07-26). Checked LAST
+	# so the more specific complaints (wrong slot, too large, wrong commission) win —
+	# "you need level 5" is unhelpful when the part was never going to fit anyway.
+	#
+	# ONLY THE PLAYER IS GATED, and that is automatic rather than a check: NPC fits
+	# never pass through _fit_error, so a level-8 pirate keeps its guns.
+	var need := int(comp.level)
+	if need > Pilot.level():
+		return "%s needs pilot level %d — you are level %d." % [
+			comp.display_name, need, Pilot.level()]
 	return ""
 
 

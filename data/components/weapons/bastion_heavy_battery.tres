@@ -13,6 +13,7 @@ homing_by_band = PackedFloat32Array()
 display_name = "Bastion Heavy Battery"
 description = "Fortress artillery. If it catches you square, you were already too slow."
 mark = 4
+level = 6
 mass = 42.0
 power_draw = 48.0
 affix_ids = PackedStringArray()

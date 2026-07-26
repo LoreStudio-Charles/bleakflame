@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_2w345"]
+
+[resource]
+script = ExtResource("1_2w345")
+damage = 4.0
+fire_interval = 0.26
+projectile_speed = 820.0
+weapon_range = 240.0
+bolt_color = Color(1, 0.78, 0.42, 1)
+bolt_scale = 0.75
+homing_by_band = PackedFloat32Array()
+display_name = "Hacksaw Scattergun"
+description = "Six cut-down barrels on a scavenged frame. Useless past spitting distance, brutal inside it."
+mark = 2
+grade = 1
+level = 2
+mass = 7.0
+power_draw = 9.0
+affix_ids = PackedStringArray()

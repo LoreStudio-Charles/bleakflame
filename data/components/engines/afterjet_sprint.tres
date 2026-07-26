@@ -10,6 +10,7 @@ display_name = "Afterjet Sprint Drive"
 description = "Burns hot and loud. Freighter captains' favorite lie: 'just for emergencies.'"
 mark = 2
 grade = 3
+level = 6
 mass = 14.0
 power_draw = 26.0
 affix_ids = PackedStringArray()

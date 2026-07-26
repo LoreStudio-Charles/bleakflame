@@ -17,6 +17,7 @@ display_name = "Aegis Lance Battery"
 description = "Galean naval laser: a sustained ivory lance, instant on target. Line-standard, and it shows — steady, long-reaching, merciless to anything that lingers in the open."
 mark = 4
 grade = 3
+level = 8
 mass = 12.0
 power_draw = 7.0
 affix_ids = PackedStringArray()

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ReactorDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/reactor_def.gd" id="1_hub3v"]
+
+[resource]
+script = ExtResource("1_hub3v")
+power_output = 128.0
+energy_capacity = 180.0
+energy_recharge = 2.0
+display_name = "Longhaul Fusion Cell"
+description = "Freight-yard standard. Twenty years of hauling and it still lights."
+mark = 2
+level = 4
+mass = 15.0
+affix_ids = PackedStringArray()

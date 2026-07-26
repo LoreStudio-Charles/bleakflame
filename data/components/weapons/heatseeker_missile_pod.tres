@@ -22,6 +22,7 @@ display_name = "Heat-Seeker Missile Pod"
 description = "Fire and forget — the warhead chases the hottest engine in the sky. Five rounds that hit like a grudge; enough to break a fight you didn't start, never enough for a long hunt."
 mark = 2
 grade = 3
+level = 6
 mass = 7.0
 power_draw = 4.0
 affix_ids = PackedStringArray()

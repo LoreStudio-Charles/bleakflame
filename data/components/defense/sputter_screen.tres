@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DefenseDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/defense_def.gd" id="1_lfmfu"]
+
+[resource]
+script = ExtResource("1_lfmfu")
+kind = 0
+shield_hp = 28.0
+shield_regen = 2.0
+display_name = "Sputter Screen"
+description = "It flickers, it gutters, and it buys you the three seconds you need."
+grade = 1
+mass = 5.0
+power_draw = 11.0
+affix_ids = PackedStringArray()

@@ -18,6 +18,7 @@ display_name = "Palisade Flak Battery"
 description = "Galean anti-fighter mount: a fence of proximity-fuzed bursts thrown up around the hull. It cannot reach a ship of the line and was never meant to — it is here for the ones that get close enough to matter."
 mark = 4
 grade = 3
+level = 8
 mass = 13.0
 power_draw = 9.0
 affix_ids = PackedStringArray()

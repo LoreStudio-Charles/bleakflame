@@ -15,6 +15,7 @@ display_name = "Galean Naval Autocannon"
 description = "Confederacy secondary armament: a fast-cycling autocannon that answers what the main lances are too slow to catch."
 mark = 3
 grade = 3
+level = 7
 mass = 10.0
 power_draw = 5.0
 affix_ids = PackedStringArray()

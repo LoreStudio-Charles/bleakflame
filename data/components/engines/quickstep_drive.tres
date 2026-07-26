@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EngineDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/engine_def.gd" id="1_v74ae"]
+
+[resource]
+script = ExtResource("1_v74ae")
+thrust = 980.0
+display_name = "Quickstep Drive"
+description = "Naval surplus. Answers before you have finished asking."
+grade = 3
+level = 5
+mass = 9.0
+power_draw = 17.0
+affix_ids = PackedStringArray()

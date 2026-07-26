@@ -11,6 +11,7 @@ bolt_scale = 0.85
 homing_by_band = PackedFloat32Array()
 display_name = "VK-2 Autocannon"
 description = "Factory-spec rotary cannon. The sound of the baseline."
+level = 3
 mass = 5.0
 power_draw = 10.0
 affix_ids = PackedStringArray()

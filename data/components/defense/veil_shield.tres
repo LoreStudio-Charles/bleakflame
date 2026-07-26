@@ -9,6 +9,7 @@ shield_hp = 60.0
 shield_regen = 4.0
 display_name = "Veil Shield Projector"
 description = "A soap-bubble against the dark. Regenerates; armor doesn't."
+level = 3
 mass = 6.0
 power_draw = 16.0
 affix_ids = PackedStringArray()

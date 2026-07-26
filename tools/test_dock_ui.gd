@@ -52,6 +52,8 @@ func _ready() -> void:
 	_case_talk_to_odessa_does_quest_first()
 	_case_every_npc_desk_is_uniform()
 	_case_quest_log_is_the_tracker()
+	_case_armory_filters()
+	_case_level_gates_equipping()
 	_case_contracts_credit_their_giver_guild()
 	_case_gem_bar_never_starts_crossed_out()
 	_case_odessa_has_no_dead_ask()
@@ -1148,3 +1150,164 @@ func _ok(cond: bool, what: String) -> void:
 	_checks += 1
 	if not cond:
 		_fails.append(what)
+
+
+## ARMORY FILTERS — the chip shelf and the level band (user, 2026-07-26).
+##
+## Asserted through the REAL screen and the REAL shop stock, because the whole
+## point of these two filters is which of the actual shipped items they surface.
+##
+## The subtle one is CHIPS vs SYSTEM. A chip is a SystemDef, so `slot_type()`
+## answers SYSTEM for a cargo pod and an ability chip alike — a slot filter simply
+## cannot tell them apart, which is why the chip shelf keys off what the item
+## GRANTS instead. If that ever regresses to a slot test, "Chips" quietly becomes a
+## second System tab and the System tab fills up with chips.
+func _case_armory_filters() -> void:
+	var screen := _fresh_dock(true)
+	screen.refresh()
+
+	# --- CHIPS shows only things that grant an ability ---
+	screen._armory_filter = DockScreen.FILTER_CHIPS
+	screen._refresh_armory()
+	var chips := _shop_tiles(screen)
+	_ok(not chips.is_empty(), "the Chips filter shows something (the shop stocks chips)")
+	for c in chips:
+		_ok(DockScreen._is_chip(c), "'%s' is on the chip shelf and grants an ability" % c.display_name)
+
+	# --- ...and the System shelf is free of them ---
+	screen._armory_filter = HardpointDef.SlotType.SYSTEM
+	screen._refresh_armory()
+	for c in _shop_tiles(screen):
+		_ok(not DockScreen._is_chip(c),
+			"'%s' is a chip and must not sit on the System shelf" % c.display_name)
+
+	# --- LEVEL BAND ---
+	screen._armory_filter = -1
+	screen._armory_lvl_min = 1
+	screen._armory_lvl_max = Pilot.MAX_LEVEL
+	screen._refresh_armory()
+	var all_count := _shop_tiles(screen).size()
+	_ok(all_count > 0, "the unfiltered shelf has stock (%d)" % all_count)
+
+	screen._armory_lvl_min = 1
+	screen._armory_lvl_max = 5
+	screen._refresh_armory()
+	for c in _shop_tiles(screen):
+		_ok(int(c.level) >= 1 and int(c.level) <= 5,
+			"'%s' (L%d) is inside the 1-5 band" % [c.display_name, int(c.level)])
+
+	# A band nothing occupies must EXPLAIN itself, not just look like a broken shop.
+	screen._armory_lvl_min = Pilot.MAX_LEVEL
+	screen._armory_lvl_max = Pilot.MAX_LEVEL
+	screen._refresh_armory()
+	_ok(_shop_tiles(screen).is_empty(), "an empty band shows no stock")
+	_ok(_finds_text(screen._shop_grid, "level %d" % Pilot.MAX_LEVEL),
+		"an empty shelf names the level band that emptied it")
+
+	# --- THE ENDS CANNOT CROSS --- dragging min past max shoves max, and vice
+	# versa. Without this the shop can be left permanently empty with no visible
+	# cause, which reads as a bug rather than a filter.
+	screen._armory_lvl_min = 1
+	screen._armory_lvl_max = 60
+	screen._lvl_min_spin.value = 1
+	screen._lvl_max_spin.value = 60
+	screen._lvl_min_spin.value = 40          # emits -> should shove max up
+	_ok(screen._armory_lvl_max >= 40,
+		"raising min above max pushed max up (min %d, max %d)"
+		% [screen._armory_lvl_min, screen._armory_lvl_max])
+	screen._lvl_max_spin.value = 3           # emits -> should shove min down
+	_ok(screen._armory_lvl_min <= 3,
+		"lowering max below min pulled min down (min %d, max %d)"
+		% [screen._armory_lvl_min, screen._armory_lvl_max])
+
+	screen.queue_free()
+
+
+## The ComponentDefs currently drawn on the shop shelf.
+##
+## SKIPS NODES ALREADY QUEUED FOR DELETION. `_refresh_armory` clears the grid with
+## queue_free(), which is DEFERRED to the end of the frame — so inside one frame the
+## grid holds the previous fill AND the new one. Reading it raw made every filter
+## look like it did nothing at all (the first run of this case "found" every weapon
+## in the game on the chip shelf). In play a frame always elapses between refreshes,
+## so this is a harness concern, not a product bug.
+func _shop_tiles(screen: DockScreen) -> Array:
+	var out: Array = []
+	for t in screen._shop_grid.get_children():
+		if t.is_queued_for_deletion():
+			continue
+		var c = t.get("comp")
+		if c != null:
+			out.append(c)
+	return out
+
+
+func _finds_text(root: Node, needle: String) -> bool:
+	for child in root.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		var txt = child.get("text")
+		if txt != null and needle in str(txt):
+			return true
+		if _finds_text(child, needle):
+			return true
+	return false
+
+
+## LEVEL IS THE MINIMUM PILOT LEVEL TO EQUIP (user, 2026-07-26).
+##
+## It started life as a shop-filter label. Making it a REQUIREMENT is the part with
+## teeth, so this asserts the refusal itself rather than the number being drawn:
+## a label nobody enforces and a gate nobody can see are different failures, and
+## the first one is what this used to be.
+func _case_level_gates_equipping() -> void:
+	var screen := _fresh_dock(true)
+	screen.refresh()
+
+	# A blue mk1 part: level 5 by the grade+mark rule.
+	var blue: ComponentDef = load("res://data/components/weapons/halberd_repeater.tres")
+	var white: ComponentDef = load("res://data/components/weapons/junker_slugthrower.tres")
+	_ok(int(blue.level) == 5, "Halberd Repeater is level 5 (got %d)" % int(blue.level))
+	_ok(int(white.level) == 1, "Junker Slugthrower is level 1 (got %d)" % int(white.level))
+
+	# Find a weapon hardpoint big enough that MARK can never be the reason it is
+	# refused — otherwise this case could pass on the wrong error entirely.
+	var slot := -1
+	for i in screen.ship.build.hull.hardpoints.size():
+		var hp: HardpointDef = screen.ship.build.hull.hardpoints[i]
+		if hp.slot_type == HardpointDef.SlotType.WEAPON and hp.mark >= blue.mark:
+			slot = i
+			break
+	_ok(slot >= 0, "the starter has a weapon hardpoint that fits a Mk%d" % blue.mark)
+	if slot < 0:
+		screen.queue_free()
+		return
+
+	var was := Wallet.xp
+	Wallet.xp = 0                                   # level 1
+	_ok(Pilot.level() == 1, "pilot is level 1 for the test (got %d)" % Pilot.level())
+	var err := screen._fit_error(blue, slot)
+	_ok(err != "", "a level-5 part is REFUSED to a level-1 pilot")
+	_ok("level" in err.to_lower(), "...and the refusal says why: '%s'" % err)
+	_ok(screen._fit_error(white, slot) == "", "a level-1 part still fits a level-1 pilot")
+
+	# Earn the level and the same part becomes legal — the gate must OPEN, or it is
+	# just a permanent ban wearing a level's clothes.
+	Wallet.xp = Pilot.xp_for_level(5)
+	_ok(Pilot.level() >= 5, "pilot reached level 5 (got %d)" % Pilot.level())
+	_ok(screen._fit_error(blue, slot) == "",
+		"the same part fits once the level is earned — got '%s'" % screen._fit_error(blue, slot))
+
+	# THE STARTER MUST BE LEGAL AT LEVEL 1. It flies white and grey precisely so a
+	# new pilot is never wearing gear they could not re-fit after a refit.
+	Wallet.xp = 0
+	for i in screen.ship.build.slots:
+		var c: ComponentDef = screen.ship.build.slots[i]
+		if c == null:
+			continue
+		_ok(int(c.level) <= 1,
+			"starter part '%s' is level %d — a level-1 pilot could not re-fit it"
+			% [c.display_name, int(c.level)])
+
+	Wallet.xp = was
+	screen.queue_free()

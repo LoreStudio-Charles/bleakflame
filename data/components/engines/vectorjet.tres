@@ -7,6 +7,7 @@ script = ExtResource("1_oix4n")
 thrust = 800.0
 display_name = "Vectorjet Thruster"
 description = "Reliable gimbal-nozzle workhorse."
+level = 3
 mass = 9.0
 power_draw = 14.0
 affix_ids = PackedStringArray()

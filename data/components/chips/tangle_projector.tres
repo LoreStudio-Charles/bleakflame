@@ -18,3 +18,4 @@ grade = 3
 mass = 0.2
 power_draw = 0.0
 affix_ids = PackedStringArray()
+level = 5

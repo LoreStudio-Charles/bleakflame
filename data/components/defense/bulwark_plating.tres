@@ -7,5 +7,6 @@ script = ExtResource("1_nqacg")
 armor_hp = 80.0
 display_name = "Bulwark Plating"
 description = "Milled, matched, and bolted right."
+level = 3
 mass = 16.0
 affix_ids = PackedStringArray()

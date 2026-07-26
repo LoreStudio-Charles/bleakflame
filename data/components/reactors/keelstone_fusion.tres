@@ -12,5 +12,6 @@ display_name = "Keelstone Fusion Plant"
 description = "Capital-grade fusion, built around the keel rather than bolted to it. Freight lines and navies buy the same plant for the same reason: nothing aboard should ever have to wait its turn for power."
 mark = 3
 grade = 3
+level = 7
 mass = 34.0
 affix_ids = PackedStringArray()

@@ -22,7 +22,40 @@ func _init() -> void:
 	quit()
 
 
+## WHEN EACH QUALITY REACHES THE SHELF, by grade (docs/gear_levels.md).
+## Flotsam, Salvage, Standard, Advanced, Experimental, Bespoke, Exotic.
+##
+## Green at 3, blue at 5 and PURPLE AT 15 are the user's calls (2026-07-26). The
+## purple floor is deliberately far above blue: no Experimental gear is being
+## authored yet, and the four items that already exist (Aegis Composite, Overcharged
+## Cell, Sentinel Radar Battery, Manifold Coupling) should not be reachable in the
+## early game — the Aegis and the Overcharged Cell were sitting in the STARTING
+## SHOP. Bespoke and Exotic are spaced above it and remain guesses.
+const GRADE_FLOOR := [1, 1, 3, 5, 15, 22, 30]
+
+
+## LEVEL IS DERIVED FROM GRADE AND MARK, not hand-typed on 50 resources.
+##
+## `level = grade_floor + (mark - 1)` — quality decides when a thing appears, size
+## spreads it within its tier. Encoding the rule once means a new component is
+## levelled correctly the moment it is authored, and re-tuning a floor is a
+## one-line change rather than a sweep anyone can half-finish.
+func _level_for(grade: int, mark: int) -> int:
+	return GRADE_FLOOR[clampi(grade, 0, GRADE_FLOOR.size() - 1)] + maxi(0, mark - 1)
+
+
 func _save(res: Resource, path: String) -> void:
+	# Apply the derived level to COMPONENTS only — HullDef.level is a different
+	# statement entirely (rim 1-5, Long Lane 6-15, Navy 35-40) and must not be
+	# recomputed from grade.
+	#
+	# `<= 1` means "never explicitly set", since 1 is the field's default. That is
+	# what preserves the deliberate exceptions: the Augur Sensor Array is authored
+	# at 10 because role identification gates on level >= 10, and the derived value
+	# would be 6 — silently un-gating a capability the player is meant to buy.
+	if res is ComponentDef and not (res is HullDefS):
+		if int(res.level) <= 1:
+			res.level = _level_for(int(res.grade), int(res.mark))
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var err := ResourceSaver.save(res, path)
 	if err != OK:
@@ -57,6 +90,29 @@ func _generate_components() -> void:
 	slug.bolt_color = Color(1.0, 0.62, 0.3)   # hot slag orange, chunky
 	slug.bolt_scale = 1.15
 	_save(slug, "res://data/components/weapons/junker_slugthrower.tres")
+
+	# THE FIRST UPGRADE A PLAYER EVER BUYS (2026-07-26). Salvage mk2 -> LEVEL 2.
+	# Deliberately not "the Junker but better": it trades more than half the reach
+	# for real close-in damage, so the first purchase is a CHOICE about how you
+	# want to fight rather than a bigger number. That is where the pride comes from.
+	var hacksaw := _weapon("Hacksaw Scattergun", G.SALVAGE, 2, 7.0, 9.0, 4.0, 0.26,
+		"Six cut-down barrels on a scavenged frame. Useless past spitting distance, brutal inside it.")
+	hacksaw.weapon_range = 240.0
+	hacksaw.projectile_speed = 820.0
+	hacksaw.bolt_color = Color(1.0, 0.78, 0.42)
+	hacksaw.bolt_scale = 0.75
+	_save(hacksaw, "res://data/components/weapons/hacksaw_scattergun.tres")
+
+	# BLUE AT LEVEL 5 (user, 2026-07-26). Every Advanced weapon on disk was mark 2,
+	# which the grade+mark rule puts at level 6 — so "blue at 5" was true of nothing.
+	# This is the mark 1 rung that makes the promise real.
+	var halberd := _weapon("Halberd Repeater", G.ADVANCED, 1, 8.0, 15.0, 6.5, 0.22,
+		"Factory-fresh autocannon with a cooled sleeve. It simply does not stop.")
+	halberd.weapon_range = 480.0
+	halberd.projectile_speed = 1150.0
+	halberd.bolt_color = Color(0.62, 0.82, 1.0)
+	halberd.bolt_scale = 0.9
+	_save(halberd, "res://data/components/weapons/halberd_repeater.tres")
 
 	# Mining laser: a weapon by the rules, a tool by trade. Terrible in a
 	# fight, peerless against rock.
@@ -267,12 +323,40 @@ func _generate_components() -> void:
 	e.description = "Slow to spool, cheap to feed."
 	_save(e, "res://data/components/engines/drifter_ion.tres")
 
+	# THE GREY RUNG (2026-07-26). docs/gear_levels.md flagged that Flotsam had no
+	# engine at all, so the cheapest drive in the game was already white. It also
+	# gives the light pirate hulls something slow enough to actually fight: a wasp on
+	# a Drifter Ion still ran at 468 against a 250-speed starter.
+	e = EngineDefS.new()
+	e.display_name = "Ashpan Drive"
+	e.grade = G.FLOTSAM
+	e.mark = 1; e.mass = 7.0; e.power_draw = 8.0; e.thrust = 400.0
+	e.description = "Recovered off something that did not survive. Runs hot, runs anyway."
+	_save(e, "res://data/components/engines/ashpan_drive.tres")
+
+	# White mk2 -> LEVEL 2. Sits between the Drifter (500) and the green Vectorjet
+	# (800), so leaving the starter drive behind is felt without skipping the tier.
+	e = EngineDefS.new()
+	e.display_name = "Kickstart Thruster"
+	e.grade = G.SALVAGE
+	e.mark = 2; e.mass = 8.5; e.power_draw = 12.0; e.thrust = 640.0
+	e.description = "Someone welded a second injector on. It mostly holds."
+	_save(e, "res://data/components/engines/kickstart_thruster.tres")
+
 	e = EngineDefS.new()
 	e.display_name = "Vectorjet Thruster"
 	e.grade = G.STANDARD
 	e.mark = 1; e.mass = 9.0; e.power_draw = 14.0; e.thrust = 800.0
 	e.description = "Reliable gimbal-nozzle workhorse."
 	_save(e, "res://data/components/engines/vectorjet.tres")
+
+	# Blue mk1 -> LEVEL 5.
+	e = EngineDefS.new()
+	e.display_name = "Quickstep Drive"
+	e.grade = G.ADVANCED
+	e.mark = 1; e.mass = 9.0; e.power_draw = 17.0; e.thrust = 980.0
+	e.description = "Naval surplus. Answers before you have finished asking."
+	_save(e, "res://data/components/engines/quickstep_drive.tres")
 
 	e = EngineDefS.new()
 	e.display_name = "Afterjet Sprint Drive"
@@ -299,6 +383,19 @@ func _generate_components() -> void:
 	r.trail_color = Color(0.55, 0.75, 1.0)
 	r.description = "The steady blue everyone learned to fly by."
 	_save(r, "res://data/components/reactors/hearth_fusion.tres")
+
+	# THE DOWAGER'S PLANT (2026-07-26). Her design is deliberately tired — "all Mk1
+	# except one Mk2 foredeck gun and a Mk2 reactor to feed it" — but the ONLY Mk2
+	# reactor in the game was the EXPERIMENTAL Overcharged Cell, so the beaten-up
+	# smuggler's boat shipped with purple, level-16 hardware. Freight-grade Mk2:
+	# unglamorous, dependable, and exactly as exciting as a workboat should be.
+	r = ReactorDefS.new()
+	r.display_name = "Longhaul Fusion Cell"
+	r.grade = G.STANDARD
+	r.mark = 2; r.mass = 15.0; r.power_output = 128.0
+	r.energy_capacity = 180.0; r.energy_recharge = 2.0
+	r.description = "Freight-yard standard. Twenty years of hauling and it still lights."
+	_save(r, "res://data/components/reactors/longhaul_cell.tres")
 
 	r = ReactorDefS.new()
 	r.display_name = "Overcharged Cell"
@@ -334,6 +431,29 @@ func _generate_components() -> void:
 	d.description = "Overlapping wreck-plates. Rattles at speed — that's the drawback affix talking."
 	_save(d, "res://data/components/defense/patchplate_armor.tres")
 
+	# White mk2 -> LEVEL 2. Between Patchplate (40) and green Bulwark (80).
+	d = DefenseDefS.new()
+	d.display_name = "Braceplate Armor"
+	d.grade = G.SALVAGE
+	d.kind = DefenseDefS.Kind.ARMOR
+	d.mark = 2; d.mass = 14.0; d.armor_hp = 58.0
+	d.description = "Salvaged plate, cut square and braced properly. It will hold."
+	_save(d, "res://data/components/defense/braceplate_armor.tres")
+
+	# THE GAP THAT MATTERED MOST (docs/gear_levels.md §2). The cheapest shield in
+	# the game was the GREEN Veil Shield, so gating green at level 3 would have left
+	# a new pilot with NO SHIELD AT ANY PRICE — and the shield is the layer that
+	# teaches you to disengage and come back. White mk1 -> LEVEL 1, so it is
+	# available from the first minute and is what the starter Rooster now flies.
+	d = DefenseDefS.new()
+	d.display_name = "Sputter Screen"
+	d.grade = G.SALVAGE
+	d.kind = DefenseDefS.Kind.SHIELD
+	d.mark = 1; d.mass = 5.0; d.power_draw = 11.0
+	d.shield_hp = 28.0; d.shield_regen = 2.0
+	d.description = "It flickers, it gutters, and it buys you the three seconds you need."
+	_save(d, "res://data/components/defense/sputter_screen.tres")
+
 	d = DefenseDefS.new()
 	d.display_name = "Bulwark Plating"
 	d.grade = G.STANDARD
@@ -350,6 +470,16 @@ func _generate_components() -> void:
 	d.shield_hp = 60.0; d.shield_regen = 4.0
 	d.description = "A soap-bubble against the dark. Regenerates; armor doesn't."
 	_save(d, "res://data/components/defense/veil_shield.tres")
+
+	# Blue mk1 -> LEVEL 5.
+	d = DefenseDefS.new()
+	d.display_name = "Mirrorfield Projector"
+	d.grade = G.ADVANCED
+	d.kind = DefenseDefS.Kind.SHIELD
+	d.mark = 1; d.mass = 7.0; d.power_draw = 20.0
+	d.shield_hp = 95.0; d.shield_regen = 6.0
+	d.description = "A proper emitter with a proper capacitor bank. Comes back fast."
+	_save(d, "res://data/components/defense/mirrorfield_projector.tres")
 
 	d = DefenseDefS.new()
 	d.display_name = "Aegis Composite Lattice"

@@ -9,5 +9,6 @@ energy_capacity = 140.0
 energy_recharge = 1.5
 display_name = "Hearth Fusion Core"
 description = "The steady blue everyone learned to fly by."
+level = 3
 mass = 12.0
 affix_ids = PackedStringArray()

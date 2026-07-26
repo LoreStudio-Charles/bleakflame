@@ -78,6 +78,7 @@ func _ready() -> void:
 				l.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 				l.offset_right = -3
 				l.offset_top = 0)
+		_add_level_badge()
 		if price >= 0:
 			_add_price_badge()
 	else:
@@ -89,6 +90,14 @@ func _ready() -> void:
 	# Stash gear rides dimmer than hold gear — location at a glance.
 	if source == "stash":
 		modulate = Color(1, 1, 1, 0.68 if style == Style.HOLD else 0.7)
+
+	# GEAR YOU CANNOT EQUIP YET READS AS OUT OF REACH. Level is a requirement now,
+	# not a label, so the shelf should answer "can I use this?" before the pilot
+	# clicks anything. Applied MULTIPLICATIVELY so it stacks with the stash dim
+	# rather than overwriting it, and kept subtle — the item is still for sale and
+	# still worth wanting, it is just not yours yet.
+	if int(comp.level) > Pilot.level():
+		modulate *= Color(0.72, 0.66, 0.66, 0.82)
 
 	var ability := ItemVisuals.ability_line(comp)
 	_tip_body = ((ability + "\n") if ability != "" else "") \
@@ -130,6 +139,29 @@ func _add_mark_badge() -> void:
 	mb.offset_top = 2
 	mb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(mb)
+
+
+## LEVEL badge (bottom-left): the minimum pilot level to EQUIP this part.
+##
+## Bottom-left because the other three corners are taken — mark top-left, pips
+## top-right, price centred along the bottom. Turns DANGER RED when the pilot
+## cannot meet it, which is the one thing worth seeing without hovering: a red
+## number means "not yet", whatever else the tile says.
+func _add_level_badge() -> void:
+	var need := int(comp.level)
+	var lb := Label.new()
+	lb.text = "L%d" % need
+	lb.add_theme_font_size_override("font_size", 10)
+	lb.add_theme_color_override("font_color",
+		Color(0.95, 0.35, 0.31) if need > Pilot.level() else Color(0.62, 0.68, 0.78))
+	lb.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	lb.add_theme_constant_override("outline_size", 3)
+	lb.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	lb.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	lb.offset_left = 3
+	lb.offset_bottom = -1
+	lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(lb)
 
 
 func _add_price_badge() -> void:

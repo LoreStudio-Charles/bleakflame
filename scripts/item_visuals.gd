@@ -177,9 +177,25 @@ static func grade_tooltip(comp: ComponentDef, body: String) -> Control:
 	var nm := ("◆ " if not comp.affix_ids.is_empty() else "") + comp.display_name
 	# Name on its own line, then grade + size on the SECOND line — so the rarity/Mk
 	# phrase never wraps mid-word behind the name.
-	rt.text = "[b][color=#%s]%s[/color][/b]\n[color=#%s]%s Mk %d[/color]\n%s" % [
-		gc, nm, gc, Grades.display_name(comp.grade), comp.mark, body]
+	#
+	# LEVEL RIDES THE SAME LINE as grade and mark, because the three are one thought:
+	# quality, size, and what it takes to use. It is a REQUIREMENT TO EQUIP, so it
+	# says so — and when the pilot cannot meet it, it turns DANGER RED and states
+	# the shortfall outright. A requirement the player can't see is a rejection they
+	# can only discover by being refused.
+	rt.text = "[b][color=#%s]%s[/color][/b]\n[color=#%s]%s Mk %d[/color]   %s\n%s" % [
+		gc, nm, gc, Grades.display_name(comp.grade), comp.mark, level_line(comp), body]
 	return rt
+
+
+## "Requires level N", coloured by whether this pilot actually meets it.
+## Shared so the hover, the details panel and the paperdoll can never disagree
+## about what a part demands.
+static func level_line(comp: ComponentDef) -> String:
+	var need := int(comp.level)
+	if need <= Pilot.level():
+		return "[color=#8890a0]Requires level %d[/color]" % need
+	return "[color=#f25a50]Requires level %d — you are %d[/color]" % [need, Pilot.level()]
 
 
 ## The ability equivalent of grade_tooltip: icon + name, then the body from

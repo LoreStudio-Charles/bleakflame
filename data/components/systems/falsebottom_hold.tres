@@ -8,5 +8,6 @@ tags = PackedStringArray("cargo")
 cargo_capacity = 40.0
 display_name = "False-Bottom Hold"
 description = "A smuggler's hold with room the manifest never mentions — twice the strapdown pod's space, and just as quiet. Sits between a starter's pockets and a freighter's belly."
+level = 3
 mass = 7.0
 affix_ids = PackedStringArray()

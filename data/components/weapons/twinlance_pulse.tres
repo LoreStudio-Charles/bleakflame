@@ -15,6 +15,7 @@ display_name = "Twinlance Pulse Laser"
 description = "Paired emitters tuned a half-phase apart."
 mark = 2
 grade = 3
+level = 6
 mass = 8.0
 power_draw = 22.0
 affix_ids = PackedStringArray()

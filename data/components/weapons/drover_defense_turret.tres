@@ -15,6 +15,7 @@ homing_by_band = PackedFloat32Array()
 display_name = "Drover Defense Turret"
 description = "Standard freight-line defensive mount. Slow, plain, and bolted to every hauler on the lane — enough to make a raider work for it, never enough to make one leave."
 mark = 2
+level = 4
 mass = 9.0
 power_draw = 12.0
 affix_ids = PackedStringArray()

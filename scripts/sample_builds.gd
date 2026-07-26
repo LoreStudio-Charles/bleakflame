@@ -47,18 +47,30 @@ static func _create(index: int) -> ShipBuild:
 			})
 		3:
 			# The Rooster: a little of everything, a lot of nothing.
+			# EVERYTHING ON IT IS WHITE OR GREY (2026-07-26, user: new white L1-2 gear
+			# "so players can feel some pride in their first upgrades").
+			#
+			# It used to fly VK-2s, a Vectorjet, a Hearth Fusion and a Veil Shield —
+			# all STANDARD (green), which under the new gate is level 3 gear a level 1
+			# pilot cannot buy. That inverted the whole ladder: the first thing on the
+			# shelf you could afford was a DOWNGRADE from what you already had, so
+			# there was no first upgrade to be proud of. The starter has to sit BELOW
+			# the tier it is meant to grow out of.
+			#
+			# Still a complete ship — every layer present, all of them poor. The
+			# Sputter Screen exists specifically so this hull keeps a shield.
 			return _make("res://data/hulls/rooster.tres", {
-				0: "res://data/components/weapons/vk2_autocannon.tres",
-				1: "res://data/components/weapons/vk2_autocannon.tres",
-				2: "res://data/components/engines/vectorjet.tres",
-				3: "res://data/components/reactors/hearth_fusion.tres",
-				4: "res://data/components/defense/veil_shield.tres",
+				0: "res://data/components/weapons/junker_slugthrower.tres",
+				1: "res://data/components/weapons/junker_slugthrower.tres",
+				2: "res://data/components/engines/drifter_ion.tres",
+				3: "res://data/components/reactors/scrap_cell_pile.tres",
+				4: "res://data/components/defense/sputter_screen.tres",
 				6: "res://data/components/systems/strapdown_cargo_pod.tres",
 				# JUNK HULL, JUNK COUPLING: the Rooster is Flotsam-grade, and its
 				# bus is the cheapest thing that works. Upgrading it is one of the
 				# first upgrades that visibly changes what you can DO.
 				7: "res://data/components/couplings/scrap_coupling.tres",
-			})
+			}, TIN_EAR)
 		4:
 			# The Cutlass: fastest thing a player can buy. Twin fixed talons,
 			# an oversized drive, and a knife-edge power margin.
@@ -75,10 +87,16 @@ static func _create(index: int) -> ShipBuild:
 			# boat built around ONE big gun. The Mk2 foredeck mount + Mk2 reactor
 			# to feed it are the whole pitch; everything else is Mk1 and tired.
 			return _make("res://data/hulls/dowager.tres", {
-				0: "res://data/components/weapons/heatseeker_missile_pod.tres", # her way out of a scrap (Mk2, homing, low ammo)
+				# NO PURPLE, NO HIGH LEVELS (user, 2026-07-26: "definitely not purple
+				# or level 16 — it was a bad design, but intentionally so"). She keeps
+				# her Mk2 gun and Mk2 plant, but both are FREIGHT-GRADE green now
+				# rather than Experimental, so the whole boat tops out at level 4.
+				# The Drover is the civilian mount that keeps an armed hauler annoying
+				# rather than safe — which is the Dowager exactly.
+				0: "res://data/components/weapons/drover_defense_turret.tres", # Mk2 foredeck, civilian mount
 				1: "res://data/components/weapons/vk2_autocannon.tres",      # the spite gun for the long haul
 				2: "res://data/components/engines/vectorjet.tres",           # a tired drive
-				3: "res://data/components/reactors/overdrive_bottle.tres",   # Mk2 reactor
+				3: "res://data/components/reactors/longhaul_cell.tres",      # Mk2 plant, freight-grade
 				4: "res://data/components/defense/patchplate_armor.tres",    # patched plate
 				5: "res://data/components/systems/falsebottom_hold.tres",    # her upgraded smuggler deck (40 cargo)
 				6: "res://data/components/couplings/scrap_coupling.tres",    # junk hull, junk bus
@@ -113,11 +131,15 @@ static func trader_mule() -> ShipBuild:
 ## Pirate loadouts — enemy variety is just other builds over the same data.
 ## Raider: stripped Kestrel, fast and fragile. Brawler: budget Sparrowhawk
 ## with scavenged armor.
+## STRIPPED MEANS STRIPPED (user, 2026-07-26: wasps and the Kestrel "are both a
+## little fast still"). Two Drifter Ions made the RAIDER faster than the wasp — 667
+## against a 250-speed starter, and a heavy raider outrunning a light interceptor is
+## backwards besides. One drive puts it at ~380, and an empty engine bay suits a
+## hull described as stripped.
 static func pirate_raider() -> ShipBuild:
 	return _make("res://data/hulls/kestrel.tres", {
 		0: "res://data/components/weapons/junker_slugthrower.tres",
 		1: "res://data/components/engines/drifter_ion.tres",
-		2: "res://data/components/engines/drifter_ion.tres",
 		3: "res://data/components/reactors/scrap_cell_pile.tres",
 	}, TIN_EAR)
 
@@ -132,10 +154,20 @@ static func pirate_brawler() -> ShipBuild:
 	}, TIN_EAR)
 
 
+## WAY TOO FAST TO BE DANGEROUS (user, 2026-07-26). It flew a GREEN Vectorjet at
+## 733 top speed, which needed 6.11 rad/s to circle at its 120-unit knife-fight
+## range against a 4.50 turn rate — so it could never hold an orbit, fell back to
+## strafing passes, and spent every pass so far out that the player's shields fully
+## regenerated between them. It read as scenery.
+##
+## The white Drifter Ion drops it to 468, where the orbit becomes physically
+## possible (3.90 vs 4.50) and it simply stays on you. Its GUN is untouched: the
+## wasp was never short of damage, only of time on target. Also fixes a coherence
+## gap — a level 1-3 trash mob was flying level-3 green hardware.
 static func pirate_wasp() -> ShipBuild:
 	return _make("res://data/hulls/wasp.tres", {
 		0: "res://data/components/weapons/vk2_autocannon.tres",
-		1: "res://data/components/engines/vectorjet.tres",
+		1: "res://data/components/engines/ashpan_drive.tres",
 		2: "res://data/components/reactors/scrap_cell_pile.tres",
 	}, TIN_EAR)
 

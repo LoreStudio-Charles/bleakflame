@@ -17,6 +17,7 @@ blast_radius = 48.0
 homing_by_band = PackedFloat32Array()
 display_name = "Bombard Rocket Pod"
 description = "Twelve dumb rockets and a rail. Aim is your problem; the warhead forgives."
+level = 3
 mass = 7.0
 power_draw = 3.0
 affix_ids = PackedStringArray()

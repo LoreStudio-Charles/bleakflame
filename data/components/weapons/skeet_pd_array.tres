@@ -14,6 +14,7 @@ bolt_scale = 0.55
 homing_by_band = PackedFloat32Array()
 display_name = "Skeet PD Array"
 description = "A hail of small answers to small problems."
+level = 3
 mass = 6.0
 power_draw = 18.0
 affix_ids = PackedStringArray()

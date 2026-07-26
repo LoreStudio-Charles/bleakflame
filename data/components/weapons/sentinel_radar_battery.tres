@@ -19,6 +19,7 @@ display_name = "Sentinel Radar Battery"
 description = "Command-guided capital ordnance: heavy warheads ride the ship's targeting radar to whatever it has locked. Reaches where the lances can't — and the fleet doesn't hand these out."
 mark = 4
 grade = 4
+level = 18
 mass = 14.0
 power_draw = 8.0
 affix_ids = PackedStringArray()

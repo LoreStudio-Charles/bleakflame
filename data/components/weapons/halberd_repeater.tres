@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/schema/weapon_def.gd" id="1_3jgyx"]
+
+[resource]
+script = ExtResource("1_3jgyx")
+damage = 6.5
+fire_interval = 0.22
+projectile_speed = 1150.0
+weapon_range = 480.0
+bolt_color = Color(0.62, 0.82, 1, 1)
+bolt_scale = 0.9
+homing_by_band = PackedFloat32Array()
+display_name = "Halberd Repeater"
+description = "Factory-fresh autocannon with a cooled sleeve. It simply does not stop."
+grade = 3
+level = 5
+mass = 8.0
+power_draw = 15.0
+affix_ids = PackedStringArray()

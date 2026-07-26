@@ -8,6 +8,7 @@ tags = PackedStringArray("sensor")
 sensor_range = 1500.0
 display_name = "Wayfarer Sensor Suite"
 description = "Sees farther than you can run."
+level = 3
 mass = 3.0
 power_draw = 6.0
 affix_ids = PackedStringArray()
