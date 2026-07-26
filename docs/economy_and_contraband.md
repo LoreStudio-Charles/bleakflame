@@ -92,6 +92,85 @@ half-built**:
 Black markets want at least: **the Shoal** (obvious), **Ember Row's back room** (already
 implied by the bar), and a **capital undercity** if Telon is built.
 
+### Contraband is a RELATIONSHIP, not a property
+
+An item is not "illegal". An item is illegal **here**. The same cloak is fine at the Shoal
+and a crime at Orivel, and that relationship is the whole mechanic.
+
+**FACTIONS MAKE LAWS; SYSTEMS HAVE A CONTROLLING FACTION.** One source of truth — *this
+faction outlaws this item* — and the place you are standing tells you whose law applies.
+Maintaining per-system lists *and* per-faction lists would let the two disagree.
+
+**"Jurisdiction", not "system".** The word *system* is already three things here: a star
+system, `SystemDef`, and `SlotType.SYSTEM` — and the star-system sense is **locked
+narrative canon** (Campaign = one *system's* story; Saga = across all *systems*). So the
+legal scope gets its own word. It is a better fit anyway, because jurisdiction and system
+are not the same unit:
+
+> **Cinder Reach already holds three.** Galean law near the station and Orivel, Krayt's
+> writ at the Shoal, and **the Gap, where nobody's runs at all.**
+
+That last one is free design: **the lawless middle of the Long Lane is where you can carry
+anything.** Exactly where smugglers should want to be, at exactly the price the Gap already
+charges. And the Shoal having *its own* contraband list — things **they** will not tolerate
+— makes it a far more interesting criminal harbour than one with no rules.
+
+### Two flags: illegal to FIT, illegal to CARRY
+
+Separate, and they fall out naturally:
+
+| | Means | Typically |
+|---|---|---|
+| **Fit-illegal** | you may transport it, you may not *use* it | military hardware — the gun is fine in the case |
+| **Carry-illegal** | possession itself is the crime | the genuinely forbidden |
+| **Both** | | most serious contraband |
+
+**This creates two different concealment problems, which is better than one.** Carried
+contraband hides in a **False-Bottom Hold** — which already exists on the Dowager with no
+fiction attached to it. Fitted contraband is bolted to your hull and *cannot* be hidden
+that way, so concealing it is a **smuggler ability** rather than a cargo trick. Two
+problems, two solutions, two reasons to specialise.
+
+### Severity is HIDDEN. Illegality is not.
+
+**You always know an item is illegal — an icon says so. You do not know what it costs to be
+caught.** Holding a key reveals what you have actually learned about the local statute.
+
+**That split is the fairness line, and it is the whole reason this works.** You consented to
+a risk of unknown size, which is tense. Being shot for something you had no way of knowing
+was illegal is not tense, it is cheap.
+
+The ladder runs:
+
+**fine → confiscation → impound + standing hit → wanted → KOS on sight**
+
+Standing, `wanted` and KOS are all live systems already, so the harsh end is mostly wiring
+rather than new machinery.
+
+### Severity should be LEARNABLE — an information economy
+
+"How bad is this?" ought to be something you can **invest in**, not something you are simply
+denied:
+
+- a better **computer** reads the local statute (another customer for computer-as-data-tier)
+- **asking at Ember Row** surfaces it — the rumour system already exists
+- **getting caught once** teaches you permanently
+- **friendly standing** means customs *warns* you instead of acting
+
+### The annihilation tier should be WARDEN TECH
+
+The worst rung should not be drugs. **Carrying something Warden-made through Galean space
+being shoot-on-sight** says an enormous amount with no dialogue at all: the Confederacy
+knows what the gates are, or knows enough to be terrified of anyone handling them.
+
+That ties smuggling into **the Convergence** rather than leaving it a parallel economy — and
+it makes the most dangerous cargo in the game not the most valuable, but the most
+**incriminating**. The contraband that can get you annihilated is *evidence*.
+
+See `docs/the_convergence.md` and `docs/threats_wardens.md`.
+
+---
+
 **Smuggling should be a SYSTEM anyone can touch, with a specialist who is best at it** —
 exactly how mining works today. Anyone can shoot a rock; the Miner gets ore-sense and
 yield. Anyone can run contraband; the Smuggler gets concealment, better black-market
@@ -158,4 +237,11 @@ has — worth tracking as the list grows rather than noticing at ten.
 3. **What makes an interdiction survivable?** Speed, concealment, a social check, standing,
    or a bribe — the smuggler's toolkit lives here.
 4. **What is contraband?** Nothing is currently illegal. The category has to exist before
-   any of this does.
+   any of this does — though `TradeGoods` already carries per-venue product lists, so the
+   first brick is smaller than it sounds.
+5. **Does fitted contraband get confiscated, or does the whole ship?** Taking a fitted
+   module is far harsher than taking cargo, and may be too harsh for a first offence —
+   which is part of why the ladder escalates rather than jumping.
+6. **Who controls what, per jurisdiction?** Needs a controlling faction per region before
+   any law can apply. The Gap having *none* is the interesting case and should stay that
+   way.
