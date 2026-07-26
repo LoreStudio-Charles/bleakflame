@@ -131,6 +131,37 @@ func _init() -> void:
 			print("FAIL: build '%s' — %s" % [label, err])
 			failures += 1
 
+	# ---- ORPHANED SHIP ART ----
+	# A hull resolves its sprite from its DISPLAY NAME (BuildShip: art_path, else
+	# assets/ships/<snake_name>.png). So a one-letter typo in a filename does not
+	# error -- the hull silently falls back to its silhouette and the art sits on
+	# disk unused. That is exactly what happened to "bellweather.png" against the
+	# Bellwether, and nothing caught it but a human eyeball.
+	#
+	# So: every top-level PNG in assets/ships/ must be claimed by some hull.
+	# assets/ is gitignored, so an ABSENT folder is normal and skipped -- this only
+	# fires on a file that exists and matches nothing, which is nearly always a typo.
+	var art_dir := DirAccess.open("res://assets/ships")
+	if art_dir != null:
+		var claimed := {}
+		for path in _hull_paths():
+			var h: HullDef = load(path)
+			if h == null:
+				continue
+			if h.art_path != "":
+				claimed[h.art_path.get_file().to_lower()] = true
+			claimed["%s.png" % h.display_name.to_snake_case()] = true
+		# Not hulls: the practice drone is a TargetDrone, not a HullDef.
+		for allowed in ["drone.png"]:
+			claimed[allowed] = true
+		for f in art_dir.get_files():
+			var fname := f.trim_suffix(".remap")
+			if not fname.ends_with(".png") or fname.ends_with(".import"):
+				continue
+			if not claimed.has(fname.to_lower()):
+				print("FAIL: assets/ships/%s is claimed by NO hull — probable filename typo; it will render as a silhouette" % fname)
+				failures += 1
+
 	print("hulls checked: %d   builds checked: %d" % [checked, builds_checked])
 	if checked == 0 or builds_checked == 0:
 		print("FAIL: nothing was loaded — this suite is VACUOUS and proves nothing")
