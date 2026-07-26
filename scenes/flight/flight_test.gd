@@ -2079,8 +2079,8 @@ func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
 	pirate.died.connect(_respawn_pirate_later.bind(kind, posting))
 
 
-## Kill XP by archetype — the seed the leveling system will grow from.
-const KILL_XP := {"wasp": 8, "raider": 10, "brawler": 14, "vulture": 40}
+## Kill XP by archetype now lives in `XP.KILL`, with every other reward in the
+## game, so the whole economy of danger can be judged in one place.
 
 
 ## Only the player's own kills pay out: guardians and pirates gunning each
@@ -2090,7 +2090,7 @@ func _grant_kill_xp(pirate: Node, kind: String) -> void:
 	if not is_instance_valid(pirate) or not pirate.killed_by_player():
 		return
 	MissionLog.note_kill()           # a bounty tally is the player's contract
-	var xp := int(round(float(KILL_XP.get(kind, 10)) * Pilot.kill_xp_mult()))
+	var xp := int(round(float(XP.kill(kind)) * Pilot.kill_xp_mult()))
 	Wallet.xp += xp
 	Standing.add("guardian", 1)     # kills are the Guardian verb (Ruel's watching)
 	Standing.add("privateer", -1)   # ...and the Shoal remembers who guns down their own

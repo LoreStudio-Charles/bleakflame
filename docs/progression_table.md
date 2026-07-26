@@ -35,6 +35,24 @@ Supersedes the previous PLANNED stub. The old placeholder formulas in `scripts/p
 
 Everything scales on **LEVEL** and **GRADE**, and both apply to every scaling stat.
 
+> **XP IS TUNED IN `scripts/xp.gd`, AND THE CODE IS THE SOURCE OF TRUTH FOR IT**
+> (2026-07-26). Both halves of levelling — what a level COSTS and what an activity
+> PAYS — live there and nowhere else.
+>
+> **This document specified an XP base of 500; the code runs 50, and 50 is the
+> version that has been played.** A pilot reached level 4 in one short session and
+> confirmed that pace as right, so the code is correct and this doc was the thing
+> that was wrong. The base is a pure denomination anyway: multiply it and every
+> reward together and nothing changes but the digits.
+>
+> The curve now carries a KNEE (`XP.KNEE`, level 5). Below it the shape is exactly
+> the original `BASE * (L-1)^1.6`; above it `XP.LATE_STEEPEN` compounds per level,
+> so the late game can be slowed WITHOUT rebalancing an early game that has been
+> validated by play. At 1.06 level 60 costs ~25x the un-steepened curve.
+>
+> Tuning, in one place each: `XP.LATE_STEEPEN` for how hard the end drags,
+> `XP.KNEE` for where the grind starts, `XP.REWARD_SCALE` for everything earned.
+
 ### Level factor — COMPOUNDING, cap 60, soft lock 30
 
 ```

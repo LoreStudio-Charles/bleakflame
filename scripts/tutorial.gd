@@ -7,7 +7,9 @@ extends Node
 ## step's `id` and calls Tutor.did() to complete each one. Runs once on a fresh save.
 
 const REWARD_CREDITS := 150
-const REWARD_XP := 50
+## Authored in XP.ACTIVITY with every other payout; kept as a name here because
+## the completion message prints it.
+static var REWARD_XP := XP.activity("licence")
 const DRONE_COUNT := 3
 
 ## Step id -> VO clip. The controller plays it when a step first becomes active

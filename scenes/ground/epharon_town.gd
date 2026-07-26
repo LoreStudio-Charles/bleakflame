@@ -613,7 +613,7 @@ func _tick_ambush() -> void:
 
 
 func _on_scrit_down(g: Scrit) -> void:
-	Wallet.xp += 6   # one spine: scrit pay the same currency as pirates (KILL_XP style)
+	Wallet.xp += XP.activity("scrit")   # one spine: scrit pay the same currency as pirates
 	_flash("Scrit down  ·  +6 XP", 1.6)
 	if _player.combat_target == g:
 		_player.engage(null)

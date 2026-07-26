@@ -100,5 +100,52 @@ func _init() -> void:
 	if Pilot.gem_at(0) != "scan" or Pilot.gem_at(1) != "" or Pilot.gem_at(2) != "cloak":
 		f += 1; print("FAIL: gem load/sanitize ", Pilot.gems)
 
+	# ---- THE XP CURVE (user, 2026-07-26: "slow more toward the end") ----
+	# Two properties, and the point is that they are INDEPENDENT: the early game has
+	# been played and confirmed, the late game has not been reached.
+
+	# 1. LEVELS 1-4 ARE UNTOUCHED. A player hit level 4 in one short session and
+	#    called that pacing right, so the knee exists to protect exactly this. If a
+	#    late-game tune ever leaks down here, it did so by accident.
+	for lv in [2, 3, 4]:
+		var pure := int(XP.BASE * pow(float(lv - 1), XP.EXP))
+		if XP.xp_to_reach(lv) != pure:
+			f += 1
+			print("FAIL: level %d costs %d, not the un-steepened %d — late-game tuning leaked into the confirmed early game" % [
+				lv, XP.xp_to_reach(lv), pure])
+
+	# 2. IT ACTUALLY SLOWS DOWN. Every level must cost more than the last, and the
+	#    late ones disproportionately so — a curve that merely rises is not the same
+	#    as one that steepens.
+	var prev_step := 0
+	for lv in range(2, 61):
+		var step := XP.xp_for_next(lv)
+		if step <= prev_step:
+			f += 1
+			print("FAIL: level %d costs %d, no more than the previous %d" % [lv, step, prev_step])
+			break
+		prev_step = step
+	var early_step := XP.xp_for_next(5)
+	var late_step := XP.xp_for_next(50)
+	if late_step < early_step * 50:
+		f += 1
+		print("FAIL: level 50 costs %d vs level 5's %d (%.1fx) — the late game is not meaningfully slower" % [
+			late_step, early_step, float(late_step) / maxf(1.0, float(early_step))])
+
+	# 3. ONE DIAL REACHES EVERY REWARD. Centralising was the whole point, so every
+	#    payout must go THROUGH the scale rather than around it.
+	if XP.kill("wasp") != XP._scaled(float(XP.KILL["wasp"])):
+		f += 1; print("FAIL: kill XP bypasses the reward scale")
+	if XP.quest(100) != XP._scaled(100.0):
+		f += 1; print("FAIL: quest XP bypasses the reward scale")
+	if XP.activity("scrit") != XP._scaled(float(XP.ACTIVITY["scrit"])):
+		f += 1; print("FAIL: activity XP bypasses the reward scale")
+	if XP._scaled(0.4) < 1:
+		f += 1; print("FAIL: a small reward rounded to 0 — that reads as a broken drop")
+
+	# 4. Pilot is a FORWARDER now, and a forwarder that drifts is worse than a copy.
+	if Pilot.xp_for_level(7) != XP.xp_to_reach(7):
+		f += 1; print("FAIL: Pilot.xp_for_level disagrees with XP.xp_to_reach")
+
 	print("test_progression: %s" % ("ALL PASS" if f == 0 else "%d FAILURES" % f))
 	quit()

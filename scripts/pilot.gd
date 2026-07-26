@@ -148,8 +148,12 @@ static func sanitize_bio(raw: String) -> String:
 ## ---- Progression: levels, skill points, skills, profession ----
 
 ## Cumulative XP to REACH level `lv` (lv 1 is free at 0). Tunable curve.
+## THE CURVE LIVES IN `XP` NOW (2026-07-26). Kept as a forwarder because it is
+## called from the HUD, the dock and several suites, and because "how much XP is
+## level 5" is a fair question to ask the Pilot — it just should not be ANSWERED
+## in two places.
 static func xp_for_level(lv: int) -> int:
-	return int(50.0 * pow(float(maxi(0, lv - 1)), 1.6))
+	return XP.xp_to_reach(lv)
 
 
 static func level() -> int:

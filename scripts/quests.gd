@@ -666,7 +666,7 @@ static func _advance(id: String) -> void:
 		completed_day[id] = Research.day
 		var r: Dictionary = q.rewards
 		Wallet.credits += int(r.get("credits", 0))
-		Wallet.xp += int(r.get("xp", 0))
+		Wallet.xp += XP.quest(int(r.get("xp", 0)))
 		var done_note := "QUEST COMPLETE: %s — %s" % [q.title, rewards_text(q)]
 		pending_notes.append(done_note)
 		Research.journal.append({"day": Research.day, "text": done_note})
