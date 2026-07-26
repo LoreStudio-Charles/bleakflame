@@ -72,16 +72,52 @@ kind in one.
 Step 4 is the fun part and step 2 is the value: the Megacity is worth building mostly
 because it forces the engine/content seam to be real.
 
-## What the Megacity is (content, for step 4)
+## TELON — the look (user, 2026-07-25)
 
-Orivel SE: the domed capital, the Galean seat — the INSTITUTIONAL district, and the
-tonal opposite of Epharon. Epharon is dust, four buildings and people who know your
-name. The Megacity should feel like a place that does not care that you arrived.
-- Vertical, lit, crowded. Props are structure, not scenery.
-- No heat boundary; the edge is architecture.
-- Almost certainly home to the **Marine** commission (docs/professions.md) and the
-  Galean Navy's institutional face — which is why this district first.
-- Its own cast, none of whom are Imari.
+**It is the CAPITAL, so it should feel GLORIOUS.** Tall, beautiful white spires that
+match the might of the navy above it. **White, glass, and blue lights.**
+
+This supersedes the earlier "institutional and indifferent" sketch. The register is AWE,
+not alienation — a city that is genuinely magnificent, and whose indifference to you (if
+any) is the ordinary indifference of somewhere vast, not coldness authored at the player.
+
+**It is a total palette inversion of Epharon, which is the point.** Epharon is dusk,
+dust, low mud-brick, warm orange, long shadows, four buildings and everyone knows your
+name. Telon is height, white stone and glass, cool blue light. A player who lands on both
+should never need a caption to know which world they are on.
+
+- **Vertical.** Spires, not sheds. The camera composition problem is the opposite of
+  Epharon's: there, buildings squatted; here, things go UP out of frame, and the art has
+  to sell height on a top-down view (long cast shadows, tapering silhouettes, lit
+  windows climbing away).
+- **Blue lights echo the NAVY.** The Galean Navy livery is already blue
+  (`Color(0.23, 0.44, 0.85)`, flight_test's fleet chevron). Telon's lighting should read
+  as the same blue — the city and the fleet above it are one civilization's colours,
+  which does a lot of storytelling for free while the fleet is literally overhead.
+- **Glass matters as a material.** Reflection and transparency are what separate "white
+  buildings" from "a capital". Even faked cheaply, glass is the difference.
+
+### DO NOT let it drift into WARDEN
+
+The WayGate's look is "sung from crystal" — pale ivory ceramic with GOLD light-veins
+glowing within. Telon is white spires with BLUE light. These are close enough to blur if
+nobody is watching, and they must not: the Wardens are elder, alien and grown; Telon is
+Galean, built, and proud of it. Keep the split at **gold-veined and organic (Warden) vs
+blue-lit and geometric (Galean)**, and never give Telon a glowing vein.
+
+### Art plan
+
+Generate two or three test spires BEFORE committing to a layout — the art will dictate
+the scale of the district far more than the code will, and Epharon's layout was tuned
+around building art that already existed.
+
+## The ground tutor is REGION-GATED (user, 2026-07-25)
+
+Ground lessons name Epharon's cast and buildings by string (`met_imari`, targets
+`"MARKET"`), so they would arm at Telon and point at things that are not there. Lessons
+gain a `region` alongside the existing `venue`, and Telon gets **little or no onboarding**
+— the hope being there is nothing much left to teach by the time a player reaches the
+capital. A megacity that does not stop to explain itself is also correct characterisation.
 
 ## Open
 
