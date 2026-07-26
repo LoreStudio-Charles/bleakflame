@@ -26,6 +26,7 @@ func _ready() -> void:
 	_case_zero_and_missing_levels_are_safe()
 	_case_spawners_actually_pass_the_level()
 	_case_no_sensors_means_blind()
+	_case_hunters_see_only_as_far_as_they_are_equipped()
 
 	if failures == 0:
 		print("test_levels: ALL PASS")
@@ -182,6 +183,45 @@ func _case_no_sensors_means_blind() -> void:
 		_fail("a blind ship is treated as running silent — it would get dark's stealth for free")
 	seeing.queue_free()
 	blind.queue_free()
+
+
+## A HUNTER SEES ONLY AS FAR AS ITS EQUIPMENT (user, 2026-07-26).
+##
+## Acquisition used to be a flat AGGRO_RANGE for every AI, so sensors were
+## decorative on every enemy in the game and a Tin-Ear was worth nothing to fit —
+## the exact "granting what a ship has not equipped" leak the component model
+## forbids. Retention is a separate thing and must stay untouched.
+func _case_hunters_see_only_as_far_as_they_are_equipped() -> void:
+	var cheap := AIShip.new()
+	add_child(cheap)
+	cheap.setup(SampleBuilds.pirate_brawler())          # Tin-Ear, 700u
+	var cheap_reach := cheap.acquire_range()
+	if cheap_reach <= 0.0 or cheap_reach >= AIShip.AGGRO_RANGE:
+		_fail("a Tin-Ear hunter acquires at %.0fu — it should be its sensor's reach, under the %.0fu flat range" % [
+			cheap_reach, AIShip.AGGRO_RANGE])
+
+	# Blind: no eyes, no hunt. It must not fall back on the flat range.
+	var blind := AIShip.new()
+	add_child(blind)
+	blind.setup(_blinded(SampleBuilds.pirate_brawler()))
+	if blind.acquire_range() != 0.0:
+		_fail("a sensorless hunter still acquires at %.0fu" % blind.acquire_range())
+
+	# A better suite must not silently EXTEND how far pirates engage from — that
+	# would be a pacing buff smuggled in as a leak fix.
+	var keen := AIShip.new()
+	add_child(keen)
+	keen.setup(SampleBuilds.vshrike_goshawk_elite())     # Augur, 2400u
+	if keen.acquire_range() > AIShip.AGGRO_RANGE:
+		_fail("an Augur hunter acquires at %.0fu, past the %.0fu ceiling" % [
+			keen.acquire_range(), AIShip.AGGRO_RANGE])
+	if keen.acquire_range() <= cheap_reach:
+		_fail("better sensors bought a hunter nothing (%.0f vs %.0f)" % [
+			keen.acquire_range(), cheap_reach])
+
+	cheap.queue_free()
+	blind.queue_free()
+	keen.queue_free()
 
 
 ## Strip the sensor out of a build, whatever socket it landed in.

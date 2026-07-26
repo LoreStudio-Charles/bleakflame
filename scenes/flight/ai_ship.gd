@@ -408,12 +408,34 @@ func _prey_valid(node: BuildShip, base_reach := AGGRO_RANGE) -> bool:
 			or node.global_position.distance_to(station_pos) > SANCTUARY_R)
 
 
+## How far this hunter can ACQUIRE a new mark — ITS OWN SENSORS, never further.
+##
+## Acquisition used to be a flat AGGRO_RANGE for everyone, which handed every
+## pirate 950u of sight regardless of what it carried: sensors were decorative on
+## every AI in the game and the Tin-Ear set was worth nothing to fit. A component
+## has to DO something or there is no reason to carry its mass and draw.
+##
+## RETENTION IS DELIBERATELY UNTOUCHED. `_prey_valid(_prey, LEASH_RANGE)` still
+## holds a locked mark out to 1700 — acquire close, leash far, which is what stops
+## a fast strafing pass "forgetting" its prey and wandering off. Once you have the
+## contact you chase it by eye; finding it in the first place is what takes eyes.
+##
+## Capped at AGGRO_RANGE, so good sensors do not silently extend how far pirates
+## engage from — that would be a pacing buff, not a leak fix. Raising the ceiling
+## for a superior suite is a separate, deliberate decision.
+func acquire_range() -> float:
+	return minf(AGGRO_RANGE, sensor_reach(0.0))
+
+
 func _pick_prey() -> BuildShip:
+	var reach := acquire_range()
+	if reach <= 0.0:
+		return null          # no eyes, no hunt
 	var best: BuildShip = null
-	var best_d := AGGRO_RANGE * AGGRO_RANGE
+	var best_d := reach * reach
 	for node in get_tree().get_nodes_in_group("player_team"):
 		var bs := node as BuildShip
-		if bs == null or not _prey_valid(bs):
+		if bs == null or not _prey_valid(bs, reach):
 			continue
 		var d := global_position.distance_squared_to(bs.global_position)
 		if d < best_d:

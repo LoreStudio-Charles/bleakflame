@@ -83,11 +83,14 @@ static func rank_prey(cargo: float, allies_near: int, navy_dist: float,
 func _pick_prey() -> BuildShip:
 	if callsign == "":
 		return super()
+	var reach := acquire_range()
+	if reach <= 0.0:
+		return null          # no eyes, no hunt — doctrine cannot pick what it cannot see
 	var best: BuildShip = null
 	var best_score := -INF
 	for node in get_tree().get_nodes_in_group("player_team"):
 		var bs := node as BuildShip
-		if bs == null or not _prey_valid(bs):
+		if bs == null or not _prey_valid(bs, reach):
 			continue
 		var navy_d := INF
 		if navy_pos.is_finite():
