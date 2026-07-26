@@ -136,6 +136,23 @@ climax** (see The Braid).
      professional, and the player deduces both from what is missing rather than what
      is there.
 
+   **THE SCENE IS STILL WARM (user, 2026-07-25) — the detail that makes it frightening
+   instead of sad.** You do not find an old crime. You find one you *just* missed:
+   - **Smoke still hanging** in the cave air, layered flat in the still cold where
+     nothing has stirred it.
+   - **The stink of ozone**, sharp and recent — a discharge smell that fades in minutes.
+   - **Blaster scoring on the rock**, and this is where the beat turns: the marks are
+     NOT random spite. They are **grouped tight, at chest height, in the sleeping
+     alcove and across the doorway** — the two places a man would be. They did not come
+     to question a discrepancy. **They came to erase one**, and they shot the places
+     before they knew whether anyone was in them.
+
+   So the arithmetic the player does standing there is: *he beat them out by minutes,
+   and if he had been slower there would be a body.* And because the smoke has not
+   settled, the hunters are not a story Odessa tells any more — they are **present
+   tense**, possibly still in the sky overhead. The player never sees a face (that is
+   held for later); the threat is entirely made of what it left behind.
+
    The player leaves knowing more than either of the people who care about him, which
    is the engine the rest of the Campaign runs on. Odessa's reaction is the beat's
    real payoff — she hears "gone, not taken" and it does not comfort her at all.
@@ -145,6 +162,13 @@ climax** (see The Braid).
    hermit actor absent, the wall drawn bare), flipped by a quest flag. The stage is a
    `goto`/enter rather than a `talk`, since the point is that there is nobody to talk
    to; the report back to Odessa is the following stage.
+   The warm-scene layer is cheap and carries most of the horror: a low **CPUParticles2D
+   haze** drifting in the room (the town already builds one for the sandstorm — same
+   pattern, slower and flatter), **scorch decals** drawn on the alcove and door rock,
+   and the ozone as a **flavour line on entry**, since smell is the one sense the game
+   can only ever narrate. Sound sells the near-miss harder than either: the cave should
+   be *too quiet*, and a single distant engine note fading out would tell the whole
+   story without a word — worth trying, and worth cutting if it reads as a cheap sting.
 
 3. **Who is asking.** Pulling the thread: who the hunters are, why an old man on a
    dust ball is worth Ooshu attention, and how much Odessa has been sitting on.
