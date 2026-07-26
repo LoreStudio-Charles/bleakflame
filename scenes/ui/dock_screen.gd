@@ -67,8 +67,15 @@ var _flash_msg := ""
 var _detail := ""
 
 var _overview_text: RichTextLabel
-var _overview_hold: ItemList
-var _overview_stash: ItemList
+## THE BAY'S MANIFEST IS AN ICON GRID, like every other place gear is shown
+## (user, 2026-07-26: "make the hold and stash display as the standard grid so
+## that it feels familiar"). It was an ItemList of text rows, which made the one
+## screen that TEACHES what a hold is look nothing like the screens where you use
+## one. READ-ONLY on purpose: this column exists to state the stakes, and the verbs
+## for moving cargo live in Engineering. A right-click that silently sold something
+## from the arrivals screen would be a nasty surprise.
+var _overview_hold: GridContainer
+var _overview_stash: GridContainer
 var _mend_box: VBoxContainer   # planet only: the Counter mends burned factions
 var _shop_grid: GridContainer
 var _armory_grid: GridContainer
@@ -277,11 +284,11 @@ func _build_overview_tab(title: String) -> void:
 	var hold_col := _stakes_column(row, "⚠  HOLD — FLIES WITH YOU, DIES WITH YOU", UiTheme.DANGER,
 		"Everything in your hold is destroyed with your ship. Dock and move anything worth keeping to the Stash.",
 		Color(0.86, 0.52, 0.47))
-	_overview_hold = _list(hold_col)
+	_overview_hold = _grid_in(hold_col)
 	if is_station:
 		var stash_col := _stakes_column(row, "✔  STATION STASH — SAFE", Color(0.5, 0.82, 0.56),
 			"Kept safe here between runs. Death never touches it.", Color(0.48, 0.68, 0.53))
-		_overview_stash = _list(stash_col)
+		_overview_stash = _grid_in(stash_col)
 		_reset_button = Button.new()
 		_reset_button.text = "New Pilot (wipe all progress)"
 		_reset_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1769,20 +1776,29 @@ func _refresh_overview() -> void:
 	txt += "[color=#8890a0]Press E to launch. Visit the other decks with the tabs above.[/color]"
 	_overview_text.text = txt
 
-	_overview_hold.clear()
+	var held := 0
+	for c in _overview_hold.get_children():
+		c.queue_free()
 	for comp in ship.cargo:
-		_overview_hold.add_item("%s  Mk%d %s  (mass %.0f)" % [
-			comp.display_name, comp.mark, Grades.display_name(comp.grade), comp.mass])
+		_overview_hold.add_child(_manifest_tile(comp))
+		held += 1
 	for key in ship.commodities:
-		_overview_hold.add_item("%s x%d  (mass %.0f)" % [TradeGoods.display_name(key),
-			ship.commodities[key], ship.commodities[key] * TradeGoods.unit_mass(key)])
-	_placeholder_if_empty(_overview_hold, "— hold empty —")
+		_overview_hold.add_child(_commodity_tile(key, int(ship.commodities[key])))
+		held += 1
+	if held == 0:
+		_empty_note(_overview_hold, "— hold empty —")
 	if _overview_stash != null:
-		_overview_stash.clear()
+		var stashed := 0
+		for c in _overview_stash.get_children():
+			c.queue_free()
 		for comp in Stash.items:
-			_overview_stash.add_item("%s  Mk%d %s" % [
-				comp.display_name, comp.mark, Grades.display_name(comp.grade)])
-		_placeholder_if_empty(_overview_stash, "— stash empty —")
+			_overview_stash.add_child(_manifest_tile(comp))
+			stashed += 1
+		for key in Stash.commodities:
+			_overview_stash.add_child(_commodity_tile(key, int(Stash.commodities[key])))
+			stashed += 1
+		if stashed == 0:
+			_empty_note(_overview_stash, "— stash empty —")
 	_refresh_mend()
 
 
@@ -1910,6 +1926,44 @@ func _shop_tile(comp: ComponentDef, path: String) -> ItemTile:
 	t.on_inspect = _on_armory_tile_selected
 	t.on_interact = func(_c: ComponentDef, _s: String) -> void: _buy_component(path)
 	return t
+
+
+## A manifest square: the familiar tile, INSPECT ONLY. No price badge and no
+## interact verb -- the Landing Bay states what you stand to lose, it does not
+## trade. Engineering owns moving things.
+func _manifest_tile(comp: ComponentDef) -> ItemTile:
+	var t := ItemTile.new(comp, "hold", ItemTile.Style.HOLD)
+	t.hint = "Engineering deck to move it"
+	t.on_inspect = _on_armory_tile_selected
+	return t
+
+
+## Ore and trade goods are not ComponentDefs, so they cannot use ItemTile -- but
+## they are most of what a hold actually carries, and leaving them out of the
+## manifest would understate exactly what a death costs. Same footprint, drop-in
+## icon, count in the corner.
+func _commodity_tile(key: String, count: int) -> Control:
+	var box := PanelContainer.new()
+	box.custom_minimum_size = ItemTile.HOLD_SIZE
+	box.tooltip_text = "%s x%d  (mass %.0f)" % [
+		TradeGoods.display_name(key), count, count * TradeGoods.unit_mass(key)]
+	var icon := TextureRect.new()
+	icon.texture = _material_icon(key)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.add_child(icon)
+	var n := Label.new()
+	n.text = "x%d" % count
+	n.add_theme_font_size_override("font_size", 10)
+	n.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	n.add_theme_constant_override("outline_size", 3)
+	n.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	n.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	n.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(n)
+	return box
 
 
 func _goods_tile(comp: ComponentDef, source: String) -> ItemTile:
