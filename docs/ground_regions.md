@@ -35,8 +35,27 @@ GroundRegion  (engine: movement, combat, props, interiors, camera, tutor, gear, 
 ```
 
 Regions declare content through overridable hooks rather than constants baked into the
-engine — `region_buildings()`, `region_interiors()`, `region_cast()`, `region_hazard()`
-(Epharon's heat limit is NOT universal; a megacity's boundary is a wall, or nothing).
+engine — `region_buildings()`, `region_interiors()`, `region_cast()`, and crucially
+`region_boundary()`.
+
+**The boundary hook is the one that earns the refactor** (user, 2026-07-25 — this
+supersedes the `region_hazard()` sketch above it, which assumed every edge turns you
+back). An edge has a KIND:
+
+| kind | behaviour | example |
+|---|---|---|
+| `wall` | turns you back, with a telegraph | Epharon's heat limit |
+| `door` | HANDS YOU OFF to a neighbouring district | Telon → Tundra / Desert / Swamp |
+| `open` | no edge at all | small interior-ish regions |
+
+So the engine gains a neighbour hand-off (leave region, enter neighbour at the matching
+edge — the same shape `_enter_interior` already uses), and a region declares its
+neighbours as data. Epharon keeps a wall and never notices; Telon has three doors.
+
+This is exactly why the extraction comes FIRST: had the Megacity been built by copying
+the town, the heat-limit boundary would have been copied with it and then special-cased,
+and "the edge is a door" would have become an if-statement in two files instead of a
+kind in one.
 
 ### Do it in this order — extract UNDER a passing suite
 

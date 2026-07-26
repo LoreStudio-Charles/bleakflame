@@ -22,10 +22,36 @@ Becoming landable means giving it districts, not a dock.
 
 | Quadrant | District | Notes |
 |---|---|---|
-| **SE** | **The Megacity** | The domed capital itself — the Galean seat. The institutional district: the fleet, the Navy, the machinery of a civilization. Almost certainly where the **Marine** commission lives (see [[marine-profession-banked]]). |
+| **SE** | **TELON** — the Megacity | The domed capital itself — the Galean seat. The institutional district: the fleet, the Navy, the machinery of a civilization. Almost certainly where the **Marine** commission lives (see [[marine-profession-banked]]). |
 | **NE** | **Tundra** | |
 | **NW** | **Desert** | |
 | **SW** | **Swamp** | |
+
+### Districts CONNECT (user, 2026-07-25) — edges are doors, not walls
+
+Telon does not end at a boundary that turns you back. It has **EXITS** that lead out of
+the city and into the neighbouring districts on foot or by **vehicle**:
+
+    TELON (SE)  --N-->  Tundra (NE)
+                --NW->  Desert (NW)
+                --SW->  Swamp (SW)
+
+This is a real change to the model, not decoration. Districts stop being four isolated
+landing sites and become **one connected surface** — which means a world can be crossed,
+not just visited, and a player who lands once can reach everywhere without lifting off.
+
+Consequences to design for:
+- **SCALE forces the vehicle.** A megacity to a tundra is not a walk you make repeatedly.
+  Either the crossing is content in its own right (the way Epharon's open roam is), or it
+  wants a ground vehicle — which is the first argument the game has produced FOR one.
+- **Flying down becomes FAST TRAVEL**, and probably wants earning: you can land directly
+  in a district you have already reached overland. That makes the first crossing a
+  journey and every later one a choice.
+- **Not every world connects.** Percival's Quarn Wastes should arguably be reachable ONLY
+  by air — a region that has to be flown to reads as quarantined, which is what it is.
+- **Transition, not streaming.** The cheap and correct v1 is a boundary hand-off like the
+  interiors already do (leave region, enter neighbour at the matching edge). True seamless
+  streaming is a much larger engine problem and buys little at this scale.
 
 Orivel's **orbital outpost** is separate and stays a small bespoke screen
 (`scenes/ui/orivel_dock.gd`) — a station berth is not a place you walk.
