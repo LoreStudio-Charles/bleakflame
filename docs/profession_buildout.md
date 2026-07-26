@@ -1,10 +1,18 @@
 # Profession Build-Out Guide
 
-**Written 2026-07-26 from the code.** The working document for turning six commissions
-from "one signature ability each" into full identities. Companion to
-`docs/progression_reference.md` (what progression does today) and `docs/professions.md`
-(the flavour and voice of each commission — unchanged, still the source of truth for who
-these people *are*).
+**Written 2026-07-26 from the code.** Companion to `docs/progression_reference.md` (what
+progression does today) and `docs/professions.md` (the flavour and voice of each
+commission — unchanged, still the source of truth for who these people *are*).
+
+> **A FULL PROFESSION EVALUATION PASS COMES FIRST (user, 2026-07-26).** The professions
+> "aren't very well planned" as they stand, so **this document is INPUT to that pass, not a
+> build order to execute.** It is an honest inventory of what exists, what is dead, and
+> where the structural holes are — exactly the material an evaluation needs — but nothing
+> here should be built until the pass decides what the six commissions actually are.
+>
+> The design decided since (Trader as a Druid, Science owning rad cleansing) are likewise
+> *inputs*: good answers to specific questions, not a substitute for looking at all six
+> together.
 
 ---
 
@@ -105,6 +113,12 @@ office shows one node per branch and is headed "COMMISSION ABILITIES" rather tha
 Plus **Blackout**: built, but on the `WITHHELD` list, so its node is hidden *and* its chip
 is filtered off Trader's shelf. One switch, both ends — deliberately.
 
+**Blackout STAYS withheld** pending the evaluation pass (user, 2026-07-26). It is already
+in exactly the state that wants — no code change needed. Two observations go into the pass
+with it: it is a **debuff sitting at T3 of the Tender HEALING branch**, which the Druid
+split makes plainly wrong, and it is the only *built* ability the game is deliberately
+hiding, which makes it the cleanest test of whatever the pass decides a tree node is.
+
 ---
 
 ## Per-commission notes
@@ -197,6 +211,10 @@ identity payoff.
 ---
 
 ## Suggested order
+
+**Subject to the evaluation pass above.** Step 1 is safe regardless — wiring a dead stat is
+correct under any profession design, because those effects are already advertised to the
+player. Everything after it depends on what the pass decides.
 
 1. **Wire the five dead effects** (mining yield, salvage luck, scan value, insight,
    gunnery arcs). Cheap, and it makes three commissions real. Note `insight` belongs to
