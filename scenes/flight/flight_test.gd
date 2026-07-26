@@ -1788,6 +1788,25 @@ const LANE_RIM := Vector2(-2600, -1600)   # just outside the station's 1800 sanc
 ## THE THREE BANDS as fractions of the road, (start, end). These are the design,
 ## not just parameters: GUARD and NAVY must never reach into GAP, or freight stops
 ## needing an escort and the lane stops meaning anything. Asserted in test_lane.
+## THE CONVOYS, by where along the road each one STARTS (see _spawn_long_lane).
+##
+## Spaced ~0.16 apart, which at 90,963 units is a hauler roughly every 14,500 —
+## close enough that flying the lane means meeting freight, far enough that they
+## never arrive as a crowd. Every one of them runs the WHOLE lane; `t` is only the
+## seed position, so the road stays a through-route rather than six shuttle beats.
+##
+## `hull` is a KIND, resolved by _convoy_build. A const cannot hold a Callable, and
+## storing a built ShipBuild here would be worse than illegal -- it would hand the
+## same object to every convoy AND to every later respawn.
+const LANE_CONVOYS := [
+	{"t": 0.08, "hull": "dray", "escorts": 0},        # still inside the Guardian band
+	{"t": 0.24, "hull": "bellwether", "escorts": 2},
+	{"t": 0.40, "hull": "dray", "escorts": 1},        # entering the Gap
+	{"t": 0.56, "hull": "bellwether", "escorts": 3},  # the prize, deepest in the Gap
+	{"t": 0.72, "hull": "dray", "escorts": 1},
+	{"t": 0.88, "hull": "bellwether", "escorts": 2},  # nearly under the Navy's guns
+]
+
 const LANE_GUARD_LEG := Vector2(0.02, 0.25)   # Guardians, out of the rim
 const LANE_GAP_LEG := Vector2(0.34, 0.66)     # nobody — the V-Shrike prowl here
 const LANE_NAVY_LEG := Vector2(0.75, 0.98)    # the Navy, in to Orivel
@@ -1848,14 +1867,34 @@ func _spawn_long_lane() -> void:
 
 	# THE FREIGHT the lane exists for. The Bellwether is the convoy's heart: worth
 	# more than her escort, slower than her attackers, and aware of both.
-	_spawn_lane_freighter(SampleBuilds.lane_dray(), road, 0.14)
-	var bell := _spawn_lane_freighter(SampleBuilds.lane_bellwether(), road, 0.58)
-	# Her hired screen — a Goshawk and two Harriers flying formation, breaking off
-	# to gun whatever closes and rejoining. GuardianShip is borrowed for that
-	# behaviour ONLY; the guardian blue comes straight back off.
-	_spawn_escort(SampleBuilds.escort_goshawk(), bell, 0, 3)
-	_spawn_escort(SampleBuilds.escort_harrier(), bell, 1, 3)
-	_spawn_escort(SampleBuilds.escort_harrier(), bell, 2, 3)
+	#
+	# SIX CONVOYS, SPAWNED ALL ALONG THE ROAD, EACH RUNNING ITS FULL LENGTH (user,
+	# 2026-07-26). There used to be two, and the lane read as deserted — a pilot
+	# could fly the whole 91,000 units and meet nothing.
+	#
+	# WHY SPREAD THE SPAWNS RATHER THAN SHORTEN THE ROUTES: freight has to actually
+	# GO to Orivel, or the Long Lane is a set of shuttle runs wearing a trade road's
+	# name. Every hauler still traverses the whole lane; they simply START at
+	# different points, so at any moment the road has traffic distributed along it
+	# instead of two ships in the same place. They share a speed, so that spacing
+	# holds rather than drifting into a clump.
+	#
+	# THIS ONLY WORKS BECAUSE FREIGHT IS SLOW. A Dray does 135 and a Bellwether 161
+	# against the player's 250, so a stern chase closes at ~90-115/s and traffic
+	# heading your way is reachable. Had they matched the player, spreading them out
+	# would still have left every same-direction hauler permanently out of reach —
+	# worth re-checking if freight is ever re-engined.
+	#
+	# Escort weight rises with the danger of the stretch a convoy spawns into: bare
+	# near the guarded rim, heaviest through the Gap where nothing patrols.
+	for c in LANE_CONVOYS:
+		var hauler := _spawn_lane_freighter(_convoy_build(str(c["hull"])), road, float(c["t"]))
+		var wing := int(c["escorts"])
+		for i in wing:
+			# A Goshawk leads a wing of Harriers. GuardianShip is borrowed for the
+			# formation behaviour ONLY; the guardian blue comes straight back off.
+			_spawn_escort(SampleBuilds.escort_goshawk() if i == 0
+				else SampleBuilds.escort_harrier(), hauler, i, wing)
 
 
 	# BAND 1 — GUARDIANS, the first quarter out of the rim. They will not follow
@@ -1942,6 +1981,13 @@ func _tick_patrol_limit() -> void:
 
 ## A hauler running the capital road. Same living-world rule as the short lanes:
 ## it is somewhere on the route when you arrive, not conjured near you.
+## A FRESH build per convoy — never a shared one. Builds are mutable and a hauler
+## refits itself on damage/loot, so handing two ships the same ShipBuild would let
+## one convoy's losses show up on another's paperdoll.
+func _convoy_build(hull: String) -> ShipBuild:
+	return SampleBuilds.lane_bellwether() if hull == "bellwether" else SampleBuilds.lane_dray()
+
+
 func _spawn_lane_freighter(build: ShipBuild, route: Array[Vector2], t: float) -> TraderShip:
 	var hauler := TraderShip.new()
 	hauler.position = _lane_point(t) + _jitter(500.0)
