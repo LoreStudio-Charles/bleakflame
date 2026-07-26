@@ -24,6 +24,7 @@ func _ready() -> void:
 	_case_drydock_accepts_the_capital(outpost)
 	_case_bay_refuses_the_capital(outpost)
 	_case_every_band_has_a_home(outpost)
+	_case_a_payout_never_opens_the_berth_screen()
 
 	if _fails.is_empty():
 		print("test_capital_berth: ALL PASS (%d checks)" % _checks)
@@ -139,3 +140,43 @@ func _case_every_band_has_a_home(outpost: OrivelOutpost) -> void:
 				homed = true
 				break
 		_ok(homed, "size band %d has a berth on the outpost" % band)
+
+
+## A BACKGROUND PAYOUT MUST NEVER OPEN A DOCK SCREEN (user-reported, 2026-07-26).
+##
+## `/cash` popped the Orivel berth screen over the cockpit from anywhere in the
+## system, and it could not be dismissed — [E] only launches you from a berth you
+## are actually standing in, so the pilot was trapped and had to restart.
+##
+## The cause was structural, not a typo: OrivelDock is in group "dock_screens", and
+## the project convention is that background payouts broadcast
+## `call_group("dock_screens", "refresh")`. That contract means refresh() may only
+## ever REDRAW a screen that is already up. OrivelDock.refresh() instead began with
+## `visible = true`, so the broadcast became a command to OPEN.
+##
+## This asserts the CONTRACT rather than the one screen: broadcast to the real group
+## and require that nothing showed itself. Any future dock screen that reaches for
+## `visible = true` inside refresh() fails here.
+func _case_a_payout_never_opens_the_berth_screen() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	var screen := OrivelDock.new(ship)
+	add_child(screen)          # _ready joins group "dock_screens"
+
+	_ok(not screen.visible, "a fresh berth screen starts hidden")
+
+	# EXACTLY what /cash, /insight and /xp do after paying out.
+	get_tree().call_group("dock_screens", "refresh")
+
+	_ok(not screen.visible,
+		"a payout broadcast OPENED the berth screen — refresh() must redraw what is "
+		+ "already up, never show itself (the /cash trap)")
+
+	# ...and the legitimate path still works: the docked-state tick owns visibility,
+	# then refresh draws. If this breaks, the guard was added by disabling the screen.
+	screen.visible = true
+	screen.refresh()
+	_ok(screen.visible, "a screen made visible by the docked-state tick still refreshes")
+
+	screen.queue_free()
+	ship.queue_free()

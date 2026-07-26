@@ -50,8 +50,22 @@ func _ready() -> void:
 	root.add_child(_body)
 
 
+## REFRESHES WHAT IS ALREADY ON SCREEN — it must never be what PUTS it there.
+##
+## THE BUG (2026-07-26, user): this used to open with `visible = true`, and this
+## screen is in group "dock_screens". Every background payout broadcasts
+## `call_group("dock_screens", "refresh")` — that is the documented convention —
+## so `/cash` from anywhere in the system threw the capital berth screen over the
+## cockpit. It could not be dismissed either: [E] only launches you from a berth
+## you are actually in, so a pilot in open space was simply trapped.
+##
+## Visibility is owned by the DOCKED-STATE TICK (flight_test sets
+## `orivel_screen.visible` from `_outpost.pads.has(ship.docked_at)` and only then
+## calls refresh). So `visible = true` here was redundant on every legitimate path
+## and load-bearing only for the bug. Guard exactly like ProspectDeck.refresh.
 func refresh() -> void:
-	visible = true
+	if not visible:
+		return
 	var berth := ""
 	if ship.docked_at is DockingPad:
 		berth = (ship.docked_at as DockingPad).berth_label
