@@ -7,6 +7,10 @@ extends StaticBody2D
 ## matter which is ABSENT. Not destructible; despawns once read.
 
 const R := 46.0
+## How much of the procedural core survives once drop-in art is the body. It is an
+## ADDITIVE disc, so it brightens whatever is under it — left at full strength it
+## washes a pixel-art anomaly out to a violet blob.
+const CORE_WITH_ART := 0.3
 
 var quest_id := ""
 ## "residue" = a cold violet smear, the footprint of a devouring (beat 2).
@@ -20,6 +24,19 @@ var _core: Polygon2D
 var _ring: Line2D
 var _sprite: Sprite2D
 var _tendrils: Array[Line2D] = []
+
+
+## DROP-IN ART, keyed off `kind`: assets/world/anomaly_residue.png / _tendril.png.
+##
+## Asked of the FILE rather than of `_sprite`, because the procedural body is built
+## BEFORE the sprite node exists and still has to know whether it is the body or
+## merely the glow over someone else's drawing.
+func _art_path() -> String:
+	return "res://assets/world/anomaly_%s.png" % kind
+
+
+func _has_art() -> bool:
+	return ResourceLoader.exists(_art_path())
 
 
 static func create(pos: Vector2, p_quest_id: String, p_kind := "residue") -> Anomaly:
@@ -61,7 +78,12 @@ func _ready() -> void:
 	_ring.material = mat
 	add_child(_ring)
 	# A tendril reaches: a few dark barbs writhing off the core.
-	if kind == "tendril":
+	# WITHHELD WHEN THERE IS ART. These straight Line2D barbs are a STAND-IN for a
+	# drawn tendril, so once a real one exists they are five crude spokes laid over
+	# it — the WayGate rule (when the frames arrive, the procedural rings retire and
+	# only the environmental fx stay). The breathing ring survives; it reads as
+	# instrumentation, not as part of the creature.
+	if kind == "tendril" and not _has_art():
 		for i in 5:
 			var t := Line2D.new()
 			var a := TAU * float(i) / 5.0 + randf() * 0.4
@@ -78,16 +100,14 @@ func _ready() -> void:
 	# DROP-IN ART (no code needed to add it): assets/world/anomaly_<kind>.png. If
 	# present it becomes the body and the solid violet core softens to a glow aura
 	# under it; the ring/tendrils keep breathing over the art. Absent = procedural.
-	var art_path := "res://assets/world/anomaly_%s.png" % kind
-	if ResourceLoader.exists(art_path):
-		var tex: Texture2D = load(art_path)
+	if _has_art():
+		var tex: Texture2D = load(_art_path())
 		_sprite = Sprite2D.new()
 		_sprite.texture = tex
 		_sprite.z_index = -1                        # under the additive glow
 		var target := hit_radius * 2.2
 		_sprite.scale = Vector2.ONE * (target / maxf(float(tex.get_width()), 1.0))
 		add_child(_sprite)
-		_core.color.a *= 0.4                         # the art is the body now
 
 
 func _process(delta: float) -> void:
@@ -96,7 +116,15 @@ func _process(delta: float) -> void:
 	var pulse := 0.85 + 0.15 * sin(_t * 1.6)
 	_core.scale = Vector2.ONE * pulse
 	_ring.rotation = _t * 0.3
-	_core.color.a = 0.35 + 0.2 * sin(_t * 2.1)
+	# THE CORE MUST NOT DROWN THE ART.
+	#
+	# This line used to write the alpha unconditionally, which silently undid the
+	# `_core.color.a *= 0.4` that _ready() applied once when art was found — on the
+	# very first frame. The result: a full-strength ADDITIVE violet disc parked over
+	# a drop-in PNG, so the pixel art loaded correctly and was never visible, and it
+	# read as "the art isn't being used". A per-frame write always beats a one-time
+	# adjustment; the dimming has to live HERE, where the value is decided.
+	_core.color.a = (0.35 + 0.2 * sin(_t * 2.1)) * (CORE_WITH_ART if _has_art() else 1.0)
 	if _sprite != null:
 		_sprite.rotation = _t * (0.12 if kind == "tendril" else 0.05)   # a slow, wrong turn
 	for i in _tendrils.size():
