@@ -339,6 +339,70 @@ func _init() -> void:
 		print("FAIL: a manual waypoint was clobbered by a stage entry")
 		failures += 1
 
+	# ---- requires_days: a follow-up that must WAIT (user, 2026-07-26) ----
+	# legend_empty_cave opens with "Nobody's seen him. Three days." — which only
+	# reads as a worry if three days have actually passed. Days advance per DOCKING,
+	# so the wait is paced by play rather than by a real-world clock.
+	Quests.reset()
+	Research.reset()
+	Quests.completed.append("legend_check_in")
+	Quests.completed_day["legend_check_in"] = 10
+	Research.day = 10
+	Quests.check_new_work(true, true)
+	if Quests.active.has("legend_empty_cave"):
+		print("FAIL: the follow-up arrived the same day the favour was finished")
+		failures += 1
+	Research.day = 12                                  # two days on — still early
+	Quests.check_new_work(true, true)
+	if Quests.active.has("legend_empty_cave"):
+		print("FAIL: the follow-up arrived on day 2 of a 3-day wait")
+		failures += 1
+	Research.day = 13
+	for _i in 12:
+		Quests.check_new_work(true, true)
+	if not Quests.active.has("legend_empty_cave"):
+		print("FAIL: the follow-up never arrived after its 3 days — a wait that "
+			+ "never ends is a dead campaign, not pacing")
+		failures += 1
+
+	# AN OLD SAVE HAS NO RECORDED DAY. It must not be gated forever on information
+	# it cannot have — a returning player would simply never see the beat again.
+	Quests.reset()
+	Research.reset()
+	Quests.completed.append("legend_check_in")         # ...and NO completed_day entry
+	Research.day = 0
+	for _i in 12:
+		Quests.check_new_work(true, true)
+	if not Quests.active.has("legend_empty_cave"):
+		print("FAIL: a pre-existing save with no completion day was locked out")
+		failures += 1
+
+	# THE SAGA KEEPS ITS HERMIT. legend_check_in must wait for `the_hermit`, or the
+	# Campaign can empty the Counter's cave before the Saga sends you to talk to him.
+	Quests.reset()
+	Research.reset()
+	Quests.completed.append("ember_word")
+	# PUMP, do not call once. `check_new_work` starts one quest per call, so a single
+	# call can be consumed by whatever else ember_word unblocks — and this assertion
+	# would then pass because nothing started, not because the gate held. (Verified:
+	# with the gate sabotaged back to `ember_word`, the one-call version still went
+	# green. A test that cannot fail is not a test.)
+	for _i in 12:
+		Quests.check_new_work(true, true)
+	if Quests.active.has("legend_check_in"):
+		print("FAIL: the Legend line started before the Saga's hermit beat — the "
+			+ "Counter can go missing before you are sent to speak with him")
+		failures += 1
+	Quests.completed.append("the_hermit")
+	# `check_new_work` deliberately starts ONE fresh quest per call (dock pacing), and
+	# clearing `the_hermit` also unblocks other beats — so pump it until it settles
+	# rather than assuming this one is first in the list.
+	for _i in 12:
+		Quests.check_new_work(true, true)
+	if not Quests.active.has("legend_check_in"):
+		print("FAIL: the Legend line never started after the hermit beat")
+		failures += 1
+
 	Quests.reset()
 	PoiMap.reset()
 	Research.reset()

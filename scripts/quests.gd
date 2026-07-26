@@ -244,8 +244,20 @@ const QUESTS := [
 	# prereq — so the lead is handed where you already are, and the DESTINATION (the
 	# colony) is charted by the talk stage's venue. No orphaned "go somewhere you have
 	# never been to start a quest you cannot see".
+	# GATED BEHIND THE SAGA'S HERMIT BEAT, not merely behind ember_word (user,
+	# 2026-07-26: "so he's always there for that").
+	#
+	# THE COLLISION: `the_hermit` sends you to the Counter to ask what he knows about
+	# Cinderweb, and this Campaign line ends with him GONE (legend_empty_cave —
+	# "Nobody Home"). Requiring only ember_word let the Campaign run first, so a
+	# player could empty that cave and then be told by Dex to go and talk to the man
+	# who lives in it. Making the Saga beat the prerequisite means the Counter is
+	# always home when the Saga needs him, and only ever disappears afterwards.
+	#
+	# BREADCRUMB RULE still holds: the new prereq's giver is the LAB (station) and
+	# Odessa is also at the station, so the lead is still handed where you are.
 	{"id": "legend_check_in", "title": "Look In On Him", "giver": "odessa", "layer": "campaign",
-		"requires": "ember_word",
+		"requires": "the_hermit",
 		"body": "Odessa wants someone to look in on an old friend at the colony's edge. She calls it a favour. She is very careful to keep calling it that.",
 		"debrief": "\"He's alive, then.\"\n\nShe takes the glass you never drank from, turns it over in her hands a moment too long, and puts it back on the shelf unwashed.\n\n\"Good. That's good.\"\n\nShe doesn't ask what he said. You get the feeling she has been not-asking for years, and has become very good at it.",
 		# NO `briefing` STRING. The hand-off is a TALK STAGE so the player can PRESS her
@@ -338,8 +350,12 @@ const QUESTS := [
 	# is the whole beat: an Ooshu scout drone they smashed for the metal — which means
 	# the hunters were WATCHING, lost their eye to vermin, went blind, and escalated.
 	# The scrit caused the raid AND saved his life. Nobody in the fiction ever knows.
+	# THREE DAYS AFTER THE FAVOUR (user, 2026-07-26). Days pass per docking, so this
+	# is paced by play. The wait IS the beat: "Nobody's seen him. Three days." lands
+	# as a worry only if three days have actually gone by — handed over the moment
+	# you finish looking in on him, it reads as a punchline.
 	{"id": "legend_empty_cave", "title": "Nobody Home", "giver": "odessa", "layer": "campaign",
-		"requires": "legend_check_in",
+		"requires": "legend_check_in", "requires_days": 3,
 		"body": "Word from the colony: nobody has seen the Counter in days, and there is a burn on the rock outside his cave. Go and look.",
 		"briefing": "She has the bottle out again and hasn't poured any of it.\n\n\"Nobody's seen him. Three days.\" The rag is nowhere. Her hands have nothing to do and it shows. \"A hauler out of Epharon says there's a scorch on the rock by his door.\"\n\nShe looks at you the way people look at a door they don't want opened.\n\n\"Go. Please. And whatever you find — you come and tell me first.\"",
 		"debrief": "She turns the wreck over once and puts it down like it's hot.\n\n\"That's a Kessit sensor stalk. Ooshu make.\" She says it flatly, and then, because there is no way back from having said it: \"They're finders. That's the whole of what they are — you give them a description and money and they bring you the person. They don't lose. Nobody's ever hired one and gone home disappointed.\"\n\nHer hand is flat on the bar again.\n\n\"They were WATCHING him. That thing sat out there and watched his door, and I have been telling myself the quiet meant it was over.\"\n\nYou don't tell her the rest — that a scrit smashed their eye for scrap, and that's the only reason there wasn't a body in that cave. You're not sure she'd hear it as good news.",
@@ -368,10 +384,43 @@ const QUESTS := [
 
 static var active := {}                 # id -> {"stage": int, "count": int}
 static var completed: Array[String] = []
+## id -> the Research.day it was finished on, for quests whose follow-up should not
+## arrive the instant you dock (see `requires_days`). Separate from `completed`
+## rather than restructuring it: `completed` is read in a dozen places and is a
+## save key, and this only ever needs to answer one extra question.
+static var completed_day := {}
 static var pending_notes: Array[String] = []
 ## Conversations the dock screen should present: {"giver": id, "text": line,
 ## "quest": title, "rewards": text}. Drained by the UI via take_talks().
 static var pending_talks: Array[Dictionary] = []
+
+
+## Is this quest's prerequisite satisfied — including any enforced WAIT?
+##
+## `requires_days: N` holds a follow-up back until N game days after its prereq
+## finished. A day passes per docking (no real-world clock), so this is paced by
+## PLAY, not by leaving the game running.
+##
+## WHY IT EXISTS (user, 2026-07-26): the Legend beats hand you back-to-back errands
+## about the same man, and "nobody has seen him in days" landing the moment you dock
+## from the previous favour reads as a joke rather than a worry. The wait is the
+## content — legend_empty_cave's own briefing says "Nobody's seen him. Three days."
+##
+## A quest completed BEFORE days were tracked has NO recorded day, and the wait is
+## then treated as already served. Defaulting the missing day to 0 looks equivalent
+## and is not: a save sitting on day 0 would be gated against day 0 + N and the beat
+## would never arrive at all. When we cannot know how long it has been, the safe
+## answer is to let the story continue — a campaign that silently stops is far worse
+## than one that skips a pause.
+static func _prereq_met(q: Dictionary, req: String, tutorial_done: bool) -> bool:
+	if req == "":
+		return tutorial_done
+	if not completed.has(req):
+		return false
+	var wait := int(q.get("requires_days", 0))
+	if wait <= 0 or not completed_day.has(req):
+		return true
+	return Research.day >= int(completed_day[req]) + wait
 
 
 static func quest_def(id: String) -> Dictionary:
@@ -431,25 +480,26 @@ static func check_new_work(is_station: bool, tutorial_done: bool) -> void:
 		if Npcs.is_dockside(str(q.giver)) and not Npcs.at_venue(str(q.giver), is_station):
 			continue
 		var req: String = q.requires
-		if (req == "" and tutorial_done) or completed.has(req):
-			active[q.id] = {"stage": 0, "count": 0}
-			if q.get("grants_shoal", false):
-				Pilot.shoal_invited = true   # Krayt's invitation, handed over by the hermit
-			pending_notes.append("NEW WORK — %s: \"%s\"  (Quest Log: Missions tab, or [L] in flight)" % [
-				Npcs.display_name(q.giver), q.title])
-			Research.journal.append({"day": Research.day,
-				"text": "Took work from %s: %s." % [Npcs.display_name(q.giver), q.title]})
-			if q.has("briefing"):
-				pending_talks.append({"giver": q.giver, "text": q.briefing,
-					"quest": q.title, "rewards": rewards_text(q),
-					"vo": str(q.id) + "_briefing"})
-			_enter_stage(q.id)
-			# If the fresh quest OPENS on a talk at this venue, queue it now too,
-			# so the player doesn't have to re-dock to trigger it.
-			var st0 := stage_def(q.id)
-			if st0.get("kind", "") == "talk" and (str(st0.get("venue", "station")) == "station") == is_station:
-				pending_talks.append({"giver": str(st0.npc), "nodes": st0.dialogue, "advance": q.id})
-			return   # one fresh quest per call
+		if not _prereq_met(q, req, tutorial_done):
+			continue
+		active[q.id] = {"stage": 0, "count": 0}
+		if q.get("grants_shoal", false):
+			Pilot.shoal_invited = true   # Krayt's invitation, handed over by the hermit
+		pending_notes.append("NEW WORK — %s: \"%s\"  (Quest Log: Missions tab, or [L] in flight)" % [
+			Npcs.display_name(q.giver), q.title])
+		Research.journal.append({"day": Research.day,
+			"text": "Took work from %s: %s." % [Npcs.display_name(q.giver), q.title]})
+		if q.has("briefing"):
+			pending_talks.append({"giver": q.giver, "text": q.briefing,
+				"quest": q.title, "rewards": rewards_text(q),
+				"vo": str(q.id) + "_briefing"})
+		_enter_stage(q.id)
+		# If the fresh quest OPENS on a talk at this venue, queue it now too,
+		# so the player doesn't have to re-dock to trigger it.
+		var st0 := stage_def(q.id)
+		if st0.get("kind", "") == "talk" and (str(st0.get("venue", "station")) == "station") == is_station:
+			pending_talks.append({"giver": str(st0.npc), "nodes": st0.dialogue, "advance": q.id})
+		return   # one fresh quest per call
 
 
 ## Start a `manual_start` quest from a scripted event (the flight scene calls
@@ -613,6 +663,7 @@ static func _advance(id: String) -> void:
 	if active[id].stage >= (q.stages as Array).size():
 		active.erase(id)
 		completed.append(id)
+		completed_day[id] = Research.day
 		var r: Dictionary = q.rewards
 		Wallet.credits += int(r.get("credits", 0))
 		Wallet.xp += int(r.get("xp", 0))
@@ -793,7 +844,8 @@ static func _entry(q: Dictionary, upto: int, count: int, done_quest: bool) -> Di
 
 
 static func to_dict() -> Dictionary:
-	return {"active": active.duplicate(true), "completed": completed.duplicate()}
+	return {"active": active.duplicate(true), "completed": completed.duplicate(),
+		"completed_day": completed_day.duplicate()}
 
 
 static func from_dict(data: Dictionary) -> void:
@@ -806,6 +858,10 @@ static func from_dict(data: Dictionary) -> void:
 	for id in data.get("completed", []):
 		if not quest_def(str(id)).is_empty():
 			completed.append(str(id))
+	completed_day.clear()
+	for id in data.get("completed_day", {}):
+		if not quest_def(str(id)).is_empty():
+			completed_day[str(id)] = int(data.completed_day[id])
 	# POIs/waypoints re-chart on load for whatever stage we're standing in.
 	for id in active:
 		_enter_stage(id)
@@ -814,5 +870,6 @@ static func from_dict(data: Dictionary) -> void:
 static func reset() -> void:
 	active.clear()
 	completed.clear()
+	completed_day.clear()
 	pending_notes.clear()
 	pending_talks.clear()
