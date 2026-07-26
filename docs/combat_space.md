@@ -732,10 +732,96 @@ accessibility goal but not the whole of it — those three deserve the same pass
    synergy and the readout carry the mechanic while the stat drag stays subliminal.
 3. **What happens at the 10-debuff cap** — is a new debuff refused, or does the oldest
    fall off?
-4. **Do defences scale on level+quality too, and on what curve?** Named here because
-   weapons cannot ship without it.
+4. **Do defences scale on level+quality too, and on what curve?** Answered in §9.9 —
+   they do, and neither half ships alone. The curves themselves are still open.
 
-### 9.9 Reconciliation rule
+### 9.9 DEFENCES — the target design
+
+Designed with the user 2026-07-26. **None of this is built.** The other half of §9.8, and
+**neither half can ship without the other** — weapons scaling on level and quality while
+defences scale on neither collapses time-to-kill to nothing.
+
+**Level and quality improve:**
+
+| Layer | Properties that scale |
+|---|---|
+| **Shields** | value **and** regen |
+| **Armor** | value **and** DR |
+| **Hull** | value |
+
+#### The split worth making: LEVEL makes it BIGGER, QUALITY makes it BETTER
+
+A suggestion rather than a decision, but it does a lot of work:
+
+| Axis | Governs | Shields | Armor | Hull |
+|---|---|---|---|---|
+| **Level** | size — the pool | shield HP | armor HP | hull HP |
+| **Quality** | character — the qualitative property | **regen rate** | **DR** | — |
+
+Why it is worth it:
+
+- **It gives GRADE its own identity** instead of "more of the same". A high-level Flotsam
+  plate is a big, crude wall; a low-level Exotic plate is small but excellent. That is a
+  genuine choice rather than a strict ladder, and it makes the grade ladder legible on
+  sight.
+- **It matches what already exists in the world.** The Long Lane's hulls are STANDARD while
+  the rim flies SALVAGE — a distinction that is currently pure flavour and would become
+  mechanical for free.
+- **It reinforces the armor spec's lowest-DR rule.** If DR rides quality, mixing one cheap
+  plate into a good suit is punished exactly as intended, and for a legible reason.
+
+#### TRAP 1 — DR and value both scaling is QUADRATIC
+
+Pool growth is linear. **DR growth is multiplicative on effective HP.** If armor's value
+doubles and its DR climbs 10% → 50% across a career, effective armor durability grows far
+faster than shields or hull, and armor quietly becomes the only layer worth fitting.
+
+**DR must scale much more slowly than value, and hard-cap.** A whole-game range of roughly
+5% → 35% is the shape; the pool can grow normally underneath it. Under the level/quality
+split above this happens naturally, since DR only advances through the seven grade tiers
+rather than sixty levels.
+
+#### TRAP 2 — shield regen outrunning the fixed delay
+
+`SHIELD_REGEN_DELAY` is a flat **2.5s** and is not proposed to scale. If regen scales
+aggressively, high-tier shields refill fully in the first quiet moment, and **armor and
+hull stop mattering** because nothing ever gets through the outer layer.
+
+**Regen should scale conservatively relative to value.** A bigger shield that refills at a
+similar rate is a straightforwardly better shield; a bigger shield that *also* refills
+proportionally faster is a different, much stronger thing.
+
+(Radiation's extended regen cut gets proportionally more valuable as regen scales, which is
+a good pressure and needs no special handling.)
+
+#### Hull stays plain — deliberately
+
+Hull scales on value alone and gains no second property. That is the point: **hull is the
+thing you are protecting**, and its featurelessness is what makes shields and armor
+interesting to reason about. Resist giving it innate DR or a regen trickle; each would blur
+a layer that earns its place by being simple.
+
+#### What does NOT scale here
+
+**Evasion** stays a skill axis — `min(0.6, rank × 0.05)`, max 0.25 in practice, unaffected
+by level or quality. It shrinks the hit profile (§4) and is deliberately outside this
+system. Do not sweep it in: it is the one defensive stat a *pilot* earns rather than buys.
+
+#### Open questions
+
+1. **Do offense and defence scale at the SAME rate?** Equal rates hold time-to-kill
+   constant across a whole career, which can read as a treadmill — numbers rise, nothing
+   changes. Offense slightly ahead makes fights more decisive over time but trends toward
+   one-shots. **Recommended: equal rates, and let LEVEL GAPS supply the drama** — which is
+   what `toughness_between` and the Long Lane's region bands already do. A level-25 Recluse
+   is terrifying to a level-8 pilot because of the gap, not because of absolute numbers.
+2. **Does quality scale NPC gear too?** It would make the lane's STANDARD-vs-SALVAGE
+   distinction mechanical, which is desirable — but it also silently buffs every lane
+   enemy, so it wants doing on purpose with a playtest.
+3. **What are the actual curves?** Both halves need real numbers before either can ship.
+   `docs/progression_table.md` is the home for that and is still status PLANNED.
+
+### 9.10 Reconciliation rule
 
 When this section and sections 1–8 disagree, **this section is the intent and the code is
 the bug.** Fix the code or change this section deliberately — never let them drift
