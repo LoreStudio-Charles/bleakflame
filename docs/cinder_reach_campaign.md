@@ -114,15 +114,46 @@ climax** (see The Braid).
 
 1. **The check-in.** Odessa sends you to look in on her old friend. You meet a
    strange recluse who is plainly *more* than he seems.
-2. **The thread.** The wrong questions in Ember Row; the trail is warm. You start
-   pulling — who's asking, who are the hunters, who is he *really*. Odessa knows
-   more than she says.
-3. **The reveal.** Who Conall is, what he did at Percival, and the stakes of his
+2. **The thread — THE EMPTY CAVE (user, 2026-07-25).** You come back and he is
+   **gone**, and the place has been **turned over**.
+
+   The horror is in what it *isn't*:
+   - **The hunters do not know it is him.** They know something is off about a man
+     hiding out here, and for the Ooshu that is enough to warrant a search. They are
+     not closing on a target; they are *eliminating a discrepancy*. That is worse.
+   - **Nothing is taken.** It is obviously searched and obviously not robbed. No
+     words, no threat left behind — the wreck IS the message, and it is addressed to
+     nobody in particular.
+   - **He knew they were coming.** He is brilliant and permanently alert; a landing is
+     all the warning he needs, and he was gone before they were down. THE TALLY WALL
+     PAYS THIS OFF: the short marks by the door — "ships that come in slow and don't
+     land" — were never eccentricity. They were an early-warning system, and beat 1
+     let the player read it without understanding it.
+   - **THE CLUE IS AN ABSENCE.** The furniture is wrecked at random; the WALL is wiped
+     *clean* — thirty years of counting scoured off deliberately, edge to edge. The
+     hunters had no reason to do that. He did, and doing it took time he chose to
+     spend. So: no body, no blood, and a man who left tidy. He is ALIVE and he is a
+     professional, and the player deduces both from what is missing rather than what
+     is there.
+
+   The player leaves knowing more than either of the people who care about him, which
+   is the engine the rest of the Campaign runs on. Odessa's reaction is the beat's
+   real payoff — she hears "gone, not taken" and it does not comfort her at all.
+
+   IMPLEMENTATION SHAPE (not built): the cave interior needs a **wrecked state**
+   (`epharon_town.INTERIORS["?"]` gains a variant — flavour text, scattered props, the
+   hermit actor absent, the wall drawn bare), flipped by a quest flag. The stage is a
+   `goto`/enter rather than a `talk`, since the point is that there is nobody to talk
+   to; the report back to Odessa is the following stage.
+
+3. **Who is asking.** Pulling the thread: who the hunters are, why an old man on a
+   dust ball is worth Ooshu attention, and how much Odessa has been sitting on.
+4. **The reveal.** Who Conall is, what he did at Percival, and the stakes of his
    being found: not one old man's life — a **new war.**
-4. **The job: keep him buried.** Divert the hunters, muddy the trail, protect the
+5. **The job: keep him buried.** Divert the hunters, muddy the trail, protect the
    cave, root out the leak. (Exact beats TODO — see Open questions.)
-5. **It fails.** You can't keep him hidden.
-6. **The heavy decision.** Conall stops hiding. He becomes the legend, and draws
+6. **It fails.** You can't keep him hidden.
+7. **The heavy decision.** Conall stops hiding. He becomes the legend, and draws
    the Quarn **into the gate** — pulling the whole hunt out of Cinder Reach and
    **saving the Reach by pulling the Quarn in.** The Campaign's climax is a man
    deciding to be who he is, at the cost of everything.
