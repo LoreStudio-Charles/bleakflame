@@ -59,7 +59,11 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is not InputEventKey or not event.pressed or event.echo:
 		return
-	if event.keycode == Keys.LOG and not ship.dead and ship.docked_at == null:
+	# GROUNDED COUNTS AS FLYING for the log (playtest: can't open it on a planet).
+	# Walking the colony means the ship is DOCKED to the planetoid, so the old
+	# `docked_at == null` test locked the quest log exactly where the quests are.
+	if event.keycode == Keys.LOG and not ship.dead \
+			and (ship.docked_at == null or ship.docked_at is Planetoid):
 		visible = not visible
 		if visible:
 			Tutor.did("log_opened")   # they found the log themselves

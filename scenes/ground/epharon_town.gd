@@ -637,6 +637,11 @@ func _on_player_down() -> void:
 	_player.dead = false
 	_player.health = _player.max_health
 	_player.set_pose("")
+	# YOU WAKE OUTSIDE (playtest: died in the cave, respawned in a corner of it). The
+	# death seam already says you wake at the Starport; leaving you in the room you were
+	# killed in — with whatever killed you — is neither that nor survivable.
+	if _interior_id != "":
+		_exit_interior()
 	_player.global_position = Vector2(0, 780)
 	_player.face("south")
 
@@ -998,11 +1003,19 @@ func _update_focus() -> void:
 			_current_npc = str(s.get("npc", ""))
 	# Loot corpses are dynamic interactables — nearest one within reach wins the prompt
 	# if nothing else claimed it.
-	if _current_action == "":
-		for n in get_tree().get_nodes_in_group("ground_loot"):
-			var c := n as Node2D
-			if c != null and _player.global_position.distance_to(c.global_position) < 70.0:
+	# A BODY IN REACH OUTRANKS THE ROOM (playtest: no drone from the cave scrit). This
+	# only ran when NOTHING else had claimed the prompt — and a room always has a
+	# standing spot (the exit) whose range covers it, so indoors the loot prompt could
+	# never appear and the corpses could not be searched at all. A corpse you are
+	# standing on is always the more specific thing to offer.
+	for n in get_tree().get_nodes_in_group("ground_loot"):
+		var c := n as Node2D
+		if c != null:
+			var cd := _player.global_position.distance_to(c.global_position)
+			if cd < 70.0 and cd < best:
+				best = cd
 				_current_action = "loot"
+				_current_npc = ""
 				text = "[E] Scavenge the scrit"
 				break
 	_prompt.text = text
@@ -1851,22 +1864,7 @@ func _draw_town() -> void:
 	for n in _npcs:
 		draw_string(_font, n.node.global_position + Vector2(-40, -78), n.name,
 			HORIZONTAL_ALIGNMENT_CENTER, 80, 15, Color(0.96, 0.92, 0.82, 0.85))
-	# Combat readouts: a thin hp bar over anyone recently in a fight, and an amber ring
-	# under the player's current target (LMB select / TAB cycle).
-	var fighters: Array = get_tree().get_nodes_in_group("ground_hostiles").duplicate()
-	fighters.append(_player)
-	for n in fighters:
-		var g := n as GroundCharacter
-		if g == null or not is_instance_valid(g) or g.dead:
-			continue
-		if g.health < g.max_health:
-			var top := g.global_position + Vector2(-16, -62)
-			draw_rect(Rect2(top, Vector2(32, 4)), Color(0.08, 0.06, 0.08, 0.85))
-			draw_rect(Rect2(top, Vector2(32.0 * (g.health / g.max_health), 4)),
-				Color(0.42, 0.86, 0.46) if g == _player else Color(0.9, 0.42, 0.35))
-	if _player.combat_target != null and is_instance_valid(_player.combat_target):
-		draw_arc(_player.combat_target.global_position, 20.0, 0, TAU, 22,
-			Color(0.95, 0.72, 0.35, 0.9), 2.0)
+	_draw_combat_readouts()   # hp bars + target ring (shared with the interiors)
 
 	# Guide nudge: a soft chevron over the pilot pointing toward the current objective — a ground
 	# lesson's target, or whoever the quest system wants you to talk to.
@@ -1984,7 +1982,32 @@ func _draw_spire(pos: Vector2) -> void:
 ## One generic room shell (floor + walls + title from the INTERIORS def), then per-room
 ## DRESSING so each place has a face. Procedural for now — drop-in interior art is a later
 ## seam, same as the buildings got.
+## The combat readouts (thin hp bars, the amber target ring) — shared by the open town
+## and the interiors. It lived inside _draw_town only, so the cave fight had no health
+## bars and no target marker at all (playtest); a fight indoors is still a fight.
+func _draw_combat_readouts() -> void:
+	var fighters: Array = get_tree().get_nodes_in_group("ground_hostiles").duplicate()
+	fighters.append(_player)
+	for n in fighters:
+		var g := n as GroundCharacter
+		if g == null or not is_instance_valid(g) or g.dead or not g.visible:
+			continue
+		if g.health < g.max_health:
+			var top := g.global_position + Vector2(-16, -62)
+			draw_rect(Rect2(top, Vector2(32, 4)), Color(0.08, 0.06, 0.08, 0.85))
+			draw_rect(Rect2(top, Vector2(32.0 * (g.health / g.max_health), 4)),
+				Color(0.42, 0.86, 0.46) if g == _player else Color(0.9, 0.42, 0.35))
+	if _player.combat_target != null and is_instance_valid(_player.combat_target):
+		draw_arc(_player.combat_target.global_position, 20.0, 0, TAU, 22,
+			Color(0.95, 0.72, 0.35, 0.9), 2.0)
+
+
 func _draw_interior() -> void:
+	_draw_room()
+	_draw_combat_readouts()   # a fight indoors is still a fight
+
+
+func _draw_room() -> void:
 	var def: Dictionary = INTERIORS.get(_interior_id, {})
 	var half: Vector2 = def.get("half", IROOM_HALF)
 	var rect := Rect2(IROOM - half, half * 2.0)
