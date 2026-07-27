@@ -222,3 +222,16 @@ static func _toward_player(from: String) -> Att:
 ## Shoal's is "privateer" because that key predates the faction system and is persisted.
 static func standing_key(faction: String) -> String:
 	return str(LIST.get(faction, {}).get("standing", faction))
+
+
+## AND BACK AGAIN — which faction does this ledger belong to? Campaign beats move a
+## STANDING KEY (that is what is persisted and what Standing.add takes), but the player
+## must be TOLD in the name they know: "THE RUST SHOAL holds its fire", never "privateer".
+## Falls back to the key itself, so a ledger with no faction still prints something.
+static func faction_for_standing(key: String) -> String:
+	if LIST.has(key):
+		return key
+	for id in LIST:
+		if standing_key(id) == key:
+			return id
+	return key

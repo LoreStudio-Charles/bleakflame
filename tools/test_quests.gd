@@ -245,10 +245,47 @@ func _init() -> void:
 	if Quests.completed.has("rust_shoal"):
 		print("FAIL: dialogue-goto auto-completed on arrival")
 		failures += 1
+	# THE SHOAL LADDER, RUNG 1 (user, 2026-07-27). Before the meeting they are at war:
+	# -100 comes from Standing.OPENING, not from anything the player did, so a fresh pilot
+	# reads hostile without a save entry existing.
+	if Standing.get_points("privateer") != -100 or not Standing.is_hostile("privateer"):
+		print("FAIL: the Shoal should open at war (-100), got ",
+			Standing.get_points("privateer"))
+		failures += 1
 	Quests.advance_goto_dialogue("rust_shoal")
 	if not Quests.completed.has("rust_shoal"):
 		print("FAIL: advance_goto_dialogue did not complete rust_shoal")
 		failures += 1
+	# RUNG 2: sitting at Krayt's table lifts them to -50 — their guns come off you...
+	if Standing.get_points("privateer") != -50:
+		print("FAIL: meeting Krayt did not set the truce floor at -50, got ",
+			Standing.get_points("privateer"))
+		failures += 1
+	if Standing.is_hostile("privateer"):
+		print("FAIL: the Shoal is still at war after Krayt's truce")
+		failures += 1
+	# ...but a truce is NOT a welcome. -50 must stay well short of a commission, or the
+	# beat quietly hands the player the Privateer door the campaign means to withhold.
+	if Standing.eligible("privateer"):
+		print("FAIL: Krayt's truce made the player eligible for the Privateer commission")
+		failures += 1
+	# The player has to be TOLD, in the name they know — a relationship that changes in
+	# silence is indistinguishable from a bug.
+	var truce_said := false
+	for n in Quests.take_notes():
+		if str(n).contains("RUST SHOAL") and str(n).to_lower().contains("truce"):
+			truce_said = true
+	if not truce_said:
+		print("FAIL: the truce was applied without telling the player")
+		failures += 1
+	# A FLOOR, NOT A SET: re-applying must never claw back standing earned since.
+	Standing.add("privateer", 30)          # -20
+	Quests._raise_standing("privateer", -50)
+	if Standing.get_points("privateer") != -20:
+		print("FAIL: the truce floor demoted a pilot who was already above it, got ",
+			Standing.get_points("privateer"))
+		failures += 1
+	Standing.add("privateer", -30)         # back to -50 for anything downstream
 
 	# BEAT 7 REACH_GATE: the finale is manual_start — the flight scene's
 	# Shoal's-fall set-piece begins it (Krayt's final transmission), NOT a dock.
