@@ -6,6 +6,10 @@ extends Node
 ##   <godot> --headless --path . res://tools/test_ground_landing.tscn
 
 func _ready() -> void:
+	# NEVER WRITE THE PLAYER'S PILOT. This boots the real flight scene, and the real
+	# flight scene checkpoints on touchdown and on the tutorial paying out.
+	SaveGame.read_only = true
+
 	var scene: Node = load("res://scenes/flight/flight_test.tscn").instantiate()
 	add_child(scene)
 	for _i in 8:

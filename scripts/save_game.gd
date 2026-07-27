@@ -25,7 +25,29 @@ static var _pending_cargo: Array[ComponentDef] = []
 static var _pending_commodities := {}
 
 
+## A TEST MUST NEVER OVERWRITE THE PILOT SOMEBODY IS PLAYING (found 2026-07-27 by
+## checksumming the save around every suite). Four tests were quietly writing it —
+## test_ground_landing, test_lane_traffic, test_prompt_onscreen and test_ranks_in_world —
+## because ALL OF THEM BOOT THE REAL FLIGHT SCENE, and the real flight scene saves: a
+## touchdown, or the tutorial paying out its licence, is a checkpoint. Each test avoided
+## the obvious `ship.dock()` and got caught by a path it never called directly.
+##
+## Patching four call sites would leave the FIFTH test to be written unprotected, so the
+## guard lives at the one door every write goes through. `test_dock_ui` was hardened by
+## hand months ago and is the reason we know this rule matters.
+static var read_only := false
+static var _blocked := 0
+
+
 static func save_game(ship: TestShip) -> void:
+	if read_only:
+		# Warn ONCE. A test that boots a scene may trip this dozens of times, and a
+		# thousand identical warnings would bury whatever the test was actually saying.
+		_blocked += 1
+		if _blocked == 1:
+			push_warning("SaveGame.read_only: refusing to write the pilot save "
+				+ "(set by a test or tool — this is the intended behaviour)")
+		return
 	var builds := {}
 	for index in SampleBuilds._player_builds:
 		builds[str(index)] = _build_to_dict(SampleBuilds._player_builds[index])

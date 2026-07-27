@@ -18,6 +18,10 @@ var _scene: Node = null
 
 
 func _ready() -> void:
+	# NEVER WRITE THE PLAYER'S PILOT. This boots the real flight scene, and the real
+	# flight scene checkpoints on touchdown and on the tutorial paying out.
+	SaveGame.read_only = true
+
 	_scene = load("res://scenes/flight/flight_test.tscn").instantiate()
 	add_child(_scene)
 	# Let _ready + the spawn block run, then a few physics frames so anything that

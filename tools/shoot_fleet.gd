@@ -3,6 +3,10 @@ extends Node
 const DIR := "C:/Users/charl/AppData/Local/Temp/claude/E--Seared-Games-repos-Bleakflame-bleakflame/3a9df3e2-fa85-477f-96c4-c9436e26c8ad/scratchpad"
 
 func _ready() -> void:
+	# NEVER WRITE THE PLAYER'S PILOT. This boots the real flight scene, and the real
+	# flight scene checkpoints on touchdown and on the tutorial paying out.
+	SaveGame.read_only = true
+
 	var scene: Node = load("res://scenes/flight/flight_test.tscn").instantiate()
 	add_child(scene)
 	for _i in 20:

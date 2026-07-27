@@ -10,6 +10,10 @@ var _player: Node2D
 var _cam: Camera2D
 
 func _ready() -> void:
+	# NEVER WRITE THE PLAYER'S PILOT. This boots the real flight scene, and the real
+	# flight scene checkpoints on touchdown and on the tutorial paying out.
+	SaveGame.read_only = true
+
 	SaveGame.tutorial_done = true   # so the ground onboarding lesson shows in the shots
 	_town = load("res://scenes/ground/epharon_town.tscn").instantiate()
 	add_child(_town)
