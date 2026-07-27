@@ -188,15 +188,11 @@ var _e_was := false
 var _esc_was := false
 ## True for the first frame after a panel closes -- see _poll_actions.
 var _thawed_frame := false
-var _lmb_was := false
-var _rmb_was := false
-var _q_was := false
-var _tab_was := false
-var _kneel_was := false
-var _kneeling := false
-var _med_was := false
-var _tech_was := {}      # bus slot -> key held last frame (edge detection)
-var _tech_cd := {}       # technique id -> seconds remaining
+## THE COMBAT VERBS, on foot. Owns target selection, the input edges and the technique
+## cooldowns — none of which was ever about Epharon. Built in _ready once the player and
+## the world exist, and handed _flash so it decides WHAT to say while this scene decides
+## how to show it.
+var _combat: GroundCombat
 var _active := true   # frozen while a dock panel is open over the town (flight_test drives it)
 var _current_npc := ""   # name of the NPC under the [E] prompt (for the tutor's met-events)
 var _tutor_cap: Label    # ground-lesson caption (top-center)
@@ -241,6 +237,9 @@ func _ready() -> void:
 	apply_gear(true)
 	_player.died.connect(_on_player_down)
 	_world.add_child(_player)
+	# The combat verbs get the player, the world (for the mouse) and this scene's caption
+	# sink. It decides WHAT to say; _flash decides how it is shown.
+	_combat = GroundCombat.new(_player, _world, Callable(self, "_flash"))
 	_spawn_warren()
 	var cam := Camera2D.new()
 	cam.zoom = Vector2(1.3, 1.3)
@@ -291,7 +290,7 @@ func _ready() -> void:
 	$HUD.add_child(_tutor_cap)
 	var bar := TechniqueBar.new()
 	bar.walker = _player
-	bar.cooldowns = _tech_cd   # the LIVE dict — the bar reads, it never decides
+	bar.cooldowns = _combat.cooldowns   # the LIVE dict — the bar reads, it never decides
 	$HUD.add_child(bar)
 	var frames := GroundHud.new()
 	frames.walker = _player
@@ -488,8 +487,8 @@ func _process(delta: float) -> void:
 	# engage, toggle weapons, cycle targets, kneel or fire a technique. Exactly the shape
 	# of the tutor bug from earlier today: a system trapped in the else-branch, unnoticed
 	# until content walked indoors.
-	_poll_combat()
-	_tick_techniques(delta)   # cooldowns run indoors too — a room is not a time-out
+	_combat.poll()
+	_combat.tick(delta)   # cooldowns run indoors too — a room is not a time-out
 	# The tutor observes EVERYWHERE — indoors too (user bug: opening Bram's shop inside
 	# the market fired used_market, but the lesson only advanced after stepping back
 	# outside, because observe() never ran while a room was up).
@@ -524,7 +523,7 @@ func _tick_npcs(delta: float) -> void:
 			node.move_to(pp)                                 # walk over until close
 			if dist <= TALK_RANGE:
 				node.stop()
-				node.face(_cardinal(pp - node.global_position))
+				node.face_toward(pp)
 				n.approaching = false
 				n.wants_talk = false
 				n.delivered = true                            # she's come to you — now she WAITS.
@@ -547,14 +546,14 @@ func _tick_npcs(delta: float) -> void:
 		if dist <= NOTICE_RANGE and n.wants_talk and str(n.action) != "":
 			n.noticed = true
 			node.stop()
-			node.face(_cardinal(pp - node.global_position))
+			node.face_toward(pp)
 			n.approaching = true
 			continue
 		if dist <= NOTICE_RANGE and not n.noticed and n.react_cd <= 0.0:
 			n.noticed = true
 			n.react_cd = 3.0
 			node.stop()
-			node.face(_cardinal(pp - node.global_position))
+			node.face_toward(pp)
 			n.look_t = 1.2                                    # hold a glance
 			_npc_notice(node)
 		elif dist > NOTICE_RANGE + 130.0:
@@ -676,11 +675,11 @@ func _on_player_down() -> void:
 	#    or use a technique, with no clue but to guess [K].
 	#  · the shadow -- die() tweens it to alpha 0 and nothing brings it back, so the
 	#    pilot walked the rest of the session as the one thing in town casting none.
-	#  · _kneeling -- the town's mirror of the pose, which desynced so the next
+	#  · the chosen kneel -- the town's mirror of the pose, which desynced so the next
 	#    [SPACE] silently did nothing and cover mitigation was not applied.
 	_player.set_meditating(false)
 	_player.restore_shadow()
-	_kneeling = false
+	_combat.kneeling = false
 	# YOU WAKE OUTSIDE (playtest: died in the cave, respawned in a corner of it). The
 	# death seam already says you wake at the Starport; leaving you in the room you were
 	# killed in — with whatever killed you — is neither that nor survivable.
@@ -688,173 +687,6 @@ func _on_player_down() -> void:
 		_exit_interior()
 	_player.global_position = Vector2(0, 780)
 	_player.face("south")
-
-
-## ---- combat verbs (the input scheme, on foot) ----
-## LMB = SELECT (a click on a scrit targets it; holding still walks). RMB on a hostile
-## = target AND engage (the soft interact). [Q] toggles weapons-free. [TAB] cycles
-## hostiles. [SPACE] kneels — cover mitigation + the braced pose.
-func _poll_combat() -> void:
-	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	if lmb and not _lmb_was:
-		var hit := _hostile_at(_world.get_global_mouse_position())
-		if hit != null:
-			_player.combat_target = hit
-	_lmb_was = lmb
-	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-	if rmb and not _rmb_was:
-		var hit := _hostile_at(_world.get_global_mouse_position())
-		if hit != null:
-			_player.engage(hit)   # picking a fight and starting it are one gesture
-			Tutor.did("ground_engaged")
-	_rmb_was = rmb
-	var q := Input.is_key_pressed(Keys.WEAPONS_FREE)
-	if q and not _q_was:
-		_player.auto_attack = not _player.auto_attack
-		if _player.auto_attack and _player.combat_target == null:
-			_player.combat_target = _nearest_hostile()
-		if not _player.auto_attack:
-			_player.set_pose("kneeling" if _kneeling else "")
-		_flash("WEAPONS FREE" if _player.auto_attack else "WEAPONS TIGHT", 1.0)
-		Tutor.did("ground_weapons_toggled")
-	_q_was = q
-	var tabk := Input.is_key_pressed(Keys.CYCLE_FOE)
-	if tabk and not _tab_was:
-		_player.combat_target = _nearest_hostile(_player.combat_target)
-	_tab_was = tabk
-	var kneel := Input.is_key_pressed(Keys.BRAKE)
-	if kneel and not _kneel_was:
-		_kneeling = not _kneeling
-		_player.set_pose("kneeling" if _kneeling else "")
-		Tutor.did("ground_kneeled")
-	_kneel_was = kneel
-	# [K] MEDITATE — the Going-Dark mirror on foot: power down into the cell, refill fast,
-	# defenseless while you're down. Kneeling is the pose either way, so leaving meditation
-	# restores whatever stance you chose.
-	var med := Input.is_key_pressed(Keys.DARK)
-	if med and not _med_was:
-		_player.set_meditating(not _player.meditating)
-		if not _player.meditating and _kneeling:
-			_player.set_pose("kneeling")
-		_flash("MEDITATING — systems down, cell charging" if _player.meditating
-			else "Up. Systems live.", 1.6)
-		Tutor.did("meditated")
-	_med_was = med
-	# [1]-[5] TECHNIQUES — the character's own bus (Pilot.techniques), distinct from the
-	# ship's gems by design: hardware vs training.
-	for i in Techniques.BUS_SLOTS:
-		var key := Keys.ability_key(i)
-		var down := Input.is_key_pressed(key)
-		if down and not _tech_was.get(i, false):
-			_use_technique(i)
-		_tech_was[i] = down
-
-
-## Fire the technique prepared in bus slot `i`. EVERY refusal is loud and specific (the
-## ship's _ability_fail rule, mirrored) — and, the invariant that matters: the energy
-## and the cooldown are only ever charged AFTER the last refusal, so a refused technique
-## costs nothing.
-func _use_technique(i: int) -> void:
-	var tid := Pilot.technique_at(i)
-	if tid == "":
-		_tech_fail("[%d] IS EMPTY — prepare a technique in your dossier [P]" % (i + 1))
-		return
-	var d := Techniques.def(tid)
-	if d.is_empty():
-		return
-	if _player.dead:
-		return
-	if _player.meditating:
-		_tech_fail("%s — YOU'RE MEDITATING" % str(d.name).to_upper())
-		return
-	if _player.is_stunned():
-		_tech_fail("%s — YOU'RE REELING" % str(d.name).to_upper())
-		return
-	if _tech_cd.get(tid, 0.0) > 0.0:
-		_tech_fail("%s — %.0fs LEFT" % [str(d.name).to_upper(), float(_tech_cd[tid])])
-		return
-	# Target-needing techniques check the target BEFORE the cell is touched.
-	var target := _player.combat_target
-	if tid == "sand_kick":
-		if target == null or not is_instance_valid(target) or target.dead:
-			_tech_fail("KICK SAND — NO TARGET")
-			return
-		if _player.global_position.distance_to(target.global_position) > float(d.range):
-			_tech_fail("KICK SAND — OUT OF RANGE")
-			return
-	if tid == "field_patch" and _player.health >= _player.max_health:
-		_tech_fail("FIELD PATCH — YOU'RE UNHURT")
-		return
-	if not _player.spend_energy(float(d.get("energy", 0.0))):
-		_tech_fail("%s — NOT ENOUGH ENERGY" % str(d.name).to_upper())
-		return
-	_tech_cd[tid] = float(d.get("cooldown", 0.0))
-	Tutor.did("used_technique")   # fired AFTER every refusal, so only a real cast counts
-	# ---- the dispatch (one arm per Techniques.LIST entry; effects live on the character) ----
-	match tid:
-		"field_patch":
-			var healed := _player.mend(float(d.heal))
-			_flash("FIELD PATCH — mended %d" % int(healed), 1.6)
-		"sand_kick":
-			target.apply_stun(float(d.duration))
-			_flash("KICK SAND — it reels, clawing at its eyes", 1.8)
-		"second_wind":
-			_player.apply_haste(float(d.duration))
-			_flash("SECOND WIND", 1.4)
-		"brace":
-			_player.apply_brace(float(d.duration), float(d.mitigation))
-			_flash("BRACED — set your feet", 1.6)
-	Sfx.play("pickup", -10.0)
-
-
-func _tech_fail(reason: String) -> void:
-	# The unmistakable refusal (ship rule: loud, red, distinct from the soft nav click).
-	_flash("✕ " + reason, 2.2)
-	Sfx.play("click", -6.0, 0.32)
-
-
-func _tick_techniques(delta: float) -> void:
-	for tid in _tech_cd.keys():
-		var left: float = float(_tech_cd[tid]) - delta
-		if left <= 0.0:
-			_tech_cd.erase(tid)
-		else:
-			_tech_cd[tid] = left
-
-
-func _hostile_at(point: Vector2) -> GroundCharacter:
-	var best: GroundCharacter = null
-	var best_d := 46.0
-	for n in get_tree().get_nodes_in_group("ground_hostiles"):
-		var g := n as GroundCharacter
-		if g == null or g.dead:
-			continue
-		var d := point.distance_to(g.global_position - Vector2(0, 24))
-		if d < best_d:
-			best_d = d
-			best = g
-	return best
-
-
-func _nearest_hostile(after: GroundCharacter = null) -> GroundCharacter:
-	var all: Array = []
-	for n in get_tree().get_nodes_in_group("ground_hostiles"):
-		var g := n as GroundCharacter
-		if g != null and not g.dead 				and _player.global_position.distance_to(g.global_position) < 900.0:
-			all.append(g)
-	if all.is_empty():
-		return null
-	all.sort_custom(func(a, b) -> bool:
-		return _player.global_position.distance_to(a.global_position) 			< _player.global_position.distance_to(b.global_position))
-	if after != null and all.has(after):
-		return all[(all.find(after) + 1) % all.size()]
-	return all[0]
-
-
-func _cardinal(v: Vector2) -> String:
-	if absf(v.x) > absf(v.y):
-		return "east" if v.x > 0.0 else "west"
-	return "south" if v.y > 0.0 else "north"
 
 
 ## Drive the declarative Tutor from the ground. The town is the tutor's authority while you're
@@ -874,7 +706,7 @@ func _tick_tutor() -> void:
 		# to carry it: something visible to fight, a technique actually known, and how
 		# much cell is left. Every key is read with a default on the other side, so a
 		# missing one is falsy rather than a crash (the engine's can't-jam rule).
-		"hostile_near": _nearest_hostile() != null,
+		"hostile_near": _combat.hostile_near(),
 		"has_technique": Pilot.technique_at(0) != "" or Pilot.first_empty_technique() != 0,
 		"energy_frac": (_player.energy / _player.max_energy) if _player.max_energy > 0.0 else 1.0,
 		"skill_points": Pilot.skill_points_available(),

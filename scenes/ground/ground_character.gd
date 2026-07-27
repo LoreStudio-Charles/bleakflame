@@ -451,6 +451,14 @@ func face(dir: String) -> void:
 		_apply_anim(_has_target)
 
 
+## Turn to look at a world point. The cardinal is worked out HERE because the character
+## already does exactly this every frame it walks (_face_from) — callers were each
+## computing their own copy of the same four-way test and handing back a string.
+func face_toward(point: Vector2) -> void:
+	_face_from(point - global_position)
+	_apply_anim(_has_target)
+
+
 ## Enter/leave a combat stance ("aiming", "kneeling", "" = stand down). Falls back
 ## gracefully: a character without that pose group keeps walk/idle frames (the weapon
 ## still aims — the body just doesn't brace).
