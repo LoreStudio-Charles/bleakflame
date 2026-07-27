@@ -865,37 +865,17 @@ func _enforce_heat() -> void:
 
 
 func _update_focus() -> void:
-	_current_action = ""
-	_current_npc = ""
-	var best := 1e9
-	var text := ""
-	for s in _spots:
-		var p: Vector2 = s.node.global_position if s.has("node") else s.pos
-		var dist := _player.global_position.distance_to(p)
-		if dist <= s.range and dist < best:
-			best = dist
-			text = s.prompt
-			_current_action = s.action
-			_current_npc = str(s.get("npc", ""))
-	# Loot corpses are dynamic interactables — nearest one within reach wins the prompt
-	# if nothing else claimed it.
-	# A BODY IN REACH OUTRANKS THE ROOM (playtest: no drone from the cave scrit). This
-	# only ran when NOTHING else had claimed the prompt — and a room always has a
-	# standing spot (the exit) whose range covers it, so indoors the loot prompt could
-	# never appear and the corpses could not be searched at all. A corpse you are
-	# standing on is always the more specific thing to offer.
-	for n in get_tree().get_nodes_in_group("ground_loot"):
-		var c := n as Node2D
-		if c != null:
-			var cd := _player.global_position.distance_to(c.global_position)
-			if cd < 70.0 and cd < best:
-				best = cd
-				_current_action = "loot"
-				_current_npc = ""
-				text = "[E] Scavenge the scrit"
-				break
-	_prompt.text = text
-	_prompt.visible = text != ""
+	# The static spots plus whatever is lying about, judged on the same footing: NEAREST IN
+	# REACH WINS. The bodies are rebuilt every frame rather than registered because they
+	# come and go — see GroundSpots for why this is one rule and not two.
+	var candidates := _spots.duplicate()
+	candidates.append_array(
+		GroundSpots.loot_candidates(get_tree(), "[E] Scavenge the scrit"))
+	var focus := GroundSpots.focus(candidates, _player.global_position)
+	_current_action = str(focus.get("action", ""))
+	_current_npc = str(focus.get("npc", ""))
+	_prompt.text = str(focus.get("prompt", ""))
+	_prompt.visible = _prompt.text != ""
 
 
 # ---------------------------------------------------------------- input
