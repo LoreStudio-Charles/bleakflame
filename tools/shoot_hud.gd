@@ -26,4 +26,32 @@ func _ready() -> void:
 		await get_tree().process_frame
 	get_viewport().get_texture().get_image().save_png(DIR + "/hud_tracker.png")
 	print("saved hud_tracker.png")
+	await _rank_shot(ship)
 	get_tree().quit()
+
+
+## THE TARGET READOUT with a rank on it. Ranked ships live tens of thousands of units out
+## (the Vulture's haunt, RECLUSE's leg of the Long Lane), so rather than fly there this
+## drags one to the player and targets it — the readout only cares what is selected.
+func _rank_shot(ship) -> void:
+	var picks := {}
+	for grp in ["hostile_team", "player_team"]:
+		for n in get_tree().get_nodes_in_group(grp):
+			if not (n is BuildShip) or n == ship:
+				continue
+			var rk := Threat.rank_of(n)
+			var key := Threat.label(rk)
+			if not picks.has(key):
+				picks[key] = n
+	print("  ranks present in the world: ", picks.keys())
+	for key in ["MILITARY", "ELITE", "NORMAL"]:
+		if not picks.has(key):
+			continue
+		var mark = picks[key]
+		mark.global_position = ship.global_position + Vector2(420, -120)
+		ship.target = mark
+		for _i in 8:
+			await get_tree().process_frame
+		var f := "hud_rank_%s.png" % key.to_lower().replace(" ", "_")
+		get_viewport().get_texture().get_image().save_png(DIR + "/" + f)
+		print("saved ", f)
