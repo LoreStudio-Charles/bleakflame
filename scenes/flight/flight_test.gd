@@ -2157,13 +2157,18 @@ func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
 			# a Vulture measures only 1.34x a rim pirate, so no stats rule would ever call
 			# it more than ordinary. It is a BIG ship, and big-for-its-level is exactly
 			# what level scaling already accounts for. What it is FOR has to be stated.
-			pirate.rank = Threat.Rank.ELITE
-			# RAPTOR (user, 2026-07-27) — the Shoal elite that haunts the deep east near
-			# Epharon. An elite that has earned a name never goes back to being a smear of
-			# characters, and a name is what makes a death worth coming back from: the
-			# same premise the Nemesis system runs on, applied outside the Widows.
-			pirate.callsign = "Raptor"
-			pirate.ship_name = "Raptor"
+			# RAPTOR IS A PILOT, NOT A HULL CLASS (user, 2026-07-27: "Vulture is just a
+			# hull type... there may be normal vultures too"). Gated on the POSTING, so the
+			# one that haunts the deep east near Epharon is the elite with the name and any
+			# other Vulture is an ordinary raider flying the same airframe. Without this
+			# gate every Vulture — including this one's own respawn — became a second
+			# Raptor, which would have made the name worth nothing.
+			if posting == "haunt":
+				pirate.rank = Threat.Rank.ELITE
+				# A name is EARNED: the Nemesis premise applied outside the Widows. An elite
+				# that has earned one never goes back to being a smear of characters.
+				pirate.callsign = "Raptor"
+				pirate.ship_name = "Raptor"
 		_:
 			pirate.setup(SampleBuilds.pirate_raider(), AIShip.Tactic.STRAFE)
 	pirate.died.connect(_grant_kill_xp.bind(pirate, kind))

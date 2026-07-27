@@ -33,20 +33,30 @@ func _ready() -> void:
 
 	# THE PIRATE VULTURE — ELITE (user, 2026-07-27). It haunts the deep east and is the
 	# heaviest ambient thing a rim pilot can run into.
-	# BY FACTION, not by hull. The Navy picket flies a Vulture too and is correctly MILITARY,
-	# so "every Vulture is ELITE" was a claim about the wrong thing — it passed only while
-	# the picket was an uncorrected GuardianShip. This is the faction field earning its keep
-	# on its first day: the question was always "the PIRATE Vulture", and now that is askable.
-	var vult: Array = []
+	# BY THE PILOT, NOT THE HULL (user, 2026-07-27): "Vulture is just a hull type... Raptor
+	# is [elite] because it is an elite pirate, but there may be normal vultures too."
+	#
+	# This assertion has now been wrong twice in the same way, each time by naming a broader
+	# set than the claim: first "every Vulture", which the Navy picket broke by flying one;
+	# then "every SHOAL Vulture", which any ordinary raider in the same airframe would break.
+	# The claim was only ever about ONE SHIP.
+	var raptor: Node = null
+	for s in ships:
+		if str(s.get("callsign")) == "Raptor":
+			raptor = s
+	_ok(raptor != null, "RAPTOR is out there at the haunt")
+	if raptor != null:
+		_ok(Threat.rank_of(raptor) == Threat.Rank.ELITE,
+			"...and reads ELITE, not %s" % Threat.label(Threat.rank_of(raptor)))
+		_ok(str(raptor.get("faction")) == "shoal", "...flying for the Shoal")
+	# ...and the hull he flies carries no rank of its own.
+	var ordinary := 0
 	for v in _by_hull(ships, "Vulture"):
-		if str(v.get("faction")) == "shoal":
-			vult.append(v)
-	_ok(not vult.is_empty(), "a Shoal Vulture is spawned in the world (found %d)" % vult.size())
-	for v in vult:
-		_ok(Threat.rank_of(v) == Threat.Rank.ELITE,
-			"the Shoal Vulture reads ELITE, not %s" % Threat.label(Threat.rank_of(v)))
-		_ok(str(v.get("callsign")) == "Raptor",
-			"...and the one at the haunt is RAPTOR (got '%s')" % str(v.get("callsign")))
+		if str(v.get("callsign")) == "":
+			ordinary += 1
+			_ok(Threat.rank_of(v) != Threat.Rank.ELITE or str(v.get("faction")) != "shoal",
+				"a nameless Vulture is not elite BY VIRTUE OF ITS HULL")
+	print("  %d unnamed Vultures in the world (hull != rank)" % ordinary)
 
 	# RECLUSE — MILITARY. Named, level 25, and hunting the stretch just short of safety.
 	var rec: Array = []

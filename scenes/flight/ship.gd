@@ -216,6 +216,10 @@ var commodities: Dictionary = {}
 
 
 func _ready() -> void:
+	# THE PILOT IS THEIR OWN FACTION (user, 2026-07-27), which is what makes coop allies
+	# and PvP expressible at all — and what stops the player being a special case in
+	# every lookup. Standing is this faction's row in the matrix.
+	faction = Factions.player_id()
 	enemy_group = "hostile_team"
 	ally_groups = ["player_team", "friendly_targets"]
 	add_to_group("player_ship")
@@ -255,6 +259,10 @@ func sliding() -> bool:
 
 
 func apply_build(new_build: ShipBuild) -> void:
+	# THE PILOT IS THEIR OWN FACTION (user, 2026-07-27), which is what makes coop allies
+	# and PvP expressible at all — and what stops the player being a special case in
+	# every lookup. Standing is this faction's row in the matrix.
+	faction = Factions.player_id()
 	enemy_group = "hostile_team"
 	ally_groups = ["player_team", "friendly_targets"]
 	super(new_build)

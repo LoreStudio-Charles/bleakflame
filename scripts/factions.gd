@@ -167,8 +167,16 @@ static func color(id: String) -> Color:
 static func _player_toward(other: String) -> Att:
 	# Anything with no opinion of anyone — and anything that hates everyone — is fair game
 	# regardless of paperwork. You do not need standing with a leviathan.
-	var theirs: Dictionary = BASE.get(other, {})
-	if theirs.get("*", Att.NEUTRAL) == Att.HOSTILE:
+	# YOU ARE AT WAR WITH WHOEVER IS AT WAR WITH YOU. Anything already shooting at this
+	# pilot is something the pilot may shoot back at — self-defence needs no paperwork.
+	#
+	# THIS WAS A REAL BUG, found by the parity net before a single trigger was wired: the
+	# Shoal's row names specific targets rather than "*", and Standing has no "shoal"
+	# entry, so nothing made them hostile in the PLAYER'S direction. Pirates would open
+	# fire and the player's own guns would treat them as neutral. The two directions are
+	# deliberately not mirrors of each other (a faction disliking you is not licence to
+	# shoot it), but "it is actively hostile to me" is the one case that must cross over.
+	if _toward_player(other) == Att.HOSTILE:
 		return Att.HOSTILE
 	if Standing.is_hostile(other) or Standing.at_war(other):
 		return Att.HOSTILE
