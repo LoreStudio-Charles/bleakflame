@@ -25,8 +25,8 @@ func _init() -> void:
 	# Dock 1 advances the day but fires NO rumor — rumors are overheard at
 	# the bar (hear_rumor), never delivered by the dock itself.
 	Research.on_dock(true, ship)
-	if Research.day != 1:
-		print("FAIL: day should advance on dock: ", Research.day)
+	if GameClock.day_number() != 1:
+		print("FAIL: day should advance on dock: ", GameClock.day_number())
 		failures += 1
 	if Research.chain_stage.get("wayfinder_core", 0) != 0:
 		print("FAIL: docking alone must not fire rumors")
@@ -127,18 +127,22 @@ func _init() -> void:
 		print("FAIL: fab_1 should unlock exactly the Bulwark recipe")
 		failures += 1
 
-	# The journal recorded every completed stage, day-stamped.
-	if Research.journal.size() < 5 or int(Research.journal[0].day) != 1:
-		print("FAIL: journal entries: ", Research.journal.size())
+	# The journal recorded every completed stage, time-stamped. The stored value is an
+	# opaque CLOCK STAMP — ask the clock which day it falls on rather than comparing it to
+	# a day number, which only worked while a day happened to be one unit.
+	if Research.journal.size() < 5 \
+			or GameClock.day_number(int(Research.journal[0].day)) != 1:
+		print("FAIL: journal entries: ", Research.journal.size(),
+			" first on day ", GameClock.day_number(int(Research.journal[0].day)))
 		failures += 1
 
 	# Save round-trip: everything survives to_dict -> from_dict.
 	var snapshot := Research.to_dict()
 	var before_insight := Research.insight
-	var before_day := Research.day
+	var before_day := GameClock.now()
 	Research.reset()
 	Research.from_dict(snapshot)
-	if absf(Research.insight - before_insight) > 0.001 or Research.day != before_day \
+	if absf(Research.insight - before_insight) > 0.001 or GameClock.now() != before_day \
 			or not Research.recovered.has("wayfinder_core") \
 			or Research.stage("cinderheart").get("kind", "") != "cold" \
 			or not Research.is_unlocked("fab_1") or Research.is_unlocked("fab_2") \

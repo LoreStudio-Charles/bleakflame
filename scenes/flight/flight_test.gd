@@ -1974,9 +1974,9 @@ func _on_named_hunter_died(raider: VShrikeShip) -> void:
 		return
 	if not raider.killed_by_player():
 		return
-	if not Nemesis.avenge(raider.callsign, Research.day):
+	if not Nemesis.avenge(raider.callsign, GameClock.now()):
 		return   # it never touched you; no debt, no ceremony
-	Research.journal.append({"day": Research.day,
+	Research.journal.append({"day": GameClock.now(),
 		"text": Nemesis.avenged_line(raider.callsign)})
 	if ship != null and is_instance_valid(ship):
 		ship._flash_note("✔ %s — DEBT PAID" % raider.callsign.to_upper())

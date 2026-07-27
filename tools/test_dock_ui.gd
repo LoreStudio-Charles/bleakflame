@@ -1458,7 +1458,7 @@ func _case_the_campaign_banner_never_goes_silent() -> void:
 	# reason rather than showing nothing at all.
 	Quests.completed.append("legend_check_in")
 	Quests.completed_day["legend_check_in"] = 0
-	Research.day = 0                               # 3-day wait not yet served
+	GameClock.reset()                               # 3-day wait not yet served
 	Quests.active.clear()
 
 	_ok(Quests.current_step().is_empty(),
@@ -1506,7 +1506,7 @@ func _case_started_spines_stay_in_the_log() -> void:
 	# Started, and resting: one Legend beat done, the next held by its 3-day wait.
 	Quests.completed.append("legend_check_in")
 	Quests.completed_day["legend_check_in"] = 0
-	Research.day = 0
+	GameClock.reset()
 	var dormant := Quests.dormant_spines()
 	_ok(dormant.size() == 1, "the started Campaign is listed while resting (got %d)"
 		% dormant.size())

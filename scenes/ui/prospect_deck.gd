@@ -297,7 +297,7 @@ func _open_office(prof: String) -> void:
 		func(id: String) -> void:
 			Pilot.join_profession(id)
 			Sfx.play("jingle", -8.0)
-			Research.journal.append({"day": Research.day,
+			Research.journal.append({"day": GameClock.now(),
 				"text": "Accepted the %s commission." % Professions.display_name(id)}))
 	office.closed.connect(refresh)
 	add_child(office)

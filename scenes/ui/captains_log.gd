@@ -86,10 +86,10 @@ func _esc_capture(on: bool) -> void:
 func _refresh() -> void:
 	_active_view.rebuild()
 	_done_view.rebuild()
-	var txt := "[color=#8890a0]Day %d — a day passes with each docking[/color]\n\n" % Research.day
+	var txt := "[color=#8890a0]%s — %s[/color]\n\n" % [GameClock.label(), GameClock.cadence_text()]
 	if Research.journal.is_empty():
 		txt += "[color=#8890a0]No entries yet. The Reach keeps its stories close.[/color]"
 	for i in range(Research.journal.size() - 1, -1, -1):
 		var entry: Dictionary = Research.journal[i]
-		txt += "[color=#f2b859]Day %d[/color]  —  %s\n" % [int(entry.day), entry.text]
+		txt += "[color=#f2b859]%s[/color]  —  %s\n" % [GameClock.label(int(entry.day)), entry.text]
 	_chronicle.text = txt

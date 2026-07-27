@@ -498,7 +498,7 @@ static func record_stall(id: String, at: int, why: String) -> void:
 		"where": str(st.get("where", "")), "venue": str(st.get("venue", "")),
 		"count": 0, "last_day": 0})
 	row["count"] = int(row["count"]) + 1
-	row["last_day"] = Research.day
+	row["last_day"] = GameClock.now()
 	row["reason"] = why
 	stalls[key] = row
 	Telemetry.warn("tutor", "'%s' step %d stalled (anchor %s)" % [id, at, anchor])

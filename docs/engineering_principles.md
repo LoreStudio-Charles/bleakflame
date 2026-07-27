@@ -121,3 +121,38 @@ silently has no plate.
   screenshot showed four overlapping plates rendering "Scritt", a foot ring that
   read as a spiral, and two identical blue bars. None of that is expressible as an
   assertion you would think to write.
+
+## 6. Replaceable subsystems: the GameClock pattern
+
+**User, 2026-07-27:** *"That system is going to change, and possibly be tracked to
+realtime, but no system should have a hard coupling with it so that whether it
+changes to any other system, we just get date from it and it advances as needed."*
+
+The calendar was `Research.day`, an int incremented on docking. The damage was not
+that twenty places read it — a stored value is easy to redirect — but that several
+did **arithmetic** on it (`Research.day >= completed_day[req] + wait`). Expressions
+that assume "+1 means tomorrow" break by producing *plausible wrong answers* when a
+unit changes, which no type checker and no test notices.
+
+**The pattern, for any subsystem we expect to replace:**
+
+1. **Opaque values.** Callers store what they are given and never inspect it.
+2. **Ask, never compute.** `elapsed(stamp, span)` — not `a >= b + c`. The one place
+   the comparison lives is the one place it can be got right.
+3. **Author in human units, convert at the boundary.** `requires_days: 3` stays in
+   the quest table; the code says `days(3)`. Content never needs rewriting.
+4. **Push nothing.** Systems that accrue *subscribe* (`on_tick`), so the clock knows
+   nothing about artifacts or Insight and can be swapped wholesale. Subscribers get
+   the **size of the jump**, so a realtime clock resuming after a week pays a week.
+5. **The fiction lives with the system.** `cadence_text()` — "a day passes with each
+   docking" was hard-coded in two screens that should not know the rule.
+
+**MAKE THE SEAM LOAD-BEARING IMMEDIATELY.** `DAY` was 1 at first, which made
+`days(n)` and `n` the same number — so every consumer doing raw arithmetic still
+worked by accident, and sabotaging `days()` to ignore the unit **went undetected**.
+Setting a day to 24 units made the conversion real from day one. A seam that costs
+nothing today is a seam nobody is obeying.
+
+That change immediately failed two tests, both writing a raw day number where a
+stamp belonged — *inside the tests guarding the system*. That is the honest measure
+of whether an abstraction is real: break the assumption and see who was leaning on it.

@@ -548,7 +548,7 @@ static func _prereq_met(q: Dictionary, req: String, tutorial_done: bool) -> bool
 	var wait := int(q.get("requires_days", 0))
 	if wait <= 0 or not completed_day.has(req):
 		return true
-	return Research.day >= int(completed_day[req]) + wait
+	return GameClock.elapsed(int(completed_day[req]), GameClock.days(wait))
 
 
 ## WHY the next beat of a chain has not arrived, in the player's words — or "" if
@@ -572,9 +572,13 @@ static func pending_reason(id: String) -> String:
 		return "The trail is cold. Something surfaces around level %d." % need_lv
 	var wait := int(q.get("requires_days", 0))
 	if wait > 0 and completed_day.has(req):
-		var due := int(completed_day[req]) + wait
-		if Research.day < due:
-			var left := due - Research.day
+		var stamp := int(completed_day[req])
+		var span := GameClock.days(wait)
+		if not GameClock.elapsed(stamp, span):
+			# Asked of the CLOCK rather than worked out here, so a change of unit cannot
+			# leave this saying "Word in 0 days" forever.
+			var left := GameClock.day_number(GameClock.now() + GameClock.remaining(stamp, span)) \
+				- GameClock.day_number()
 			return "The trail is cold. Word in %d day%s." % [left, "" if left == 1 else "s"]
 	return ""
 
@@ -643,7 +647,7 @@ static func check_new_work(is_station: bool, tutorial_done: bool) -> void:
 			Pilot.shoal_invited = true   # Krayt's invitation, handed over by the hermit
 		pending_notes.append("NEW WORK — %s: \"%s\"  (Quest Log: Missions tab, or [L] in flight)" % [
 			Npcs.display_name(q.giver), q.title])
-		Research.journal.append({"day": Research.day,
+		Research.journal.append({"day": GameClock.now(),
 			"text": "Took work from %s: %s." % [Npcs.display_name(q.giver), q.title]})
 		if q.has("briefing"):
 			pending_talks.append({"giver": q.giver, "text": q.briefing,
@@ -671,7 +675,7 @@ static func begin_manual(id: String) -> void:
 	active[id] = {"stage": 0, "count": 0}
 	pending_notes.append("NEW WORK — %s: \"%s\"  (Quest Log: Missions tab, or [L] in flight)" % [
 		Npcs.display_name(q.giver), q.title])
-	Research.journal.append({"day": Research.day,
+	Research.journal.append({"day": GameClock.now(),
 		"text": "Took work from %s: %s." % [Npcs.display_name(q.giver), q.title]})
 	_enter_stage(id)   # charts the waygate POI + snaps an idle waypoint
 
@@ -813,19 +817,19 @@ static func _advance(id: String) -> void:
 	var st := stage_def(id)
 	if st.has("flash"):
 		pending_notes.append(st.flash)
-		Research.journal.append({"day": Research.day, "text": st.flash})
+		Research.journal.append({"day": GameClock.now(), "text": st.flash})
 	active[id].stage += 1
 	var q := quest_def(id)
 	if active[id].stage >= (q.stages as Array).size():
 		active.erase(id)
 		completed.append(id)
-		completed_day[id] = Research.day
+		completed_day[id] = GameClock.now()
 		var r: Dictionary = q.rewards
 		Wallet.credits += int(r.get("credits", 0))
 		Wallet.xp += XP.quest(int(r.get("xp", 0)))
 		var done_note := "QUEST COMPLETE: %s — %s" % [q.title, rewards_text(q)]
 		pending_notes.append(done_note)
-		Research.journal.append({"day": Research.day, "text": done_note})
+		Research.journal.append({"day": GameClock.now(), "text": done_note})
 		if q.has("debrief"):
 			pending_talks.append({"giver": q.giver, "text": q.debrief,
 				"quest": "%s — COMPLETE" % q.title, "rewards": rewards_text(q),

@@ -98,6 +98,7 @@ static func save_game(ship: TestShip) -> void:
 		"waypoint_manual": PoiMap.waypoint_manual,
 		"tracker": MissionTracker.to_dict(),
 		"research": Research.to_dict(),
+		"clock": GameClock.to_dict(),
 		"quests": Quests.to_dict(),
 		"nemesis": Nemesis.to_dict(),
 		"pilot": Pilot.to_dict(),
@@ -173,6 +174,9 @@ static func load_game() -> void:
 	PoiMap.waypoint_manual = bool(data.get("waypoint_manual", false))
 	MissionTracker.from_dict(data.get("tracker", {}))
 	Research.from_dict(data.get("research", {}))
+	# LEGACY: pre-clock saves stored a bare day count inside "research". Hand that dict
+	# over when there is no "clock" key, so an existing pilot keeps their calendar.
+	GameClock.from_dict(data.get("clock", data.get("research", {})))
 	Quests.from_dict(data.get("quests", {}))
 	Nemesis.from_dict(data.get("nemesis", {}))
 	# Pre-pilot saves: mark created with defaults, or veterans would be

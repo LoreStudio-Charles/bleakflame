@@ -1359,7 +1359,7 @@ func _join_commission(id: String) -> void:
 	Tutor.did("joined_commission")
 	Sfx.play("jingle", -8.0)
 	_flash("Commission accepted — %s. New skill caps unlocked." % Professions.display_name(id))
-	Research.journal.append({"day": Research.day,
+	Research.journal.append({"day": GameClock.now(),
 		"text": "Accepted the %s commission." % Professions.display_name(id)})
 	refresh()
 
@@ -1832,7 +1832,9 @@ func _dockside_talk() -> String:
 		hints.append("Old-timers say something pre-collapse still whispers out in the Drift Belt. Old-timers say a lot of things.")
 	hints.append("The belt's richer past the far rim, if you can stomach how quiet it gets out there.")
 	hints.append("Another hauler's gone quiet past the lane. Third this season. Nobody's found so much as a hull plate.")
-	return hints[Research.day % hints.size()]
+	# Rotates with the calendar. day_number() is the DISPLAY reading of the clock, which
+	# is right here: the hint should turn over once a day whatever the underlying unit is.
+	return hints[GameClock.day_number() % hints.size()]
 
 
 func _refresh_armory() -> void:
@@ -2354,7 +2356,7 @@ func _refresh_missions() -> void:
 	var log_txt := ""
 	for i in range(Research.journal.size() - 1, -1, -1):
 		var entry: Dictionary = Research.journal[i]
-		log_txt += "[color=#f2b859]Day %d[/color]  —  %s\n" % [int(entry.day), entry.text]
+		log_txt += "[color=#f2b859]%s[/color]  —  %s\n" % [GameClock.label(int(entry.day)), entry.text]
 	if log_txt == "":
 		log_txt = "[color=#8890a0]No entries yet. The Reach keeps its stories close.[/color]"
 	_mission_log.text = log_txt
@@ -2397,8 +2399,8 @@ func _refresh_research() -> void:
 
 
 func _refresh_lab_status() -> void:
-	var txt := "[b][color=#f2b859]INSIGHT  %d[/color][/b]     [color=#8890a0]day %d — a day passes with each docking[/color]\n" % [
-		int(Research.insight), Research.day]
+	var txt := "[b][color=#f2b859]INSIGHT  %d[/color][/b]     [color=#8890a0]%s — %s[/color]\n" % [
+		int(Research.insight), GameClock.label(), GameClock.cadence_text()]
 	txt += "[color=#8890a0]collection income +%.2f Insight/day   •   Scan Data aboard: %d[/color]" % [
 		Research.income_per_day(), ship.commodities.get("scan_data", 0)]
 	_lab_status.text = txt

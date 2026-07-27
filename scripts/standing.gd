@@ -140,7 +140,10 @@ const MEND_STEP := 20      # standing recovered per session
 const MEND_COST := 250     # credits the Counter's word costs
 
 static func can_mend(faction: String) -> bool:
-	return get_points(faction) < 0 and int(mend_day.get(faction, -1)) < Research.day
+	# ONCE PER DAY. `-1` meant "never mediated" and also compared as a real moment;
+	# GameClock.NEVER is the explicit version and since() answers "long ago" for it.
+	return get_points(faction) < 0 \
+		and GameClock.elapsed(int(mend_day.get(faction, GameClock.NEVER)), GameClock.days(1))
 
 
 static func mend(faction: String) -> int:
@@ -148,7 +151,7 @@ static func mend(faction: String) -> int:
 		return 0
 	var before := get_points(faction)
 	points[faction] = mini(0, before + MEND_STEP)
-	mend_day[faction] = Research.day
+	mend_day[faction] = GameClock.now()
 	return points[faction] - before
 
 

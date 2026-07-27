@@ -943,7 +943,7 @@ func _finish_scan() -> void:
 	if first:
 		# Readable TODAY, with no new UI: the Captain's Log already renders the
 		# research journal at both docks and on [L].
-		Research.journal.append({"day": Research.day,
+		Research.journal.append({"day": GameClock.now(),
 			"text": "✔  Catalogued: %s — first of its class." % subject_name})
 	var payout := 5 if target.is_in_group("leviathan") else 2
 	var headline := ("CATALOGUED — %s, first of its class" % subject_name) if first else ""
@@ -2051,8 +2051,8 @@ func _record_nemesis() -> void:
 	if tag == "":
 		return
 	var lvl: int = killer.level() if killer.has_method("level") else 0
-	Nemesis.record_defeat(tag, tag, lvl, Research.day)
-	Research.journal.append({"day": Research.day, "text": Nemesis.defeat_line(tag)})
+	Nemesis.record_defeat(tag, tag, lvl, GameClock.now())
+	Research.journal.append({"day": GameClock.now(), "text": Nemesis.defeat_line(tag)})
 
 
 ## SENSOR CLASSIFICATION (user, 2026-07-25) — the ROLE of a contact, or "" if

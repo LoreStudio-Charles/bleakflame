@@ -116,7 +116,10 @@ static var insight: float:
 		PlayerState.local.research_insight = value
 
 
-static var day := 0
+## THE CALENDAR MOVED OUT (user, 2026-07-27): "no system should have a hard coupling
+## with it so that whether it changes to any other system, we just get date from it and
+## it advances as needed." It is GameClock now, and it is WORLD state -- the lab does not
+## own what day it is any more than the market does.
 static var recovered: Array:
 	get:
 		return PlayerState.local.research_recovered
@@ -214,7 +217,7 @@ static func _complete_stage(id: String) -> void:
 		if str(st.get("kind", "")) != "rumor":
 			text = "✔  " + text
 		pending_notes.append(text)
-		journal.append({"day": day, "text": text})
+		journal.append({"day": GameClock.now(), "text": text})
 	chain_stage[id] = chain_stage.get(id, 0) + 1
 	# Entering a haul stage is when the dig site hits the chart.
 	var next := stage(id)
@@ -223,16 +226,32 @@ static func _complete_stage(id: String) -> void:
 
 
 ## One game day per docking. Recovered artifacts pay their trickle here.
-static func advance_day() -> void:
-	day += 1
+## ARTIFACTS PAY OUT OVER TIME, so this SUBSCRIBES to the clock rather than being called
+## from inside it. GameClock knows nothing about artifacts or Insight, which is what lets
+## it be replaced wholesale; installed collections accrue for however much time passed,
+## so a clock that jumps (a realtime one resuming after a week) pays correctly instead of
+## paying once.
+static func _on_time_passed(units: int) -> void:
+	var elapsed_days := float(units) / float(GameClock.DAY)
 	for id in recovered:
-		insight += 1.0 / float(ARTIFACTS[id].rate_days)
+		insight += elapsed_days / float(ARTIFACTS[id].rate_days)
+
+
+## Wire the payout to the clock exactly once, whoever gets here first.
+static var _clocked := false
+
+static func ensure_clocked() -> void:
+	if _clocked:
+		return
+	_clocked = true
+	GameClock.on_tick(_on_time_passed)
 
 
 ## Called from ship.dock() BEFORE the checkpoint save, so consumed items and
 ## chain advances persist. Processes every dock-triggered stage kind.
 static func on_dock(is_station: bool, ship) -> void:
-	advance_day()
+	ensure_clocked()
+	GameClock.advance()
 	for id in CHAINS:
 		var st := stage(id)
 		match st.get("kind", ""):
@@ -523,7 +542,7 @@ static func is_catalogued(subject: String) -> bool:
 
 
 static func to_dict() -> Dictionary:
-	return {"insight": insight, "day": day, "recovered": recovered.duplicate(),
+	return {"insight": insight, "recovered": recovered.duplicate(),
 		"chain_stage": chain_stage.duplicate(), "survey_progress": survey_progress,
 		"unlocked": unlocked.keys(), "journal": journal.duplicate(true),
 		"catalogued": catalogued.keys()}
@@ -531,7 +550,6 @@ static func to_dict() -> Dictionary:
 
 static func from_dict(data: Dictionary) -> void:
 	insight = float(data.get("insight", 0.0))
-	day = int(data.get("day", 0))
 	recovered.clear()
 	for id in data.get("recovered", []):
 		if ARTIFACTS.has(str(id)):
@@ -557,7 +575,6 @@ static func from_dict(data: Dictionary) -> void:
 
 static func reset() -> void:
 	insight = 0.0
-	day = 0
 	recovered.clear()
 	chain_stage.clear()
 	survey_progress = 0

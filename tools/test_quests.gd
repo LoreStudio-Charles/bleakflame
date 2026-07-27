@@ -345,19 +345,23 @@ func _init() -> void:
 	# so the wait is paced by play rather than by a real-world clock.
 	Quests.reset()
 	Research.reset()
+	# STAND THE CLOCK SOMEWHERE FIRST, then stamp FROM it — a completed_day value is an
+	# opaque moment, never a day number. Writing a bare 10 here passed only while a day was
+	# one unit; it is the very coupling this system was built to remove.
+	GameClock.reset()
+	GameClock.advance(GameClock.days(10))
 	Quests.completed.append("legend_check_in")
-	Quests.completed_day["legend_check_in"] = 10
-	Research.day = 10
+	Quests.completed_day["legend_check_in"] = GameClock.now()
 	Quests.check_new_work(true, true)
 	if Quests.active.has("legend_empty_cave"):
 		print("FAIL: the follow-up arrived the same day the favour was finished")
 		failures += 1
-	Research.day = 12                                  # two days on — still early
+	GameClock.advance(GameClock.days(2))                                   # two days on — still early
 	Quests.check_new_work(true, true)
 	if Quests.active.has("legend_empty_cave"):
 		print("FAIL: the follow-up arrived on day 2 of a 3-day wait")
 		failures += 1
-	Research.day = 13
+	GameClock.advance(GameClock.days(1))                                   # the third day
 	for _i in 12:
 		Quests.check_new_work(true, true)
 	if not Quests.active.has("legend_empty_cave"):
@@ -370,7 +374,7 @@ func _init() -> void:
 	Quests.reset()
 	Research.reset()
 	Quests.completed.append("legend_check_in")         # ...and NO completed_day entry
-	Research.day = 0
+	GameClock.reset()
 	for _i in 12:
 		Quests.check_new_work(true, true)
 	if not Quests.active.has("legend_empty_cave"):
@@ -429,8 +433,9 @@ func _init() -> void:
 	# "You are not ready" must outrank "not yet": a beat gated on BOTH must report the
 	# level, or a pilot waits out the days and still finds nothing.
 	Wallet.xp = 0
-	Quests.completed_day["legend_check_in"] = 0
-	Research.day = 99
+	Quests.completed_day["legend_check_in"] = GameClock.days(0)
+	GameClock.reset()
+	GameClock.advance(GameClock.days(99))
 	var both := {"requires": "legend_check_in", "requires_level": 12, "requires_days": 3}
 	if Quests._prereq_met(both, "legend_check_in", true):
 		print("FAIL: days elapsed let a level gate through")
@@ -443,8 +448,8 @@ func _init() -> void:
 			or Quests.pending_reason("legend_empty_cave") == ""):
 		print("FAIL: pending_reason returned something unreadable")
 		failures += 1
-	Research.day = 0
-	Quests.completed_day["legend_check_in"] = 0
+	GameClock.reset()
+	Quests.completed_day["legend_check_in"] = GameClock.days(0)
 	var why := Quests.pending_reason("legend_empty_cave")
 	if why == "":
 		print("FAIL: a beat held by its 3-day wait explained nothing — silence and a "
