@@ -1529,12 +1529,22 @@ func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
 	# with its own team/colours/standing — deferred.)
 	cap.set_hull_tint(Color.WHITE)
 	cap.apply_livery(Color(0.23, 0.44, 0.85))   # Galean Navy blue chevron (retint via /livery)
+	# MILITARY (user, 2026-07-27: "Navy is Military"). GuardianShip.setup_guard stamps
+	# ELITE, which is right for a Guardian patrol and wrong for the Navy — this class is
+	# only BORROWED here for its friendly-patrol behaviour, so the rank has to be corrected
+	# after the fact exactly like the hull tint above.
+	cap.rank = Threat.Rank.MILITARY
 	# A fighter screen flying formation on the capital — the "a capital wants a
 	# screen" fiction, and it reads as a real fleet element.
 	for i in 3:
 		var esc := GuardianShip.spawn_protector(self, SampleBuilds.guardian_kestrel(), cap, i, 3)
 		esc.set_hull_tint(Color.WHITE)
 		esc.apply_livery(Color(0.23, 0.44, 0.85))
+		# The screen is Navy too, so it ranks Navy. A JUDGEMENT CALL on a light hull:
+		# "Navy is Military" was stated as a faction rule, and a fighter screen welded to a
+		# capital's guns is not a thing you take alone whatever it is flying. Drop this line
+		# if the screen should read ELITE on its own merits.
+		esc.rank = Threat.Rank.MILITARY
 	return cap
 
 
@@ -1942,9 +1952,15 @@ func _spawn_long_lane() -> void:
 	VShrikeShip.navy_pos = _lane_point(LANE_NAVY_LEG.x)
 	var hunt := _lane_leg(RECLUSE_LEG.x, RECLUSE_LEG.y, 3)
 	for i in 2:
-		_spawn_vshrike(_lane_point(lerpf(RECLUSE_LEG.x, RECLUSE_LEG.y, 0.3 + 0.4 * i))
+		var hunter := _spawn_vshrike(
+			_lane_point(lerpf(RECLUSE_LEG.x, RECLUSE_LEG.y, 0.3 + 0.4 * i))
 			+ _jitter(600.0), SampleBuilds.vshrike_goshawk_elite(),
 			AIShip.Tactic.BOOM_ZOOM, hunt, RECLUSE_LEVEL, RECLUSE)
+		# MILITARY (user, 2026-07-27) — "built for a group". They measure 1.11x a lane
+		# normal, so nothing derived from stats would ever warn you about them; what makes
+		# RECLUSE lethal is the LEVEL 25 they field it at and the two of them doing it
+		# together, and the plate has to say so before the pass that kills you.
+		hunter.rank = Threat.Rank.MILITARY
 
 
 ## A named hunter died. If it owed you, the debt closes — loudly, because the
@@ -2080,6 +2096,11 @@ func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
 		"vulture":
 			# Variant skins are already pirate-colored; only a light menace tint.
 			pirate.setup(SampleBuilds.pirate_vulture(), AIShip.Tactic.ORBIT, Color(0.95, 0.8, 0.8))
+			# ELITE (user, 2026-07-27) — "built for a small group". Authored, not derived:
+			# a Vulture measures only 1.34x a rim pirate, so no stats rule would ever call
+			# it more than ordinary. It is a BIG ship, and big-for-its-level is exactly
+			# what level scaling already accounts for. What it is FOR has to be stated.
+			pirate.rank = Threat.Rank.ELITE
 		_:
 			pirate.setup(SampleBuilds.pirate_raider(), AIShip.Tactic.STRAFE)
 	pirate.died.connect(_grant_kill_xp.bind(pirate, kind))

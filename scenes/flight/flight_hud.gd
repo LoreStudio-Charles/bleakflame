@@ -495,7 +495,22 @@ func _target_text() -> String:
 	if t is BuildShip:
 		lvl = (t as BuildShip).level()
 	var lvl_text := "  L%d" % lvl if lvl > 0 else ""
-	var out := "TARGET: %s%s   %d u" % [name_text, lvl_text, rng]
+	# RANK rides beside the level, because the two answer the same question and are
+	# useless apart: a level tells you what band a thing is in, the rank tells you what it
+	# was BUILT FOR inside that band. A level-5 Guardian and a level-5 pirate print the
+	# same L5 and are nine times apart, which is the entire reason ranks exist.
+	# UNGATED, exactly like the level above and unlike the sensor-gated ROLE: this is how
+	# hard the thing hits, not a specialist's hidden job.
+	# NORMAL prints nothing, so the marks stay a warning instead of becoming wallpaper.
+	# Pips AND the word — this is one flat Label with no per-span colour, so the pips are
+	# carrying the whole signal on their own here (the colourblind-safety pairing the
+	# Grade ladder uses, doing double duty).
+	var rank_text := ""
+	if t is BuildShip:
+		var rk := Threat.rank_of(t)
+		if rk != Threat.Rank.NORMAL:
+			rank_text = "  %s %s" % [Threat.pips(rk), Threat.label(rk)]
+	var out := "TARGET: %s%s%s   %d u" % [name_text, lvl_text, rank_text, rng]
 	if ship.scanning():
 		out += "\nSCANNING %d%%" % int(ship.scan_fraction() * 100.0)
 	elif ship.scanner_fitted:
