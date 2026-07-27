@@ -38,6 +38,12 @@ var stats: Dictionary = {}
 ## rather than from 1.
 var spawn_level := 0
 var enemy_group := ""          # the group this ship's weapons target
+## EVERYONE ON THIS SHIP'S SIDE — the other half of `enemy_group`, and set
+## everywhere that is. A LIST because the player's side spans two groups that
+## OVERLAP: a Guardian and a hauler each join player_team AND friendly_targets.
+## Read it through allies_within(), never by hand — see that comment for what
+## walking it by hand cost.
+var ally_groups: Array[String] = []
 var dead := false
 ## AI ships draw a random skin from assets/ships/variants/<hull>/ so every
 ## pirate looks individually lived-in; the player keeps the canonical sprite.
@@ -510,6 +516,45 @@ func repair(amount: float) -> void:
 	amount -= to_hull
 	if amount > 0.0:
 		armor = minf(stats.armor_hp, armor + amount)
+
+
+## Every living ally inside `radius`, EACH ONE EXACTLY ONCE.
+##
+## THE GROUPS OVERLAP AND THAT IS THE WHOLE POINT OF THIS FUNCTION. A Guardian
+## joins player_team AND friendly_targets (guardian_ship._ready); so does every
+## hauler (trader_ship._ready). Five sites walked the pair by hand and two got it
+## wrong — the Science Repair Field mended every Guardian and hauler in reach at
+## DOUBLE RATE for as long as it has existed, and Bulwark reported more ships
+## braced than it had braced. Neither was visible in play: an ability that is
+## twice as good as authored reads as a generous ability, not as a bug. That is
+## why this is a function and not a convention.
+##
+## It is also the single home of the WANTED-PLAYER rule. A wanted pilot joins
+## hostile_team (ship.gd _refresh_wanted), so a pirate asking for "my side" was
+## handed the person it is shooting at. Stated as "never an ally if I am shooting
+## at them" rather than "never the player", so a Guardian — who genuinely does
+## count the pilot as an ally — still gets them.
+##
+## `include_self` is opt-in because most callers already treat themselves
+## specially (Bulwark braces self then counts, the Repair Field mends self at a
+## different site); only a mender wants itself folded into the same list.
+func allies_within(radius: float, include_self: bool = false) -> Array[BuildShip]:
+	var out: Array[BuildShip] = []
+	var r2 := radius * radius
+	for grp in ally_groups:
+		for node in get_tree().get_nodes_in_group(grp):
+			if node == self or not is_instance_valid(node):
+				continue
+			var ally := node as BuildShip
+			if ally == null or ally.dead or out.has(ally):
+				continue
+			if enemy_group != "" and ally.is_in_group(enemy_group):
+				continue
+			if global_position.distance_squared_to(ally.global_position) <= r2:
+				out.append(ally)
+	if include_self and not dead:
+		out.append(self)
+	return out
 
 
 ## Restitution when a ship runs into something solid — it rebounds instead of

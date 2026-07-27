@@ -217,6 +217,7 @@ var commodities: Dictionary = {}
 
 func _ready() -> void:
 	enemy_group = "hostile_team"
+	ally_groups = ["player_team", "friendly_targets"]
 	add_to_group("player_ship")
 	add_to_group("player_team")
 
@@ -255,6 +256,7 @@ func sliding() -> bool:
 
 func apply_build(new_build: ShipBuild) -> void:
 	enemy_group = "hostile_team"
+	ally_groups = ["player_team", "friendly_targets"]
 	super(new_build)
 	decoupler_fitted = build.has_system_tag("flight_decoupler")
 	if not decoupler_fitted:
@@ -998,15 +1000,14 @@ func _engage_bulwark() -> void:
 	if not _spend(_bulwark_energy, "Bulwark"):
 		return
 	_bulwark_cd = _bulwark_cd_max
-	var n := 1
 	apply_bulwark(_bulwark_reduction, _bulwark_dur)
-	for grp in ["player_team", "friendly_targets"]:
-		for ally in get_tree().get_nodes_in_group(grp):
-			if ally == self or not (ally is BuildShip) or ally.dead:
-				continue
-			if global_position.distance_to(ally.global_position) <= _bulwark_radius:
-				ally.apply_bulwark(_bulwark_reduction, _bulwark_dur)
-				n += 1
+	# The count is the player's only readout of the ability's reach, so it has to
+	# be a count of SHIPS and not of group memberships — every Guardian in the
+	# dome used to be tallied twice.
+	var braced := allies_within(_bulwark_radius)
+	for ally in braced:
+		ally.apply_bulwark(_bulwark_reduction, _bulwark_dur)
+	var n := braced.size() + 1
 	var field: Node2D = preload("res://scenes/flight/bulwark_field.gd").new()
 	field.radius = _bulwark_radius
 	field.life = _bulwark_dur
@@ -1463,7 +1464,9 @@ func _engage_jinx() -> void:
 	field.floor_evasion = _jinx_floor
 	field.cap = _jinx_cap
 	get_parent().add_child(field)
-	field.apply_to_allies(global_position, ["player_team", "friendly_targets"])
+	# jinx_field does its own dedupe (_touched), so it only needs to be told WHO
+	# our side is — and that answer now lives in one place.
+	field.apply_to_allies(global_position, ally_groups)
 	_flash_note("JINX UP — FLY LOOSE")
 	Sfx.play("click", -4.0, 1.4)
 
@@ -1660,12 +1663,11 @@ func _is_ally(node: Node) -> bool:
 
 func _run_repair(delta: float) -> void:
 	repair(_repair_rate * delta)
-	for grp in ["player_team", "friendly_targets"]:
-		for ally in get_tree().get_nodes_in_group(grp):
-			if ally == self or not (ally is BuildShip) or ally.dead:
-				continue
-			if global_position.distance_to(ally.global_position) <= _repair_radius:
-				ally.repair(_repair_rate * delta)
+	# ONCE EACH. This walked player_team then friendly_targets, and a Guardian or
+	# hauler is in both — so the field mended every escort at twice its authored
+	# rate while mending a fresh-off-the-pad wingman at one. allies_within dedupes.
+	for ally in allies_within(_repair_radius):
+		ally.repair(_repair_rate * delta)
 
 
 ## Miner Tangle Shot: clamp a selected target's speed for a few seconds.

@@ -25,6 +25,7 @@ func _ready() -> void:
 	_case_courage_does_not_depend_on_rate_of_fire()
 	_case_fighting_style_is_authored_not_derived()
 	_case_a_holed_ship_cannot_run()
+	_case_an_ally_is_healed_once_not_twice()
 	_case_shadow_escort_trails_and_hangs_back()
 	_case_shadow_escort_commits_on_spring()
 	_case_miner_ore_sense_is_a_commission_perk()
@@ -540,6 +541,74 @@ func _case_moving_shooter_fires_true() -> void:
 	# A stationary shooter is unchanged — aim is still just the target.
 	var still := WeaponMount.intercept_point(from, target, Vector2.ZERO, Vector2.ZERO, speed, 1.0)
 	_ok(still.is_equal_approx(target), "a stationary shooter still aims dead at the target")
+
+
+## AN ALLY IS HELPED ONCE, NOT ONCE PER GROUP THEY BELONG TO (2026-07-27).
+##
+## `player_team` and `friendly_targets` OVERLAP — a Guardian joins both, and so
+## does every hauler. Five sites walked the pair by hand; the Science Repair Field
+## and Bulwark were the two that forgot to dedupe, so the field mended every
+## escort at DOUBLE its authored rate and the "N shielded" readout counted each
+## Guardian twice. Invisible in play: an ability that is twice as good as written
+## reads as a generous ability.
+##
+## The exact-rate assertion is the load-bearing one. "Did it heal?" passes just as
+## happily at 2x — which is why the bug survived every existing ability test.
+func _case_an_ally_is_healed_once_not_twice() -> void:
+	var HOME := Vector2(70000, -70000)   # clear of the debris earlier cases leave
+
+	var player := TestShip.new()
+	add_child(player)
+	player.global_position = HOME
+	player.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+
+	var escort := GuardianShip.new()
+	add_child(escort)
+	escort.setup_guard(SampleBuilds.get_build(0), 600.0)
+	escort.global_position = HOME + Vector2(150, 0)
+
+	# WITHOUT THIS THE CASE IS VACUOUS. If a Guardian ever stops joining both
+	# groups the dedupe becomes untested and this quietly passes forever.
+	_ok(escort.is_in_group("player_team") and escort.is_in_group("friendly_targets"),
+		"a Guardian really is in BOTH ally groups (else this case tests nothing)")
+
+	escort.hull = escort.stats.hull_hp * 0.5
+	var before: float = escort.hull
+	player._run_repair(1.0)              # one second of channel
+	var healed: float = escort.hull - before
+	_ok(healed > 0.0, "the Repair Field mends an escort in range")
+	_ok(absf(healed - player._repair_rate) < 0.01,
+		"...at EXACTLY its authored rate, not twice (healed %.1f, rate %.1f)"
+			% [healed, player._repair_rate])
+
+	# The count is the player's only readout of the ability's reach, so it has to
+	# count SHIPS, not group memberships.
+	_ok(player.allies_within(player._repair_radius).size() == 1,
+		"one escort in the dome counts as one ally, not two")
+
+	# OUT OF RANGE IS STILL OUT OF RANGE — the dedupe must not have widened reach.
+	escort.global_position = HOME + Vector2(player._repair_radius + 200.0, 0)
+	var far_before: float = escort.hull
+	player._run_repair(1.0)
+	_ok(is_equal_approx(escort.hull, far_before), "an escort outside the radius gets nothing")
+
+	# AND THE WANTED-PLAYER RULE, which now rides on the same function. A wanted
+	# pilot joins hostile_team, so a pirate asking for "my side" used to be handed
+	# the person it is shooting at — a Mender healing its own attacker.
+	player.global_position = HOME
+	player.add_to_group("hostile_team")
+	var medic := _pirate(AIShip.Specialty.MENDER)
+	medic.global_position = HOME + Vector2(100, 0)
+	player.hull = player.stats.hull_hp * 0.2
+	var pilot_hp: float = player.hull
+	medic._tick_specialty(0.1, null)
+	_ok(is_equal_approx(player.hull, pilot_hp),
+		"a pirate Mender never mends the WANTED player it is shooting at")
+	player.remove_from_group("hostile_team")
+
+	player.free()
+	escort.free()
+	medic.free()
 
 
 # ---- rig ----

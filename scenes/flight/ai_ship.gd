@@ -195,6 +195,7 @@ var _prey: BuildShip = null   # the mark: player OR a hauler, held stable while 
 func _ready() -> void:
 	avoids_obstacles = true   # AI flies around things; the player is trusted to steer
 	enemy_group = "player_team"
+	ally_groups = ["hostile_team"]
 	add_to_group("hostile_team")
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 
@@ -294,26 +295,11 @@ func _worst_wounded_ally() -> BuildShip:
 
 
 func _allies_within(radius: float) -> Array[BuildShip]:
-	var out: Array[BuildShip] = []
-	for other in get_tree().get_nodes_in_group("hostile_team"):
-		if not is_instance_valid(other) or other == self:
-			continue
-		# A WANTED PLAYER RIDES IN hostile_team (ship.gd _refresh_wanted), so the
-		# specialists were mending and shielding the person they were shooting at --
-		# a MENDER healing 55 HP off the pilot's attacker list every 9s, a WARDEN
-		# handing them 45% damage reduction, with the callout announcing it.
-		# GuardianShip._nearest_hostile_near filters this same group for the mirror
-		# reason; the specialist path had no filter at all.
-		if other.is_in_group("player_ship"):
-			continue
-		var b := other as BuildShip
-		if b == null or b.dead:
-			continue
-		if global_position.distance_to(b.global_position) <= radius:
-			out.append(b)
-	if specialty == Specialty.MENDER and not dead:
-		out.append(self)       # a mender is allowed to save itself
-	return out
+	# BuildShip.allies_within owns the dedupe and the wanted-player rule (a wanted
+	# pilot rides in hostile_team, so "my side" used to hand a pirate the person it
+	# was shooting at). A mender is allowed to save itself; the others buff
+	# themselves at their own call site.
+	return allies_within(radius, specialty == Specialty.MENDER)
 
 
 ## Say it out loud. The player cannot counter what they cannot perceive.
@@ -327,6 +313,7 @@ func _announce(verb: String) -> void:
 func setup(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 		tint: Color = Color(0.85, 0.52, 0.46)) -> void:
 	enemy_group = "player_team"
+	ally_groups = ["hostile_team"]
 	# The shared pirate skin pool is rust-and-orange. A faction that wears its OWN
 	# livery (the V-Shrike are black) sets `faction_livery` before calling setup,
 	# because a livery only means anything if it is the same every time.

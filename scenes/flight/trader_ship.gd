@@ -34,6 +34,7 @@ var _saved := false
 
 func _ready() -> void:
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
+	ally_groups = ["player_team", "friendly_targets"]
 	add_to_group("friendly_targets")   # friendlies roster + hailable
 	add_to_group("traders")
 	add_to_group("player_team")         # so PIRATES hunt it (guns target player_team)

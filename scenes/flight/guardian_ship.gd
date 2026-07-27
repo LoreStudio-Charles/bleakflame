@@ -37,6 +37,7 @@ var _ring_dir := 1.0
 func _ready() -> void:
 	avoids_obstacles = true   # AI flies around things; the player is trusted to steer
 	enemy_group = "hostile_team"
+	ally_groups = ["player_team", "friendly_targets"]
 	add_to_group("player_team")
 	add_to_group("friendly_targets")
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
@@ -44,6 +45,7 @@ func _ready() -> void:
 
 func setup_guard(new_build: ShipBuild, ring_r: float) -> void:
 	enemy_group = "hostile_team"
+	ally_groups = ["player_team", "friendly_targets"]
 	apply_build(new_build)
 	# Military grade: triple hull/armor pool, triple weapon damage.
 	stats.hull_hp *= MILITARY_HULL

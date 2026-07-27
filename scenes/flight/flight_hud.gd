@@ -710,13 +710,10 @@ class GroupOverlay:
 			return
 		_refresh = 0.4
 		var reach: float = ship.sensor_reach(COMM_FLOOR)   # blind = nobody on the roster
-		var friends: Array[Node2D] = []
-		for group in ["player_team", "friendly_targets"]:
-			for node in get_tree().get_nodes_in_group(group):
-				if node is BuildShip and node != ship and node.get("dead") != true \
-						and not friends.has(node) \
-						and ship.global_position.distance_to(node.global_position) <= reach:
-					friends.append(node)
+		# This hand-rolled the two-group walk and got the dedupe RIGHT, which is
+		# exactly why the two that got it wrong went unnoticed for so long — the
+		# correct copy was sitting one file away looking like the convention.
+		var friends: Array[BuildShip] = ship.allies_within(reach)
 		friends.sort_custom(func(a: Node2D, b: Node2D) -> bool:
 			return ship.global_position.distance_squared_to(a.global_position) \
 				< ship.global_position.distance_squared_to(b.global_position))
