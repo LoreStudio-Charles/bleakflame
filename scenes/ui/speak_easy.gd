@@ -203,6 +203,16 @@ func _install_slot(comp: ComponentDef) -> int:
 			continue
 		if comp is SystemDef and not (comp as SystemDef).fittable_by(Pilot.profession):
 			continue
+		# LEVEL GATES VYPER'S COUNTER TOO (2026-07-27). This is a hand-rolled copy of
+		# the Engineering bay's fit rules that checks slot type, occupancy, mark and
+		# profession lock -- everything _fit_error checked BEFORE the level
+		# requirement was added, and nothing since. So the Shoal would bolt a
+		# level-gated module onto a level-2 hull that the dock would refuse.
+		# THE THIRD COPY OF THIS RULE to need the same patch in two days (the
+		# Coupling's _chip_error was the second). The real fix is one shared
+		# ShipFitting.fit_error; until that lands, this keeps the counters honest.
+		if int(comp.level) > Pilot.level():
+			continue
 		return i
 	return -1
 
