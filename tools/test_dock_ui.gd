@@ -51,6 +51,7 @@ func _ready() -> void:
 		_case_commission_never_joins_on_one_click,
 		_case_every_leader_has_a_room,
 		_case_secret_commissions_never_leak,
+		_case_the_privateer_is_earned_at_the_shoal,
 		_case_withheld_abilities_are_not_on_sale,
 		_case_withholding_is_all_or_nothing,
 		_case_ability_tooltips_carry_numbers,
@@ -429,29 +430,131 @@ func _case_withheld_abilities_are_not_on_sale() -> void:
 ## not be advertised anywhere in the demo: no meter, no door, no invitation
 ## tutor. This is the assertion that catches a well-meaning refactor swapping
 ## Professions.visible() back to Professions.LIST and spoiling the surprise.
+##
+## TESTED WITHOUT A SECRET IN THE GAME (2026-07-27). This used to walk LIST for anything
+## `hidden`, and the Privateer was the only one — reopening it emptied the loop, so the
+## case would have reported ALL PASS while asserting nothing. A fixture cannot be pushed
+## into LIST either: it is `const`, and Godot makes const collections read-only.
+##
+## So the rule is asked of an INJECTED roster (Professions.visible_in), and the live list
+## is asserted to be consistent with it. The machinery stays verified between secrets,
+## which is exactly when a refactor is most likely to quietly undo it.
 func _case_secret_commissions_never_leak() -> void:
+	var ghost := {"id": "zzz_test_secret", "hidden": true, "name": "Sable Cabal"}
+	var open_one := {"id": "zzz_test_open", "name": "Open Guild"}
+	var shown := Professions.visible_in([ghost, open_one])
+	_ok(not shown.has(ghost), "a hidden commission is filtered out of the advertised list")
+	_ok(shown.has(open_one), "...and an ordinary one is not — the filter is not just empty")
+	_ok(Professions.visible_in([]).is_empty(), "an empty roster advertises nothing")
+
+	# THE LIVE LIST AGREES WITH THE RULE. This is what catches a refactor that starts
+	# hand-rolling the filter somewhere instead of asking for it.
+	_ok(Professions.visible().size() == Professions.visible_in(Professions.LIST).size(),
+		"visible() is the same filter applied to the real roster")
 	for p in Professions.LIST:
 		var pid := str(p.id)
-		if not Professions.hidden(pid):
-			continue
-		_ok(not Professions.visible().has(p),
-			"%s is absent from the advertised list" % pid)
+		_ok(Professions.hidden(pid) != Professions.visible().has(p),
+			"%s is advertised iff it is not hidden" % pid)
+		# A HIDDEN COMMISSION'S DOOR STAYS SHUT to an over-qualified pilot, and an open
+		# one's does not. Both directions, so "the door never opens" would fail too.
 		Standing.reset()
 		Pilot.profession = ""
-		Standing.add(pid, Standing.INVITE_AT * 3)   # over-qualified on purpose
-		_ok(not Professions.office_open(pid),
-			"%s's door stays shut even to an over-qualified pilot" % pid)
-		for venue_is_station in [true, false]:
-			var screen := _fresh_dock(venue_is_station)
-			Standing.add(pid, Standing.INVITE_AT * 3)
-			screen.refresh()
-			_ok(not _find_text(screen, str(p.name)),
-				"\"%s\" is never printed on the %s dock" % [p.name,
-					"station" if venue_is_station else "colony"])
-			_ok(_find_button(screen, Professions.office_name(pid)) == null,
-				"%s's office door is never drawn at %s" % [pid,
-					"the station" if venue_is_station else "the colony"])
-			screen.queue_free()
+		# TO a level, not BY an amount. `add(INVITE_AT * 3)` assumed every ledger opens at
+		# zero; the Shoal's opens at -100 (Standing.OPENING), so +30 left the pilot at -70
+		# and this asserted a door was shut for the wrong reason entirely.
+		Standing.add(pid, Standing.INVITE_AT * 3 - Standing.get_points(pid))
+		_ok(Standing.eligible(pid), "...%s test pilot is genuinely over-qualified" % pid)
+		_ok(Professions.office_open(pid) != Professions.hidden(pid),
+			"%s's door opens to an over-qualified pilot iff it is not a secret" % pid)
+
+
+## THE PRIVATEER IS REOPENED (2026-07-27, user: "I closed the Privateer profession before
+## building a demo to keep it secret. I would like to reopen it now and restore access to
+## unlock it via missions from the Shoal.")
+##
+## Reopening a commission by DELETING A FLAG is only correct if something else was already
+## holding the door. This asserts that something is the standing ledger — every rung of the
+## Shoal ladder, and the board that pays the last one.
+func _case_the_privateer_is_earned_at_the_shoal() -> void:
+	_ok(not Professions.hidden("privateer"), "the Privateer commission is no longer secret")
+	var ids := []
+	for p in Professions.visible():
+		ids.append(str(p.id))
+	_ok(ids.has("privateer"), "...and it is advertised like any other commission")
+
+	# THE LADDER IS THE GATE. A pilot who has never been to the Shoal opens at -100 from
+	# Standing.OPENING, so no amount of lawful play can ever reach the door.
+	Standing.reset()
+	Pilot.profession = ""
+	_ok(Standing.get_points("privateer") == -100,
+		"a pilot who has never met the Shoal opens at war with them")
+	_ok(not Professions.office_open("privateer"),
+		"The Back Room is shut to a pilot who has never met the Shoal")
+	Standing.add("privateer", 50)                      # Krayt's truce
+	_ok(not Professions.office_open("privateer"),
+		"...still shut under Krayt's truce — a truce is not a commission")
+	Standing.add("privateer", 50)                      # Vyper's banner
+	_ok(Standing.get_points("privateer") >= SpeakEasy.WORK_AT,
+		"Vyper's banner opens her contract board")
+	_ok(not Professions.office_open("privateer"),
+		"...but the commission is still ahead of you at 0")
+	Standing.add("privateer", Standing.INVITE_AT)      # her work
+	_ok(Professions.office_open("privateer"),
+		"running Vyper's work to INVITE_AT opens The Back Room")
+
+	# AND THERE IS WORK TO RUN. A ladder whose top rung needs standing that no board pays
+	# is a locked door with the key drawn on it — that was the actual gap: the fence opens
+	# at Friendly (100) and the quartermaster at commissioned, so a pilot at 0 could see
+	# both and reach neither.
+	MissionLog.ensure_offers()   # top-up only; safe to call after any earlier case
+	var posted := MissionLog.offers_at("shoal", "The Speak's Easy")
+	_ok(posted.size() >= 3, "Vyper posts work at the Speak's Easy (%d)" % posted.size())
+	for entry in posted:
+		_ok(MissionLog.faction_for(entry.m) == "privateer",
+			"...crediting Privateer standing, not the Board's")
+		_ok(MissionLog.venue_ok_at(entry.m, "shoal"),
+			"...handed in at the Shoal")
+		_ok(not MissionLog.venue_ok_at(entry.m, "station"),
+			"...and never filed with the Board at the station")
+
+	# AND IT IS ON SCREEN. The model above can be perfectly correct while the bar draws
+	# nothing — that is the Imari-on-the-pad bug, and it is why this project tests real
+	# screens. Build the actual Speak's Easy and walk it for the control a player clicks.
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true          # refresh() early-returns on a hidden screen
+
+	Standing.reset()
+	Pilot.profession = ""
+	Standing.add("privateer", -50 - Standing.get_points("privateer"))   # Krayt's truce
+	bar.refresh()
+	# IS_VISIBLE_IN_TREE, not `== null`. The button is hidden rather than freed, so a
+	# null check passes for the wrong reason and would keep passing if the hiding broke.
+	# This asks the only question that matters: can the player see it and click it?
+	var locked := _find_button(bar, "Take the job")
+	_ok(locked == null or not locked.is_visible_in_tree(),
+		"under Krayt's truce there is no work to take — you are a guest, not crew")
+	_ok(_find_button(bar, Professions.office_name("privateer")) == null,
+		"...and The Back Room's door is not drawn")
+
+	Standing.add("privateer", 50)                                      # Vyper's banner
+	bar.refresh()
+	var take := _find_button(bar, "Take the job")
+	_ok(take != null and take.is_visible_in_tree(),
+		"Vyper's banner puts a job on the board")
+	_ok(_find_text(bar, "VYPER'S WORK"), "...under her own heading")
+	_ok(_find_button(bar, Professions.office_name("privateer")) == null,
+		"...but The Back Room is still shut at 0 — the work comes first")
+
+	Standing.add("privateer", Standing.INVITE_AT)                       # her work, run
+	bar.refresh()
+	_ok(_find_button(bar, Professions.office_name("privateer")) != null,
+		"at INVITE_AT the door to The Back Room is drawn at the bar")
+	bar.queue_free()
+	ship.queue_free()
 
 
 ## A tooltip that only says what an ability DOES cannot settle "which of these

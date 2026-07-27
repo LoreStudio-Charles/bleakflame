@@ -235,13 +235,19 @@ const LIST := [
 			"Point-defense", "Taunt beacon", "Hyperslide+ (tighter drift)"],
 		"wares": ["res://data/components/chips/bulwark_projector.tres",
 			"res://data/components/chips/conductive_lance.tres"]},
-	# SECRET FOR THE DEMO (2026-07-22, user): the Privateer commission is fully
-	# built but must not appear anywhere in the UI — no standing meter, no
-	# invitation, no door. You cannot be offered it, and ideally you do not know
-	# it exists until the Shoal's story hands it to you. `hidden` is honoured by
-	# visible()/office_open(); everything downstream (caps, tier, wares, the
-	# tree) keeps working the moment it is un-hidden or granted by script.
-	{"id": "privateer", "hidden": true,
+	# REOPENED 2026-07-27 (user): "I closed the Privateer profession before building a
+	# demo to keep it secret. I would like to reopen it now and restore access to unlock
+	# it via missions from the Shoal." The secrecy was demo scaffolding, not design, so
+	# the flag is gone rather than qualified — `hidden` stays in the engine for the next
+	# secret, and test_dock_ui still enforces it against a synthetic one.
+	#
+	# NOTHING ELSE HAD TO CHANGE TO GATE IT, because the Shoal ladder already is the gate.
+	# office_open() asks Standing.eligible("privateer") like every other commission, and
+	# that ledger OPENS AT -100: no amount of lawful play moves it. Only the Shoal's own
+	# beats (Krayt's truce -50, Vyper's banner 0) and then Vyper's contracts (+10) can,
+	# which is exactly "unlock it via missions from the Shoal" — expressed as standing
+	# rather than as a second bespoke flag beside it.
+	{"id": "privateer",
 		"name": "Privateer", "leader": "vyper", "combat_tier": 0.02, "energy_regen": 1.00,
 		"verb": "recoveries, salvage, grey work", "perk": "",
 		"caps": {"gunnery": 5, "evasion": 5, "salvage": 5},
@@ -298,8 +304,21 @@ static func hidden(id: String) -> bool:
 ## Every commission the player is allowed to KNOW ABOUT. UI must iterate this,
 ## never LIST — LIST is the mechanical truth and includes the secrets.
 static func visible() -> Array:
+	return visible_in(LIST)
+
+
+## The FILTER, over an injected list — the same rule, asked of any roster.
+##
+## Split out 2026-07-27 when the Privateer was reopened and LIST held no secret at all.
+## The old test walked LIST for something `hidden` and asserted it never leaked; with the
+## last secret gone that loop ran zero times and still reported PASS. LIST is `const` and
+## Godot makes const collections READ-ONLY, so a test cannot push a fixture into it — the
+## rule has to be reachable without one. Now the filter can be asked about a roster the
+## test owns, and the secrecy machinery stays verified between secrets, which is precisely
+## when a refactor is most likely to quietly undo it.
+static func visible_in(list: Array) -> Array:
 	var out := []
-	for p in LIST:
+	for p in list:
 		if not bool(p.get("hidden", false)):
 			out.append(p)
 	return out

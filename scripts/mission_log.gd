@@ -83,6 +83,28 @@ static var _templates := [
 	{"type": "delivery", "n": 2, "good": "scan_data", "reward": 70, "giver": "sella",
 		"venue": "planet", "turn_in": "either", "board": "Explorer's Union",
 		"desc": "Sella's standing order: 2 Scan Data, any system, any time"},
+	# --- The Speak's Easy (Vyper, the Rust Shoal). THE ONLY LADDER FROM VYPER'S BANNER
+	# TO THE PRIVATEER COMMISSION. Standing credits through faction_for -> led_by("vyper")
+	# -> "privateer", which is the same ledger Krayt's truce and Vyper's banner move: the
+	# commission is earned by doing Shoal work, and there was previously no way to do any.
+	# The fence sits ABOVE this (Friendly, 100) and the quartermaster above that
+	# (commissioned) — a stranger at the bar could look at both and reach neither.
+	#
+	# Pay is better than the lawful boards and the work is worse, which is the whole
+	# pitch. Descriptions stay mechanically honest: `bounty` counts ANY kill (progress()
+	# reads total_kills), so Vyper asks for kills and pointedly does not ask whose.
+	{"type": "recovery", "n": 3, "reward": 260, "giver": "vyper",
+		"venue": "shoal", "turn_in": "shoal", "board": "The Speak's Easy",
+		"desc": "Bring back 3 crates of Stolen Goods — off a wreck, off a hold, not our business"},
+	{"type": "bounty", "n": 3, "reward": 240, "giver": "vyper",
+		"venue": "shoal", "turn_in": "shoal", "board": "The Speak's Easy",
+		"desc": "Thin the competition: 3 kills. The Shoal doesn't ask whose"},
+	{"type": "delivery", "n": 4, "good": "circuits", "reward": 200, "giver": "vyper",
+		"venue": "shoal", "turn_in": "shoal", "board": "The Speak's Easy",
+		"desc": "4 Circuits, no manifest, no questions — the Shoal patches its own"},
+	{"type": "recovery", "n": 2, "reward": 180, "giver": "vyper",
+		"venue": "shoal", "turn_in": "shoal", "board": "The Speak's Easy",
+		"desc": "2 crates of Stolen Goods. Somebody else already did the stealing"},
 ]
 static var _next_template := 0
 
@@ -111,6 +133,11 @@ static func ensure_offers() -> void:
 	# must not cost the colony its own contracts.
 	_ensure_venue("planet", 2, "Explorer's Union")
 	_ensure_venue("verge", 3, "The Dig")   # Doug's board, out at the freighter
+	# Vyper's board at the Shoal. Stocked unconditionally like every other venue —
+	# WHO MAY READ IT is the Speak's Easy's business (her banner gates the display), not
+	# a reason to leave the shelf empty. Gating stock here instead would mean the board
+	# is bare on the first dock after the banner and fills on the second.
+	_ensure_venue("shoal", 3, "The Speak's Easy")
 
 
 static func _ensure_venue(venue: String, target: int, board := "") -> void:

@@ -16,10 +16,20 @@ const FENCE_PRIVATEER := 2
 ## Grey-market markup on Vyper's gear — the Shoal doesn't run a charity.
 const QUART_MARKUP := 1.2
 
+## VYPER'S BANNER is what opens her work to you — the middle rung of the Shoal ladder.
+## At -50 (Krayt's truce) their guns are off you and you may stand at the bar; you are
+## Krayt's guest, not Shoal crew, and nobody hands a guest a job. Her banner sets 0, and
+## from there her contracts are the ONLY road to Standing.INVITE_AT and the commission.
+const WORK_AT := 0
+
 var ship: TestShip
 var _body: RichTextLabel
 var _fence_box: VBoxContainer
 var _quart_box: VBoxContainer
+var _work_box: VBoxContainer
+var _offers: ItemList
+var _take_btn: Button
+var _active_box: VBoxContainer
 var _active_talk: DialoguePanel
 
 
@@ -61,6 +71,29 @@ func _ready() -> void:
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(_body)
 
+	# VYPER'S WORK — the rung between her banner and the commission. Posted here and
+	# turned in here: Shoal work does not get filed with the Board.
+	var work_head := Label.new()
+	work_head.text = "VYPER'S WORK"
+	work_head.add_theme_color_override("font_color", UiTheme.ACCENT)
+	col.add_child(work_head)
+	_work_box = VBoxContainer.new()
+	_work_box.add_theme_constant_override("separation", 4)
+	col.add_child(_work_box)
+	_offers = ItemList.new()
+	_offers.custom_minimum_size = Vector2(0, 96)
+	_offers.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_offers.item_activated.connect(func(_i: int) -> void: _on_accept())
+	_work_box.add_child(_offers)
+	_take_btn = Button.new()
+	_take_btn.text = "Take the job"
+	UiTheme.button_flavor(_take_btn, "secondary")
+	_take_btn.pressed.connect(_on_accept)
+	_work_box.add_child(_take_btn)
+	_active_box = VBoxContainer.new()
+	_active_box.add_theme_constant_override("separation", 4)
+	_work_box.add_child(_active_box)
+
 	var fence_head := Label.new()
 	fence_head.text = "THE FENCE"
 	fence_head.add_theme_color_override("font_color", UiTheme.ACCENT)
@@ -94,6 +127,7 @@ func refresh() -> void:
 	txt += "[color=#8890a0]credits %dc    Privateer standing %d[/color]" % [
 		Wallet.credits, Standing.get_points("privateer")]
 	_body.text = txt
+	_refresh_work()
 	_refresh_quartermaster()
 
 	for c in _fence_box.get_children():
@@ -129,6 +163,104 @@ func refresh() -> void:
 	UiTheme.button_flavor(btn, "secondary")
 	btn.pressed.connect(_on_fence)
 	row.add_child(btn)
+
+
+## Vyper's postings, anything of hers you can hand in right now, and the door to The Back
+## Room. All three appear together the moment her banner does, and not one moment before.
+func _refresh_work() -> void:
+	for c in _active_box.get_children():
+		c.queue_free()
+	_offers.clear()
+	var open := Standing.get_points("privateer") >= WORK_AT
+	_offers.visible = open
+	_take_btn.visible = open
+	if not open:
+		var locked := Label.new()
+		locked.text = "\"Krayt vouched for you, so drink. Working for us is a different word.\"   (Vyper's banner opens her work)"
+		locked.add_theme_font_size_override("font_size", 12)
+		locked.add_theme_color_override("font_color", UiTheme.DIM)
+		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_active_box.add_child(locked)
+		return
+
+	for entry in MissionLog.offers_at("shoal", "The Speak's Easy"):
+		var m: Dictionary = entry.m
+		var idx := _offers.add_item("%s  —  %dc" % [MissionLog.label(m), m.reward])
+		_offers.set_item_metadata(idx, int(entry.index))
+		var face := Npcs.portrait("vyper")
+		if face != null:
+			_offers.set_item_icon(idx, face)
+	if _offers.item_count == 0:
+		_offers.add_item("— the board's bare. Come back when the lane's been busy —")
+		_offers.set_item_disabled(0, true)
+
+	for i in MissionLog.active.size():
+		var m: Dictionary = MissionLog.active[i]
+		if not MissionLog.venue_ok_at(m, "shoal"):
+			continue
+		var done: bool = MissionLog.is_complete(m, ship)
+		var b := Button.new()
+		b.text = "%s  —  %s" % [MissionLog.label(m),
+			"HAND IN (%dc)" % m.reward if done else "in progress"]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.disabled = not done
+		if done:
+			UiTheme.button_flavor(b, "primary")
+		b.pressed.connect(_turn_in.bind(i))
+		_active_box.add_child(b)
+
+	# THE BACK ROOM. The same GuildOffice every other leader uses — a commission is
+	# administered where its leader stands, and Vyper's counter is a bar in a pirate den.
+	var prof := Professions.led_by("vyper")
+	if prof != "" and Professions.office_open(prof):
+		var door := Button.new()
+		door.text = "%s  →  %s" % [
+			"Enter" if Pilot.profession == prof else "Visit",
+			Professions.office_name(prof)]
+		UiTheme.button_flavor(door, "secondary")
+		door.pressed.connect(_open_office.bind(prof))
+		_active_box.add_child(door)
+
+
+## THROUGH take(), never accept(): take() reports WHY a refusal happened (a full log
+## answered a bare accept() with a click and nothing else) and calls ensure_offers itself.
+func _on_accept() -> void:
+	var sel := _offers.get_selected_items()
+	if sel.is_empty() or _offers.is_item_disabled(sel[0]):
+		return
+	var r := MissionLog.take(int(_offers.get_item_metadata(sel[0])))
+	if r.ok:
+		Tutor.did("accepted_contract")
+	else:
+		Sfx.play("click", -16.0, 0.6)
+	ship._flash_note(str(r.msg))
+	refresh()
+
+
+## THROUGH MissionLog.complete(), which carries the standing credit (faction_for ->
+## privateer, the whole reason this board exists), Quests.check_new_work and the turn-in
+## tutor signals. Re-implementing the tail here is how boards drift apart.
+func _turn_in(index: int) -> void:
+	var r := MissionLog.complete(index, ship, "shoal", SaveGame.tutorial_done)
+	if r.ok:
+		Tutor.did("turned_in")
+		Tutor.retire("turn_in")
+		Sfx.play("jingle", -8.0)
+	ship._flash_note(str(r.msg))
+	refresh()
+
+
+func _open_office(prof: String) -> void:
+	Tutor.retire("office")
+	var office := GuildOffice.new("vyper", prof, ship,
+		func(path: String) -> void: _on_buy_install(path),
+		func(id: String) -> void:
+			Pilot.join_profession(id)
+			Sfx.play("jingle", -8.0)
+			Research.journal.append({"day": GameClock.now(),
+				"text": "Took the Shoal's colors — the %s commission." % Professions.display_name(id)})
+			refresh())
+	add_child(office)
 
 
 func _on_fence() -> void:
