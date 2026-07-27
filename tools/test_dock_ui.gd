@@ -22,51 +22,80 @@ extends Node
 
 ## Floor on coverage. If a case dies early (a parse error in a dependency aborts
 ## the rest of _ready), the suite would otherwise report a cheerful ALL PASS over
-## zero assertions. Raise this as cases are added; it only has to be a floor.
-const MIN_CHECKS := 90
+## zero assertions.
+##
+## IT HAS TO BE RAISED WITH THE SUITE, AND IT WAS NOT. It sat at 90 while the
+## suite grew to ~670, so any run that died four-fifths of the way through still
+## passed — observed live on 2026-07-27, printing "ALL PASS (139 checks)" off a
+## dependency that had failed to compile. A floor set to a seventh of the real
+## count is decoration. Bump this whenever you add a case; the number below is
+## deliberately close to the real total so that forgetting is LOUD rather than
+## silent.
+const MIN_CHECKS := 650
 
 var _fails: Array[String] = []
 var _checks := 0
 
 
 func _ready() -> void:
-	_case_station_talk_appears_on_arrival()
-	_case_trade_lesson_waits_for_ruel()
-	_case_planet_talk_appears_on_arrival()
-	_case_every_home_tab_can_host_its_person()
-	_case_office_door_is_earned()
-	_case_office_shows_tree_and_terms()
-	_case_commission_never_joins_on_one_click()
-	_case_every_leader_has_a_room()
-	_case_secret_commissions_never_leak()
-	_case_withheld_abilities_are_not_on_sale()
-	_case_withholding_is_all_or_nothing()
-	_case_ability_tooltips_carry_numbers()
-	_case_office_door_is_taught()
-	_case_informational_lessons_do_not_starve_the_queue()
-	_case_turn_in_is_signalled()
-	_case_filler_never_preempts_an_objective()
-	_case_leader_line_never_crosses_its_target()
-	_case_same_npc_keeps_talking()
-	_case_all_held_talks_play_in_one_sitting()
-	_case_talk_to_odessa_does_quest_first()
-	_case_every_npc_desk_is_uniform()
-	_case_quest_log_is_the_tracker()
-	_case_armory_filters()
-	_case_level_gates_equipping()
-	_case_the_campaign_banner_never_goes_silent()
-	_case_started_spines_stay_in_the_log()
-	_case_contracts_credit_their_giver_guild()
-	_case_gem_bar_never_starts_crossed_out()
-	_case_odessa_has_no_dead_ask()
-	_case_every_equipment_surface_describes_parts()
-	_case_hulls_are_graded_gear()
-	_case_lessons_stay_at_their_own_venue()
-	_case_every_lesson_is_completable()
+	# AS CALLABLES, so each case can be checked for having actually produced
+	# assertions. A case that dies on its first line used to vanish without trace:
+	# the suite simply reported a smaller number and called it a pass.
+	var cases: Array[Callable] = [
+		_case_station_talk_appears_on_arrival,
+		_case_trade_lesson_waits_for_ruel,
+		_case_planet_talk_appears_on_arrival,
+		_case_every_home_tab_can_host_its_person,
+		_case_office_door_is_earned,
+		_case_office_shows_tree_and_terms,
+		_case_commission_never_joins_on_one_click,
+		_case_every_leader_has_a_room,
+		_case_secret_commissions_never_leak,
+		_case_withheld_abilities_are_not_on_sale,
+		_case_withholding_is_all_or_nothing,
+		_case_ability_tooltips_carry_numbers,
+		_case_office_door_is_taught,
+		_case_informational_lessons_do_not_starve_the_queue,
+		_case_turn_in_is_signalled,
+		_case_filler_never_preempts_an_objective,
+		_case_leader_line_never_crosses_its_target,
+		_case_same_npc_keeps_talking,
+		_case_all_held_talks_play_in_one_sitting,
+		_case_talk_to_odessa_does_quest_first,
+		_case_every_npc_desk_is_uniform,
+		_case_quest_log_is_the_tracker,
+		_case_armory_filters,
+		_case_level_gates_equipping,
+		_case_the_campaign_banner_never_goes_silent,
+		_case_started_spines_stay_in_the_log,
+		_case_contracts_credit_their_giver_guild,
+		_case_gem_bar_never_starts_crossed_out,
+		_case_odessa_has_no_dead_ask,
+		_case_every_equipment_surface_describes_parts,
+		_case_hulls_are_graded_gear,
+		_case_lessons_stay_at_their_own_venue,
+		_case_every_lesson_is_completable,
+		_case_a_refused_turn_in_says_so,
+	]
+	for c in cases:
+		var before := _checks
+		c.call()
+		if _checks == before:
+			_fails.append("case %s asserted NOTHING — it died before its first check "
+				% c.get_method() + "(look for a SCRIPT ERROR above)")
 
 	if _checks < MIN_CHECKS:
-		printerr("test_dock_ui: RAN ONLY %d CHECKS (expect >= %d) — a case aborted, "
-			+ "probably a parse/runtime error above. NOT a pass." % [_checks, MIN_CHECKS])
+		# NAME THE DEAD CASE FIRST. Quitting on the count alone tells you the suite
+		# broke but not where, and the per-case "asserted NOTHING" line is usually
+		# pointing straight at it.
+		for f in _fails:
+			printerr("  FAIL: %s" % f)
+		# The two literals are joined BEFORE formatting. Written as `"a " + "b" % args`
+		# the `%` binds tighter than the `+`, so it formatted the second literal —
+		# which has no placeholders — and the numbers never reached the message. Same
+		# shape as the %d/%d that printed raw on every dock screen for months.
+		printerr(("test_dock_ui: RAN ONLY %d CHECKS (expect >= %d) — a case aborted, "
+			+ "probably a parse/runtime error above. NOT a pass.") % [_checks, MIN_CHECKS])
 		get_tree().quit(1)
 		return
 	if _fails.is_empty():
@@ -79,6 +108,91 @@ func _ready() -> void:
 
 
 # ---- cases ----
+
+## EVERY REJECTION IS VISIBLE (project convention) — including the ones the UI
+## thinks it has already prevented.
+##
+## MissionLog.complete() returns a REASON on refusal ("...isn't finished yet.",
+## "...turns in elsewhere.", "No such contract."), and all three boards gate the
+## button on the same conditions — so the refusal path only runs when the world
+## moved between the last refresh and the click. That is precisely when a dead
+## button is most confusing, and two of the three boards had `_flash(r.msg)`
+## INSIDE `if r.ok`, so the press did nothing at all: no sound, no message.
+## scenes/ground/board_view.gd was the copy that got it right, with a comment
+## naming the convention.
+##
+## Asserted BOTH ways: the real screen actually says something, and no board is
+## structurally able to swallow the reason again.
+func _case_a_refused_turn_in_says_so() -> void:
+	var screen := _fresh_dock(true)          # the STATION
+	screen.refresh()
+	var kept := MissionLog.active.duplicate(true)
+	MissionLog.active.clear()
+
+	# Complete (n = 0 delivered of 0) but turns in AT THE COLONY. The button would
+	# be disabled here; a stale index or a mid-refresh change reaches this anyway.
+	MissionLog.active.append({"type": "delivery", "good": "circuits", "n": 0,
+		"reward": 100, "turn_in": "planet", "venue": "station", "desc": "test run"})
+	screen._on_turn_in(0)
+	_ok(screen._flash_msg != "",
+		"a refused turn-in tells the player something instead of doing nothing")
+	_ok(screen._flash_msg.contains("elsewhere"),
+		"...and says WHY — that it turns in elsewhere (got: %s)" % screen._flash_msg)
+	_ok(MissionLog.active.size() == 1, "the refused contract is still in the log")
+
+	# A stale index — the other way this path is reached in practice.
+	screen._on_turn_in(99)
+	_ok(screen._flash_msg != "", "a stale turn-in index is reported, not ignored")
+
+	MissionLog.active.clear()
+	for m in kept:
+		MissionLog.active.append(m)
+	screen.queue_free()
+
+	# STRUCTURAL, so the NEXT board cannot repeat it. Every file that calls
+	# MissionLog.complete must report the result at the SAME indent as `if r.ok:` —
+	# i.e. unconditionally — rather than nested inside the success branch.
+	for path in ["res://scenes/ui/dock_screen.gd", "res://scenes/ui/prospect_deck.gd",
+			"res://scenes/ground/board_view.gd"]:
+		var src := FileAccess.get_file_as_string(path)
+		_ok(src.contains("MissionLog.complete("),
+			"%s still turns contracts in through the shared path" % path.get_file())
+		var lines := src.split("\n")
+		# ANCHOR ON complete(), NOT on the first `if r.ok:`. Every one of these files
+		# has an earlier r.ok — the ACCEPT handler — and anchoring there measured the
+		# wrong function in all three (board_view passed only by luck, because its
+		# accept path happens to report unconditionally too).
+		var guard := -1
+		var indent := ""
+		var reported := false
+		var seen_complete := false
+		for i in lines.size():
+			var line: String = lines[i]
+			if line.contains("MissionLog.complete("):
+				seen_complete = true
+			if guard < 0:
+				if seen_complete and line.strip_edges() == "if r.ok:":
+					guard = i
+					indent = line.substr(0,
+						line.length() - line.strip_edges(true, false).length())
+				continue
+			# Blank lines and COMMENTS are not the report — and stopping on a comment
+			# at the guard indent is how the first draft of this check failed the very
+			# fix it was written for.
+			var bare := line.strip_edges()
+			if bare == "" or bare.begins_with("#"):
+				continue
+			var here := line.substr(0, line.length() - line.strip_edges(true, false).length())
+			if here.length() > indent.length():
+				continue                      # still inside the ok branch
+			if here.length() < indent.length():
+				break                         # left the function without reporting
+			if line.contains("_flash(") or line.contains("_report("):
+				reported = true
+			break
+		_ok(reported,
+			"%s reports the outcome OUTSIDE `if r.ok:` — a refusal must not be silent"
+				% path.get_file())
 
 ## THE IMARI REGRESSION, station side. Ruel's briefing is queued by the same
 ## docking that builds the screen; his button must exist on that first draw.

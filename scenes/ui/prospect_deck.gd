@@ -204,10 +204,18 @@ func _accept_selected() -> void:
 	var sel := _offers.get_selected_items()
 	if sel.is_empty() or _offers.is_item_disabled(sel[0]):
 		return
-	if not MissionLog.accept(int(_offers.get_item_metadata(sel[0]))):
+	# THROUGH take(), not accept(). accept() returns a bare bool, so a full log was
+	# answered with a quiet click and nothing else — the pilot pressed Accept, heard
+	# a noise, and the contract did not appear. take() wraps it with the reason
+	# ("Mission log full (max N active).") and calls ensure_offers itself. Both the
+	# dock board and the ground board already went through it; this was the copy
+	# still talking to the raw call.
+	var r := MissionLog.take(int(_offers.get_item_metadata(sel[0])))
+	if r.ok:
+		Tutor.did("accepted_contract")   # they took the work themselves
+	else:
 		Sfx.play("click", -16.0, 0.6)
-	MissionLog.ensure_offers()
-	refresh()
+	_flash(str(r.msg))
 
 
 func _turn_in(index: int) -> void:
@@ -222,8 +230,10 @@ func _turn_in(index: int) -> void:
 		Tutor.did("turned_in")
 		Tutor.retire("turn_in")
 		Sfx.play("jingle", -8.0)
-		_flash(str(r.msg))
-	refresh()
+	# OUTSIDE the ok branch — see dock_screen._on_turn_in. A refused turn-in was
+	# completely silent here too. _flash() calls refresh() itself, so this is the
+	# whole tail.
+	_flash(str(r.msg))
 
 
 ## Derived from the STATION's standing price, so Doug's premium is always

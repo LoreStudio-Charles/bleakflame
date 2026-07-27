@@ -3172,7 +3172,14 @@ func _on_turn_in(index: int) -> void:
 		Tutor.did("turned_in")   # the loop closes: work -> cargo -> paid
 		Tutor.retire("turn_in")        # they did it; no need to be told how
 		Sfx.play("jingle", -8.0)
-		_flash(str(r.msg))
+	# OUTSIDE the ok branch — every rejection is VISIBLE (project convention), and
+	# complete() already returns the reason ("...isn't finished yet.", "...turns in
+	# elsewhere."). Sitting inside it, a refused turn-in did NOTHING AT ALL: no
+	# sound, no message, the button just failed to work. The button is gated on the
+	# same two conditions, so this only fires when the world moved between the last
+	# refresh and the click — which is exactly when the player needs telling.
+	# scenes/ground/board_view.gd _report is the copy that got this right.
+	_flash(str(r.msg))
 	refresh()
 
 
