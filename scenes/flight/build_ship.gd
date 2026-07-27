@@ -44,6 +44,11 @@ var enemy_group := ""          # the group this ship's weapons target
 ## Read it through allies_within(), never by hand — see that comment for what
 ## walking it by hand cost.
 var ally_groups: Array[String] = []
+## WHAT THIS ENCOUNTER IS BUILT FOR — Threat.Rank (NORMAL/ELITE/MILITARY/SPEC_OPS).
+## AUTHORED, not derived: role cannot be recovered from pools, because a big hull and
+## a multiplied one look identical in the stats. Set by the spawner; everything that
+## does not bother is NORMAL, which is the honest default for most of the sky.
+var rank := Threat.Rank.NORMAL
 var dead := false
 ## AI ships draw a random skin from assets/ships/variants/<hull>/ so every
 ## pirate looks individually lived-in; the player keeps the canonical sprite.

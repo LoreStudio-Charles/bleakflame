@@ -38,6 +38,10 @@ func _ready() -> void:
 	avoids_obstacles = true   # AI flies around things; the player is trusted to steer
 	enemy_group = "hostile_team"
 	ally_groups = ["player_team", "friendly_targets"]
+	# ELITE (user, 2026-07-27). The 3x pools and 3x damage below land it at exactly
+	# 3.00x a same-level normal, which is what ELITE promises -- the one ship in the
+	# fleet that already meets its mark.
+	rank = Threat.Rank.ELITE
 	add_to_group("player_team")
 	add_to_group("friendly_targets")
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING

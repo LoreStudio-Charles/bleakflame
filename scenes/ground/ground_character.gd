@@ -48,12 +48,21 @@ const COVER_MITIGATION := 0.25
 const BARRIER_REGEN_DELAY := 4.0   # seconds out of combat before the emitter rebuilds
 const BARRIER_REGEN_RATE := 8.0
 
+## WHO THIS IS, on the character itself. The town kept names in a parallel _npcs
+## dictionary, so the actor could not say its own name and nothing that met one
+## (a nameplate, a target frame, a log line) could ask.
+var display_name := ""
 var team := ""                    # "player_team" / "hostile" — "" = non-combatant
 var max_health := 100.0
 var health := 100.0
 var max_barrier := 0.0            # > 0 only with an emitter fitted
 var barrier := 0.0
 var mitigation := 0.0             # from worn PLATING (0..~0.6); SuitDef wires in later
+## WHAT THIS ENCOUNTER IS BUILT FOR — Threat.Rank (NORMAL/ELITE/MILITARY/SPEC_OPS).
+## AUTHORED, not derived: role cannot be recovered from pools, because a big hull and
+## a multiplied one look identical in the stats. Set by the spawner; everything that
+## does not bother is NORMAL, which is the honest default for most of the sky.
+var rank := Threat.Rank.NORMAL
 var dead := false
 ## Who we're fighting. Assigning one SUBSCRIBES to its death — the ground half of the
 ## same mechanism the ship uses (Ship._hook_death), for the same reason: "my target is
