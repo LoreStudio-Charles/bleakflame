@@ -29,6 +29,7 @@ var _quart_box: VBoxContainer
 var _work_box: VBoxContainer
 var _offers: ItemList
 var _take_btn: Button
+var _door_box: HBoxContainer
 var _active_box: VBoxContainer
 var _active_talk: DialoguePanel
 
@@ -79,20 +80,41 @@ func _ready() -> void:
 	col.add_child(work_head)
 	_work_box = VBoxContainer.new()
 	_work_box.add_theme_constant_override("separation", 4)
+	# THE BOARD TAKES THE SLACK. Everything else on this screen is a couple of lines, so
+	# without this the whole bar crams into the top third and two thirds of the panel is
+	# dead space with a 96px scroller in it — three contracts behind a scrollbar on a
+	# 1080-tall screen. The board is the reason to stand here; it gets the room.
+	_work_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(_work_box)
 	_offers = ItemList.new()
-	_offers.custom_minimum_size = Vector2(0, 96)
+	# SIZED TO THE BOARD, not to the screen. Letting the list take all the slack fixed the
+	# 96px scroller by overshooting into ~700px of empty list under three rows; a venue
+	# posts three or four contracts, so this holds them all with a little room and the
+	# SPACER below takes the leftover instead.
+	_offers.custom_minimum_size = Vector2(0, 200)
 	_offers.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_offers.item_activated.connect(func(_i: int) -> void: _on_accept())
 	_work_box.add_child(_offers)
+	# Buttons sit in a row so they keep their own width. A Button parented straight to a
+	# VBoxContainer stretches to fill it, which made "Take the job" a 1900px bar.
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 8)
+	_work_box.add_child(btn_row)
 	_take_btn = Button.new()
 	_take_btn.text = "Take the job"
 	UiTheme.button_flavor(_take_btn, "secondary")
 	_take_btn.pressed.connect(_on_accept)
-	_work_box.add_child(_take_btn)
+	btn_row.add_child(_take_btn)
+	_door_box = HBoxContainer.new()
+	btn_row.add_child(_door_box)
 	_active_box = VBoxContainer.new()
 	_active_box.add_theme_constant_override("separation", 4)
 	_work_box.add_child(_active_box)
+	# The slack lands HERE, so the fence and the quartermaster sit at the foot of the
+	# panel instead of being crowded into the top third with dead space beneath them.
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_work_box.add_child(spacer)
 
 	var fence_head := Label.new()
 	fence_head.text = "THE FENCE"
@@ -168,7 +190,12 @@ func refresh() -> void:
 ## Vyper's postings, anything of hers you can hand in right now, and the door to The Back
 ## Room. All three appear together the moment her banner does, and not one moment before.
 func _refresh_work() -> void:
+	# BOTH ledgers cleared up front, before the locked early-return below. The door lives
+	# in the button row now, so clearing it only on the open path would leave a stale
+	# Back Room door standing on a screen that has just re-locked.
 	for c in _active_box.get_children():
+		c.queue_free()
+	for c in _door_box.get_children():
 		c.queue_free()
 	_offers.clear()
 	var open := Standing.get_points("privateer") >= WORK_AT
@@ -185,7 +212,10 @@ func _refresh_work() -> void:
 
 	for entry in MissionLog.offers_at("shoal", "The Speak's Easy"):
 		var m: Dictionary = entry.m
-		var idx := _offers.add_item("%s  —  %dc" % [MissionLog.label(m), m.reward])
+		# `desc`, not MissionLog.label() — label appends the giver, which is right on a
+		# board carrying several people's postings and pure noise on a single-giver one.
+		# Every row read "... — Vyper" directly under a heading saying VYPER'S WORK.
+		var idx := _offers.add_item("%s  —  %dc" % [str(m.desc), m.reward])
 		_offers.set_item_metadata(idx, int(entry.index))
 		var face := Npcs.portrait("vyper")
 		if face != null:
@@ -200,7 +230,7 @@ func _refresh_work() -> void:
 			continue
 		var done: bool = MissionLog.is_complete(m, ship)
 		var b := Button.new()
-		b.text = "%s  —  %s" % [MissionLog.label(m),
+		b.text = "%s  —  %s" % [str(m.desc),
 			"HAND IN (%dc)" % m.reward if done else "in progress"]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.disabled = not done
@@ -217,9 +247,9 @@ func _refresh_work() -> void:
 		door.text = "%s  →  %s" % [
 			"Enter" if Pilot.profession == prof else "Visit",
 			Professions.office_name(prof)]
-		UiTheme.button_flavor(door, "secondary")
+		UiTheme.button_flavor(door, "primary")
 		door.pressed.connect(_open_office.bind(prof))
-		_active_box.add_child(door)
+		_door_box.add_child(door)
 
 
 ## THROUGH take(), never accept(): take() reports WHY a refusal happened (a full log
