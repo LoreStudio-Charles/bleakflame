@@ -957,6 +957,10 @@ func is_hidden() -> bool:
 func _die() -> void:
 	dead = true
 	_explode()
+	# THE BODY STAYS. Spawned BEFORE _on_death, because that frees the ship and the wreck
+	# copies its art and momentum off it. Deliberately absent from devour(), which is the
+	# whole point: the beast leaves nothing and now that is something you can SEE.
+	Wreck.spawn(self)
 	died.emit()
 	_on_death()
 
