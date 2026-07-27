@@ -1112,7 +1112,11 @@ func _present_vyper_truce() -> void:
 
 
 func _apply_vyper_truce() -> void:
-	Standing.add("privateer", 20)     # the Shoal honors the banner he died under
+	# ACCEPTING VYPER SETS ZERO (user's ladder, 2026-07-27): -100 at war, -50 once Krayt's
+	# visit signals a truce, 0 on accepting the banner, and quests thereafter climb to
+	# INVITE_AT (10) for the Privateer commission. A flat +20 could not express that —
+	# from -100 it landed at -80, still at war with the people who just offered peace.
+	Standing.add("privateer", -Standing.get_points("privateer"))
 	Pilot.shoal_invited = true        # stays open — Vyper's word now, not just Krayt's
 	AIShip.parley = false             # the truce is carried by standing/shoal_open, not the beat flag
 	if _ambient_leviathan != null:

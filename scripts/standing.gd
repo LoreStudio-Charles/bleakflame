@@ -76,7 +76,11 @@ static func set_peace(faction: String, on: bool) -> bool:
 
 static func add(faction: String, n: int) -> void:
 	var was_hostile := is_hostile(faction)
-	points[faction] = clampi(int(points.get(faction, 0)) + n, MIN, MAX)
+	# THROUGH get_points, NOT points.get(). They disagreed the moment OPENING existed:
+	# a pilot who had never met the Shoal READ as -100 but would have GAINED from 0, so
+	# the first scrap of standing teleported them from hostile to friendly. Two accessors
+	# for one value is how that happens; there is one now.
+	points[faction] = clampi(get_points(faction) + n, MIN, MAX)
 	# Guard the fragile mend: the instant a faction climbs out of hostile, revert
 	# to PEACE so a stray shot can't undo the work. War is re-declared by hand.
 	if was_hostile and not is_hostile(faction):
