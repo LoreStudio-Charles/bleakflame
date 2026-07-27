@@ -301,8 +301,9 @@ for years. It just has to be legible as waiting rather than as breakage.
 ### Percival is a JOURNEY, not a destination unlock
 
 **Decision closed 2026-07-26** (was pending in `wip_the_legend_handoff.md`):
-Percival becomes a real place you travel to, for the reveal — beat 4 is walked, not
-told. `assets/world/percival.png` is on disk and `docs/planet_districts.md` already
+Percival becomes a real place you travel to, for the reveal — **beat 7** is walked, not
+told. (It was numbered beat 4 until 2026-07-27; the road in front of it became beats
+4-6. See "Beats 4-7" below.) `assets/world/percival.png` is on disk and `docs/planet_districts.md` already
 designs its three districts.
 
 **It needs no gate.** Percival is on the same axis, beyond Orivel, so the Campaign
@@ -344,6 +345,111 @@ explain it — the player assembles who Conall is from a place rather than a per
 which is the whole argument for making Percival a journey. It also keeps the noir
 shape: the client stays behind, and the only one who goes is the one with nothing
 to lose by being seen there.
+
+### Beats 4-7: the road, the capital, the lead, the reveal (user, 2026-07-27)
+
+**The reveal moves to beat 7.** This section previously called Percival "beat 4"
+while simultaneously prescribing "four legs with a beat at each end" — a contradiction
+left over from before the trip was designed. Closed here.
+
+**And the emptiness stopped being a bug.** The first proposal was three travel beats to
+break up the haul. The user's is better and inverts it:
+
+> *"Just a single beat that is the loneliness. Increase traffic along the entire lane.
+> Pass through some interesting places player can choose to visit... Tell the story of
+> the long, lonely road you travel beside strangers. You're alone. They're alone.
+> Together, but alone."*
+
+Filling the emptiness gives a busier road. Making it the SUBJECT gives a beat. It also
+answers the pacing worry directly: the lane is only ~3-5 minutes end to end (90,963
+units), so three legs of fly-talk-fly would have been over before they registered —
+whereas one beat whose subject IS the road gets authorial attention instead of being
+connective tissue.
+
+---
+
+**BEAT 4 — THE LONELINESS.** The long road out, and the first time the Reach is behind
+you.
+
+Its spine is already planted in beat 3: the unlisted buoy **forwards**, so there is
+another beyond it — "a chain strung across the dark on the assumption nobody from the
+Reach would come this far off-lane." Following that chain out is the errand, and it is
+the loneliness made physical: objects placed by someone, for someone, that will never
+speak to each other.
+
+The instrument is the **friendlies roster** (comm-range only, names and distance,
+right-click to hail). On the long road it stops being a utility and becomes the beat: a
+list of people who are RIGHT THERE and not with you, filling and emptying as you pass.
+Traffic needs names and one-line hails that answer politely and fly on — without that
+"together but alone" reads as "some ships went past."
+
+**Optional places stay OPTIONAL.** Secret POIs that chart on discovery, never tracker
+targets. The moment the objective tracker points at them they are chores, and "you chose
+to look" is the entire value.
+
+**A station en route you cannot use yet.** Let the player DOCK and be priced out rather
+than refused at the mouth. Refusal says "not yet" and reads as a locked door; walking an
+Armory full of gear you cannot afford, in a place that does not care that you cannot,
+says "look how far you have to go" — and it is the same note beat 5 lands. It also gives
+the level 6-15 band somewhere to come back to.
+
+**BEAT 5 — ORIVEL ORBITAL.** Registering to visit the planet. After the empty road, a
+place *full* of traffic and people — and nobody cares who you are looking for or why.
+
+That is an intensification, not a repeat: physical isolation, then crowd-isolation, which
+is worse. It is also load-bearing for the campaign's premise — a capital that does not
+care who you are asking about is a relief and a threat in one, because the Ooshu can ask
+there too.
+
+**BEAT 6 — PLANETSIDE.** Direction again, finally. A lead, and it points at Percival.
+
+**BEAT 7 — PERCIVAL.** The reveal, walked alone (see the section above: Odessa cannot go).
+
+---
+
+### The road itself: constant company, a danger CURVE (user, 2026-07-27)
+
+Measured before authoring, because the road the beat needs did not exist. Of 38 contacts,
+only **10** were within sensor range of the centreline, and hostiles by quarter were
+`[0, 1, 3, 0]` — 25 hostiles sat in a blob near the origin, thousands of units off-lane.
+A pilot following the road left the entire pirate population behind in the first seconds.
+That is why "I flew it twice to track down pirates and didn't see them."
+
+The user's gradient:
+
+> *"The guardian side probably keeps the lanes clear. Beyond the Shoal pirates pick up and
+> increase until the center where the V-Shrike pirates ruthlessly raid anyone, including
+> Shoal pirates. They are worst around the center and grow less threatening to the navy
+> picket line."*
+
+| band | t | who | density |
+|---|---|---|---|
+| Guardian | 0.00-0.25 | patrols, freight | hostiles **0** — cleared, by design |
+| Shoal reach | 0.25-0.50 | raiders pushing out from the den | ramping |
+| The heart | 0.45-0.60 | V-Shrike | **peak** |
+| Fading | 0.60-0.75 | V-Shrike thinning; RECLUSE as the named apex | falling |
+| Navy picket | 0.75-0.98 | the Navy; challenged, not hunted | hostiles **0** |
+
+**THE TWO CLAIMS ARE SEPARATE, and that is the lesson.** The first test written for this
+asserted "hostiles in most quarters" — which sounds reasonable and CONTRADICTS the design:
+two quarters are *meant* to be clear, and a fix driven by that assertion would have broken
+the sanctuary pillar and emptied the Navy of meaning. The real complaint was never "no
+pirates in the Guardian band"; it was that the band was VOID. A traffic problem wearing a
+danger problem's clothes.
+
+So: **company is constant, danger is a curve.** The safe stretches are not empty — they
+are full of people who are not with you, which is exactly what beat 4 is made of.
+
+Now `[6, 13, 12, 5]` contacts and `[0, 8, 6, 0]` hostiles by quarter, asserted in
+`tools/test_lane_encounterable.tscn` — which measures perpendicular distance from the
+centreline, i.e. what a pilot can actually MEET. (`test_lane_traffic` counts what exists;
+it passed through two player reports of an empty road.)
+
+**NOT BUILT — three-way predation.** "V-Shrike raid anyone, including Shoal pirates" is
+canon and unimplemented: V-Shrike pick prey from `player_team` only, and pirates share
+`hostile_team` with them, so they cannot currently fight. Needs team semantics rather than
+a spawn change. Cheapest first step short of that: pirate wrecks in the heart, killed by
+something that was not you.
 
 ### The Recluse — the beat the player writes themselves
 

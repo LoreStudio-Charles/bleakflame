@@ -582,8 +582,13 @@ func can_carry(comp: ComponentDef) -> bool:
 	return can_carry_mass(comp.mass)
 
 
+## `stats` is a Dictionary, and `stats.cargo` THROWS when the key is absent rather than
+## reading as zero — which it does for any build with no hold. This runs from
+## LootPickup._physics_process, so a hull with no cargo capacity drifting past loot threw
+## every frame it was near a pickup (pre-existing; surfaced 2026-07-27 while measuring the
+## lane). Every other read in this file already goes through .get(); this one did not.
 func can_carry_mass(mass: float) -> bool:
-	return cargo_used() + mass <= stats.cargo
+	return cargo_used() + mass <= float(stats.get("cargo", 0.0))
 
 
 func add_cargo(comp: ComponentDef) -> void:

@@ -1824,6 +1824,52 @@ const LANE_CONVOYS := [
 	{"t": 0.88, "hull": "bellwether", "escorts": 2},  # nearly under the Navy's guns
 ]
 
+## LANE TRAVELLERS (user, 2026-07-27) — "lots of travellers".
+##
+## THE MATERIAL THE LONELINESS BEAT IS MADE OF: "Tell the story of the long, lonely road
+## you travel beside strangers. You're alone. They're alone. Together, but alone." These
+## are lone ships with no escort and nothing worth raiding — people making the same run you
+## are, who will pass close enough to name and never become anything to you.
+##
+## DENSITY IS CONSTANT ALONG THE WHOLE ROAD, including the bands where nothing can hurt
+## you. That is the entire point and it is what was missing: measured, the Guardian quarter
+## held TWO contacts across 23,000 units and the Navy quarter held one, so the protected
+## stretches read as void rather than as protected. Danger is a curve; company is not.
+const LANE_TRAVELLERS := 16
+
+## THE DANGER CURVE (user, 2026-07-27): "the guardian side probably keeps the lanes clear.
+## Beyond the Shoal pirates pick up and increase until the center where the V-Shrike pirates
+## ruthlessly raid anyone, including Shoal pirates. They are worst around the center and
+## grow less threatening to the navy picket line."
+##
+## So the road is quiet at BOTH ends and worst in the middle — and the two quiet ends are
+## quiet for opposite reasons, which is the thing a player should be able to feel: the
+## Guardians clear the first quarter, the Navy holds the last, and the middle belongs to
+## whoever is willing to take it.
+##
+## SHOAL RAIDERS push out from home (the den sits at the rim, just off the road) and thin
+## out as they get further from it — they are opportunists working the edge of protected
+## space, not an army.
+const LANE_RAIDERS := [
+	{"t": 0.28, "hull": "wasp"},
+	{"t": 0.33, "hull": "raider"},
+	{"t": 0.38, "hull": "wasp"},
+	{"t": 0.42, "hull": "raider"},
+	{"t": 0.46, "hull": "brawler"},
+]
+
+## V-SHRIKE, thickest at the centre and falling away toward the Navy's guns. They are the
+## reason the middle is the middle.
+const LANE_VSHRIKE := [
+	{"t": 0.38, "hull": "harrier"},
+	{"t": 0.45, "hull": "goshawk"},
+	{"t": 0.50, "hull": "harrier"},
+	{"t": 0.53, "hull": "goshawk"},
+	{"t": 0.57, "hull": "goshawk"},
+	{"t": 0.64, "hull": "harrier"},
+	{"t": 0.70, "hull": "harrier"},
+]
+
 const LANE_GUARD_LEG := Vector2(0.02, 0.25)   # Guardians, out of the rim
 const LANE_GAP_LEG := Vector2(0.34, 0.66)     # nobody — the V-Shrike prowl here
 const LANE_NAVY_LEG := Vector2(0.75, 0.98)    # the Navy, in to Orivel
@@ -1925,12 +1971,29 @@ func _spawn_long_lane() -> void:
 	var navy_leg := _lane_leg(LANE_NAVY_LEG.x, LANE_NAVY_LEG.y, 3)
 	_spawn_navy_picket(navy_leg)
 
-	# BAND 2 — THE GAP. Nothing patrols it. Two V-Shrike prowl the middle half,
-	# world-anchored like every other ambient hostile: they live HERE, they do not
-	# spawn on top of you, and a replacement flies in from deeper space.
+	# THE TRAVELLERS. Evenly spaced down the WHOLE road — roughly one every 5,700 units —
+	# so there is always somebody in sight, including where it is safe. Each runs the whole
+	# lane; `t` is only where they happen to be when you arrive.
+	for i in LANE_TRAVELLERS:
+		var tt := (float(i) + 0.5) / float(LANE_TRAVELLERS)
+		_spawn_lane_freighter(SampleBuilds.trader_mule() if i % 3 == 2
+			else _convoy_build("dray" if i % 2 == 0 else "bellwether"), road, tt)
+
+	# BAND 2 — THE GAP, as a CURVE rather than two ships. Shoal raiders work the near edge
+	# and thin out; the V-Shrike own the centre and fall away toward the Navy. World-anchored
+	# like every other ambient hostile: they live HERE, they never spawn on top of you.
 	var gap := _lane_leg(LANE_GAP_LEG.x, LANE_GAP_LEG.y, 3)
-	_spawn_gap_raider(SampleBuilds.vshrike_goshawk(), AIShip.Tactic.BOOM_ZOOM, gap, 0.40)
-	_spawn_gap_raider(SampleBuilds.vshrike_harrier(), AIShip.Tactic.ORBIT, gap, 0.60)
+	for r in LANE_RAIDERS:
+		# A SHOAL raider on a lane leg of its own, so it works its patch rather than the
+		# whole road — the further from home, the fewer of them, which is the ramp.
+		var leg := _lane_leg(float(r["t"]) - 0.05, float(r["t"]) + 0.05, 2)
+		_spawn_pirate(_lane_point(float(r["t"])) + _jitter(700.0), str(r["hull"]), leg)
+	for v in LANE_VSHRIKE:
+		var tactic: AIShip.Tactic = AIShip.Tactic.BOOM_ZOOM if str(v["hull"]) == "goshawk" \
+			else AIShip.Tactic.ORBIT
+		var build: ShipBuild = SampleBuilds.vshrike_goshawk() if str(v["hull"]) == "goshawk" \
+			else SampleBuilds.vshrike_harrier()
+		_spawn_gap_raider(build, tactic, gap, float(v["t"]))
 
 	# RECLUSE — the named elite pair (docs/the_long_lane.md). Two Goshawks at
 	# LEVEL 25, far above the lane's band, hunting the stretch just SHORT of the
