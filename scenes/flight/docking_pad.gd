@@ -39,6 +39,13 @@ var runs_dock_services := true
 ## Shown by a bespoke dock screen so the pilot knows which berth they took
 ## ("Landing Bay · East", "Drydock · NE"). Empty for the plain station pad.
 var berth_label := ""
+## False for a berth that is NOT where a pilot learns to fly. The scrape and wreck
+## lessons are Harbormaster Ruel hailing the cockpit, which is exactly right at his
+## station and absurd at an outlaw den — so the Rust Shoal takes the same approach
+## grading and damage without the tuition, rather than reimplementing the lot to
+## dodge one dialogue. (Also leaves `docking_taught`/`crash_taught` untouched: a
+## berth that does not teach must not consume the one-time lesson either.)
+var teaches_docking := true
 ## True while a berthing cinematic is playing (one at a time, no re-entry).
 var _berthing := false
 var _scolding := false   # the one-time scrape lesson is open; don't re-trigger
@@ -92,10 +99,14 @@ func try_dock(ship: TestShip) -> void:
 		ship.velocity = -approach_dir() * 90.0 + ship.velocity.bounce(approach_dir()) * 0.2
 		Sfx.play_at("scrape", ship.global_position, -8.0, 0.5)
 		return
-	# OUTLAW LOCKOUT: a pilot the Guardians want dead doesn't get clearance. The
-	# station closes; the neutral PLANET is your fallback (and where you mend it).
-	if Standing.is_kos("guardian"):
-		ship._flash_note("DOCKING DENIED — the Guardians won't clear an outlaw. Head for the planet.")
+	# WHO THIS BERTH WILL CLEAR — the ONE thing that differs between berths, so it
+	# is the one thing a subclass overrides. ShoalPad inverts it (the Shoal turns
+	# away the law, not the lawless) and used to do so by reimplementing this whole
+	# function, which silently cost it the size gate above and the fault reporting
+	# below.
+	var denied := clearance_error(ship)
+	if denied != "":
+		ship._flash_note(denied)
 		ship.velocity = -approach_dir() * 120.0 + ship.velocity.bounce(approach_dir()) * 0.2
 		Sfx.play_at("scrape", ship.global_position, -6.0, 0.5)
 		return
@@ -116,7 +127,7 @@ func try_dock(ship: TestShip) -> void:
 		# docking hides the same frame, and a line in the Landing Bay is a wall
 		# of text nobody reads when they were expecting to just... dock.
 		# So: Ruel hails, the player dismisses him, THEN we berth. Once, ever.
-		if tier == "yellow" and not SaveGame.docking_taught:
+		if tier == "yellow" and teaches_docking and not SaveGame.docking_taught:
 			_scold_then_dock(ship, s)
 			return
 		ship.approach_fault = ("SCRAPED IN — %s" % _fault_line(s)) if tier == "yellow" else ""
@@ -125,10 +136,19 @@ func try_dock(ship: TestShip) -> void:
 	# FIRST WRECK: frame it before you watch it. The crash beat on its own reads
 	# as the game snatching the stick for no stated reason; with Ruel's call in
 	# front of it, the same footage becomes the consequence of a named mistake.
-	if not SaveGame.crash_taught:
+	if teaches_docking and not SaveGame.crash_taught:
 		_brace_then_crash(ship, s)
 		return
 	_run_berth(ship, s, tier)
+
+
+## Why this berth would refuse clearance right now, or "" if it will take you.
+## Base rule: a pilot the Guardians want dead gets no clearance — the station
+## closes and the neutral PLANET is the fallback (and where you mend it).
+func clearance_error(_ship: TestShip) -> String:
+	if Standing.is_kos("guardian"):
+		return "DOCKING DENIED — the Guardians won't clear an outlaw. Head for the planet."
+	return ""
 
 
 ## THE ONE SCRAPE LESSON. Held modal so it cannot be missed, and the berth only
@@ -221,7 +241,7 @@ func _resolve(ship: TestShip, s: Dictionary, tier: String) -> void:
 	if not ship.dead:
 		Sfx.play("dock", -8.0)
 		ship.dock(self)
-		if tier == "green":
+		if tier == "green" and teaches_docking:
 			SaveGame.docking_taught = true   # she can fly; stop narrating it
 
 

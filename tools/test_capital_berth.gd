@@ -25,6 +25,7 @@ func _ready() -> void:
 	_case_bay_refuses_the_capital(outpost)
 	_case_every_band_has_a_home(outpost)
 	_case_a_payout_never_opens_the_berth_screen()
+	_case_every_berth_keeps_the_shared_rules()
 
 	if _fails.is_empty():
 		print("test_capital_berth: ALL PASS (%d checks)" % _checks)
@@ -104,6 +105,59 @@ func _bay(outpost: OrivelOutpost) -> DockingPad:
 		if p.max_size_band == SB.HEAVY:
 			return p
 	return null
+
+
+## A BERTH MAY DIFFER IN WHO IT CLEARS, NOT IN HOW IT WORKS.
+##
+## ShoalPad overrode try_dock() WHOLESALE to invert one gate — the Shoal welcomes
+## outlaws and turns away the law — and paid for that one difference by silently
+## losing everything else the function does: the berth size limit, the scrape/crash
+## fault reporting, and `approach_fault`. The only thing it genuinely needed was to
+## skip the docking LESSONS, because those are Harbormaster Ruel hailing you from
+## his own station and he has no business scolding you at a pirate den.
+##
+## So the subclass now overrides `clearance_error` and clears `teaches_docking`,
+## and this asserts the shared machinery reaches it — including the ACCEPT path,
+## since a gate that refuses everything would pass a refusal-only test.
+func _case_every_berth_keeps_the_shared_rules() -> void:
+	var den := PirateDen.new()
+	add_child(den)                       # _ready builds the ShoalPad
+	var pad := den.pad
+	_ok(pad != null, "the Rust Shoal has a berth")
+	if pad == null:
+		return
+
+	# ONE IMPLEMENTATION. If try_dock is ever overridden again, the size gate and
+	# the fault tiers leave with it, exactly as they did before.
+	_ok(not FileAccess.get_file_as_string("res://scenes/flight/shoal_pad.gd") \
+		.contains("func try_dock("),
+		"ShoalPad does NOT reimplement try_dock — it overrides the gate only")
+
+	# The size limit is shared machinery, so the Shoal has it now.
+	pad.max_size_band = SB.MEDIUM
+	_ok(pad.size_permitted(SB.LIGHT), "the Shoal berth takes a hull within its band")
+	_ok(not pad.size_permitted(SB.SUPER_HEAVY),
+		"the Shoal berth refuses an oversized hull like every other berth")
+	pad.max_size_band = SB.SUPER_HEAVY_PLUS
+
+	# The gate itself, BOTH ways — inverted from the station's. A gate that refused
+	# everything would sail through a refusal-only test, so the ACCEPT side matters.
+	var was_points: int = Standing.points.get("privateer", 0)
+	var was_invited: bool = Pilot.shoal_invited
+	Standing.points["privateer"] = -100      # unwelcome
+	Pilot.shoal_invited = false
+	_ok(pad.clearance_error(null) != "", "the Shoal refuses a pilot it is not open to")
+	Pilot.shoal_invited = true               # Krayt's invitation
+	_ok(pad.clearance_error(null) == "", "...and CLEARS one it is open to")
+	Standing.points["privateer"] = was_points
+	Pilot.shoal_invited = was_invited
+
+	# And it must not run Ruel's tuition.
+	_ok(not pad.teaches_docking, "no docking lesson plays at an outlaw den")
+	var station_pad := DockingPad.new()
+	_ok(station_pad.teaches_docking, "...but a normal berth still teaches")
+	station_pad.free()
+	den.queue_free()
 
 
 func _case_drydock_accepts_the_capital(outpost: OrivelOutpost) -> void:

@@ -9,23 +9,22 @@ extends DockingPad
 ## the station's (both are DockingPads) when toggling the right dock screen.
 
 
-func try_dock(ship: TestShip) -> void:
-	var s := status_for(ship)
-	if not s.in_range:
-		return
+func _ready() -> void:
+	super()
+	# NOBODY LEARNS TO FLY HERE. The scrape and wreck lessons are Ruel hailing the
+	# cockpit from the station he runs; hearing the Harbormaster scold you as you
+	# put down at an outlaw den would be nonsense. This is the ONLY reason the old
+	# override existed, and dodging one dialogue by reimplementing try_dock cost
+	# the Shoal the berth size gate and the fault reporting with it.
+	teaches_docking = false
+
+
+## INVERTED FROM THE STATION'S. The Shoal welcomes outlaws and turns away the
+## law: you may only put down if it is open to you (Krayt's invitation, a
+## Privateer standing, or the post-Krayt truce). Overriding just this leaves the
+## approach grading, the damage tiers, the size limit and the berth itself
+## exactly as they are everywhere else — which is the point.
+func clearance_error(_ship: TestShip) -> String:
 	if not Standing.shoal_open():
-		ship._flash_note("The Shoal's guns track you. Nobody flies in here uninvited.")
-		ship.velocity = -approach_dir() * 120.0 + ship.velocity.bounce(approach_dir()) * 0.2
-		Sfx.play_at("scrape", ship.global_position, -6.0, 0.5)
-		return
-	if s.error >= CRASH_ERROR:
-		Sfx.play_at("scrape", ship.global_position, -3.0, 0.65)
-		ship.take_damage(s.error * CRASH_DAMAGE_SCALE)
-		ship.velocity = -approach_dir() * 160.0 + ship.velocity.bounce(approach_dir()) * 0.2
-		return
-	if s.error > SCRAPE_FREE_ERROR:
-		Sfx.play_at("scrape", ship.global_position, -8.0)
-		ship.take_damage(s.error * CRASH_DAMAGE_SCALE * 0.45)
-	if not ship.dead:
-		Sfx.play("dock", -8.0)
-		ship.dock(self)
+		return "The Shoal's guns track you. Nobody flies in here uninvited."
+	return ""
