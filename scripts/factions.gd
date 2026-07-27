@@ -37,7 +37,11 @@ const LIST := {
 	"civilian": {"name": "Reach Civilians", "color": Color(0.82, 0.84, 0.88)},
 	"escort": {"name": "Contract Escorts", "color": Color(0.25, 0.70, 0.58)},
 	"marines": {"name": "Galean Marine Corps", "color": Color(0.55, 0.62, 0.42)},
-	"shoal": {"name": "Rust Shoal", "color": Color(0.85, 0.45, 0.30)},
+	# THE SHOAL'S LEDGER IS KEPT UNDER "privateer" — Vyper leads that commission, and the
+	# standing was persisted under that key long before factions existed. STANDING KEYS
+	# ARE SAVE KEYS: the faction renames, the ledger never does. Mapped, not renamed.
+	"shoal": {"name": "Rust Shoal", "color": Color(0.85, 0.45, 0.30),
+		"standing": "privateer"},
 	"widow": {"name": "The Widows", "color": Color(0.12, 0.11, 0.13)},
 	"ooshu": {"name": "The Ooshu", "color": Color(0.62, 0.42, 0.78)},
 	"ghosts": {"name": "The Ghosts", "color": Color(0.58, 0.60, 0.66)},
@@ -92,6 +96,28 @@ const BASE := {
 	"civilian": {"guardian": Att.ALLIED, "navy": Att.ALLIED, "escort": Att.ALLIED,
 		"marines": Att.ALLIED},
 }
+
+## THE SHOAL LADDER (user, 2026-07-27) — and the reason the Shoal stopped being a special
+## case in this file. It used to hang off `Pilot.shoal_invited`, a BOOLEAN pretending to be
+## a relationship, which could say "truce" or "no truce" and nothing in between.
+##
+## The user's numbers land exactly on constants Standing already had, which is the tell that
+## the arc was always a standing arc:
+##
+##   -100  START. Hostile — the sanctuary makes the station safe now, so they can open
+##         aggressive (Standing.HOSTILE_AT: "at war; their ships will fight you").
+##    -50  VISITING KRAYT signals a truce. Above HOSTILE_AT, so they stop shooting.
+##      0  VYPER'S OFFER ACCEPTED.
+##    +10  quests thereafter reach Standing.INVITE_AT — the Privateer commission opens.
+##   -100  KILLING A SHOAL PIRATE UNDER TRUCE: straight back to war, in one stroke.
+##
+##   REJECTING Vyper leaves you at -50 with no extra penalty — only the ordinary standing
+##   loss from hunting them, which is the point: refusal is not a punishment.
+##
+## So `_toward_player` now just reads the ledger like every other faction does.
+##
+## STILL TO WIRE (the beats, not the rule): the -100 seed, Krayt's -50, Vyper's 0, and the
+## truce-break -100. Those live in the campaign flow, and the rule they set is here.
 
 ## PILOTS ARE MUTUALLY NEUTRAL — no PvP (user, 2026-07-27, "yet").
 ##
@@ -178,7 +204,8 @@ static func _player_toward(other: String) -> Att:
 	# shoot it), but "it is actively hostile to me" is the one case that must cross over.
 	if _toward_player(other) == Att.HOSTILE:
 		return Att.HOSTILE
-	if Standing.is_hostile(other) or Standing.at_war(other):
+	var key := standing_key(other)
+	if Standing.is_hostile(key) or Standing.at_war(key):
 		return Att.HOSTILE
 	return Att.NEUTRAL
 
@@ -186,12 +213,12 @@ static func _player_toward(other: String) -> Att:
 static func _toward_player(from: String) -> Att:
 	if BASE.get(from, {}).get("*", Att.NEUTRAL) == Att.HOSTILE:
 		return Att.HOSTILE      # hates everyone, and a pilot is somebody
-	if Standing.is_hostile(from):
+	if Standing.is_hostile(standing_key(from)):
 		return Att.HOSTILE      # you have earned this
-	# THE SHOAL IS THE INTERESTING CASE: pirates by default, but the truce after the
-	# Shoal's Fall makes them permanently neutral (Pilot.shoal_invited).
-	if from == "shoal" and Pilot.shoal_invited:
-		return Att.NEUTRAL
-	if from == "shoal":
-		return Att.HOSTILE
 	return Att.NEUTRAL
+
+
+## The ledger a faction's standing with the player is kept in. Usually its own id; the
+## Shoal's is "privateer" because that key predates the faction system and is persisted.
+static func standing_key(faction: String) -> String:
+	return str(LIST.get(faction, {}).get("standing", faction))

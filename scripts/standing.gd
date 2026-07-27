@@ -83,8 +83,27 @@ static func add(faction: String, n: int) -> void:
 		peace[faction] = true
 
 
+## WHERE A PILOT STARTS with a faction that has never been touched. Most open at zero —
+## strangers, no opinion either way — but not everyone is a stranger.
+##
+## THE SHOAL OPEN AT WAR (user, 2026-07-27): "I think it's safe near the station now so they
+## can start aggressive, -100 faction or something." They can, because the sanctuary makes
+## the station safe on its own; the old arrangement had them start passive purely so a new
+## pilot was not eaten, which is a job the sanctuary now does properly.
+##
+## Their ledger is kept under "privateer" — Vyper leads that commission, and the key is
+## persisted, so the faction renames and the key never does.
+##
+## Reading it through get_points rather than seeding on New Game means an EXISTING pilot who
+## never met them also reads -100, instead of being silently at peace with pirates because
+## their save predates the rule.
+const OPENING := {
+	"privateer": -100,      # the Rust Shoal: hostile until Krayt's truce lifts it to -50
+}
+
+
 static func get_points(faction: String) -> int:
-	return int(points.get(faction, 0))
+	return int(points.get(faction, OPENING.get(faction, 0)))
 
 
 ## The faction's STATE, derived from standing: kos / hostile / neutral /

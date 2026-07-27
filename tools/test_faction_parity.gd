@@ -30,6 +30,12 @@ var _checks := 0
 func _ready() -> void:
 	SaveGame.read_only = true
 	add_child(load("res://scenes/flight/flight_test.tscn").instantiate())
+	# A FRESH PILOT, not whoever is in the save. The scene loads the real userdata, so
+	# without this the test compares the world against the DEVELOPER'S played standing —
+	# which is how it first reported the Shoal as friendly: the pilot on disk had made
+	# peace with them years of game-time ago. The claim here is about the relationships a
+	# world OPENS with, so it has to be asked of a pilot who has done nothing yet.
+	PlayerState.local = PlayerState.new()
 	for _i in 8:
 		await get_tree().physics_frame
 
