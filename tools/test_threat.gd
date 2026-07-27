@@ -48,8 +48,8 @@ func _ready() -> void:
 	# THE POINT OF THE WHOLE FEATURE.
 	_ok(p_guard > p_stock * 2.0,
 		"a Guardian scores far above a stock hull (%.1f vs %.1f)" % [p_guard, p_stock])
-	var r_stock := Threat.rank_of_ship(stock)
-	var r_guard := Threat.rank_of_ship(guard)
+	var r_stock := Threat.rank_of(stock)
+	var r_guard := Threat.rank_of(guard)
 	_ok(r_stock == Threat.Rank.NORMAL,
 		"a rim pirate ranks NORMAL — the common case stays silent (got %s)"
 			% Threat.label(r_stock))

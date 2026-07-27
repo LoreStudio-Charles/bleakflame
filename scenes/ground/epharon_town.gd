@@ -221,7 +221,11 @@ func _ready() -> void:
 	_scatter_props()   # rocks + dunes in the open roam (drop-in art)
 	_spawn_player_ship()   # your hull on the apron, south of the Starport
 
-	_player = _make_actor("res://assets/characters/PilotM", Color.WHITE)
+	# A pilot who skipped character creation (every dev harness, and the very first frames
+	# of a new game) has no callsign, and the frame drew a bare "?" over the player's own
+	# unit frame. "?" is the honest answer for an unnamed bystander, never for you.
+	_player = _make_actor("res://assets/characters/PilotM", Color.WHITE,
+		Pilot.callsign if Pilot.callsign != "" else "Pilot")
 	_player.global_position = Vector2(0, 780)
 	_player.team = "player_team"
 	_player.add_to_group("player_walker")
@@ -245,17 +249,19 @@ func _ready() -> void:
 	_spawn_npc("Sella", "res://assets/characters/Sella", Vector2(-700, -320), 200, Color.WHITE, "idle:sella", false)
 	_spawn_npc("Colonist", "res://assets/characters/Colonist", Vector2(0, 360), 300, Color(0.9, 0.85, 1.0), "talk_Colonist", false)
 
-	_hermit = _make_actor("res://assets/characters/Conall", Color.WHITE)
+	# "The Counter" — the name npcs.gd registers him under and the one the cave prompt
+	# already shows. His REAL name is the beat-4 reveal and must not appear on a plate.
+	_hermit = _make_actor("res://assets/characters/Conall", Color.WHITE, "The Counter")
 	_hermit.global_position = IROOM + Vector2(0, -160)
 	_hermit.visible = false
 	_world.add_child(_hermit)
 	# Tam — Sella's farmhand, resident of the aquaponics interior.
-	_farmhand = _make_actor("res://assets/characters/Tam", Color.WHITE)
+	_farmhand = _make_actor("res://assets/characters/Tam", Color.WHITE, "Tam")
 	_farmhand.global_position = IROOM + Vector2(90, -120)
 	_farmhand.visible = false
 	_world.add_child(_farmhand)
 	# Bram — the colony market's trader, resident of the market interior.
-	_trader = _make_actor("res://assets/characters/Bram", Color.WHITE)
+	_trader = _make_actor("res://assets/characters/Bram", Color.WHITE, "Bram")
 	_trader.global_position = IROOM + Vector2(60, -140)
 	_trader.visible = false
 	_world.add_child(_trader)
@@ -280,6 +286,9 @@ func _ready() -> void:
 	bar.walker = _player
 	bar.cooldowns = _tech_cd   # the LIVE dict — the bar reads, it never decides
 	$HUD.add_child(bar)
+	var frames := GroundHud.new()
+	frames.walker = _player
+	$HUD.add_child(frames)
 	_rebuild_town_spots()
 
 
@@ -428,16 +437,21 @@ func _grant_drone() -> bool:
 	return true
 
 
-func _make_actor(dir: String, tint: Color) -> GroundCharacter:
+## The one place a town actor is built. `nm` is what the character CALLS ITSELF — the
+## town's own `_npcs` dict still holds the name it is addressed BY (quest routing, spot
+## actions), and those are not always the same string; the plate wants the former.
+func _make_actor(dir: String, tint: Color, nm := "") -> GroundCharacter:
 	var a := GroundCharacter.new()
 	a.setup(dir)
-	a.modulate = tint
+	# set_tint, not `modulate`: the actor now has a nameplate child and modulate cascades.
+	a.set_tint(tint)
+	a.display_name = nm
 	return a
 
 
 func _spawn_npc(nm: String, dir: String, home: Vector2, radius: float, tint: Color,
 		action := "", wants_talk := false) -> void:
-	var a := _make_actor(dir, tint)
+	var a := _make_actor(dir, tint, nm)
 	a.global_position = home
 	_world.add_child(a)
 	_npcs.append({"node": a, "name": nm, "home": home, "radius": radius, "timer": randf() * 3.0,
@@ -1951,10 +1965,12 @@ func _draw_town() -> void:
 	for b in BUILDINGS:
 		_draw_building(b)
 	_draw_spire(Vector2(300, -560))
-	for n in _npcs:
-		draw_string(_font, n.node.global_position + Vector2(-40, -78), n.name,
-			HORIZONTAL_ALIGNMENT_CENTER, 80, 15, Color(0.96, 0.92, 0.82, 0.85))
-	_draw_combat_readouts()   # hp bars + target ring (shared with the interiors)
+	# NAMES, HEALTH BARS AND THE TARGET RING ALL MOVED TO THE NAMEPLATE (2026-07-27).
+	# Three separate draws lived here — an unconditional name over every NPC, a world-space
+	# hp bar over every fighter, and a ring under the target — each with its own idea of
+	# when to show and what colour to be. The plate is one answer, distance-gated and
+	# colour-coded by relationship, and it travels to any ground scene because it hangs off
+	# the character rather than off this town's draw loop.
 
 	# Guide nudge: a soft chevron over the pilot pointing toward the current objective — a ground
 	# lesson's target, or whoever the quest system wants you to talk to.
@@ -2075,26 +2091,8 @@ func _draw_spire(pos: Vector2) -> void:
 ## The combat readouts (thin hp bars, the amber target ring) — shared by the open town
 ## and the interiors. It lived inside _draw_town only, so the cave fight had no health
 ## bars and no target marker at all (playtest); a fight indoors is still a fight.
-func _draw_combat_readouts() -> void:
-	var fighters: Array = get_tree().get_nodes_in_group("ground_hostiles").duplicate()
-	fighters.append(_player)
-	for n in fighters:
-		var g := n as GroundCharacter
-		if g == null or not is_instance_valid(g) or g.dead or not g.visible:
-			continue
-		if g.health < g.max_health:
-			var top := g.global_position + Vector2(-16, -62)
-			draw_rect(Rect2(top, Vector2(32, 4)), Color(0.08, 0.06, 0.08, 0.85))
-			draw_rect(Rect2(top, Vector2(32.0 * (g.health / g.max_health), 4)),
-				Color(0.42, 0.86, 0.46) if g == _player else Color(0.9, 0.42, 0.35))
-	if _player.combat_target != null and is_instance_valid(_player.combat_target):
-		draw_arc(_player.combat_target.global_position, 20.0, 0, TAU, 22,
-			Color(0.95, 0.72, 0.35, 0.9), 2.0)
-
-
 func _draw_interior() -> void:
 	_draw_room()
-	_draw_combat_readouts()   # a fight indoors is still a fight
 
 
 func _draw_room() -> void:

@@ -52,6 +52,17 @@ const BARRIER_REGEN_RATE := 8.0
 ## dictionary, so the actor could not say its own name and nothing that met one
 ## (a nameplate, a target frame, a log line) could ask.
 var display_name := ""
+## Height of the drawn sprite in px, measured once at setup. The nameplate needs to sit
+## above the HEAD, and asking the node for its sprite by name does not work: the shadow
+## and the body are both unnamed AnimatedSprite2Ds, so get_node("AnimatedSprite2D")
+## returns whichever was added first (the shadow). It happens to be the same height
+## today because they share sprite_frames — an accident, not a fact to build on.
+var sprite_h := 68.0
+## Rows of empty canvas above the character's HEAD, measured from the idle frame. A
+## PixelLab canvas is generously margined and the figure does not fill it, so anchoring
+## anything to the canvas top puts it a visible gap too high — which is what floated the
+## first nameplates well clear of their owners.
+var art_top := 0.0
 var team := ""                    # "player_team" / "hostile" — "" = non-combatant
 var max_health := 100.0
 var health := 100.0
@@ -328,6 +339,17 @@ func play_action(group: String, fps: float, loop: bool) -> void:
 	_action_until = Time.get_ticks_msec() / 1000.0 + (frames / maxf(1.0, fps)) 		+ (999999.0 if group == "death" else 0.0)
 
 
+## Tint the BODY, never the node. `modulate` cascades to children, and the character's
+## children now include its nameplate — so tinting the node would tint the plate with it.
+## This is the same bug the hull decals had (set_hull_tint writes self_modulate for
+## exactly this reason); it hid there because the tints in play were mild, and the two
+## tints in play here are mild too. _flash_hit still works: it writes `modulate` on the
+## same sprite, and the two multiply.
+func set_tint(c: Color) -> void:
+	if _anim != null:
+		_anim.self_modulate = c
+
+
 ## Brief red blink so a hit is never silent.
 func _flash_hit() -> void:
 	if _anim == null:
@@ -376,6 +398,8 @@ func setup(char_dir: String) -> void:
 	var t := _anim.sprite_frames.get_frame_texture("idle_south", 0)
 	if t != null:
 		h = t.get_height()
+	sprite_h = float(h)
+	art_top = _opaque_top(t)
 	_anim.offset = Vector2(0, -h * 0.5)
 	# The projected shadow: a dark, squashed, skewed copy behind the sprite, locked to its
 	# frame below (so it animates for free). Added first, so it draws behind.
@@ -400,6 +424,11 @@ func setup(char_dir: String) -> void:
 	_anim.frame_changed.connect(_sync_weapon)
 	_anim.animation_changed.connect(_sync_weapon)
 	_apply_anim(false)
+	# EVERY ground character gets a plate, from the ONE place every ground character is
+	# built. Attaching at the spawn sites instead would mean the next spawn site added is
+	# the one that silently has no plate — the exact one-sided-logic shape this codebase
+	# keeps paying for. The plate itself decides whether it is worth drawing.
+	Nameplate.attach(self)
 
 
 func move_to(p: Vector2) -> void:
@@ -698,6 +727,24 @@ static func _tex(path: String) -> Texture2D:
 	if img.load(path) == OK:
 		return ImageTexture.create_from_image(img)
 	return null
+
+
+## How many rows of fully transparent canvas sit above the figure. Scans a handful of
+## columns' worth of rows rather than every pixel — it runs once per character at setup,
+## but there is no reason for it to be slow. Returns 0 for anything it cannot read, which
+## puts the plate back at the canvas top: the old behaviour, never a crash.
+static func _opaque_top(tex: Texture2D) -> float:
+	if tex == null:
+		return 0.0
+	var img := tex.get_image()
+	if img == null:
+		return 0.0
+	var w := img.get_width()
+	for y in img.get_height():
+		for x in w:
+			if img.get_pixel(x, y).a > 0.02:
+				return float(y)
+	return 0.0
 
 
 static func _placeholder() -> Texture2D:

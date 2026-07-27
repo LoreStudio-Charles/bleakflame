@@ -39,6 +39,7 @@ func setup_scrit(spawn: Vector2) -> void:
 	setup("res://assets/characters/Scrit")
 	home = spawn
 	global_position = spawn
+	display_name = "Scrit"
 	team = "hostile"
 	max_health = 34.0
 	health = max_health

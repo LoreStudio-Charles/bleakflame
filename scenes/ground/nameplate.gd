@@ -43,30 +43,54 @@ const HOSTILE_RANGE := 620.0
 ## Radii of the ellipse under the feet. Squashed, because the town is drawn at a
 ## slight tilt and a true circle reads as a ball rather than a footprint.
 const RING_R := Vector2(17.0, 7.0)
+## How close two characters have to be before their plates are treated as a pile that
+## needs stacking. Generous on x (plates are much wider than a body) and tight on y.
+const STACK_X := 130.0
+const STACK_Y := 80.0
 
 var who: GroundCharacter          # the character this plate belongs to
-var viewer: GroundCharacter       # whose point of view decides friend/foe (the player)
 
 var _font: Font
 var _head := -74.0                # plate sits this far above the feet-anchored origin
+var _viewer: GroundCharacter      # cached; resolved from the scene, never passed in
 
 
-func _init(p_who: GroundCharacter, p_viewer: GroundCharacter) -> void:
+## Give a character its plate. Called from GroundCharacter.setup(), so every ground
+## character has one and no spawn site has to remember.
+static func attach(who: GroundCharacter) -> Nameplate:
+	var plate := Nameplate.new(who)
+	plate.add_to_group("nameplates")   # so plates can see each other and de-collide
+	who.add_child(plate)
+	return plate
+
+
+func _init(p_who: GroundCharacter) -> void:
 	who = p_who
-	viewer = p_viewer
 	# ABOVE EVERYTHING. The town y-sorts, so without this a plate is occluded by any
 	# actor standing one pixel further south — including the one it belongs to.
 	z_index = 40
 	top_level = false
 
 
+## WHOSE SIDE ARE WE READING FROM — resolved from the scene rather than handed in at
+## construction. The plate is attached during setup(), which runs BEFORE the player has
+## joined its group (and before the player exists at all, for anything spawned earlier),
+## so a constructor argument would be null for half the town. Looking it up lazily also
+## means this class needs no changes to work in a ground scene that is not Epharon.
+func viewer() -> GroundCharacter:
+	if is_instance_valid(_viewer):
+		return _viewer
+	for n in get_tree().get_nodes_in_group("player_walker"):
+		_viewer = n as GroundCharacter
+		break
+	return _viewer
+
+
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
-	var art := who.get_node_or_null("AnimatedSprite2D")
-	if art is AnimatedSprite2D and art.sprite_frames != null:
-		var tex := art.sprite_frames.get_frame_texture(art.animation, 0)
-		if tex != null:
-			_head = -float(tex.get_height()) - 8.0
+	# Above the HEAD, not above the canvas. The node's origin is at the feet, so the top of
+	# the drawn figure is (canvas height - the empty margin above it) up from here.
+	_head = -(who.sprite_h - who.art_top) - 6.0
 
 
 func _process(_delta: float) -> void:
@@ -77,11 +101,12 @@ func _process(_delta: float) -> void:
 ## on the character ("player_team" / "hostile"); "" means non-combatant, which is
 ## most of a farming colony.
 func _relation() -> Color:
-	if who == viewer:
+	var v := viewer()
+	if who == v:
 		return SELF
 	if who.team == "":
 		return NEUTRAL
-	if viewer != null and who.team == viewer.team:
+	if v != null and who.team == v.team:
 		return FRIENDLY
 	return HOSTILE
 
@@ -92,14 +117,15 @@ func _relation() -> Color:
 func _should_draw() -> bool:
 	if who == null or not is_instance_valid(who) or who.dead:
 		return false
-	if viewer == null or not is_instance_valid(viewer):
+	var v := viewer()
+	if v == null or not is_instance_valid(v):
 		return false
-	if who == viewer:
+	if who == v:
 		return true                                   # your own marker is always on
-	if viewer.combat_target == who:
+	if v.combat_target == who:
 		return true                                   # the thing you are pointed at
-	var d := who.global_position.distance_to(viewer.global_position)
-	var hostile := who.team != "" and who.team != viewer.team
+	var d := who.global_position.distance_to(v.global_position)
+	var hostile := who.team != "" and who.team != v.team
 	if hostile:
 		return d <= HOSTILE_RANGE
 	if who.health < who.max_health:
@@ -110,20 +136,21 @@ func _should_draw() -> bool:
 func _draw() -> void:
 	if not _should_draw():
 		return
+	var v := viewer()
 	var col := _relation()
-	var targeted: bool = viewer.combat_target == who
-	var is_self: bool = who == viewer
+	var targeted: bool = v.combat_target == who
+	var is_self: bool = who == v
 
 	# --- the foot ring: the only marker the PLAYER themselves gets, plus the
 	# target's. It sits on the ground rather than over the head so it never
 	# occludes the character art, and so two stacked actors stay distinguishable.
+	# A REAL ELLIPSE. The first pass faked the tilt with a second, flatter arc drawn just
+	# below the first; on screen that read as a spiral or a double ring, not as one ring
+	# lying on the ground. Plotting the ellipse directly is the same handful of lines and
+	# actually looks like a footprint.
 	if is_self or targeted:
 		var ring := col if is_self else Color(0.95, 0.72, 0.35)   # AMBER = selection
-		draw_arc(Vector2.ZERO, RING_R.x, 0.0, TAU, 24, Color(ring, 0.85), 1.6, true)
-		# Squash it by drawing into a scaled space would need a transform; instead a
-		# second, flatter arc reads as a tilted ellipse at this size and costs nothing.
-		draw_arc(Vector2(0, RING_R.y * 0.35), RING_R.x * 0.82, 0.0, TAU, 20,
-			Color(ring, 0.35), 1.2, true)
+		_ellipse(Vector2.ZERO, RING_R, Color(ring, 0.9), 1.8)
 
 	if is_self:
 		return   # you know who you are; a plate over your own head is just clutter
@@ -136,18 +163,23 @@ func _draw() -> void:
 	# "here is a number", and a peaceful town stays free of combat furniture.
 	var pips := ""
 	var pip_col := Color.WHITE
-	if who.team != "" and viewer.team != "" and who.team != viewer.team:
-		var r := Threat.rank_of_ship(who)   # reads the AUTHORED rank; ships and walkers alike
+	if who.team != "" and v.team != "" and who.team != v.team:
+		var r := Threat.rank_of(who)        # reads the AUTHORED rank; ships and walkers alike
 		pips = Threat.pips(r)       # NORMAL draws nothing — the common case stays silent
 		pip_col = Threat.color(r)
 	var pip_w: float = 0.0 if pips == "" \
 		else _font.get_string_size(pips, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 4.0
 	var text_w := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + pip_w
 	var hurt: bool = who.health < who.max_health
-	var show_bar: bool = hurt or targeted or (who.team != "" and who.team != viewer.team)
+	var show_bar: bool = hurt or targeted or (who.team != "" and who.team != v.team)
 	var w: float = maxf(text_w, 46.0) + PAD.x * 2.0
 	var h: float = 13.0 + PAD.y * 2.0 + (BAR_H + 2.0 if show_bar else 0.0)
-	var box := Rect2(Vector2(-w * 0.5, _head - h), Vector2(w, h))
+	# STACK, so a pack does not become one illegible smear. Four scrit standing together
+	# drew four plates in the same few pixels and the names overprinted into nonsense.
+	# Each plate takes the slot above the last, back-to-front, which keeps the reading
+	# order the same as the depth order.
+	var top := _head - h - _stack_index() * (h + 3.0)
+	var box := Rect2(Vector2(-w * 0.5, top), Vector2(w, h))
 
 	draw_rect(box, PLATE_BG)
 	if targeted:
@@ -167,7 +199,7 @@ func _draw() -> void:
 
 	var tint := col if not targeted else col.lightened(0.25)
 	var tx := -text_w * 0.5
-	var ty := _head - h + PAD.y + 11.0
+	var ty := box.position.y + PAD.y + 11.0
 	draw_string(_font, Vector2(tx, ty), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, tint)
 	if pips != "":
 		draw_string(_font, Vector2(tx + text_w - pip_w + 4.0, ty), pips,
@@ -187,3 +219,38 @@ func _draw() -> void:
 			var bf: float = clampf(who.barrier / who.max_barrier, 0.0, 1.0)
 			draw_rect(Rect2(Vector2(bx, by - 1.0), Vector2(bw * bf, 1.5)),
 				Color(0.55, 0.82, 1.0, 0.95))
+
+
+## Where in a pile of overlapping plates this one sits — 0 is the lowest slot (nearest its
+## owner's head), and each step up clears the plate below it.
+##
+## Ordered by DEPTH: the character standing furthest back takes the highest slot, so the
+## plates read top-to-bottom in the same order the bodies read back-to-front. Ties break
+## on instance id purely so the answer is stable frame to frame; a plate that swapped
+## slots with its neighbour every frame would flicker.
+func _stack_index() -> int:
+	var mine := who.global_position
+	var idx := 0
+	for n in get_tree().get_nodes_in_group("nameplates"):
+		var other := n as Nameplate
+		if other == null or other == self or not is_instance_valid(other.who):
+			continue
+		var pos: Vector2 = other.who.global_position
+		if absf(pos.x - mine.x) > STACK_X or absf(pos.y - mine.y) > STACK_Y:
+			continue
+		if not other._should_draw() or other.who == viewer():
+			continue   # the viewer draws no plate, so it never takes a slot
+		if pos.y > mine.y or (pos.y == mine.y
+				and other.who.get_instance_id() > who.get_instance_id()):
+			idx += 1
+	return idx
+
+
+## A true ellipse as a closed polyline. draw_arc only does circles, and scaling the
+## canvas transform to squash one also squashes the stroke.
+func _ellipse(center: Vector2, r: Vector2, col: Color, width: float) -> void:
+	var pts := PackedVector2Array()
+	for i in 33:
+		var a := TAU * float(i) / 32.0
+		pts.append(center + Vector2(cos(a) * r.x, sin(a) * r.y))
+	draw_polyline(pts, col, width, true)

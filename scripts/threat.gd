@@ -121,12 +121,15 @@ static func normalised(power: float, level: int) -> float:
 	return power / maxf(BASE_POWER * growth, 0.001)
 
 
-## The ship's AUTHORED rank. Every hull answers NORMAL unless its spawner says
-## otherwise, so the common case needs no thought and no upkeep.
-static func rank_of_ship(ship) -> Rank:
-	if ship == null or not is_instance_valid(ship):
+## The AUTHORED rank of a ship OR a walker — both carry `rank`, and an encounter's
+## intent means the same thing in either mode, which is the whole reason this class is
+## shared. (Named rank_of_ship at first; the ground nameplate calling it was the tell.)
+## Everything answers NORMAL unless its spawner says otherwise, so the common case needs
+## no thought and no upkeep.
+static func rank_of(who) -> Rank:
+	if who == null or not is_instance_valid(who):
 		return Rank.NORMAL
-	var r = ship.get("rank")
+	var r = who.get("rank")
 	if r == null:
 		return Rank.NORMAL
 	return clampi(int(r), 0, Rank.SPEC_OPS) as Rank
@@ -135,7 +138,7 @@ static func rank_of_ship(ship) -> Rank:
 ## How far a ship actually is from what its rank promises: 1.0 means it hits the
 ## target, 0.5 means it is half the fight its plate claims. The audit, not the rule.
 static func target_ratio(ship) -> float:
-	var r := rank_of_ship(ship)
+	var r := rank_of(ship)
 	var want: float = RANK_MULT[clampi(int(r), 0, RANK_MULT.size() - 1)]
 	var lv := 1
 	if ship != null and ship.has_method("level"):

@@ -37,7 +37,33 @@ func _ready() -> void:
 		await get_tree().process_frame
 	get_viewport().get_texture().get_image().save_png(DIR + "/roam_shot.png")
 	print("saved roam_shot.png")
+	await _plates_shot()
 	get_tree().quit()
+
+
+## THE SHOT THAT JUDGES THE NAMEPLATES AND UNIT FRAMES: standing in the warren with a
+## scrit targeted and everyone damaged, so the plate's every branch is on screen at once —
+## a hostile plate, a targeted plate with its bracket and foot ring, the player's own foot
+## ring, and both unit frames with real numbers in them.
+func _plates_shot() -> void:
+	_player.global_position = Vector2(2300, 1500) + Vector2(-150, 90)   # WARREN
+	_player.stop()
+	_cam.zoom = Vector2(1.15, 1.15)
+	for _i in 40:
+		await get_tree().process_frame
+	var foes := get_tree().get_nodes_in_group("ground_hostiles")
+	print("  scrit in the warren: ", foes.size())
+	# Bank everyone off full so the bars have something to say — a frame reading 100/100
+	# next to a plate with no bar shows none of the states worth looking at.
+	_player.health = _player.max_health * 0.62
+	for i in foes.size():
+		foes[i].health = foes[i].max_health * (0.45 if i % 2 == 0 else 0.85)
+	if not foes.is_empty():
+		_player.combat_target = foes[0]
+	for _i in 20:
+		await get_tree().process_frame
+	get_viewport().get_texture().get_image().save_png(DIR + "/plates_shot.png")
+	print("saved plates_shot.png")
 
 func _shot(pos: Vector2, zoom: float, name: String) -> void:
 	_player.global_position = pos
