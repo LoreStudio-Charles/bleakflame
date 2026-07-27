@@ -812,8 +812,54 @@ func _try_start_scan() -> void:
 	if global_position.distance_to(target.global_position) > _scan_range:
 		_ability_fail("SCAN: out of range — close to %du" % int(_scan_range))
 		return
+	# ALREADY KNOWN? Refuse HERE, before the 3.2 seconds and before any spend — a
+	# scan that could never pay must not cost the channel. (Anomalies are exempt:
+	# surveying one IS a campaign beat, and it pays no Scan Data to farm.)
+	if target is MineableAsteroid:
+		if target.surveyed:
+			_ability_fail("ALREADY SURVEYED — this rock's contents are on file")
+			return
+	elif not (target is Anomaly):
+		var subject := _scan_subject(target)
+		if subject == "":
+			# NOTHING TO FILE. This is what let the STATION pay out: it is selectable
+			# (friendly_targets), it has no hull, and the old code fell through to the
+			# generic 2-per-scan for anything that was not a rock or an anomaly. The
+			# easiest faucet in the game was a structure that cannot move or shoot.
+			_ability_fail("SCAN: nothing here to put on file")
+			return
+		if Research.is_catalogued(subject):
+			_ability_fail("ALREADY CATALOGUED — %s is on file. Find something new."
+				% _subject_name(target))
+			return
 	_scan_progress = 0.0
 	Sfx.play("click", -8.0, 0.8)
+
+
+## WHAT A SCAN IS OF: the CLASS of thing, not the instance. Your tenth Kestrel
+## teaches nobody anything — that is the whole point of the catalogue — so this keys
+## off the HULL, which also means a respawned pirate is not a fresh discovery.
+## Empty string = there is nothing here worth filing.
+func _scan_subject(node: Node) -> String:
+	if node == null or not is_instance_valid(node):
+		return ""
+	if node.is_in_group("leviathan"):
+		return "leviathan:%s" % str(node.get("beast_name"))
+	var b = node.get("build")
+	if b != null and b.hull != null:
+		return "hull:%s" % b.hull.resource_path
+	return ""
+
+
+func _subject_name(node: Node) -> String:
+	if node == null or not is_instance_valid(node):
+		return "it"
+	if node.is_in_group("leviathan"):
+		return str(node.get("beast_name"))
+	var b = node.get("build")
+	if b != null and b.hull != null:
+		return str(b.hull.display_name)
+	return "it"
 
 
 func _flash_note(text: String) -> void:
@@ -887,20 +933,35 @@ func _finish_scan() -> void:
 		return
 	# Living things pay better: ships 2, the leviathan 5. Scanning the
 	# Cinderweb at gaze range is exactly the terrible idea it sounds like.
-	_grant_scan_data(5 if target.is_in_group("leviathan") else 2)
+	#
+	# FILED AT THE FINISH, not at the start, so an interrupted scan does not burn the
+	# discovery. _try_start_scan already refused a repeat, so reaching here means this
+	# class is new — and the return value is what says so.
+	var subject := _scan_subject(target)
+	var subject_name := _subject_name(target)   # NOT `name` — that is Node.name
+	var first := Research.catalogue(subject)
+	if first:
+		# Readable TODAY, with no new UI: the Captain's Log already renders the
+		# research journal at both docks and on [L].
+		Research.journal.append({"day": Research.day,
+			"text": "✔  Catalogued: %s — first of its class." % subject_name})
+	var payout := 5 if target.is_in_group("leviathan") else 2
+	var headline := ("CATALOGUED — %s, first of its class" % subject_name) if first else ""
+	_grant_scan_data(payout, headline)
 
 
-func _grant_scan_data(units: int) -> void:
+func _grant_scan_data(units: int, headline := "") -> void:
 	units += Research.scan_bonus()
 	var granted := 0
 	for i in units:
 		if can_carry_mass(TradeGoods.unit_mass("scan_data")):
 			add_commodity("scan_data", 1)
 			granted += 1
+	var head: String = headline if headline != "" else "SCAN COMPLETE"
 	if granted < units:
-		_flash_note("SCAN COMPLETE — HOLD FULL: %d/%d data stored" % [granted, units])
+		_flash_note("%s — HOLD FULL: %d/%d data stored" % [head, granted, units])
 	elif scan_note_t <= 0.0:
-		_flash_note("SCAN COMPLETE: +%d Scan Data" % granted)
+		_flash_note("%s: +%d Scan Data" % [head, granted])
 
 
 ## Gem bar: [1]-[5] fire the ability MEMORIZED into that slot (Pilot.gems), but

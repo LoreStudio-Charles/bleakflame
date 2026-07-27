@@ -32,6 +32,7 @@ func _ready() -> void:
 	_case_moving_shooter_fires_true()
 	_case_bolts_inherit_shooter_velocity()
 	_case_scan_chip_enables_scanning()
+	_case_scanning_pays_for_knowledge_not_repetition()
 	_case_killshot_range_and_fire()
 	_case_collision_damage()
 	_case_every_played_sound_exists()
@@ -333,8 +334,14 @@ func _case_tutor_watchdog_unjams() -> void:
 ## read has_system_tag("scanner") — so [1] answered "NO SCANNER FITTED" on a ship
 ## that plainly knew scan. Every use of scanner_fitted means "knows scan".
 func _case_scan_chip_enables_scanning() -> void:
-	var bare := _pirate()
+	# ON A TestShip, because `scanner_fitted` only exists there. This read it off an
+	# AIShip, which does not have the property: the access errored, returned null,
+	# and `not null` is true — so the check passed without ever testing anything.
+	var bare := TestShip.new()
+	add_child(bare)
+	bare.apply_build(SampleBuilds.get_build(SampleBuilds.current))
 	_ok(not bare.scanner_fitted, "a ship with no scan chip cannot scan")
+	bare.free()
 
 	var scanner := TestShip.new()
 	add_child(scanner)
@@ -345,6 +352,93 @@ func _case_scan_chip_enables_scanning() -> void:
 	_ok(scanner.scanner_fitted,
 		"...and scanner_fitted follows the ability, so [1] will fire")
 	scanner.free()
+
+
+## SCAN DATA IS KNOWLEDGE, SO A SUBJECT PAYS ONCE (user, 2026-07-27).
+##
+## THE EXPLOIT THIS CLOSES: there was no per-target check of any kind. Park inside
+## the station sanctuary — the one place nothing can shoot you — hold a Guardian in
+## the reticle and press [1] every 3.2s, and you minted 2 Scan Data a tick forever
+## without moving. Scan Data is 2 Insight at the lab, credits from Sella, and the
+## delivery good for three of her contracts, so it was a faucet for all three
+## currencies at once. Worse, the STATION itself paid out: selectable, hull-less,
+## and it fell through to the generic per-scan grant.
+##
+## The catalogue keys off the HULL, not the node, so a respawned pirate is not a
+## fresh discovery — and the refusal lands BEFORE the 3.2-second channel.
+func _case_scanning_pays_for_knowledge_not_repetition() -> void:
+	var was := Research.catalogued.duplicate()
+	Research.catalogued.clear()
+
+	var scout := TestShip.new()
+	add_child(scout)
+	var b := SampleBuilds.get_build(SampleBuilds.current)
+	b.chips.append(load("res://data/components/chips/survey_scan_chip.tres"))
+	scout.apply_build(b)
+	scout.global_position = Vector2(-60000, 60000)
+
+	var mark := _pirate()
+	mark.global_position = scout.global_position + Vector2(80, 0)   # well inside range
+	scout.target = mark
+
+	# FIRST OF ITS CLASS — the discovery pays.
+	var before: int = scout.commodities.get("scan_data", 0)
+	scout._try_start_scan()
+	_ok(scout._scan_progress >= 0.0, "a never-seen hull can be scanned")
+	scout._finish_scan()
+	var gained: int = scout.commodities.get("scan_data", 0) - before
+	_ok(gained > 0, "...and filing it pays Scan Data (+%d)" % gained)
+	_ok(Research.is_catalogued(scout._scan_subject(mark)), "the hull is now on file")
+
+	# THE SAME HULL AGAIN — refused, and refused BEFORE the channel starts, so it
+	# costs no time. A second instance of the same class counts as the same subject.
+	var twin := _pirate()
+	twin.global_position = scout.global_position + Vector2(80, 0)
+	scout.target = twin
+	scout._scan_progress = -1.0
+	scout.scan_note = ""
+	var held: int = scout.commodities.get("scan_data", 0)
+	scout._try_start_scan()
+	_ok(scout._scan_progress < 0.0, "a hull already on file cannot be re-scanned")
+	_ok(scout.scan_note.contains("CATALOGUED"), "...and the refusal SAYS why (%s)" % scout.scan_note)
+	_ok(scout.commodities.get("scan_data", 0) == held, "...and pays nothing")
+
+	# THE STATION HOLE: selectable, cannot move, cannot shoot back, no hull.
+	var post := Station.new()
+	add_child(post)
+	post.global_position = scout.global_position + Vector2(60, 0)
+	scout.target = post
+	scout._scan_progress = -1.0
+	var banked: int = scout.commodities.get("scan_data", 0)
+	scout._try_start_scan()
+	_ok(scout._scan_progress < 0.0, "a structure with nothing to file cannot be scanned")
+	_ok(scout.commodities.get("scan_data", 0) == banked, "...and never pays out")
+
+	# A DIFFERENT hull IS still a discovery — the gate must not refuse everything.
+	var other := GuardianShip.new()
+	add_child(other)
+	other.setup_guard(SampleBuilds.guardian_kestrel(), 600.0)
+	other.global_position = scout.global_position + Vector2(80, 0)
+	scout.target = other
+	scout._scan_progress = -1.0
+	var kept: int = scout.commodities.get("scan_data", 0)
+	scout._try_start_scan()
+	if scout._scan_progress >= 0.0:
+		scout._finish_scan()
+	_ok(scout.commodities.get("scan_data", 0) > kept,
+		"an UNSEEN hull still pays — the catalogue gates repeats, not scanning")
+
+	# It survives a save round-trip, or every dock re-opens the faucet.
+	var snap := Research.to_dict()
+	Research.catalogued.clear()
+	Research.from_dict(snap)
+	_ok(Research.is_catalogued(scout._scan_subject(mark)),
+		"the catalogue persists — docking must not reset what you know")
+
+	scout.free()
+	post.queue_free()
+	other.queue_free()
+	Research.catalogued = was
 
 
 ## COLLISION DAMAGE — a real impact is a MISTAKE and costs hull; a gentle nudge

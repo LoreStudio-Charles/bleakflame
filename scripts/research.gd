@@ -114,6 +114,17 @@ static var day := 0
 static var recovered: Array[String] = []
 static var chain_stage := {}       # artifact id -> current stage index
 static var survey_progress := 0    # counter for the active survey_rocks stage
+## THE CATALOGUE — every subject this pilot has put on file, keyed by DATA KEY (a
+## hull's resource_path, never its display name: player-facing strings rename, keys
+## never).
+##
+## SCAN DATA IS KNOWLEDGE (user, 2026-07-27), so a subject pays ONCE. There was no
+## per-target check of any kind before this: park inside the station sanctuary, hold
+## a Guardian in the reticle and press [1] every 3.2s, and you minted Insight and
+## credits forever without moving. The rock branch had already written the argument
+## down — "re-scanning the same rock is not exploration" — and applied it to the
+## triangulation counter but not to the payout.
+static var catalogued := {}       # subject key -> true
 static var unlocked := {}          # tech node id -> true
 ## Chain events that happened while docking; the dock screen shows and
 ## consumes them (every advancement must be VISIBLE).
@@ -439,10 +450,24 @@ static func unlocked_recipes() -> Array:
 	return out
 
 
+## File a subject. True the FIRST time it is entered — that return IS the discovery,
+## so the caller pays out on it and nothing else needs to remember what was new.
+static func catalogue(subject: String) -> bool:
+	if subject == "" or catalogued.has(subject):
+		return false
+	catalogued[subject] = true
+	return true
+
+
+static func is_catalogued(subject: String) -> bool:
+	return subject != "" and catalogued.has(subject)
+
+
 static func to_dict() -> Dictionary:
 	return {"insight": insight, "day": day, "recovered": recovered.duplicate(),
 		"chain_stage": chain_stage.duplicate(), "survey_progress": survey_progress,
-		"unlocked": unlocked.keys(), "journal": journal.duplicate(true)}
+		"unlocked": unlocked.keys(), "journal": journal.duplicate(true),
+		"catalogued": catalogued.keys()}
 
 
 static func from_dict(data: Dictionary) -> void:
@@ -457,6 +482,11 @@ static func from_dict(data: Dictionary) -> void:
 		if CHAINS.has(str(id)):
 			chain_stage[str(id)] = int(data.chain_stage[id])
 	survey_progress = int(data.get("survey_progress", 0))
+	# Absent in saves from before the catalogue existed — an old pilot simply starts
+	# with an empty one and re-earns the entries, which is the harmless direction.
+	catalogued.clear()
+	for key in data.get("catalogued", []):
+		catalogued[str(key)] = true
 	journal.clear()
 	for e in data.get("journal", []):
 		journal.append({"day": int(e.get("day", 0)), "text": str(e.get("text", ""))})
@@ -475,3 +505,4 @@ static func reset() -> void:
 	unlocked.clear()
 	pending_notes.clear()
 	journal.clear()
+	catalogued.clear()   # a new pilot has seen nothing; the codex is theirs to fill
