@@ -37,6 +37,15 @@ const FONT_SIZE := 15
 const LIFT := 96.0
 const TAIL_H := 10.0
 
+## The tail is tucked this far UNDER the bubble's bottom edge.
+##
+## An exact join is one rounding error from a hairline seam — the bubble lives in
+## world space, so a fractional camera zoom can land the two edges on either side of
+## a pixel boundary. An overlap cannot show a gap at any zoom, and it costs a pixel
+## of a shape that is solid there anyway. Done in code rather than by asking for two
+## more rows in the art: the art is correct, the join was the fragile part.
+const TAIL_OVERLAP := 1.0
+
 const FADE := 0.35
 
 var _life := 0.0
@@ -74,12 +83,29 @@ func _build(text: String) -> void:
 		text, HORIZONTAL_ALIGNMENT_LEFT, WRAP_WIDTH, FONT_SIZE)
 	_size = wrapped + PAD * 2.0
 
+	# MEASURE THE TAIL FIRST. The body's bottom edge has to sit exactly on the
+	# arrow's top, and only the art knows how tall the arrow is: the shipped one is
+	# 8px of ink inside a 32px canvas, so the fixed 10 this used to assume left a
+	# 2px seam between bubble and tail.
+	var tip := Vector2.ZERO
+	var tail_h := TAIL_H
+	var has_tail := ResourceLoader.exists(TAIL_ART)
+	if has_tail:
+		var ttex: Texture2D = load(TAIL_ART)
+		var metrics := _tail_metrics(ttex)
+		tip = Vector2(metrics.x, metrics.y)
+		tail_h = maxf(1.0, metrics.z)
+
 	if ResourceLoader.exists(BODY_ART):
 		var np := NinePatchRect.new()
 		np.texture = load(BODY_ART)
 		# Corners drawn 1:1; only the flat middle stretches. Same reasoning as
 		# UiTheme.add_frame -- stretched detail smears, repeated detail clutters.
-		var m := int(min(12, min(np.texture.get_width(), np.texture.get_height()) / 3))
+		# 20% of the shorter side. Measured against the shipped 32x32 art, whose
+		# rounded corners are 6px deep, this gives 6 — corners drawn 1:1, the flat
+		# middle free to stretch. It scales with the art, so a 64px redraw with
+		# 12px corners still works without touching code.
+		var m := int(min(np.texture.get_width(), np.texture.get_height()) * 0.2)
 		np.patch_margin_left = m
 		np.patch_margin_top = m
 		np.patch_margin_right = m
@@ -88,7 +114,7 @@ func _build(text: String) -> void:
 	else:
 		_body = Control.new()      # procedural: _draw() handles it
 	_body.size = _size
-	_body.position = -Vector2(_size.x * 0.5, _size.y + TAIL_H + LIFT)
+	_body.position = -Vector2(_size.x * 0.5, _size.y + tail_h + LIFT - TAIL_OVERLAP)
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
 
@@ -97,14 +123,62 @@ func _build(text: String) -> void:
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(_label)
 
-	if ResourceLoader.exists(TAIL_ART):
+	if has_tail:
 		var t := Sprite2D.new()
 		t.texture = load(TAIL_ART)
 		t.centered = false
-		var tw: float = float(t.texture.get_width())
-		t.position = Vector2(-tw * 0.5, -LIFT - TAIL_H)
+		# ANCHOR THE DRAWN TIP, NOT THE CANVAS. The shipped tail is a 9x8 arrow
+		# floating in a 32x32 canvas — its ink centre sits 5.5px left of the texture
+		# centre, and the arrow is SWEPT, so its point is the bottom-RIGHT rather
+		# than the bottom-middle. Positioning by texture width would hang it off to
+		# one side and aim it at nothing. Found by measuring the PNG, because a
+		# transparent canvas hides all of this.
+		t.position = Vector2(-tip.x, -LIFT - tip.y + TAIL_OVERLAP)
 		_tail = t
 		add_child(t)
+
+
+## The tail's real geometry, in texture pixels: (tip_x, tip_y, ink_height).
+##
+## Scanned from the image, never hardcoded, because a transparent canvas hides all
+## of it. The shipped arrow is 9x8 of ink adrift in a 32x32 canvas — its centre sits
+## 5.5px left of the texture centre and it is SWEPT, so its point is the
+## bottom-RIGHT rather than the bottom-middle. Anything derived from texture size
+## would hang it off to one side, aim it at nothing, and leave a seam.
+##
+## A re-drawn tail — longer, hooked the other way, properly centred — lands right
+## with no code change. That is the whole promise of a drop-in seam.
+func _tail_metrics(tex: Texture2D) -> Vector3:
+	var img := tex.get_image()
+	var w := float(tex.get_width())
+	var h := float(tex.get_height())
+	if img == null:
+		return Vector3(w * 0.5, h, TAIL_H)
+	var low := -1
+	var high := -1
+	var lo_x := tex.get_width()
+	var hi_x := -1
+	for y in img.get_height():
+		var any := false
+		for x in img.get_width():
+			if img.get_pixel(x, y).a > 0.15:
+				any = true
+				if low < 0 or y > low:
+					low = y
+				if high < 0:
+					high = y
+		if any and low == y:
+			# Only the LOWEST row defines the point.
+			lo_x = tex.get_width()
+			hi_x = -1
+			for x in img.get_width():
+				if img.get_pixel(x, y).a > 0.15:
+					lo_x = mini(lo_x, x)
+					hi_x = maxi(hi_x, x)
+	if low < 0:
+		return Vector3(w * 0.5, h, TAIL_H)
+	return Vector3((float(lo_x) + float(hi_x) + 1.0) * 0.5,
+		float(low) + 1.0, float(low + 1 - high))
 
 
 func _process(delta: float) -> void:
@@ -130,7 +204,7 @@ func _draw() -> void:
 		return
 	var fill := Color(0.93, 0.94, 0.97, 0.96)
 	var edge := Color(0.10, 0.12, 0.16, 0.9)
-	var top := -(_size.y + TAIL_H + LIFT)
+	var top := -(_size.y + TAIL_H + LIFT)   # fallback path: no art, so the constant is the truth
 	if not (_body is NinePatchRect):
 		var r := Rect2(Vector2(-_size.x * 0.5, top), _size)
 		draw_rect(r, fill)

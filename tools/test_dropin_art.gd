@@ -21,6 +21,7 @@ var _checks := 0
 func _ready() -> void:
 	_case_anomaly_art_survives_the_process_loop()
 	_case_procedural_body_retires_when_art_exists()
+	_case_chat_bubble_tail_points_at_the_speaker()
 
 	if _fails.is_empty():
 		print("test_dropin_art: ALL PASS (%d checks)" % _checks)
@@ -86,3 +87,61 @@ func _case_procedural_body_retires_when_art_exists() -> void:
 		"...and its core is at FULL strength (alpha %.2f) — it is the body now"
 		% bare._core.color.a)
 	bare.queue_free()
+
+
+## THE CHAT BUBBLE'S TAIL POINTS AT THE SPEAKER, and meets the bubble.
+##
+## The shipped tail is 9x8 of ink adrift in a 32x32 canvas: its centre sits 5.5px
+## LEFT of the texture centre, and the arrow is SWEPT, so its point is the
+## bottom-RIGHT rather than the bottom-middle. Anything derived from texture SIZE
+## rather than from the drawing would hang it off to one side and aim it at nothing
+## — and a transparent canvas hides every bit of that, so it would have looked fine
+## in a file browser and wrong in game.
+##
+## The bubble's bottom edge also has to land on the arrow's top. That height is a
+## property of the art (8px here), not the constant the code used to assume.
+func _case_chat_bubble_tail_points_at_the_speaker() -> void:
+	var speaker := Node2D.new()
+	speaker.global_position = Vector2(1000, 1000)
+	add_child(speaker)
+	var b := ChatBubble.say(self, speaker, "Got a moment, pilot?", 9.0)
+
+	_ok(b._body != null, "the bubble built a body")
+	if not ResourceLoader.exists(ChatBubble.TAIL_ART):
+		print("NOTE: no tail art on disk — geometry check skipped")
+		b.queue_free()
+		speaker.queue_free()
+		return
+
+	_ok(b._tail != null, "the tail art is used when present")
+	var tex: Texture2D = load(ChatBubble.TAIL_ART)
+	var m := b._tail_metrics(tex)
+
+	# The tip must come from the DRAWING, not the canvas. If someone reverts to
+	# texture-width maths this lands on 16.0 and the arrow drifts off the bubble.
+	_ok(absf(m.x - tex.get_width() * 0.5) > 0.5,
+		"the tip (%.1f) is measured from the ink, not the canvas centre (%.1f)"
+		% [m.x, tex.get_width() * 0.5])
+	_ok(m.z > 0.0 and m.z < float(tex.get_height()),
+		"the arrow's ink height (%.0f) is less than its canvas (%d) — measured, not assumed"
+		% [m.z, tex.get_height()])
+
+	# NO SEAM: the body's bottom edge sits exactly on the arrow's top.
+	var body_bottom: float = b._body.position.y + b._body.size.y
+	var tail_ink_top: float = b._tail.position.y + (m.y - m.z)
+	# NEVER A GAP; a small overlap is fine and is deliberate (TAIL_OVERLAP) — an
+	# exact join can split across a pixel boundary at a fractional camera zoom.
+	var seam := tail_ink_top - body_bottom
+	_ok(seam <= 0.51,
+		"bubble bottom (%.1f) sits ABOVE tail top (%.1f) — that %.1fpx gap reads as a broken sprite"
+		% [body_bottom, tail_ink_top, seam])
+	_ok(seam >= -(ChatBubble.TAIL_OVERLAP + 0.51),
+		"the tail is buried %.1fpx under the bubble — more than the intended overlap"
+		% -seam)
+
+	# And the point lands where the speaker is, horizontally under the bubble.
+	_ok(absf(b._tail.position.y + m.y - ChatBubble.TAIL_OVERLAP + ChatBubble.LIFT) < 0.51,
+		"the tip sits LIFT above the speaker's origin")
+
+	b.queue_free()
+	speaker.queue_free()
