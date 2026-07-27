@@ -317,9 +317,25 @@ const LESSONS := {
 	],
 }
 
-static var seen: Array[String] = []
-static var active := ""
-static var step := 0
+static var seen: Array:
+	get:
+		return PlayerState.local.tutor_seen
+	set(value):
+		PlayerState.local.tutor_seen = value
+
+
+static var active: String:
+	get:
+		return PlayerState.local.tutor_active
+	set(value):
+		PlayerState.local.tutor_active = value
+
+
+static var step: int:
+	get:
+		return PlayerState.local.tutor_step
+	set(value):
+		PlayerState.local.tutor_step = value
 
 ## anchor id -> Control, registered by whichever screen owns it. Weak by
 ## convention: screens re-register on build, and stale entries are validated
@@ -367,7 +383,11 @@ static func anchor_node(anchor: String) -> Control:
 ## another is running must WAIT rather than be lost. The opening hour now has
 ## several (market, chart, docking, scanner, memorize, comms, commission) and
 ## they will overlap; silently discarding one means a system is never taught.
-static var pending: Array[String] = []
+static var pending: Array:
+	get:
+		return PlayerState.local.tutor_pending
+	set(value):
+		PlayerState.local.tutor_pending = value
 
 ## SAFE TO TEACH (user, 2026-07-22). A callout across the middle of the screen
 ## is dangerous during a fight — it covers the very space a pilot is reading to
@@ -378,7 +398,11 @@ static var pending: Array[String] = []
 ## Unsafe does NOT discard a lesson: arming queues it, and the pings stop
 ## drawing until it's safe again. The teaching waits for a quiet moment rather
 ## than competing with a threat.
-static var safe := true
+static var safe: bool:
+	get:
+		return PlayerState.local.tutor_safe
+	set(value):
+		PlayerState.local.tutor_safe = value
 
 ## WHERE THE PLAYER IS: "dock" or "flight". A step may declare a `where`, and a
 ## lesson whose current step doesn't belong here YIELDS its slot to one that
@@ -387,11 +411,27 @@ static var safe := true
 ##
 ## Yielding is not cancelling: progress is remembered per lesson and restored
 ## when the pilot is back somewhere the step makes sense.
-static var context := "dock"
+static var context: String:
+	get:
+		return PlayerState.local.tutor_context
+	set(value):
+		PlayerState.local.tutor_context = value
+
+
 ## Which dock you are actually standing in: "station" / "planet" / "verge", and
 ## "" in flight. Set by whichever screen is up; read by _fits.
-static var venue := ""
-static var _progress := {}
+static var venue: String:
+	get:
+		return PlayerState.local.tutor_venue
+	set(value):
+		PlayerState.local.tutor_venue = value
+
+
+static var _progress: Dictionary:
+	get:
+		return PlayerState.local.tutor_progress
+	set(value):
+		PlayerState.local.tutor_progress = value
 
 
 static func _step_of(id: String, at: int) -> Dictionary:
@@ -474,8 +514,18 @@ const STALL_LIMIT := 50.0
 ## forever; and a stuck step here is the player reading, not a bug the watchdog must clear.
 const PATIENT := ["flight_training", "meet_ruel"]
 
-static var _stall := 0.0
-static var _stall_key := ""
+static var _stall: float:
+	get:
+		return PlayerState.local.tutor_stall
+	set(value):
+		PlayerState.local.tutor_stall = value
+
+
+static var _stall_key: String:
+	get:
+		return PlayerState.local.tutor_stall_key
+	set(value):
+		PlayerState.local.tutor_stall_key = value
 
 ## ---- STALL LOG (reviewable) ----
 ##
@@ -679,13 +729,23 @@ static func finish() -> void:
 # ============================================================================
 
 ## The game-state snapshot the predicates read, refreshed by observe().
-static var ctx := {}
+static var ctx: Dictionary:
+	get:
+		return PlayerState.local.tutor_ctx
+	set(value):
+		PlayerState.local.tutor_ctx = value
+
+
 ## One-shot EVENT flags for the few completions that aren't a level poll — firing
 ## an ability, opening the chart/comms/salvage, launching. An action site calls
 ## Tutor.did("x") ONCE, unconditionally (no anchor to match, nothing to miss — the
 ## failure mode note() had), and observe() folds these into the ctx so a step's
 ## predicate can read c.get("x"). Session-only; cleared on reset().
-static var _did := {}
+static var _did: Dictionary:
+	get:
+		return PlayerState.local.tutor_did
+	set(value):
+		PlayerState.local.tutor_did = value
 
 
 ## Record that a one-shot tutorial-relevant action happened (replaces note() for

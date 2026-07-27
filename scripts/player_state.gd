@@ -119,6 +119,45 @@ var quest_completed_day: Dictionary = {}  # id -> game day it closed
 var quest_pending_notes: Array[String] = []
 var quest_pending_talks: Array[Dictionary] = []
 
+## ---- Tutor (scripts/tutor.gd) ----
+## THE MODULE STRADDLES THE LINE, which is why it went last. What a pilot HAS BEEN TAUGHT,
+## what they are being shown right now, and how far through it they are, are all theirs —
+## in coop, two pilots at different points in the game must not share a lesson queue, and
+## the second player joining must not have the first's onboarding skipped for them.
+##
+## WHAT STAYS GLOBAL, deliberately, over in Tutor itself:
+##   · `_anchors`      — which Control owns which anchor id. A property of the SCREEN that
+##                       is built, not of who is looking at it.
+##   · `_arm_pred` / `_done_pred` / `_preds_built` — the predicate registry. Authored
+##                       engine tables; identical for everyone, forever.
+##   · `stalls`        — the watchdog's bug list. NOT player state and pointedly not reset
+##                       with a pilot: it is the game writing its own to-do list across
+##                       every playtester, and scoping it per-pilot would throw that away.
+var tutor_seen: Array[String] = []  # lesson ids retired for good
+var tutor_active: String = ""
+var tutor_step: int = 0
+var tutor_pending: Array[String] = []  # queued behind the active one
+var tutor_progress: Dictionary = {}  # lesson id -> per-step progress
+var tutor_did: Dictionary = {}  # one-shot event flags, session-only
+var tutor_ctx: Dictionary = {}  # last context snapshot the predicates read
+## Is this pilot somewhere a lesson may interrupt? Written by the flight tick and asserted
+## by the dock screens — the field whose cross-context staleness starved the whole queue
+## once already, and which two pilots obviously disagree about.
+var tutor_safe: bool = true
+var tutor_context: String = "dock"
+var tutor_venue: String = ""
+var tutor_stall: float = 0.0  # watchdog: eligible-but-idle time on the active lesson
+var tutor_stall_key: String = ""
+
+## ---- PoiMap (scripts/poi_map.gd) ----
+## The POI LIST itself is world — the Rust Shoal is where it is for everyone. What is
+## PERSONAL is whether you have found it, and where your own chart marker points.
+var poi_discovered: Dictionary = {}  # id -> true; fog of discovery
+var poi_waypoint_id: String = ""
+## A MANUAL tag outranks the objective tracker's automatic one, so it has to travel with
+## the pilot who made it (MissionTracker.sync_waypoint respects this).
+var poi_waypoint_manual: bool = false
+
 
 ## Hand this pilot a clean slate. Used by New Game; also the honest way to build a
 ## second pilot in a test without disturbing the one already loaded.

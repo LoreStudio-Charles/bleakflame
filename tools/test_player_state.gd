@@ -33,6 +33,9 @@ func _ready() -> void:
 	_case_a_wipe_clears_only_that_pilot()
 	_case_two_pilots_run_their_own_campaign()
 	_case_two_pilots_keep_their_own_catalogue()
+	_case_two_pilots_are_taught_separately()
+	_case_the_engine_tables_are_still_shared()
+	_case_two_pilots_explore_separately()
 	_case_wipe_cannot_drift()
 
 	PlayerState.local = was
@@ -259,6 +262,84 @@ func _case_two_pilots_keep_their_own_catalogue() -> void:
 	_ok(is_equal_approx(Research.insight, 40.0),
 		"...and earning it does not touch the first pilot's (got %.1f)" % Research.insight)
 	_ok(Research.journal.size() == 1, "...nor write into their log")
+
+
+## ONBOARDING IS PERSONAL. The coop case that makes this matter: a friend joining a
+## veteran's session must still be taught to fly, and the veteran must not have the
+## beginner's lessons re-armed at them. One shared queue cannot express either.
+func _case_two_pilots_are_taught_separately() -> void:
+	var veteran := PlayerState.new()
+	var newcomer := PlayerState.new()
+
+	PlayerState.local = veteran
+	Tutor.seen.append("flight_training")
+	Tutor.seen.append("memorize")
+	Tutor.active = "running_dark"
+	Tutor.step = 2
+	Tutor.safe = false
+	Tutor.context = "flight"
+
+	PlayerState.local = newcomer
+	_ok(Tutor.seen.is_empty(), "a newcomer has been taught nothing yet")
+	_ok(Tutor.active == "", "...and is not mid-lesson in somebody else's tutorial")
+	_ok(Tutor.step == 0, "...at step zero")
+	# `safe` is the field whose cross-context staleness once starved the entire queue.
+	# Two pilots plainly disagree about whether they are being shot at.
+	_ok(Tutor.safe, "...and is safe until their OWN situation says otherwise")
+	_ok(Tutor.context == "dock", "...with their own context")
+
+	Tutor.seen.append("docking")
+	PlayerState.local = veteran
+	_ok(Tutor.seen.size() == 2 and not Tutor.seen.has("docking"),
+		"...and what the newcomer learns is not written into the veteran's record")
+	_ok(Tutor.active == "running_dark" and Tutor.step == 2,
+		"...who is still exactly where they were")
+	_ok(not Tutor.safe, "...and still in trouble")
+
+
+## THE OTHER DIRECTION, which is the one that gets forgotten: over-migrating is a bug too.
+## The predicate registry and the anchor map are ENGINE tables — authored once, identical
+## for everyone. Per-pilot copies would mean a lesson that arms for one player and not the
+## other, and the stall log is the game's own bug list across every playtester, so scoping
+## it to a pilot would quietly throw it away on New Game.
+func _case_the_engine_tables_are_still_shared() -> void:
+	var a := PlayerState.new()
+	var b := PlayerState.new()
+
+	PlayerState.local = a
+	Tutor._build_preds()
+	var arm_count := Tutor._arm_pred.size()
+	Tutor.record_stall("some_lesson", 0, "test")
+	var stall_count := Tutor.stalls.size()
+	_ok(arm_count > 0, "the predicate registry is populated (%d)" % arm_count)
+
+	PlayerState.local = b
+	_ok(Tutor._arm_pred.size() == arm_count,
+		"the predicate registry is SHARED, not copied per pilot (%d vs %d)"
+			% [Tutor._arm_pred.size(), arm_count])
+	_ok(Tutor.stalls.size() == stall_count,
+		"the stall log is shared — it is the game's bug list, not a pilot's")
+
+
+## THE FOG IS PERSONAL. "You have not found the Rust Shoal yet, your friend has" is the
+## whole point of discovery; the POI list itself stays world state.
+func _case_two_pilots_explore_separately() -> void:
+	var scout := PlayerState.new()
+	var greenhorn := PlayerState.new()
+
+	PlayerState.local = scout
+	PoiMap.discover("shoal")
+	PoiMap.set_waypoint("shoal", true)
+	_ok(PoiMap.is_discovered("shoal"), "the scout has found the Shoal")
+
+	PlayerState.local = greenhorn
+	_ok(not PoiMap.is_discovered("shoal"), "...and the greenhorn has not")
+	_ok(PoiMap.waypoint_id == "", "...and has no marker on their chart")
+	_ok(not PoiMap.waypoint_manual, "...nor inherits a manual tag they never made")
+
+	PlayerState.local = scout
+	_ok(PoiMap.waypoint_id == "shoal", "the scout's own marker is untouched")
+	_ok(PoiMap.waypoint_manual, "...and is still theirs to override the tracker with")
 
 
 ## THE DRIFT GUARD. wipe() resets from a fresh instance rather than a hand-written

@@ -8,12 +8,30 @@ class_name PoiMap
 ## lands. Discovery persists via SaveGame.
 
 static var pois: Array[Dictionary] = []
-static var waypoint_id := ""
+static var waypoint_id: String:
+	get:
+		return PlayerState.local.poi_waypoint_id
+	set(value):
+		PlayerState.local.poi_waypoint_id = value
+
+
 ## MANUAL vs AUTO waypoint. The mission tracker auto-points the waypoint at the
 ## top tracked objective; a manual click-tag on the chart overrides that until
 ## the player clears it. `waypoint_manual` records which of the two owns the mark.
-static var waypoint_manual := false
-static var _discovered := {}   # id -> true; survives scene reloads
+static var waypoint_manual: bool:
+	get:
+		return PlayerState.local.poi_waypoint_manual
+	set(value):
+		PlayerState.local.poi_waypoint_manual = value
+
+
+## id -> true. THE FOG IS PERSONAL: you have not found the Rust Shoal yet,
+## your friend has. The POI list itself stays world state.
+static var _discovered: Dictionary:
+	get:
+		return PlayerState.local.poi_discovered
+	set(value):
+		PlayerState.local.poi_discovered = value
 
 
 ## Tag the waypoint. `manual` = the player picked it on the chart (locks out the

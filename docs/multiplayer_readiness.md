@@ -100,10 +100,40 @@ two pilots run their own campaign and keep their own catalogue — the compariso
 | `MissionLog` | active, total_kills, next_uid | **done** (`offers` stays world) |
 | `Research` | 10 — insight, catalogued, journal, chains, rumour state | **done** (`day` stays world) |
 | `Quests` | 5 — active, completed, completed_day, pending notes + talks | **done** |
-| `Tutor` | seen/step/_progress/_did | last — needs splitting from the engine tables |
-| `PoiMap` | `_discovered` only | last — the module straddles player/world |
+| `Tutor` | 12 — seen, active, step, pending, progress, did, ctx, safe, context, venue, watchdog | **done** (engine tables + the stall log stay shared) |
+| `PoiMap` | 3 — `_discovered`, `waypoint_id`, `waypoint_manual` (`pois` stays world) | **done** |
 
 `PlayerState.wipe()` resets **from a fresh instance**, not from a hand-written
 field list, so adding a field cannot leave a stale value alive across New Game —
 the exact shape of the Nemesis-grudge and `Pilot.met` leaks fixed on 2026-07-26.
 `test_player_state` asserts that property over every declared field.
+
+---
+
+## THE MIGRATION IS COMPLETE (2026-07-27)
+
+All ten modules. **61 fields** in `PlayerState`, and not one of the ~137 original call
+sites had to change — the modules kept their public API and became forwarding facades,
+which is the whole reason this was affordable in a day.
+
+**What deliberately did NOT move**, because over-migrating is its own bug:
+
+| stays shared | why |
+|---|---|
+| `PoiMap.pois` | the Rust Shoal is where it is for everyone |
+| `GameClock` | two pilots cannot disagree about the date — and it is now its own component |
+| `MissionLog.offers` | the board's postings are the board's |
+| `Tutor._anchors` | a property of the SCREEN that is built, not of who looks at it |
+| `Tutor._arm_pred` / `_done_pred` | authored engine tables, identical for everyone |
+| `Tutor.stalls` | the game's own bug list across every playtester; scoping it per-pilot would throw it away on New Game |
+| `Professions.dev_unlock_offices` | config |
+
+`test_player_state` asserts the split in **both** directions — that two pilots hold
+separate wallets, stashes, identities, ships, standing, contracts, campaigns,
+catalogues, onboarding and fog; **and** that the predicate registry and the stall log
+are still shared. A test that only checked the first direction would pass just as well
+on a codebase that had wrongly copied the engine tables per pilot.
+
+**Next, when the net layer lands:** `PlayerState.local` stays "me"; coop adds a lookup
+by peer id alongside it. The flag rule (presence + order) now has per-pilot campaign
+state to be written against — see the section above.
