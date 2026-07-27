@@ -57,9 +57,15 @@ const BASE := {
 	# people, not an army, and it has no standing quarrel with anybody in the Reach. What
 	# came knocking at Odessa's door was hired, and hired is the GHOSTS' row below.
 	"ooshu": {},
-	# THE GHOSTS are bounty hunters; THE WEB is their organisation. Contractors have no
-	# enemies, only marks — a row of NEUTRAL is the correct and slightly chilling answer.
-	# Whoever they are pointed at is set by a contract, which is a quest flag, not a table.
+	# THE GHOSTS are bounty hunters, and the organisation is called the Ghosts too — one
+	# name, no house style (user, 2026-07-27). A working name of "the Web" was dropped
+	# because THE WEB IS ALREADY TAKEN, and not loosely: Cinderweb IS a web, the beat-2
+	# anomaly is "a severed piece of the WEB — living shadow, and it is watching back", and
+	# the quest body says the same. A second Web would have had the player's most
+	# frightening word pointing at a pair of contractors.
+	#
+	# Contractors have no enemies, only marks — a row of NEUTRAL is the correct and colder
+	# answer. Who they are pointed at is a CONTRACT: a quest flag, not a line in this table.
 	"ghosts": {},
 	# THE GALEAN MARINE CORPS — a profession faction players may join. Galean law, so it
 	# stands where the Navy and the Guardians stand.

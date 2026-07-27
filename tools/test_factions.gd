@@ -121,9 +121,10 @@ func _case_the_new_rows() -> void:
 		_ok(not Factions.hostile("ooshu", str(other)),
 			"the Ooshu are a people, not an army — no quarrel with %s" % other)
 
-	# THE GHOSTS are bounty hunters; the Web is their organisation. Contractors have no
-	# enemies, only marks — and a row of pure neutrality is the correct, colder answer.
-	# Who they are pointed at is a contract, i.e. a quest flag, not a line in this table.
+	# THE GHOSTS are bounty hunters, and their organisation carries the same name — one
+	# name, no house style (user). Contractors have no enemies, only marks, so pure
+	# neutrality is the correct and colder answer; who they are pointed at is a contract,
+	# i.e. a quest flag, not a line in this table.
 	for other in Factions.LIST:
 		_ok(not Factions.hostile("ghosts", str(other)),
 			"the Ghosts hold no grudges, only contracts (%s)" % other)
