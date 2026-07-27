@@ -201,8 +201,14 @@ func _ready() -> void:
 	corpse.setup_scrit(Vector2(9000, 9000))
 	corpse.die()
 	var found_gear := false
+	# SAMPLED AT THE ROLL, which is now _roll_haul() when the body FALLS — looting
+	# only hands over what the body already decided it had. (It used to roll inside
+	# loot(), so re-looting one corpse sampled the distribution; that seam moved
+	# when a full hold had to be able to leave the gear ON the body.)
 	for _i in 60:   # 22% a roll — 60 corpses miss all three ~3-in-a-million
 		corpse.looted = false
+		corpse.held_gear = null
+		corpse._roll_haul()
 		var haul := corpse.loot()
 		if haul.get("gear") != null:
 			found_gear = true
@@ -235,6 +241,36 @@ func _ready() -> void:
 	_chk(lurker.visible and lurker.is_in_group("ground_hostiles"), "springing reveals it")
 	_chk(lurker.combat_target == walker and lurker.auto_attack, "springing sends it at you")
 	_chk(lurker.home == lurk_pos, "it leashes to the cover it broke from, not a far warren")
+
+	# ---- A CORPSE KEEPS WHAT YOU CANNOT CARRY -------------------------------
+	# The scavenge verb used to hand the gear over unconditionally and fade the
+	# body, so a FULL HOLD destroyed an affix-rolled find — the only one of the
+	# codebase's seven "give the player this item" paths that silently destroyed
+	# anything. The haul is now decided when the body falls, and the body only
+	# fades once it is empty.
+	var body := Scrit.new()
+	add_child(body)
+	body.setup_scrit(Vector2(30000, 30000))
+	body._roll_haul()
+	body.add_to_group("ground_loot")
+	body.held_gear = load("res://data/ground/rag_hood.tres")
+	body.held_credits = 5
+
+	var refused := body.loot(false)          # no room for the gear
+	_chk(int(refused.get("credits", 0)) == 5, "a refused search still yields the trinkets")
+	_chk(not refused.has("gear"), "...and does NOT hand over gear there is no room for")
+	_chk(body.held_gear != null, "the body is STILL clutching it — nothing destroyed")
+	_chk(body.is_in_group("ground_loot") and not body.looted,
+		"...and stays searchable, so you can come back for it")
+
+	var second := body.loot(false)           # come back, still full
+	_chk(not second.has("credits"), "the trinkets are not paid twice")
+	_chk(body.held_gear != null, "and it is still holding the gear")
+
+	var collected := body.loot(true)         # come back with room
+	_chk(collected.get("gear") != null, "with room, the gear finally comes across")
+	_chk(body.held_gear == null and body.looted,
+		"...and only NOW is the body spent")
 
 	print("test_ground_combat: ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails > 0 else 0)

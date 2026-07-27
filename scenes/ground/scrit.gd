@@ -54,6 +54,7 @@ func setup_scrit(spawn: Vector2) -> void:
 ## scavenged — that's the desert.
 func _become_corpse() -> void:
 	remove_from_group("ground_hostiles")
+	_roll_haul()                    # decided when it falls, not when it is searched
 	var tw := create_tween()
 	tw.tween_interval(1.1)          # let the falling-back-death play out
 	tw.tween_callback(func() -> void:
@@ -68,22 +69,48 @@ const DROP_POOL := ["res://data/ground/scrap_shiv.tres", "res://data/ground/rag_
 const GEAR_DROP_CHANCE := 0.22
 
 
-## One scavenge per corpse: a fistful of trinkets — and sometimes the thing it was
-## clutching ("gear": GroundGearDef, affix-rolled) — then the body fades.
-func loot() -> Dictionary:
-	if looted:
-		return {}
-	looted = true
-	remove_from_group("ground_loot")
-	var credits := 3 + randi() % 7
-	var tw := create_tween()
-	tw.tween_property(self, "modulate:a", 0.0, 1.0)
-	tw.tween_callback(queue_free)
-	var haul := {"credits": credits}
+## WHAT THIS BODY IS HOLDING, rolled when it falls rather than when it is searched.
+## Two reasons: a search that can't take everything must not re-roll a DIFFERENT
+## prize on the next try, and the corpse can only go on holding something it
+## already decided it had.
+var held_credits := 0
+var held_gear: GroundGearDef = null
+
+
+func _roll_haul() -> void:
+	held_credits = 3 + randi() % 7
 	if randf() < GEAR_DROP_CHANCE:
 		var path: String = DROP_POOL[randi() % DROP_POOL.size()]
 		if ResourceLoader.exists(path):
-			haul["gear"] = Affixes.roll_for_drop(load(path))
+			held_gear = Affixes.roll_for_drop(load(path))
+
+
+## Scavenge: a fistful of trinkets, and the thing it was clutching if you have room
+## for it. The body only fades once it is EMPTY.
+##
+## `take_gear` false leaves the gear ON THE BODY and the corpse searchable. It used
+## to hand the item over unconditionally and fade regardless, so a full hold
+## DESTROYED the drop — the caller printed "but your hold is full" and the affixed
+## find, which the same roll_for_drop that makes ship salvage worth flying for had
+## just generated, ceased to exist. Of the seven "give the player this item" paths
+## in the codebase this was the only one that silently destroyed anything.
+func loot(take_gear := true) -> Dictionary:
+	if looted:
+		return {}
+	var haul := {}
+	if held_credits > 0:
+		haul["credits"] = held_credits
+		held_credits = 0
+	if held_gear != null and take_gear:
+		haul["gear"] = held_gear
+		held_gear = null
+	if held_gear != null:
+		return haul                      # still clutching it — stay searchable
+	looted = true
+	remove_from_group("ground_loot")
+	var tw := create_tween()
+	tw.tween_property(self, "modulate:a", 0.0, 1.0)
+	tw.tween_callback(queue_free)
 	return haul
 
 

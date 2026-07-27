@@ -1294,26 +1294,40 @@ func _do_action(action: String) -> void:
 						best_d = dd
 						best = c
 			if best != null:
-				var haul := best.loot()
-				if not haul.is_empty():
-					Wallet.credits += int(haul.get("credits", 0))
-					var note := "Scavenged the scavenger — %dc in trinkets." % int(haul.get("credits", 0))
-					# A gear find goes to the SHIP HOLD (the ground v1 inventory — same place
-					# a jettisoned crate would land), where the dossier can equip it from.
-					# THE OOSHU EYE. Only in the wrecked cave, only once — the object the
-					# whole beat turns on, so it is granted by the LOOT verb rather than
-					# dropped randomly: the player must actually search the bodies.
-					if _interior_id == "?" and _grant_drone():
-						note = "Scavenged the scavenger — %dc, and something that was never theirs." % int(haul.get("credits", 0))
-					var gear: GroundGearDef = haul.get("gear")
-					if gear != null:
-						var ship := get_tree().get_first_node_in_group("player_ship")
-						if ship != null and ship.can_carry(gear):
-							ship.add_cargo(gear)
-							note += "  It was clutching: %s (in your hold)." % gear.display_name
-						else:
-							note += "  It clutched %s — but your hold is full." % gear.display_name
-					_flash(note, 2.8)
+				# ASK BEFORE TAKING. A drop the hold can't hold stays ON THE BODY and
+				# the corpse stays searchable, instead of being handed over into
+				# nothing. Stashing it was the other candidate and is wrong here: the
+				# station stash is a system away, and teleporting a purchase into it
+				# is the exact bug that was fixed at the Verge counter.
+				var ship_now := get_tree().get_first_node_in_group("player_ship")
+				var room: bool = best.held_gear == null \
+					or (ship_now != null and ship_now.can_carry(best.held_gear))
+				var haul := best.loot(room)
+				var coin := int(haul.get("credits", 0))
+				Wallet.credits += coin
+				# THE SECOND SEARCH. Coming back with the trinkets already taken and
+				# the hold still full returns an EMPTY haul — and keying the whole
+				# message off `not haul.is_empty()` made that press do nothing at all,
+				# which is the same dead-button shape being fixed at the contract
+				# boards. Every search says something now.
+				var note := ("Scavenged the scavenger — %dc in trinkets." % coin) if coin > 0 \
+					else "You have already picked this one over."
+				# THE OOSHU EYE. Only in the wrecked cave, only once — the object the
+				# whole beat turns on, so it is granted by the LOOT verb rather than
+				# dropped randomly: the player must actually search the bodies.
+				if _interior_id == "?" and _grant_drone():
+					note = "Scavenged the scavenger — %dc, and something that was never theirs." % coin
+				# A gear find goes to the SHIP HOLD (the ground v1 inventory — same place
+				# a jettisoned crate would land), where the dossier can equip it from.
+				var gear: GroundGearDef = haul.get("gear")
+				if gear != null:
+					ship_now.add_cargo(gear)
+					note += "  It was clutching: %s (in your hold)." % gear.display_name
+				elif best.held_gear != null:
+					# STILL THERE — say where it is, not merely that you failed.
+					note += "  It is still clutching %s. Your hold is full; come back for it." \
+						% best.held_gear.display_name
+				_flash(note, 2.8)
 		_:
 			# "idle:<id>" — nothing queued for this person; a spoken one-liner so saying
 			# hello is never a dead click (same rule as the dock's NPC desks).
