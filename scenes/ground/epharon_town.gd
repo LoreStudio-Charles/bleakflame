@@ -509,9 +509,16 @@ func _tick_npcs(delta: float) -> void:
 				n.look_t = 1.6                                # hold facing you, don't robo-wander off
 				# She SAYS something (non-locking) but never opens a panel — the PLAYER opens every
 				# interaction ([E], in _poll_actions), and `met_<npc>` fires there, not on her arrival.
-				# TODO: promote this center-flash to a real chat BUBBLE over her head (user's idea) —
-				# then an NPC can hail you without ever grabbing the screen.
-				_flash("%s: \"Got a moment, pilot?\"" % n.name, 2.4)
+				# 2.4s WAS TOO SHORT (user, 2026-07-26: "the words she says pop up and go
+				# away a tiny bit too fast"). This is the last place an NPC SPEAKS as a
+				# transient flash — the talks you initiate now open a DialoguePanel — and
+				# it is the one line a player is least prepared for, because SHE started
+				# it and they may still be reading the room.
+				#
+				# TODO STANDS: promote this to a real chat BUBBLE over her head (user's
+				# idea). That is the actual fix — an NPC could hail you without ever
+				# grabbing the centre of the screen. Until then, long enough to read.
+				_flash("%s: \"Got a moment, pilot?\"" % n.name, 4.5)
 			continue
 
 		# Someone with BUSINESS (a quest talk, or the tutor's target) walks over the moment they

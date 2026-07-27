@@ -58,6 +58,27 @@ const DISTANCE_COST := 0.02    # mild: it will cross the lane for a good enough 
 const SCREEN_R := 1400.0
 
 
+## A LANE PREDATOR SEES AS FAR AS IT IS EQUIPPED TO (2026-07-26).
+##
+## AIShip caps acquisition at AGGRO_RANGE (950), which was tuned for the INNER
+## SYSTEM — it stops pirates dogpiling a new pilot in the few thousand units around
+## the station. THE LONG LANE IS 91,000 UNITS. A 950-unit acquisition radius on a
+## road that long makes highway robbery statistically almost impossible: the player
+## flew the whole route to the Navy picket and met nothing, while a probe confirmed
+## four raiders sitting right in the stretch they crossed. Two ships with
+## sub-kilometre awareness passing in the dark, one of them painted black.
+##
+## So V-Shrike use their FULL sensor reach instead of the inner-system clamp. This
+## is not a free grant -- it is exactly the pillar: never give a ship what it has
+## not equipped. A Tin-Ear raider would still be near-blind at 700; the reach comes
+## from carrying a real suite (Wayfarer 1500 on the rank and file, Augur 2400 on
+## Recluse), which is also what their ROLE demands. Commerce raiders whose whole job
+## is intercepting freight on an empty road should out-see their prey -- and being
+## seen first, by something black, is what the Gap is supposed to feel like.
+func acquire_range() -> float:
+	return sensor_reach(0.0)
+
+
 ## HOW A RAIDER RANKS A MARK. Pure and static so the doctrine can be tested
 ## without a world: cargo is the draw, isolation is the opportunity, the Navy is
 ## the deterrent, and distance is a tiebreak.

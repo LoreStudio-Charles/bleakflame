@@ -18,6 +18,7 @@ func _ready() -> void:
 	_case_mark_is_not_reapplied_twice()
 	_case_a_specialist_is_still_black()
 	_case_role_is_sensor_data_not_paint()
+	_case_a_lane_predator_out_sees_its_prey()
 
 	print("test_vshrike: %s" % ("ALL PASS" if _fails == 0 else "%d FAILURE(S)" % _fails))
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -183,7 +184,14 @@ func _case_role_is_sensor_data_not_paint() -> void:
 		_fail("a stock sensor identified a role — the capability must be bought, not free")
 
 	# Fit the Augur array: same contact, now legible.
+	#
+	# `get_build` returns the SHARED CACHED build on purpose (a refit has to persist
+	# across ship swaps and deaths), so mutating its slots here permanently upgrades
+	# the starter for every case that runs after this one. That went unnoticed until
+	# a later case asserted the starter's sensor reach and was told 2400. Put it back
+	# when we are done.
 	var augur := SampleBuilds.get_build(3)
+	var was_slot5 = augur.slots.get(5)
 	augur.slots[5] = load("res://data/components/systems/augur_sensor_array.tres")
 	pilot.apply_build(augur)
 	if float(pilot.stats.get("role_id_range", 0.0)) <= 0.0:
@@ -203,6 +211,60 @@ func _case_role_is_sensor_data_not_paint() -> void:
 	if pilot.classify(plain) != "":
 		_fail("a non-specialist reported a role")
 
+	# RESTORE THE SHARED BUILD — see above.
+	if was_slot5 == null:
+		augur.slots.erase(5)
+	else:
+		augur.slots[5] = was_slot5
+
 	mark.queue_free()
 	plain.queue_free()
+	pilot.queue_free()
+
+
+## A LANE PREDATOR OUT-SEES ITS PREY (user playtest, 2026-07-26: flew the whole
+## route to the Navy picket and met no raider at all).
+##
+## AIShip caps acquisition at AGGRO_RANGE 950 — right for the INNER SYSTEM, where it
+## stops pirates dogpiling a new pilot near the station. The Long Lane is 91,000
+## units. A 950u radius on a road that long makes an interception statistically
+## almost impossible, and a probe confirmed four raiders sitting in the exact stretch
+## the player crossed. Meanwhile the white-tier starter carries a Tin-Ear (700u), so
+## neither side could see the other: two ships with sub-kilometre awareness passing
+## in the dark, one of them painted black.
+##
+## The fix stays INSIDE the pillar — never grant what a ship has not equipped. The
+## reach is not a bigger constant; it is the raider's own suite, and upgrading that
+## suite is what buys it.
+func _case_a_lane_predator_out_sees_its_prey() -> void:
+	var raider := _raider(SampleBuilds.vshrike_goshawk())
+	var elite := _raider(SampleBuilds.vshrike_goshawk_elite())
+
+	if raider.acquire_range() <= AIShip.AGGRO_RANGE:
+		_fail("a lane raider acquires at %.0f, no better than the inner-system cap %.0f — nothing changed on the lane" % [
+			raider.acquire_range(), AIShip.AGGRO_RANGE])
+
+	# It must also out-see the PLAYER's starter, or the predator is the one being
+	# surprised. Being found first, by something black, IS the Gap.
+	var pilot := TestShip.new()
+	add_child(pilot)
+	pilot.apply_build(SampleBuilds.get_build(3))
+	var mine := pilot.sensor_reach(0.0)
+	if raider.acquire_range() <= mine:
+		_fail("the raider sees %.0f and the starter sees %.0f — the hunter must find you before you find it" % [
+			raider.acquire_range(), mine])
+	if elite.acquire_range() <= raider.acquire_range():
+		_fail("Recluse's Augur (%.0f) should reach past the rank and file (%.0f)" % [
+			elite.acquire_range(), raider.acquire_range()])
+
+	# THE PILLAR HOLDS: strip the suite and the reach goes with it, or this is a free
+	# grant wearing a sensor's clothes.
+	var blind := _raider(SampleBuilds.vshrike_goshawk())
+	blind.stats["sensor_range"] = 0.0
+	if blind.acquire_range() > 0.0:
+		_fail("a raider with no suite still acquires at %.0f — the reach must be EQUIPPED, not given" % blind.acquire_range())
+
+	raider.queue_free()
+	elite.queue_free()
+	blind.queue_free()
 	pilot.queue_free()

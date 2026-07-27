@@ -29,7 +29,11 @@ const PULSE_PERIOD := 2.6
 ## The art spans a little wider than the body, so the mast it replaces sits inside
 ## it. Scaled BY TEXTURE WIDTH (same as the anomaly and the gate) so the drop-in
 ## can be re-authored at any canvas size without touching code.
-const ART_SPAN := R * 2.2
+## A QUARTER OF ITS FIRST SIZE (user, 2026-07-26). It was authored at R * 2.2 —
+## about 101 units — which made a piece of roadside infrastructure read as a
+## landmark in its own right. A beacon should be a marker you steer by, not a
+## structure you arrive at.
+const ART_SPAN := R * 0.55
 
 # --- THE PING (user, 2026-07-26) ---
 # A radar sweep: one ray rotating forever, dragging a fading wake behind it and

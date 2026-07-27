@@ -339,7 +339,7 @@ static func vshrike_harrier() -> ShipBuild:
 		2: "res://data/components/engines/afterjet_sprint.tres",
 		3: "res://data/components/reactors/hearth_fusion.tres",
 		4: "res://data/components/defense/patchplate_armor.tres",
-	}, TIN_EAR)
+	}, WAYFARER)
 
 
 ## The one that kills the convoy. Looted Overcharged Cell feeding looted lances —
@@ -353,7 +353,7 @@ static func vshrike_goshawk() -> ShipBuild:
 		4: "res://data/components/reactors/overdrive_bottle.tres",
 		5: "res://data/components/defense/patchplate_armor.tres",
 		6: "res://data/components/defense/patchplate_armor.tres",
-	}, TIN_EAR)
+	}, WAYFARER)
 
 
 ## RECLUSE — the elite. A named hunting pair that works the stretch of road just
