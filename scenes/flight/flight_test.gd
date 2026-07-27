@@ -237,7 +237,7 @@ func _ready() -> void:
 		# the hook is itself the dev gate — a release export skips this whole block,
 		# so /cash & friends are simply unknown commands there.
 		Chat.dev_command = _run_dev_command
-		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /vshrike /livery <colour> /ruler /heartbeat /rearm"
+		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /widow /livery <colour> /ruler /heartbeat /rearm"
 
 	_populate_world()
 
@@ -1466,14 +1466,14 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			_spawn_galean_fleet(ahead)
 			_dev_feedback("Galean Navy fleet spawned ~900u DEAD AHEAD (fly forward; it's on radar)")
 			return true
-		"vshrike", "shrike":
+		"widow", "shrike":
 			# Look at the widow livery without flying the whole lane. Spawns a
 			# raiding pair — a Goshawk and its Harrier — so the black-hull-plus-red-
 			# mark reads at both sizes side by side.
 			var at := ship.global_position + Vector2.RIGHT.rotated(ship.rotation) * 800.0
-			_spawn_vshrike(at, SampleBuilds.vshrike_goshawk(), AIShip.Tactic.BOOM_ZOOM)
-			_spawn_vshrike(at + _jitter(260.0), SampleBuilds.vshrike_harrier(), AIShip.Tactic.ORBIT)
-			_dev_feedback("V-Shrike pair spawned ~800u DEAD AHEAD — black hulls, one red hourglass")
+			_spawn_widow(at, SampleBuilds.widow_goshawk(), AIShip.Tactic.BOOM_ZOOM)
+			_spawn_widow(at + _jitter(260.0), SampleBuilds.widow_harrier(), AIShip.Tactic.ORBIT)
+			_dev_feedback("Widows pair spawned ~800u DEAD AHEAD — black hulls, one red hourglass")
 			return true
 		"livery":
 			# /livery <colour> — paint the TARGETED ship's deck chevron. Colour is a
@@ -1773,18 +1773,18 @@ func _respawn_guardian_later(kind: String, i: int) -> void:
 		_spawn_guardian(kind, i)
 
 
-## A V-SHRIKE raider (docs/the_long_lane.md). Its own class so the widow livery
+## A WIDOWS raider (docs/the_long_lane.md). Its own class so the widow livery
 ## and the refusal to talk live in ONE place, not in every spawn site.
-func _spawn_vshrike(pos: Vector2, build: ShipBuild,
+func _spawn_widow(pos: Vector2, build: ShipBuild,
 		p_tactic: AIShip.Tactic = AIShip.Tactic.ORBIT,
-		route: Array[Vector2] = [], level: int = 0, name_tag: String = "") -> VShrikeShip:
-	var raider := VShrikeShip.new()
+		route: Array[Vector2] = [], level: int = 0, name_tag: String = "") -> WidowShip:
+	var raider := WidowShip.new()
 	raider.position = pos
 	add_child(raider)
 	raider.patrol_points = route
 	# BEFORE setup: apply_build is where the level scales the pools.
 	raider.spawn_level = level
-	raider.setup_vshrike(build, p_tactic, name_tag)
+	raider.setup_widow(build, p_tactic, name_tag)
 	raider.died.connect(_grant_kill_xp.bind(raider, "brawler"))
 	if name_tag != "":
 		raider.died.connect(_on_named_hunter_died.bind(raider))
@@ -1798,7 +1798,7 @@ func _spawn_vshrike(pos: Vector2, build: ShipBuild,
 # covers the last quarter in to Orivel, and the middle HALF belongs to nobody.
 #
 # THE EMPTY MIDDLE IS THE POINT. It is why freight hires escorts, it is where the
-# V-Shrike live, and it is the reason a convoy is a convoy. Both authorities have
+# Widows live, and it is the reason a convoy is a convoy. Both authorities have
 # a LEASH (GuardianShip lane patrols already work this way), so the danger is a
 # PLACE on the map rather than a difficulty number.
 const LANE_RIM := Vector2(-2600, -1600)   # just outside the station's 1800 sanctuary
@@ -1838,7 +1838,7 @@ const LANE_CONVOYS := [
 const LANE_TRAVELLERS := 16
 
 ## THE DANGER CURVE (user, 2026-07-27): "the guardian side probably keeps the lanes clear.
-## Beyond the Shoal pirates pick up and increase until the center where the V-Shrike pirates
+## Beyond the Shoal pirates pick up and increase until the center where the Widows pirates
 ## ruthlessly raid anyone, including Shoal pirates. They are worst around the center and
 ## grow less threatening to the navy picket line."
 ##
@@ -1858,9 +1858,9 @@ const LANE_RAIDERS := [
 	{"t": 0.46, "hull": "brawler"},
 ]
 
-## V-SHRIKE, thickest at the centre and falling away toward the Navy's guns. They are the
+## WIDOWS, thickest at the centre and falling away toward the Navy's guns. They are the
 ## reason the middle is the middle.
-const LANE_VSHRIKE := [
+const LANE_WIDOW := [
 	{"t": 0.38, "hull": "harrier"},
 	{"t": 0.45, "hull": "goshawk"},
 	{"t": 0.50, "hull": "harrier"},
@@ -1871,7 +1871,7 @@ const LANE_VSHRIKE := [
 ]
 
 const LANE_GUARD_LEG := Vector2(0.02, 0.25)   # Guardians, out of the rim
-const LANE_GAP_LEG := Vector2(0.34, 0.66)     # nobody — the V-Shrike prowl here
+const LANE_GAP_LEG := Vector2(0.34, 0.66)     # nobody — the Widows prowl here
 const LANE_NAVY_LEG := Vector2(0.75, 0.98)    # the Navy, in to Orivel
 ## A private contractor's colours — NOT Guardian blue and NOT Navy blue. Escorts
 ## are hired, and out here the difference between an escort and a pirate is who
@@ -1980,7 +1980,7 @@ func _spawn_long_lane() -> void:
 			else _convoy_build("dray" if i % 2 == 0 else "bellwether"), road, tt)
 
 	# BAND 2 — THE GAP, as a CURVE rather than two ships. Shoal raiders work the near edge
-	# and thin out; the V-Shrike own the centre and fall away toward the Navy. World-anchored
+	# and thin out; the Widows own the centre and fall away toward the Navy. World-anchored
 	# like every other ambient hostile: they live HERE, they never spawn on top of you.
 	var gap := _lane_leg(LANE_GAP_LEG.x, LANE_GAP_LEG.y, 3)
 	for r in LANE_RAIDERS:
@@ -1988,11 +1988,11 @@ func _spawn_long_lane() -> void:
 		# whole road — the further from home, the fewer of them, which is the ramp.
 		var leg := _lane_leg(float(r["t"]) - 0.05, float(r["t"]) + 0.05, 2)
 		_spawn_pirate(_lane_point(float(r["t"])) + _jitter(700.0), str(r["hull"]), leg)
-	for v in LANE_VSHRIKE:
+	for v in LANE_WIDOW:
 		var tactic: AIShip.Tactic = AIShip.Tactic.BOOM_ZOOM if str(v["hull"]) == "goshawk" \
 			else AIShip.Tactic.ORBIT
-		var build: ShipBuild = SampleBuilds.vshrike_goshawk() if str(v["hull"]) == "goshawk" \
-			else SampleBuilds.vshrike_harrier()
+		var build: ShipBuild = SampleBuilds.widow_goshawk() if str(v["hull"]) == "goshawk" \
+			else SampleBuilds.widow_harrier()
 		_spawn_gap_raider(build, tactic, gap, float(v["t"]))
 
 	# RECLUSE — the named elite pair (docs/the_long_lane.md). Two Goshawks at
@@ -2012,12 +2012,12 @@ func _spawn_long_lane() -> void:
 		"NAVY PICKET LINE", Color(0.23, 0.55, 0.95))
 
 	# Tell the raiders where the law starts, so their doctrine can steer around it.
-	VShrikeShip.navy_pos = _lane_point(LANE_NAVY_LEG.x)
+	WidowShip.navy_pos = _lane_point(LANE_NAVY_LEG.x)
 	var hunt := _lane_leg(RECLUSE_LEG.x, RECLUSE_LEG.y, 3)
 	for i in 2:
-		var hunter := _spawn_vshrike(
+		var hunter := _spawn_widow(
 			_lane_point(lerpf(RECLUSE_LEG.x, RECLUSE_LEG.y, 0.3 + 0.4 * i))
-			+ _jitter(600.0), SampleBuilds.vshrike_goshawk_elite(),
+			+ _jitter(600.0), SampleBuilds.widow_goshawk_elite(),
 			AIShip.Tactic.BOOM_ZOOM, hunt, RECLUSE_LEVEL, RECLUSE)
 		# MILITARY (user, 2026-07-27) — "built for a group". They measure 1.11x a lane
 		# normal, so nothing derived from stats would ever warn you about them; what makes
@@ -2032,7 +2032,7 @@ func _spawn_long_lane() -> void:
 ## Gated on killed_by_player: a Guardian or the Cinderweb finishing your nemesis
 ## is NOT your revenge, and claiming it would be the game congratulating you for
 ## someone else's work.
-func _on_named_hunter_died(raider: VShrikeShip) -> void:
+func _on_named_hunter_died(raider: WidowShip) -> void:
 	if not is_instance_valid(raider) or raider.callsign == "":
 		return
 	if not raider.killed_by_player():
@@ -2119,12 +2119,12 @@ func _respawn_navy_picket_later(route: Array[Vector2]) -> void:
 		_spawn_navy_picket(route)
 
 
-## A V-Shrike prowling the Gap. Replacements fly in from the DEEP end of the
+## A Widow prowling the Gap. Replacements fly in from the DEEP end of the
 ## middle stretch rather than appearing where the last one died — the living-world
 ## rule, and it keeps travel time as the pacing.
 func _spawn_gap_raider(build: ShipBuild, p_tactic: AIShip.Tactic,
 		route: Array[Vector2], t: float) -> void:
-	var r := _spawn_vshrike(_lane_point(t) + _jitter(700.0), build, p_tactic, route,
+	var r := _spawn_widow(_lane_point(t) + _jitter(700.0), build, p_tactic, route,
 		lane_level(t))
 	r.died.connect(_respawn_gap_raider_later.bind(build, p_tactic, route, t))
 
@@ -2147,7 +2147,7 @@ func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
 	add_child(pirate)
 	pirate.patrol_points = route
 	# BEFORE setup: apply_build is where the level scales the pools, so setting
-	# this afterwards would be a silent no-op (the same trap _spawn_vshrike notes).
+	# this afterwards would be a silent no-op (the same trap _spawn_widow notes).
 	pirate.spawn_level = _posting_level(posting)
 	match kind:
 		"brawler":

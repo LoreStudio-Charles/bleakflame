@@ -418,7 +418,7 @@ That is why "I flew it twice to track down pirates and didn't see them."
 The user's gradient:
 
 > *"The guardian side probably keeps the lanes clear. Beyond the Shoal pirates pick up and
-> increase until the center where the V-Shrike pirates ruthlessly raid anyone, including
+> increase until the center where the Widows pirates ruthlessly raid anyone, including
 > Shoal pirates. They are worst around the center and grow less threatening to the navy
 > picket line."*
 
@@ -426,8 +426,8 @@ The user's gradient:
 |---|---|---|---|
 | Guardian | 0.00-0.25 | patrols, freight | hostiles **0** — cleared, by design |
 | Shoal reach | 0.25-0.50 | raiders pushing out from the den | ramping |
-| The heart | 0.45-0.60 | V-Shrike | **peak** |
-| Fading | 0.60-0.75 | V-Shrike thinning; RECLUSE as the named apex | falling |
+| The heart | 0.45-0.60 | Widows | **peak** |
+| Fading | 0.60-0.75 | Widows thinning; RECLUSE as the named apex | falling |
 | Navy picket | 0.75-0.98 | the Navy; challenged, not hunted | hostiles **0** |
 
 **THE TWO CLAIMS ARE SEPARATE, and that is the lesson.** The first test written for this
@@ -445,22 +445,22 @@ Now `[6, 13, 12, 5]` contacts and `[0, 8, 6, 0]` hostiles by quarter, asserted i
 centreline, i.e. what a pilot can actually MEET. (`test_lane_traffic` counts what exists;
 it passed through two player reports of an empty road.)
 
-**NOT BUILT — three-way predation.** "V-Shrike raid anyone, including Shoal pirates" is
-canon and unimplemented: V-Shrike pick prey from `player_team` only, and pirates share
+**NOT BUILT — three-way predation.** "Widows raid anyone, including Shoal pirates" is
+canon and unimplemented: Widows pick prey from `player_team` only, and pirates share
 `hostile_team` with them, so they cannot currently fight. Needs team semantics rather than
 a spawn change. Cheapest first step short of that: pirate wrecks in the heart, killed by
 something that was not you.
 
 ### The Recluse — the beat the player writes themselves
 
-The named V-Shrike elite pair already on the road (`RECLUSE_LEVEL` 25, hunting
+The named Widows elite pair already on the road (`RECLUSE_LEVEL` 25, hunting
 `RECLUSE_LEG` 0.55–0.73, the stretch just short of the Navy's leash) is **an old
 friend of Conall's.**
 
 The name already carries it. A recluse is one who hides — two men who went to ground
 in opposite directions: **the Counter hid by becoming harmless, the Recluse hid by
 becoming something nobody goes near.** It is also a spider, so it sits inside the
-V-Shrike's black-widow livery with no retrofitting.
+Widows's black-widow livery with no retrofitting.
 
 **Its power is that the grudge is player-authored.** `scripts/nemesis.gd` remembers
 who killed you and the Recluse hunts the exact stretch where a pilot pushing for

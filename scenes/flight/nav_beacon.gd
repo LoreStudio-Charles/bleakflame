@@ -77,7 +77,7 @@ func _ready() -> void:
 		_sprite = Sprite2D.new()
 		_sprite.texture = load(art)
 		# self_modulate, NOT modulate: modulate cascades to children, and the label
-		# is a child. That is the same trap that rendered the V-Shrike hourglass black.
+		# is a child. That is the same trap that rendered the Widows hourglass black.
 		_sprite.self_modulate = tint
 		var tw: float = maxf(1.0, float(_sprite.texture.get_width()))
 		_sprite.scale = Vector2.ONE * (ART_SPAN / tw)

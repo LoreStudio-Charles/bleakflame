@@ -146,18 +146,18 @@ func _case_spawners_actually_pass_the_level() -> void:
 	base.queue_free()
 	hot.queue_free()
 
-	# VShrikeShip — the Gap raiders, spawned through their own path.
-	var plain := VShrikeShip.new()
+	# WidowShip — the Gap raiders, spawned through their own path.
+	var plain := WidowShip.new()
 	add_child(plain)
-	plain.setup_vshrike(SampleBuilds.vshrike_goshawk())
-	var deep := VShrikeShip.new()
+	plain.setup_widow(SampleBuilds.widow_goshawk())
+	var deep := WidowShip.new()
 	add_child(deep)
 	deep.spawn_level = 15
-	deep.setup_vshrike(SampleBuilds.vshrike_goshawk())
+	deep.setup_widow(SampleBuilds.widow_goshawk())
 	if deep.level() != 15:
-		_fail("a V-Shrike set to level 15 reports level %d" % deep.level())
+		_fail("a Widow set to level 15 reports level %d" % deep.level())
 	if deep.stats.hull_hp <= plain.stats.hull_hp:
-		_fail("a deep-Gap V-Shrike is no tougher than one at the mouth (%.0f vs %.0f)" % [
+		_fail("a deep-Gap Widows is no tougher than one at the mouth (%.0f vs %.0f)" % [
 			deep.stats.hull_hp, plain.stats.hull_hp])
 	plain.queue_free()
 	deep.queue_free()
@@ -213,7 +213,7 @@ func _case_hunters_see_only_as_far_as_they_are_equipped() -> void:
 	# would be a pacing buff smuggled in as a leak fix.
 	var keen := AIShip.new()
 	add_child(keen)
-	keen.setup(SampleBuilds.vshrike_goshawk_elite())     # Augur, 2400u
+	keen.setup(SampleBuilds.widow_goshawk_elite())     # Augur, 2400u
 	if keen.acquire_range() > AIShip.AGGRO_RANGE:
 		_fail("an Augur hunter acquires at %.0fu, past the %.0fu ceiling" % [
 			keen.acquire_range(), AIShip.AGGRO_RANGE])

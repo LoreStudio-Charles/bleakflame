@@ -1,6 +1,6 @@
 extends Node
-## THE V-SHRIKE LIVERY — black hull, one red hourglass (user, 2026-07-25).
-##   godot --headless --path . res://tools/test_vshrike.tscn
+## THE WIDOWS LIVERY — black hull, one red hourglass (user, 2026-07-25).
+##   godot --headless --path . res://tools/test_widows.tscn
 ##
 ## THE FAILURE THIS GUARDS: every other livery in the codebase gives up when a
 ## hull has no sprite (`BuildShip.apply_livery` returns early on a null texture).
@@ -20,7 +20,7 @@ func _ready() -> void:
 	_case_role_is_sensor_data_not_paint()
 	_case_a_lane_predator_out_sees_its_prey()
 
-	print("test_vshrike: %s" % ("ALL PASS" if _fails == 0 else "%d FAILURE(S)" % _fails))
+	print("test_widows: %s" % ("ALL PASS" if _fails == 0 else "%d FAILURE(S)" % _fails))
 	get_tree().quit(1 if _fails > 0 else 0)
 
 
@@ -29,10 +29,10 @@ func _fail(msg: String) -> void:
 	_fails += 1
 
 
-func _raider(build: ShipBuild) -> VShrikeShip:
-	var s := VShrikeShip.new()
+func _raider(build: ShipBuild) -> WidowShip:
+	var s := WidowShip.new()
 	add_child(s)
-	s.setup_vshrike(build)
+	s.setup_widow(build)
 	return s
 
 
@@ -40,7 +40,7 @@ func _raider(build: ShipBuild) -> VShrikeShip:
 ##
 ## `set_hull_tint` uses **self_modulate** on the sprite, deliberately — `modulate`
 ## cascades to children and would repaint the decals (that is the bug that made the
-## V-Shrike hourglass render black). The silhouette path has no sprite and tints
+## Widows hourglass render black). The silhouette path has no sprite and tints
 ## `_hull_visual.color` instead.
 ##
 ## THIS HELPER EXISTS BECAUSE THE TEST READ `modulate` AND PASSED ANYWAY. With no
@@ -48,12 +48,12 @@ func _raider(build: ShipBuild) -> VShrikeShip:
 ## never consulted — the case was green for the wrong reason for a full day, and
 ## only broke the moment real art landed. Read the field that actually carries the
 ## tint, in one place.
-func _hull_tint(s: VShrikeShip) -> Color:
+func _hull_tint(s: WidowShip) -> Color:
 	return s._hull_sprite.self_modulate if s._hull_sprite != null else s._hull_visual.color
 
 
 ## Every polygon under the mark, whatever it is parented to.
-func _mark_polys(s: VShrikeShip) -> Array:
+func _mark_polys(s: WidowShip) -> Array:
 	var out: Array = []
 	if s._widow_mark == null or not is_instance_valid(s._widow_mark):
 		return out
@@ -66,14 +66,14 @@ func _mark_polys(s: VShrikeShip) -> Array:
 ## THE ONE THAT MATTERS RIGHT NOW: the lane hulls are art-less, so the mark has to
 ## come from the silhouette.
 func _case_livery_on_a_silhouette_hull() -> void:
-	var s := _raider(SampleBuilds.vshrike_goshawk())
+	var s := _raider(SampleBuilds.widow_goshawk())
 	if s._hull_sprite != null:
 		print("NOTE: Goshawk now has art — the silhouette path is covered by the Harrier case")
 	var polys := _mark_polys(s)
 	if polys.size() != 2:
 		_fail("silhouette hull got %d hourglass polygons, want 2" % polys.size())
 	for p in polys:
-		if p.color != VShrikeShip.WIDOW_RED:
+		if p.color != WidowShip.WIDOW_RED:
 			_fail("hourglass is %s, not the widow red" % p.color)
 		if p.polygon.size() != 3:
 			_fail("hourglass half is not a triangle (%d points)" % p.polygon.size())
@@ -113,11 +113,11 @@ func _case_livery_on_an_art_hull() -> void:
 
 ## The hull must be the faction's black, NOT a random rust-and-orange pirate skin.
 func _case_no_random_pirate_skin() -> void:
-	var s := _raider(SampleBuilds.vshrike_harrier())
+	var s := _raider(SampleBuilds.widow_harrier())
 	if s.use_variant_skin:
-		_fail("V-Shrike opted into the shared pirate skin pool — the livery cannot be uniform")
+		_fail("Widows opted into the shared pirate skin pool — the livery cannot be uniform")
 	var tint := _hull_tint(s)
-	if tint != VShrikeShip.HULL_BLACK:
+	if tint != WidowShip.HULL_BLACK:
 		_fail("hull tint is %s, not the widow black" % tint)
 	# "Primarily black": whatever else happens, the hull must stay far darker than
 	# the mark it carries, or there is no single point of red.
@@ -130,7 +130,7 @@ func _case_no_random_pirate_skin() -> void:
 ## Re-applying (a refit re-runs apply_build) must not stack a second hourglass on
 ## top of the first — that would slowly brighten the mark with every call.
 func _case_mark_is_not_reapplied_twice() -> void:
-	var s := _raider(SampleBuilds.vshrike_goshawk())
+	var s := _raider(SampleBuilds.widow_goshawk())
 	s.apply_widow_mark()
 	s.apply_widow_mark()
 	var live := 0
@@ -145,11 +145,11 @@ func _case_mark_is_not_reapplied_twice() -> void:
 
 ## A SPECIALIST MUST STILL BE BLACK. AIShip._roll_specialty repaints the hull to
 ## advertise a mender/warden/binder, and it runs AFTER setup applies the faction
-## tint — so ~13% of V-Shrike used to spawn green, blue or amber. This surfaced by
+## tint — so ~13% of Widows used to spawn green, blue or amber. This surfaced by
 ## luck of the dice on one run, which is exactly why it is pinned here instead:
 ## the roll is DRIVEN until it fires rather than waited on.
 func _case_a_specialist_is_still_black() -> void:
-	var s := _raider(SampleBuilds.vshrike_goshawk())
+	var s := _raider(SampleBuilds.widow_goshawk())
 	var rolled := false
 	for _i in 500:
 		s.specialty = AIShip.Specialty.NONE
@@ -161,8 +161,8 @@ func _case_a_specialist_is_still_black() -> void:
 		_fail("never rolled a specialist in 500 tries — this case proved nothing")
 	else:
 		var tint := _hull_tint(s)
-		if tint != VShrikeShip.HULL_BLACK:
-			_fail("a %s V-Shrike is %s, not black — the specialist repaint escaped the livery" % [
+		if tint != WidowShip.HULL_BLACK:
+			_fail("a %s Widows is %s, not black — the specialist repaint escaped the livery" % [
 				s.specialty_name(), tint])
 	s.queue_free()
 
@@ -172,7 +172,7 @@ func _case_a_specialist_is_still_black() -> void:
 ## RANGE, so a distant contact stays an unknown quantity. Asserted through a real
 ## TestShip because the gate has to hold where it is actually consulted.
 func _case_role_is_sensor_data_not_paint() -> void:
-	var mark := _raider(SampleBuilds.vshrike_goshawk())
+	var mark := _raider(SampleBuilds.widow_goshawk())
 	mark.specialty = AIShip.Specialty.MENDER
 	mark.global_position = Vector2(400.0, 0.0)
 
@@ -205,7 +205,7 @@ func _case_role_is_sensor_data_not_paint() -> void:
 		_fail("role was identified far beyond role_id_range — the range gate does nothing")
 
 	# An ordinary ship never reports a role, however good the sensors.
-	var plain := _raider(SampleBuilds.vshrike_harrier())
+	var plain := _raider(SampleBuilds.widow_harrier())
 	plain.specialty = AIShip.Specialty.NONE
 	plain.global_position = Vector2(300.0, 0.0)
 	if pilot.classify(plain) != "":
@@ -237,8 +237,8 @@ func _case_role_is_sensor_data_not_paint() -> void:
 ## reach is not a bigger constant; it is the raider's own suite, and upgrading that
 ## suite is what buys it.
 func _case_a_lane_predator_out_sees_its_prey() -> void:
-	var raider := _raider(SampleBuilds.vshrike_goshawk())
-	var elite := _raider(SampleBuilds.vshrike_goshawk_elite())
+	var raider := _raider(SampleBuilds.widow_goshawk())
+	var elite := _raider(SampleBuilds.widow_goshawk_elite())
 
 	if raider.acquire_range() <= AIShip.AGGRO_RANGE:
 		_fail("a lane raider acquires at %.0f, no better than the inner-system cap %.0f — nothing changed on the lane" % [
@@ -259,7 +259,7 @@ func _case_a_lane_predator_out_sees_its_prey() -> void:
 
 	# THE PILLAR HOLDS: strip the suite and the reach goes with it, or this is a free
 	# grant wearing a sensor's clothes.
-	var blind := _raider(SampleBuilds.vshrike_goshawk())
+	var blind := _raider(SampleBuilds.widow_goshawk())
 	blind.stats["sensor_range"] = 0.0
 	if blind.acquire_range() > 0.0:
 		_fail("a raider with no suite still acquires at %.0f — the reach must be EQUIPPED, not given" % blind.acquire_range())

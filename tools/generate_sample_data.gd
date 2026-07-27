@@ -1042,7 +1042,7 @@ func _generate_hulls() -> void:
 
 	# BELLWETHER — the heavy freighter, and the convoy's reason to exist. The
 	# bellwether is the animal the flock follows, which is exactly what this is:
-	# the ship the escorts are formed around and the one the V-Shrike cross the
+	# the ship the escorts are formed around and the one the Widows cross the
 	# Gap for. Slow, enormously valuable, three turrets that are not enough.
 	# NOTE she is HEAVY, so the MEDIUM-capped Reach station can never berth her
 	# (DockingPad.max_size_band) — she runs Orivel's bays and Epharon's surface,

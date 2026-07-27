@@ -5,7 +5,7 @@ extends Node
 ## Both models are dependency-free of SaveGame and UI (Nemesis holds neither,
 ## rank_prey is pure and static), so nothing here needs a world standing up.
 ##
-## RUN AS A SCENE ANYWAY: reaching rank_prey means preloading vshrike_ship.gd,
+## RUN AS A SCENE ANYWAY: reaching rank_prey means preloading widow_ship.gd,
 ## which pulls in AIShip -> Sfx, and under --script there are no autoloads. The
 ## first attempt did exactly that and Godot printed "ALL PASS" from a stale
 ## cached script while the real one failed to compile -- a green that proved
@@ -18,7 +18,7 @@ extends Node
 ##   "Players in a Mule are in danger if they're the only cargo ship"
 ##   "Anyone is in danger if they are alone in the lane"
 
-const VS := preload("res://scenes/flight/vshrike_ship.gd")
+const VS := preload("res://scenes/flight/widow_ship.gd")
 
 var _fails := 0
 

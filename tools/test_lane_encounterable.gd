@@ -130,7 +130,7 @@ func _ready() -> void:
 		"the Navy quarter is CLEAR — the picket holds (found %d)" % hostile_quarters[3])
 	# The total ALONE is a weak claim: with both ends at zero, "more in the middle than at
 	# the ends" is nearly free, and a floor low enough to be safe survives losing half the
-	# V-Shrike (it did — the sabotage went undetected). So assert the SHAPE: the danger is
+	# Widows (it did — the sabotage went undetected). So assert the SHAPE: the danger is
 	# spread across the whole middle half rather than bunched in one quarter of it, which is
 	# what makes the crossing tense instead of a single spike you can run past.
 	_ok(middle >= 12,

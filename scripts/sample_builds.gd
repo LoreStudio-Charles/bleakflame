@@ -338,13 +338,13 @@ static func escort_goshawk() -> ShipBuild:
 	})
 
 
-## ---- V-SHRIKE ----
+## ---- WIDOWS ----
 ## The Gap's owners. They do not raise comms; they hit, take, and destroy.
 ## The FITS say it before any dialogue does: no shields and no sensors on either
 ## hull — every slot that could have gone to surviving a fight or seeing one
 ## coming went to the guns instead. They do not plan to be shot at, because they
 ## do not plan to leave anyone able to shoot.
-static func vshrike_harrier() -> ShipBuild:
+static func widow_harrier() -> ShipBuild:
 	return _make("res://data/hulls/harrier.tres", {
 		0: "res://data/components/weapons/vk2_autocannon.tres",
 		1: "res://data/components/weapons/vk2_autocannon.tres",
@@ -355,8 +355,8 @@ static func vshrike_harrier() -> ShipBuild:
 
 
 ## The one that kills the convoy. Looted Overcharged Cell feeding looted lances —
-## the V-Shrike build nothing and take everything.
-static func vshrike_goshawk() -> ShipBuild:
+## the Widows build nothing and take everything.
+static func widow_goshawk() -> ShipBuild:
 	return _make("res://data/hulls/goshawk.tres", {
 		0: "res://data/components/weapons/twinlance_pulse.tres",
 		1: "res://data/components/weapons/twinlance_pulse.tres",
@@ -376,7 +376,7 @@ static func vshrike_goshawk() -> ShipBuild:
 ## It is deliberately over-gunned for the lane band. Recluse is not a difficulty
 ## step, it is a wall with a name — the thing that kills your first Orivel run and
 ## gives you a reason to come back. See scripts/nemesis.gd.
-static func vshrike_goshawk_elite() -> ShipBuild:
+static func widow_goshawk_elite() -> ShipBuild:
 	return _make("res://data/hulls/goshawk.tres", {
 		0: "res://data/components/weapons/twinlance_pulse.tres",
 		1: "res://data/components/weapons/twinlance_pulse.tres",
@@ -400,9 +400,9 @@ static func lane_builds() -> Dictionary:
 		"lane_bellwether": lane_bellwether(),
 		"escort_harrier": escort_harrier(),
 		"escort_goshawk": escort_goshawk(),
-		"vshrike_harrier": vshrike_harrier(),
-		"vshrike_goshawk": vshrike_goshawk(),
-		"vshrike_goshawk_elite": vshrike_goshawk_elite(),
+		"widow_harrier": widow_harrier(),
+		"widow_goshawk": widow_goshawk(),
+		"widow_goshawk_elite": widow_goshawk_elite(),
 	}
 
 
@@ -427,7 +427,7 @@ static func _eyes(b: ShipBuild, path: String) -> ShipBuild:
 const WAYFARER := "res://data/components/systems/wayfarer_sensors.tres"
 const TIN_EAR := "res://data/components/systems/tinear_sensor_set.tres"   # crappy but present
 const AUGUR := "res://data/components/systems/augur_sensor_array.tres"    # reads a contact's ROLE
-const BLIND := ""   # deliberately none — see VShrikeShip
+const BLIND := ""   # deliberately none — see WidowShip
 
 
 ## `sensor` DEFAULTS TO EYES. A blind ship is a real state now (BuildShip.runs_silent

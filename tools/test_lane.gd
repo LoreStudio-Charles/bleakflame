@@ -4,7 +4,7 @@ extends Node
 ##
 ## THE INVARIANT: the middle half of the road belongs to NOBODY. Guardians leash
 ## at the first quarter, the Navy leashes at the last, and the Gap between them is
-## why freight hires escorts and why the V-Shrike are worth being afraid of.
+## why freight hires escorts and why the Widows are worth being afraid of.
 ##
 ## It is a quiet thing to break. Widening a patrol band by a few percent looks
 ## like tuning, changes nothing visible on any screen, and silently removes the

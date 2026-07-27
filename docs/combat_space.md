@@ -598,7 +598,7 @@ Each defensive layer has exactly **one** answer, so nothing overlaps:
 
 **Antimatter is the FINISHER**, not a generalist. An earlier draft had it at 125% against
 armor *and* hull with 75% against shields — but shields are the smallest pool, they
-regenerate, and plenty of ships (every V-Shrike build, `pirate_raider`) carry none at all.
+regenerate, and plenty of ships (every Widows build, `pirate_raider`) carry none at all.
 Its penalty would have barely existed while its bonus applied to everything that matters,
 making it the default pick. Paying a penalty at *both* outer layers gives it a real
 weakness and pairs it with Penetration, which is what now owns general anti-armor.

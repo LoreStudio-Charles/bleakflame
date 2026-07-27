@@ -2,12 +2,12 @@ class_name Factions
 ## WHO HATES WHOM — one relationship matrix, replacing "player_team vs hostile_team".
 ##
 ## WHY (user, 2026-07-27): "Instead of player team and enemy team can we load everything
-## into faction relationships? V-Shrike faction should just hate everyone for example. Every
+## into faction relationships? Widows faction should just hate everyone for example. Every
 ## player should be their own faction that begins with a starting relationship to every
 ## faction."
 ##
 ## TWO TEAMS CANNOT SAY WHAT THE WORLD ALREADY IS. The Long Lane's fiction is that the
-## V-Shrike "ruthlessly raid anyone, including Shoal pirates" — and that was unbuildable,
+## Widows "ruthlessly raid anyone, including Shoal pirates" — and that was unbuildable,
 ## because raiders and pirates share `hostile_team` and a ship cannot shoot its own group.
 ## The Cinderweb needs a bespoke devour path for the same reason. Guardians hunting pirates
 ## works only because there happen to be exactly two sides. Every one of those is the same
@@ -19,7 +19,7 @@ class_name Factions
 ## their row is looked up exactly like everyone else's.
 ##
 ## ASYMMETRIC ON PURPOSE. "Hate everyone" is a property of the hater, not a mutual pact:
-## the V-Shrike attack Shoal raiders, but a Shoal raider busy with a freighter has no
+## the Widows attack Shoal raiders, but a Shoal raider busy with a freighter has no
 ## opinion about them. A symmetric matrix would force every predator to be a feud.
 
 enum Att {HOSTILE, NEUTRAL, ALLIED}
@@ -31,9 +31,11 @@ const LIST := {
 	"navy": {"name": "Galean Confederate Navy", "color": Color(0.23, 0.44, 0.85)},
 	"civilian": {"name": "Reach Civilians", "color": Color(0.82, 0.84, 0.88)},
 	"escort": {"name": "Contract Escorts", "color": Color(0.25, 0.70, 0.58)},
+	"marines": {"name": "Galean Marine Corps", "color": Color(0.55, 0.62, 0.42)},
 	"shoal": {"name": "Rust Shoal", "color": Color(0.85, 0.45, 0.30)},
-	"vshrike": {"name": "V-Shrike", "color": Color(0.12, 0.11, 0.13)},
-	"ooshu": {"name": "Ooshu", "color": Color(0.62, 0.42, 0.78)},
+	"widow": {"name": "The Widows", "color": Color(0.12, 0.11, 0.13)},
+	"ooshu": {"name": "The Ooshu", "color": Color(0.62, 0.42, 0.78)},
+	"ghosts": {"name": "The Ghosts", "color": Color(0.58, 0.60, 0.66)},
 	"leviathan": {"name": "Leviathan", "color": Color(0.45, 0.25, 0.65)},
 }
 
@@ -46,26 +48,47 @@ const PLAYER_PREFIX := "pilot:"
 ## Missing rows and missing keys fall through to NEUTRAL: the honest default is "no
 ## opinion", and a faction that should fight has to say so.
 ##
-## Read it as sentences. "vshrike: everything is hostile" IS the design line.
+## Read it as sentences. "widow: everything is hostile" IS the design line.
 const BASE := {
-	"vshrike": {"*": Att.HOSTILE},
+	"widow": {"*": Att.HOSTILE},
 	"leviathan": {"*": Att.HOSTILE},
-	"ooshu": {"*": Att.NEUTRAL, "shoal": Att.NEUTRAL},   # contractors: hostile only to their mark
+	# THE OOSHU are a RACE read as a nation (user, 2026-07-27) — "the racial collective as a
+	# national identity, because I don't know their nation's name yet." So this row is a
+	# people, not an army, and it has no standing quarrel with anybody in the Reach. What
+	# came knocking at Odessa's door was hired, and hired is the GHOSTS' row below.
+	"ooshu": {},
+	# THE GHOSTS are bounty hunters; THE WEB is their organisation. Contractors have no
+	# enemies, only marks — a row of NEUTRAL is the correct and slightly chilling answer.
+	# Whoever they are pointed at is set by a contract, which is a quest flag, not a table.
+	"ghosts": {},
+	# THE GALEAN MARINE CORPS — a profession faction players may join. Galean law, so it
+	# stands where the Navy and the Guardians stand.
+	"marines": {"shoal": Att.HOSTILE, "widow": Att.HOSTILE, "navy": Att.ALLIED,
+		"guardian": Att.ALLIED, "civilian": Att.ALLIED, "escort": Att.ALLIED},
 	"shoal": {
 		"civilian": Att.HOSTILE, "escort": Att.HOSTILE,
-		"guardian": Att.HOSTILE, "navy": Att.HOSTILE,
-		"vshrike": Att.HOSTILE,                          # they raid us; we return it
+		"guardian": Att.HOSTILE, "navy": Att.HOSTILE, "marines": Att.HOSTILE,
+		"widow": Att.HOSTILE,                            # they raid us; we return it
 	},
-	"guardian": {"shoal": Att.HOSTILE, "vshrike": Att.HOSTILE, "navy": Att.ALLIED,
-		"civilian": Att.ALLIED, "escort": Att.ALLIED},
-	"navy": {"shoal": Att.HOSTILE, "vshrike": Att.HOSTILE, "guardian": Att.ALLIED,
-		"civilian": Att.ALLIED, "escort": Att.ALLIED},
-	"escort": {"shoal": Att.HOSTILE, "vshrike": Att.HOSTILE, "civilian": Att.ALLIED,
-		"guardian": Att.ALLIED, "navy": Att.ALLIED},
+	"guardian": {"shoal": Att.HOSTILE, "widow": Att.HOSTILE, "navy": Att.ALLIED,
+		"marines": Att.ALLIED, "civilian": Att.ALLIED, "escort": Att.ALLIED},
+	"navy": {"shoal": Att.HOSTILE, "widow": Att.HOSTILE, "guardian": Att.ALLIED,
+		"marines": Att.ALLIED, "civilian": Att.ALLIED, "escort": Att.ALLIED},
+	"escort": {"shoal": Att.HOSTILE, "widow": Att.HOSTILE, "civilian": Att.ALLIED,
+		"guardian": Att.ALLIED, "navy": Att.ALLIED, "marines": Att.ALLIED},
 	# CIVILIANS HATE NOBODY. They are prey with a licence, and the whole trade lane rests
 	# on them being worth escorting rather than being a side.
-	"civilian": {"guardian": Att.ALLIED, "navy": Att.ALLIED, "escort": Att.ALLIED},
+	"civilian": {"guardian": Att.ALLIED, "navy": Att.ALLIED, "escort": Att.ALLIED,
+		"marines": Att.ALLIED},
 }
+
+## PILOTS ARE MUTUALLY NEUTRAL — no PvP (user, 2026-07-27, "yet").
+##
+## Every player being their own faction makes PvP expressible for FREE, which is a feature
+## only if you want it. Stating the rule here rather than leaving it to fall out of the
+## table means turning it on later is one line in one place, and — more importantly — that
+## it cannot be turned on by ACCIDENT when somebody adds a row and forgets pilots exist.
+const PILOTS_FIGHT_EACH_OTHER := false
 
 
 static func is_player(id: String) -> bool:
@@ -84,6 +107,10 @@ static func attitude(from: String, to: String) -> Att:
 		return Att.NEUTRAL
 	if from == to:
 		return Att.ALLIED
+
+	# TWO PILOTS. Neutral until PvP is a thing somebody has decided to build.
+	if is_player(from) and is_player(to):
+		return Att.HOSTILE if PILOTS_FIGHT_EACH_OTHER else Att.NEUTRAL
 
 	# A PILOT'S ROW IS STANDING. It is already per-pilot, already persisted, and already
 	# answers this question — reimplementing it here would be a second source of truth for

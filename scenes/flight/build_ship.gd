@@ -395,8 +395,8 @@ static func hit_profile_of(node: Object, fallback := 12.0) -> float:
 ## Tints the hull art (sprite modulate or polygon color, whichever is active).
 ## SELF_MODULATE, NOT MODULATE (2026-07-25). `modulate` cascades to CHILDREN, and
 ## every decal is a child of the hull sprite — the Guardian stripe, the livery
-## chevron, the V-Shrike hourglass. So tinting through `modulate` multiplied the
-## decals too, and the V-Shrike's red mark (0.80, 0.05, 0.09) times their black
+## chevron, the Widows hourglass. So tinting through `modulate` multiplied the
+## decals too, and the Widows's red mark (0.80, 0.05, 0.09) times their black
 ## hull (0.13, 0.12, 0.15) came out effectively BLACK: the single point of red
 ## that is the entire faction read, erased by the tint meant to carry it.
 ##

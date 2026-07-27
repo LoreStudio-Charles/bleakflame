@@ -53,7 +53,7 @@ func _ready() -> void:
 	# would become wallpaper, which is the one way this feature fails quietly.
 	var normals := 0
 	for s in ships:
-		if s is AIShip and not (s is VShrikeShip) and _hull_of(s) != "Vulture":
+		if s is AIShip and not (s is WidowShip) and _hull_of(s) != "Vulture":
 			if Threat.rank_of(s) == Threat.Rank.NORMAL:
 				normals += 1
 			else:

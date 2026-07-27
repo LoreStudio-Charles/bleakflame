@@ -168,7 +168,7 @@ const BREAK_DAMAGE_FRACTION := 0.50
 var tactic := Tactic.ORBIT
 var preferred_range := 200.0
 ## Set TRUE before setup() to keep this ship off the shared random pirate skin
-## pool, so a faction with its own colours stays uniform. See VShrikeShip.
+## pool, so a faction with its own colours stays uniform. See WidowShip.
 var faction_livery := false
 ## World-anchored waypoint loop flown while not engaged. Pirates live in
 ## places and travel between them — they are traffic, not a gauntlet.
@@ -215,7 +215,7 @@ func _roll_specialty() -> void:
 	# repainting the hull any more (user, 2026-07-25).
 	#
 	# WHY THE HULL WAS THE WRONG CHANNEL: hull colour also carries FACTION, and
-	# the two fought. A rolled specialty overwrote the V-Shrike's black livery,
+	# the two fought. A rolled specialty overwrote the Widows's black livery,
 	# spawning roughly one in eight out of its own colours. One channel cannot
 	# answer both "who are they" and "what does this one do".
 	#
@@ -315,7 +315,7 @@ func setup(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 	enemy_group = "player_team"
 	ally_groups = ["hostile_team"]
 	# The shared pirate skin pool is rust-and-orange. A faction that wears its OWN
-	# livery (the V-Shrike are black) sets `faction_livery` before calling setup,
+	# livery (the Widows are black) sets `faction_livery` before calling setup,
 	# because a livery only means anything if it is the same every time.
 	if not faction_livery:
 		use_variant_skin = true

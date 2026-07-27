@@ -2065,7 +2065,7 @@ func _record_nemesis() -> void:
 ##
 ## Role used to be painted on the enemy's hull. It isn't any more, because hull
 ## colour already carries FACTION and the two fought over the same channel — a
-## rolled specialty repainted V-Shrike out of their black livery. Role is SENSOR
+## rolled specialty repainted Widows out of their black livery. Role is SENSOR
 ## DATA: your targeting computer reads it off the mark.
 ##
 ## IT IS A CAPABILITY YOU BUY, not a property of owning any sensor: it needs a

@@ -67,10 +67,10 @@ this free characterisation:
 | **Guardians** | law | to *check* — which is what makes contraband a real risk rather than a flavour word |
 | **The Navy** | law, at the capital end | the same, with far more teeth |
 | **Pirates** | robbery wearing the same shape | your cargo |
-| **V-Shrike** | **they do not stop you** | already canon: *no prisoners, no survivors, only ash* |
+| **Widows** | **they do not stop you** | already canon: *no prisoners, no survivors, only ash* |
 
 That last row is the point. Three factions, one encounter, three completely different
-meanings — and the V-Shrike's refusal to interdict says more about them than a paragraph
+meanings — and the Widows's refusal to interdict says more about them than a paragraph
 would.
 
 It lands directly on **standing and wanted**, since who may lawfully stop you is a legal

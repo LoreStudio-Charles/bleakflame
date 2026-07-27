@@ -109,7 +109,7 @@ difficulty curve, and it is exactly what the relative scaling model was built fo
 | who | level |
 |---|---|
 | Guardian rim patrol | `lane_level(0.25)` — the low end, L8 |
-| V-Shrike in the Gap | `lane_level(t)` where they prowl — L9–L12 |
+| Widows in the Gap | `lane_level(t)` where they prowl — L9–L12 |
 | Escorts | **the level of the hull they cover** — you hire cover fit for the cargo |
 | Freighters | authored (Dray L8, Bellwether L15) — those are tuned numbers |
 | Navy picket | `navy_level(t)` — L35+, a plainly different tier |
@@ -125,7 +125,7 @@ every point on the road, that the far Gap is at least 2 levels above the guarded
 part is ordering, since `spawn_level` set *after* the setup call compiles, reads fine,
 and does nothing. Both sabotage-verified.
 
-## The V-SHRIKE — new canon (user, 2026-07-25)
+## The WIDOWS — new canon (user, 2026-07-25)
 
 The Gap's owners, and a deliberate contrast with everything the Reach has met so far.
 
@@ -135,7 +135,7 @@ The Gap's owners, and a deliberate contrast with everything the Reach has met so
 - **Bloodthirsty. Heartless killers.** Not privateers with a code, not Krayt's Shoal, not
   Vyper's banner-of-truce pragmatists. There is nothing to negotiate with.
 - **THE SILENCE IS THE HORROR.** Every other faction in the game talks — Krayt jokes,
-  Vyper grieves, traders squawk distress, even ordinary pirates hail. The V-Shrike simply
+  Vyper grieves, traders squawk distress, even ordinary pirates hail. The Widows simply
   arrive. The game already has the vocabulary to make that land: comms exist, hails
   exist, and their absence will be *noticed* precisely because everything else speaks.
 - **They finish what they start.** They kill the ship AND the crew AND leave the wreck —
@@ -155,7 +155,7 @@ The Gap's owners, and a deliberate contrast with everything the Reach has met so
    marks. `SampleBuilds.lane_builds()` holds all six NPC fits.
 3. ~~**The lane**~~ — DONE. `flight_test._spawn_long_lane()`.
 4. ~~**The three bands**~~ — DONE.
-5. ~~**The V-Shrike**~~ — DONE (`VShrikeShip`). The FITS already said it — see below.
+5. ~~**The Widows**~~ — DONE (`WidowShip`). The FITS already said it — see below.
 
 ### The lane as built
 
@@ -167,7 +167,7 @@ they are the design**:
 | band | `t` | who |
 |---|---|---|
 | `LANE_GUARD_LEG` | 0.02 – 0.25 | Guardian lane patrol out of the rim |
-| `LANE_GAP_LEG` | 0.34 – 0.66 | **nobody** — two V-Shrike prowl it |
+| `LANE_GAP_LEG` | 0.34 – 0.66 | **nobody** — two Widows prowl it |
 | `LANE_NAVY_LEG` | 0.75 – 0.98 | Galean Navy picket in to Orivel |
 
 Running it: a **Dray** and a **Bellwether** haul the full road, the Bellwether under a
@@ -188,7 +188,7 @@ anchor clears the station sanctuary. Sabotage-verified.
 
 ### The widow livery (user, 2026-07-25)
 
-The V-Shrike are **black widow spiders**: hulls are near-**black** carrying a **single
+The Widows are **black widow spiders**: hulls are near-**black** carrying a **single
 point of red** — the widow's hourglass, set aft on the deck where the abdomen would be.
 One mark, nothing else. No chevron, no stripes, no random skin.
 
@@ -197,8 +197,8 @@ Guardian blue, Galean ivory, the Shoal's scavenged mismatch. A black hull is a *
 that, and the red is the only thing you get to recognise before it fires. Same job the
 silence does on the comm channel: everyone else announces themselves.
 
-`scenes/flight/vshrike_ship.gd` (`VShrikeShip extends AIShip`). Dev-summon a pair with
-**`/vshrike`**. Test: `tools/test_vshrike.tscn`.
+`scenes/flight/widow_ship.gd` (`WidowShip extends AIShip`). Dev-summon a pair with
+**`/widow`**. Test: `tools/test_widows.tscn`.
 
 Two things that had to be got right, both sabotage-verified:
 
@@ -210,7 +210,7 @@ Two things that had to be got right, both sabotage-verified:
   it was drawn for.
 - **A rare AI SPECIALIST is still black.** `AIShip._roll_specialty` used to repaint the
   hull (mender green / warden blue / binder amber), and it ran *after* setup applied the
-  faction tint — roughly one V-Shrike in eight spawned out of its own livery. **That was
+  faction tint — roughly one Widows in eight spawned out of its own livery. **That was
   fixed at the root** rather than papered over here: role is sensor data now, so nothing
   repaints a hull to announce a role and hull colour means faction, exclusively. See
   below.
@@ -255,7 +255,7 @@ stories about the same road. Recluse is simply the first one placed. Repeat deat
 the grudge rather than replacing it, and a settled hunter that comes back and kills again
 re-opens it.
 
-**The raider's doctrine** (`VShrikeShip.rank_prey`, pure and static). Recluse is a
+**The raider's doctrine** (`WidowShip.rank_prey`, pure and static). Recluse is a
 commerce raider, not a duellist — it scores marks rather than taking the nearest:
 
 - **cargo is the draw**, and bigger is better (Bellwether ≫ Dray ≫ Mule)
@@ -267,7 +267,7 @@ commerce raider, not a duellist — it scores marks rather than taking the neare
   which is what lets the convoy set-piece happen at all
 
 So a player alone in a Mule *is* the convoy, and gets hunted accordingly. Rank-and-file
-V-Shrike keep ordinary nearest-target behaviour; a whole faction of fussy raiders would
+Widows keep ordinary nearest-target behaviour; a whole faction of fussy raiders would
 read as broken AI rather than as character.
 
 `tools/test_nemesis.tscn` asserts each of those rules as its own case, plus the grudge
@@ -275,9 +275,9 @@ lifecycle and its save round-trip. Sabotage-verified four ways — zeroing cargo
 zeroing the Navy dread, zeroing the isolation bonus, and turning the escort penalty into
 a veto each fail a different assertion.
 
-### The V-Shrike fits say it before any dialogue does
+### The Widows fits say it before any dialogue does
 
-`vshrike_harrier` and `vshrike_goshawk` carry **no shields and no sensors**. Every slot
+`widow_harrier` and `widow_goshawk` carry **no shields and no sensors**. Every slot
 that could have gone to surviving a fight or seeing one coming went to guns instead. They
 do not plan to be shot at, because they do not plan to leave anyone able to shoot. The
 escort versions of the same two hulls carry both — flown by people who intend to go home.

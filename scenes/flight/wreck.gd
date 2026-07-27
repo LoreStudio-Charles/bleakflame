@@ -10,7 +10,7 @@ extends Node2D
 ## says the Cinderweb leaves its prey "gone TRACELESS — no wreck, no cargo, no rap sheet" —
 ## and the starter campaign turns on exactly that contrast: pirates leave evidence, the
 ## beast leaves none, which is what Voss's "no debris" report MEANS. Until now neither left
-## anything, so the distinction existed only in dialogue. A lane strewn with the V-Shrike's
+## anything, so the distinction existed only in dialogue. A lane strewn with the Widows's
 ## leavings and one clean empty patch where a hauler used to be is the whole horror, shown.
 ##
 ## PURELY VISUAL. No collider: debris you fly through is forgiving, and the avoidance pass
@@ -91,7 +91,7 @@ static func _cull(tree: SceneTree) -> void:
 
 
 ## Take the dead ship's own art so a Goshawk wreck is recognisably a Goshawk — which is
-## what lets a pirate hull lying in V-Shrike country tell you who lost that fight.
+## what lets a pirate hull lying in Widows country tell you who lost that fight.
 func _adopt_look(ship: Node2D) -> void:
 	var src := ship.get("_hull_sprite") as Sprite2D
 	if src != null and src.texture != null:

@@ -1,6 +1,6 @@
-class_name VShrikeShip
+class_name WidowShip
 extends AIShip
-## THE V-SHRIKE — the Gap's owners on the Long Lane (docs/the_long_lane.md).
+## THE WIDOWS — the Gap's owners on the Long Lane (docs/the_long_lane.md).
 ##
 ##   "They do not raise comms. They hit, take, and destroy.
 ##    No prisoners. No survivors. Only ash."  — user, 2026-07-25
@@ -42,7 +42,7 @@ static var navy_pos := Vector2.INF
 # --- THE RAIDER'S DOCTRINE (user, 2026-07-25) ---
 # Recluse is a COMMERCE RAIDER, not a duellist. It is on this road for cargo, and
 # it would rather take a fat hauler than win a fight. That single preference does
-# a lot of characterisation for free: the V-Shrike are here to TAKE, and combat is
+# a lot of characterisation for free: the Widows are here to TAKE, and combat is
 # just the toll.
 #
 # It also makes the Mule frightening to fly. A pilot who is the only cargo in the
@@ -68,7 +68,7 @@ const SCREEN_R := 1400.0
 ## four raiders sitting right in the stretch they crossed. Two ships with
 ## sub-kilometre awareness passing in the dark, one of them painted black.
 ##
-## So V-Shrike use their FULL sensor reach instead of the inner-system clamp. This
+## So Widows use their FULL sensor reach instead of the inner-system clamp. This
 ## is not a free grant -- it is exactly the pillar: never give a ship what it has
 ## not equipped. A Tin-Ear raider would still be near-blind at 700; the reach comes
 ## from carrying a real suite (Wayfarer 1500 on the rank and file, Augur 2400 on
@@ -145,9 +145,9 @@ func _screen_around(bs: BuildShip) -> int:
 var _widow_mark: Node2D = null
 
 
-## Stands up a V-Shrike raider: the pirate brain, the widow's colours, and the
+## Stands up a Widow raider: the pirate brain, the widow's colours, and the
 ## refusal to talk. Pass a `name` to make it a named hunter.
-func setup_vshrike(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
+func setup_widow(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 		name_tag: String = "") -> void:
 	callsign = name_tag
 	faction_livery = true      # keep off the shared rust-and-orange skin pool
@@ -157,7 +157,7 @@ func setup_vshrike(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 
 ## NOTE ON SPECIALISTS. Rare AI specialists used to advertise themselves by
 ## repainting the hull (mender green / warden blue / binder amber), which fired on
-## ~13% of eligible hulls and spawned roughly one V-Shrike in eight out of its own
+## ~13% of eligible hulls and spawned roughly one Widows in eight out of its own
 ## livery. This class briefly carried a `_roll_specialty` override to paint the
 ## black back on.
 ##
@@ -237,7 +237,7 @@ func _silhouette_half_width() -> float:
 ## Nothing here suppresses comms, because there is nothing to suppress: hailing
 ## runs one way (the PLAYER hails, ship.hail_friendly, from the friendlies roster)
 ## and a hostile never enters that roster. AI ships have no taunt or bark system
-## at all, so V-Shrike silence is currently free.
+## at all, so Widows silence is currently free.
 ##
 ## It stops being free the day ambient barks land — a shared "pirate jeers on
 ## approach" line would hand these people a voice by accident, and the silence is
