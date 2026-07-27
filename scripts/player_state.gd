@@ -91,6 +91,34 @@ var mission_active: Array = []  # contracts THIS pilot took
 var mission_total_kills: int = 0  # bounty progress baseline
 var mission_next_uid: int = 1
 
+## ---- Research (scripts/research.gd) ----
+## WHAT THIS PILOT HAS LEARNED. `Research.day` stays WORLD and is deliberately absent:
+## the calendar advances for the system, not for a person, and two pilots in one session
+## can never disagree about what day it is. Everything below they can.
+var research_insight: float = 0.0
+var research_recovered: Array[String] = []  # artifact ids installed at the lab
+var research_chain_stage: Dictionary = {}  # artifact id -> current stage index
+var research_survey_progress: int = 0  # counter for the active survey_rocks stage
+## SCAN DATA IS KNOWLEDGE (2026-07-27): a subject is catalogued ONCE, by hull class. Two
+## pilots absolutely disagree here — that is the whole feature.
+var research_catalogued: Dictionary = {}  # subject key -> true
+var research_unlocked: Dictionary = {}  # tech node id -> true
+var research_pending_notes: Array[String] = []
+var research_journal: Array[Dictionary] = []  # {day, text} — the captain's log
+var research_last_rumor_vo: String = ""
+var research_last_rumor_chain: String = ""
+
+## ---- Quests (scripts/quests.gd) ----
+## THE CAMPAIGN, PER PILOT. This is the migration the flag rule was waiting on: presence
+## + order (docs/multiplayer_readiness.md) only means anything once each pilot has their
+## own chain to check against. Helping a friend with a later beat must not grant it out
+## of sequence, and it cannot even be asked while there is one global `active`.
+var quest_active: Dictionary = {}  # id -> {"stage": int, "count": int}
+var quest_completed: Array[String] = []
+var quest_completed_day: Dictionary = {}  # id -> game day it closed
+var quest_pending_notes: Array[String] = []
+var quest_pending_talks: Array[Dictionary] = []
+
 
 ## Hand this pilot a clean slate. Used by New Game; also the honest way to build a
 ## second pilot in a test without disturbing the one already loaded.

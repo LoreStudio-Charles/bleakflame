@@ -80,8 +80,10 @@ generous with someone else's. It also preserves every authored beat's meaning fo
 each pilot individually, which matters enormously for the Saga's late reveal.
 
 **Not built yet** — the *logic* needs a notion of who is present, which arrives
-with the net layer. The *data* migration (Quests/Research per-pilot) can proceed
-ahead of it, and should, so the flag rule has somewhere to live.
+with the net layer. The *data* migration LANDED 2026-07-27: `Quests` and `Research`
+are per-pilot, so the rule now has somewhere to live. `test_player_state` asserts
+two pilots run their own campaign and keep their own catalogue — the comparison
+"is MY chain satisfied" is expressible for the first time.
 
 ---
 
@@ -96,8 +98,8 @@ ahead of it, and should, so the flag rule has somewhere to live.
 | `Standing` | points, peace, mend_day, _seeded | **done** |
 | `Comms` | messages | **done** |
 | `MissionLog` | active, total_kills, next_uid | **done** (`offers` stays world) |
-| `Research` | insight, catalogued, journal, chains | after the flag rule lands |
-| `Quests` | active, completed, pending | after the flag rule lands |
+| `Research` | 10 — insight, catalogued, journal, chains, rumour state | **done** (`day` stays world) |
+| `Quests` | 5 — active, completed, completed_day, pending notes + talks | **done** |
 | `Tutor` | seen/step/_progress/_did | last — needs splitting from the engine tables |
 | `PoiMap` | `_discovered` only | last — the module straddles player/world |
 

@@ -109,11 +109,37 @@ const RECIPES := [
 		"materials": {"ferrite_ore": 6, "aurite_ore": 4}},
 ]
 
-static var insight := 0.0
+static var insight: float:
+	get:
+		return PlayerState.local.research_insight
+	set(value):
+		PlayerState.local.research_insight = value
+
+
 static var day := 0
-static var recovered: Array[String] = []
-static var chain_stage := {}       # artifact id -> current stage index
-static var survey_progress := 0    # counter for the active survey_rocks stage
+static var recovered: Array:
+	get:
+		return PlayerState.local.research_recovered
+	set(value):
+		PlayerState.local.research_recovered = value
+
+
+## artifact id -> current stage index
+static var chain_stage: Dictionary:
+	get:
+		return PlayerState.local.research_chain_stage
+	set(value):
+		PlayerState.local.research_chain_stage = value
+
+
+## counter for the active survey_rocks stage
+static var survey_progress: int:
+	get:
+		return PlayerState.local.research_survey_progress
+	set(value):
+		PlayerState.local.research_survey_progress = value
+
+
 ## THE CATALOGUE — every subject this pilot has put on file, keyed by DATA KEY (a
 ## hull's resource_path, never its display name: player-facing strings rename, keys
 ## never).
@@ -124,15 +150,40 @@ static var survey_progress := 0    # counter for the active survey_rocks stage
 ## credits forever without moving. The rock branch had already written the argument
 ## down — "re-scanning the same rock is not exploration" — and applied it to the
 ## triangulation counter but not to the payout.
-static var catalogued := {}       # subject key -> true
-static var unlocked := {}          # tech node id -> true
+## subject key -> true
+static var catalogued: Dictionary:
+	get:
+		return PlayerState.local.research_catalogued
+	set(value):
+		PlayerState.local.research_catalogued = value
+
+
+## tech node id -> true
+static var unlocked: Dictionary:
+	get:
+		return PlayerState.local.research_unlocked
+	set(value):
+		PlayerState.local.research_unlocked = value
+
+
 ## Chain events that happened while docking; the dock screen shows and
 ## consumes them (every advancement must be VISIBLE).
-static var pending_notes: Array[String] = []
+static var pending_notes: Array:
+	get:
+		return PlayerState.local.research_pending_notes
+	set(value):
+		PlayerState.local.research_pending_notes = value
+
+
 ## The story so far: every completed chain stage, stamped with the game day
 ## it happened. Shown as the Captain's Log on the Missions tab; StoryLog
 ## campaign missions will write here too. Persisted.
-static var journal: Array[Dictionary] = []   # {day, text}
+## {day, text}
+static var journal: Array:
+	get:
+		return PlayerState.local.research_journal
+	set(value):
+		PlayerState.local.research_journal = value
 
 
 ## Is any live lead asking the pilot to SCAN something? Drives the tutor that
@@ -205,14 +256,22 @@ static func on_dock(is_station: bool, ship) -> void:
 ## rather than double-flashing on the next refresh.
 ## VO key of the last rumor Odessa delivered ("" = none) — so her line can be
 ## SPOKEN in her voice, not just printed. The bar reads it right after hear_rumor.
-static var last_rumor_vo := ""
+static var last_rumor_vo: String:
+	get:
+		return PlayerState.local.research_last_rumor_vo
+	set(value):
+		PlayerState.local.research_last_rumor_vo = value
 
 
 ## Which expedition the last rumor opened — so the bar can NAME it. Every rumor is
 ## worded differently, but the ASK is always "What's the word?", and a player who has
 ## heard one before reasonably reads a second offer as the game repeating itself
 ## (playtest, 2026-07-25). Naming the expedition it opens settles that instantly.
-static var last_rumor_chain := ""
+static var last_rumor_chain: String:
+	get:
+		return PlayerState.local.research_last_rumor_chain
+	set(value):
+		PlayerState.local.research_last_rumor_chain = value
 
 
 static func hear_rumor() -> String:

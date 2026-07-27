@@ -475,17 +475,46 @@ const QUESTS := [
 		"rewards": {"credits": 450, "xp": 90}},
 ]
 
-static var active := {}                 # id -> {"stage": int, "count": int}
-static var completed: Array[String] = []
+## id -> {"stage": int, "count": int}
+static var active: Dictionary:
+	get:
+		return PlayerState.local.quest_active
+	set(value):
+		PlayerState.local.quest_active = value
+
+
+static var completed: Array:
+	get:
+		return PlayerState.local.quest_completed
+	set(value):
+		PlayerState.local.quest_completed = value
+
+
 ## id -> the Research.day it was finished on, for quests whose follow-up should not
 ## arrive the instant you dock (see `requires_days`). Separate from `completed`
 ## rather than restructuring it: `completed` is read in a dozen places and is a
 ## save key, and this only ever needs to answer one extra question.
-static var completed_day := {}
-static var pending_notes: Array[String] = []
+static var completed_day: Dictionary:
+	get:
+		return PlayerState.local.quest_completed_day
+	set(value):
+		PlayerState.local.quest_completed_day = value
+
+
+static var pending_notes: Array:
+	get:
+		return PlayerState.local.quest_pending_notes
+	set(value):
+		PlayerState.local.quest_pending_notes = value
+
+
 ## Conversations the dock screen should present: {"giver": id, "text": line,
 ## "quest": title, "rewards": text}. Drained by the UI via take_talks().
-static var pending_talks: Array[Dictionary] = []
+static var pending_talks: Array:
+	get:
+		return PlayerState.local.quest_pending_talks
+	set(value):
+		PlayerState.local.quest_pending_talks = value
 
 
 ## Is this quest's prerequisite satisfied — including any enforced WAIT?

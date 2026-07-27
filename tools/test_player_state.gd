@@ -31,6 +31,8 @@ func _ready() -> void:
 	_case_two_pilots_own_different_ships()
 	_case_two_pilots_stand_apart()
 	_case_a_wipe_clears_only_that_pilot()
+	_case_two_pilots_run_their_own_campaign()
+	_case_two_pilots_keep_their_own_catalogue()
 	_case_wipe_cannot_drift()
 
 	PlayerState.local = was
@@ -204,6 +206,61 @@ func _case_two_pilots_stand_apart() -> void:
 		"...and their own contract and kill count")
 
 
+## THE CAMPAIGN IS PER PILOT — the data foundation the flag rule was waiting on.
+##
+## "Presence, then order" (docs/multiplayer_readiness.md) cannot even be ASKED while there
+## is one global `Quests.active`: helping a friend with a later beat must not grant it to
+## you out of sequence, and that comparison needs your own chain to compare against. This
+## does not implement the rule — presence needs the net layer — it proves the state it will
+## be written against exists.
+func _case_two_pilots_run_their_own_campaign() -> void:
+	var ahead := PlayerState.new()
+	var behind := PlayerState.new()
+
+	PlayerState.local = ahead
+	Quests.active["legend_who_is_asking"] = {"stage": 1, "count": 0}
+	Quests.completed.append("prove_wings")
+	Quests.completed_day["prove_wings"] = 4
+
+	PlayerState.local = behind
+	_ok(Quests.active.is_empty(),
+		"a second pilot has not started the first's beat (%d active)" % Quests.active.size())
+	_ok(Quests.completed.is_empty(), "...and has completed none of their quests")
+	_ok(Quests.completed_day.is_empty(), "...and shares none of their timestamps")
+
+	# The one ahead is untouched by the one behind — the direction that would silently
+	# ERASE somebody's campaign if these were still shared.
+	Quests.completed.append("overdue")
+	PlayerState.local = ahead
+	_ok(Quests.completed.size() == 1 and Quests.completed[0] == "prove_wings",
+		"...and the first pilot's campaign is not rewritten by the second's")
+	_ok(Quests.active.has("legend_who_is_asking"), "...still standing mid-beat where they were")
+
+
+## SCAN DATA IS KNOWLEDGE (user, 2026-07-27), and knowledge is personal. A subject is
+## catalogued once PER PILOT: your friend having filed a Goshawk must not spend your
+## first-scan payout, and it must not deny you the discovery either.
+func _case_two_pilots_keep_their_own_catalogue() -> void:
+	var scholar := PlayerState.new()
+	var rookie := PlayerState.new()
+
+	PlayerState.local = scholar
+	Research.catalogued["hull:res://data/hulls/goshawk.tres"] = true
+	Research.insight = 40.0
+	Research.journal.append({"day": 3, "text": "Filed a Goshawk."})
+
+	PlayerState.local = rookie
+	_ok(Research.catalogued.is_empty(), "a second pilot's catalogue starts empty")
+	_ok(is_equal_approx(Research.insight, 0.0), "...with none of the first's Insight")
+	_ok(Research.journal.is_empty(), "...and a blank captain's log")
+
+	Research.insight += 15.0
+	PlayerState.local = scholar
+	_ok(is_equal_approx(Research.insight, 40.0),
+		"...and earning it does not touch the first pilot's (got %.1f)" % Research.insight)
+	_ok(Research.journal.size() == 1, "...nor write into their log")
+
+
 ## THE DRIFT GUARD. wipe() resets from a fresh instance rather than a hand-written
 ## field list, so adding a field cannot leave a stale value alive across New Game —
 ## the shape of the Nemesis/Pilot.met leak fixed on 2026-07-26. This asserts the
@@ -212,9 +269,12 @@ func _case_wipe_cannot_drift() -> void:
 	var fresh := PlayerState.new()
 	var dirty := PlayerState.new()
 	var touched := 0
+	var total := 0
+	var skipped: Array[String] = []
 	for prop in fresh.get_property_list():
 		if not (prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
 			continue
+		total += 1
 		var clean = fresh.get(prop.name)
 		# Dirty every field with something that is definitely not its default.
 		match typeof(clean):
@@ -223,9 +283,24 @@ func _case_wipe_cannot_drift() -> void:
 			TYPE_BOOL: dirty.set(prop.name, not bool(clean))
 			TYPE_STRING: dirty.set(prop.name, "dirty")
 			TYPE_DICTIONARY: dirty.set(prop.name, {"dirty": 1})
-			_: continue      # typed arrays: filled below only if we can
+			TYPE_ARRAY:
+				var soiled := _dirty_array(clean)
+				if soiled.size() == (clean as Array).size():
+					skipped.append("%s (Array of an unhandled type)" % str(prop.name))
+					continue
+				dirty.set(prop.name, soiled)
+			_:
+				skipped.append("%s (%s)" % [str(prop.name), type_string(typeof(clean))])
+				continue
 		touched += 1
-	_ok(touched > 10, "the guard actually dirtied a meaningful number of fields (%d)" % touched)
+	# EVERY FIELD, OR NAME THE ONES YOU COULD NOT REACH. This used to be `touched > 10`
+	# with typed arrays falling through a bare `continue` — so a dozen Array[String] and
+	# Array[Dictionary] fields were never dirtied at all, and the "wipe clears everything"
+	# assertion below passed VACUOUSLY for every one of them. A guard that silently skips a
+	# whole category of field is the shape it was written to prevent.
+	_ok(skipped.is_empty(), "every field type can be dirtied — unreachable: %s" % str(skipped))
+	_ok(touched == total, "the guard dirtied all %d declared fields (reached %d)"
+		% [total, touched])
 
 	dirty.wipe()
 	var stale: Array[String] = []
@@ -235,6 +310,31 @@ func _case_wipe_cannot_drift() -> void:
 		if str(dirty.get(prop.name)) != str(fresh.get(prop.name)):
 			stale.append(str(prop.name))
 	_ok(stale.is_empty(), "wipe() clears EVERY declared field — stale: %s" % str(stale))
+
+
+## A non-empty array that a TYPED array field will actually accept. `Array[String]` refuses
+## a Dictionary and vice versa, so the element is chosen from the destination's own element
+## type — which is why this cannot just append a string and hope.
+## A non-empty array that a TYPED array field will actually accept. `Array[String]` refuses
+## a Dictionary and vice versa, so the element comes from the destination's own element
+## type — this cannot just append a string and hope.
+##
+## RETURNS THE ARRAY UNCHANGED when it cannot synthesise an element, and the caller detects
+## that and NAMES the field. The first version appended "dirty" to anything it did not
+## recognise; Godot rejected the push_back, printed an engine error, left the array equal to
+## fresh — and the suite still said ALL PASS, because "wipe cleared it" is trivially true
+## for a field that was never dirtied. Exactly the vacuum this whole case exists to prevent.
+func _dirty_array(clean) -> Array:
+	var src := clean as Array
+	var out: Array = src.duplicate()
+	match src.get_typed_builtin():
+		TYPE_NIL: out.append("dirty")        # untyped Array takes anything
+		TYPE_STRING: out.append("dirty")
+		TYPE_DICTIONARY: out.append({"dirty": 1})
+		TYPE_INT: out.append(4242)
+		TYPE_FLOAT: out.append(42.5)
+		TYPE_OBJECT: out.append(null)   # Array[ComponentDef] and friends accept a null slot
+	return out
 
 
 func _ok(cond: bool, what: String) -> void:

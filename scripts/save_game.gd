@@ -37,10 +37,30 @@ static var _pending_commodities := {}
 ## hand months ago and is the reason we know this rule matters.
 static var read_only := false
 static var _blocked := 0
+static var _cmdline_checked := false
+
+
+## `--no-save` ON THE COMMAND LINE (after a bare `--`) makes a run read-only.
+##
+## THE DOCUMENTED SMOKE CHECK NEEDED THIS. CLAUDE.md tells every session to boot the flight
+## scene headless after a change — and that boot starts the pilot DOCKED, so it checkpoints,
+## and Research.on_dock ADVANCES THE GAME DAY. Every "did it still compile" run was quietly
+## ageing the playtester's save by a day; artifact payouts and rumour gates are both day-
+## based, so it accumulated. Tests could be fixed by setting `read_only` in their own
+## _ready, but the smoke check has no script of its own to set anything in.
+##
+##   <godot> --headless --path . res://scenes/flight/flight_test.tscn --quit-after 60 -- --no-save
+static func _wants_read_only() -> bool:
+	if not _cmdline_checked:
+		_cmdline_checked = true
+		if OS.get_cmdline_user_args().has("--no-save"):
+			read_only = true
+			print("[SaveGame] --no-save: this run will not write the pilot")
+	return read_only
 
 
 static func save_game(ship: TestShip) -> void:
-	if read_only:
+	if _wants_read_only():
 		# Warn ONCE. A test that boots a scene may trip this dozens of times, and a
 		# thousand identical warnings would bury whatever the test was actually saying.
 		_blocked += 1
