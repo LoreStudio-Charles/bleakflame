@@ -3,14 +3,26 @@ class_name SampleBuilds
 ## `current` is static so the selection survives scene switches — F1 always
 ## inspects the ship currently being flown.
 
-static var current := 3  # starter: Rooster (index 3)
+static var current: int:
+	get:
+		return PlayerState.local.ship_current
+	set(value):
+		PlayerState.local.ship_current = value
 ## Indices of ships the player owns. Ships are bought at the Shipyard and
 ## boarded in the Hangar; 1-4 keys only work docked, for owned ships.
-static var owned: Array[int] = [3]
+static var owned: Array[int]:
+	get:
+		return PlayerState.local.ship_owned
+	set(value):
+		PlayerState.local.ship_owned = value
 
 ## Player builds are cached so refits persist across ship swaps, deaths, and
 ## scene changes for the whole session. Pirate builds stay fresh per spawn.
-static var _player_builds: Dictionary = {}
+static var _player_builds: Dictionary:
+	get:
+		return PlayerState.local.ship_builds
+	set(value):
+		PlayerState.local.ship_builds = value
 
 
 static func count() -> int:

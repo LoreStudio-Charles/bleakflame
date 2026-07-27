@@ -46,12 +46,36 @@ const BACKGROUNDS := [
 		"trait": "Smooth rings: turrets slew 5% faster."},
 ]
 
-static var created := false
-static var callsign := ""       # a handle from CALLSIGNS
-static var family_name := ""    # free text
-static var portrait_path := ""
-static var background := ""
-static var bio := ""
+static var created: bool:
+	get:
+		return PlayerState.local.created
+	set(value):
+		PlayerState.local.created = value
+static var callsign: String:
+	get:
+		return PlayerState.local.callsign
+	set(value):
+		PlayerState.local.callsign = value
+static var family_name: String:
+	get:
+		return PlayerState.local.family_name
+	set(value):
+		PlayerState.local.family_name = value
+static var portrait_path: String:
+	get:
+		return PlayerState.local.portrait_path
+	set(value):
+		PlayerState.local.portrait_path = value
+static var background: String:
+	get:
+		return PlayerState.local.background
+	set(value):
+		PlayerState.local.background = value
+static var bio: String:
+	get:
+		return PlayerState.local.bio
+	set(value):
+		PlayerState.local.bio = value
 
 ## Progression: LEVELS derive from banked Wallet.xp (retroactive — veterans dock
 ## already levelled), granting a skill point every POINTS_PER_LEVELS levels. A
@@ -60,15 +84,31 @@ static var bio := ""
 const MAX_LEVEL := 60
 const POINTS_PER_LEVELS := 4     # 1 skill point per 4 levels -> 15 at the cap
 
-static var profession := ""      # "" = no commission yet
-static var skills := {}          # skill id -> ranks bought
+static var profession: String:
+	get:
+		return PlayerState.local.profession
+	set(value):
+		PlayerState.local.profession = value
+static var skills: Dictionary:
+	get:
+		return PlayerState.local.skills
+	set(value):
+		PlayerState.local.skills = value
 ## Krayt's invitation (from the hermit) is your first key to the Rust Shoal — the
 ## campaign grants access to the outlaw haven, before any standing is earned.
-static var shoal_invited := false
+static var shoal_invited: bool:
+	get:
+		return PlayerState.local.shoal_invited
+	set(value):
+		PlayerState.local.shoal_invited = value
 ## Pirates killed WHILE the truce holds. Vyper's banner is a promise, not a
 ## suicide pact: gun down enough of the Shoal's own and they revoke it (see
 ## flight_test SHOAL_TRUCE_BREAK). Persisted so the tally survives a save.
-static var shoal_truce_kills := 0
+static var shoal_truce_kills: int:
+	get:
+		return PlayerState.local.shoal_truce_kills
+	set(value):
+		PlayerState.local.shoal_truce_kills = value
 
 ## The ABILITY GEMS: the [1]-[5] active bar. Each slot holds an ability id (from
 ## Abilities) or "" (empty). You MEMORIZE abilities into gems at dock; only a
@@ -88,17 +128,33 @@ const GEM_SLOTS := 5
 ## Everyone you have actually SPOKEN to. Introductions only fire for strangers —
 ## being told "you haven't met the cartographer" about someone you chatted with
 ## an hour ago reads as the game not paying attention.
-static var met: Array[String] = []
+static var met: Array[String]:
+	get:
+		return PlayerState.local.met
+	set(value):
+		PlayerState.local.met = value
 
 
-static var gems := ["", "", "", "", ""]
+static var gems: Array:
+	get:
+		return PlayerState.local.gems
+	set(value):
+		PlayerState.local.gems = value
 
 ## ---- GROUND EQUIPMENT (docs/ground_combat.md: the 9-slot paperdoll) ----
 ## slot name -> {"base": tres path, "affixes": [ids]} — the same save-safe shape ship
 ## builds use; Affixes.rebuild makes the identical item every load. TWO-HAND RULE: a
 ## two-handed Main writes "__2h__" into Offhand (a lock marker, not an item).
-static var ground_gear := {}
-static var _ground_cache := {}   # slot -> rebuilt GroundGearDef (instances, not saved)
+static var ground_gear: Dictionary:
+	get:
+		return PlayerState.local.ground_gear
+	set(value):
+		PlayerState.local.ground_gear = value
+static var _ground_cache: Dictionary:
+	get:
+		return PlayerState.local._ground_cache
+	set(value):
+		PlayerState.local._ground_cache = value
 const OFFHAND_LOCK := "__2h__"
 
 
@@ -371,7 +427,11 @@ static func offhand_locked() -> bool:
 ## holds trained techniques (docs/ground_combat.md — hardware vs training). Same
 ## 5-slot idiom, separate list, separate save key, so boarding a different hull never
 ## touches what your character knows how to do.
-static var techniques: Array = ["", "", "", "", ""]
+static var techniques: Array:
+	get:
+		return PlayerState.local.techniques
+	set(value):
+		PlayerState.local.techniques = value
 
 
 static func _ensure_techniques() -> void:
@@ -426,7 +486,11 @@ static func autoprepare() -> void:
 
 ## The starter kit — once, on first landfall: rags and a scrap pistol, so the first
 ## scrit is beatable and the paperdoll teaches itself. Never re-granted.
-static var ground_kit_granted := false
+static var ground_kit_granted: bool:
+	get:
+		return PlayerState.local.ground_kit_granted
+	set(value):
+		PlayerState.local.ground_kit_granted = value
 static func ensure_ground_kit() -> void:
 	if ground_kit_granted:
 		return

@@ -54,11 +54,41 @@ var xp := 0
 var stash_items: Array[ComponentDef] = []
 var stash_commodities: Dictionary = {}
 
+# --- Pilot identity, commission and loadout ----------------------
+var created: bool = false
+var callsign: String = ""  # a handle from CALLSIGNS
+var family_name: String = ""  # free text
+var portrait_path: String = ""
+var background: String = ""
+var bio: String = ""
+var profession: String = ""  # "" = no commission yet
+var skills: Dictionary = {}  # skill id -> ranks bought
+var shoal_invited: bool = false
+var shoal_truce_kills: int = 0
+var met: Array[String] = []
+var gems: Array = ["", "", "", "", ""]
+var ground_gear: Dictionary = {}
+var _ground_cache: Dictionary = {}  # slot -> rebuilt GroundGearDef (not saved)
+var techniques: Array = ["", "", "", "", ""]
+var ground_kit_granted: bool = false
+
+# --- Owned ships (SampleBuilds) ----------------------------------
+var ship_current: int = 3  # starter: Rooster (index 3)
+var ship_owned: Array[int] = [3]
+var ship_builds: Dictionary = {}
+
 
 ## Hand this pilot a clean slate. Used by New Game; also the honest way to build a
 ## second pilot in a test without disturbing the one already loaded.
+##
+## RESET FROM A FRESH INSTANCE rather than by listing the fields. A hand-written
+## wipe() is a second copy of the defaults that drifts the moment someone adds a
+## field and forgets it here -- and a field that quietly survives a New Game is
+## exactly the bug that let Nemesis grudges and Pilot.met leak into new pilots
+## (fixed 2026-07-26). This cannot drift: the defaults have one home, the
+## declarations above.
 func wipe() -> void:
-	credits = 0
-	xp = 0
-	stash_items.clear()
-	stash_commodities.clear()
+	var fresh := PlayerState.new()
+	for prop in fresh.get_property_list():
+		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			set(prop.name, fresh.get(prop.name))

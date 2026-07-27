@@ -27,7 +27,10 @@ func _ready() -> void:
 	_case_two_pilots_do_not_share_a_wallet()
 	_case_two_pilots_do_not_share_a_stash()
 	_case_collections_are_live_not_copies()
+	_case_two_pilots_are_different_people()
+	_case_two_pilots_own_different_ships()
 	_case_a_wipe_clears_only_that_pilot()
+	_case_wipe_cannot_drift()
 
 	PlayerState.local = was
 	if _fails.is_empty():
@@ -121,6 +124,86 @@ func _case_a_wipe_clears_only_that_pilot() -> void:
 	_ok(scrub.credits == 0 and scrub.stash_commodities.is_empty(), "wipe() empties its own pilot")
 	_ok(keep.credits == 777 and int(keep.stash_commodities.get("aurite_ore", 0)) == 4,
 		"...and leaves every other pilot alone")
+
+
+## IDENTITY, COMMISSION AND LOADOUT. In coop these are the things that make two
+## pilots two people rather than one pilot rendered twice.
+func _case_two_pilots_are_different_people() -> void:
+	var alice := PlayerState.new()
+	var bob := PlayerState.new()
+
+	PlayerState.local = alice
+	Pilot.callsign = "Wingfeather"
+	Pilot.profession = "guardian"
+	Pilot.skills["evasion"] = 2
+	Pilot.gems[0] = "scan"
+	Pilot.met.append("ruel")
+
+	PlayerState.local = bob
+	_ok(Pilot.callsign == "", "a second pilot has their own name, not the first's")
+	_ok(Pilot.profession == "", "...their own commission")
+	_ok(Pilot.skills.is_empty(), "...their own skills")
+	_ok(Pilot.gems[0] == "", "...their own wired abilities")
+	_ok(Pilot.met.is_empty(), "...and has met nobody yet")
+
+	Pilot.callsign = "Tallow"
+	Pilot.profession = "miner"
+	PlayerState.local = alice
+	_ok(Pilot.callsign == "Wingfeather" and Pilot.profession == "guardian",
+		"the first pilot is unchanged by the second's choices")
+
+
+## SHIP OWNERSHIP. `owned` and the cached refits were global, so in coop every
+## pilot would have flown the same hull and shared one loadout.
+func _case_two_pilots_own_different_ships() -> void:
+	var alice := PlayerState.new()
+	var bob := PlayerState.new()
+
+	PlayerState.local = alice
+	SampleBuilds.owned.append(5)      # she bought the Dowager
+	SampleBuilds.current = 5
+
+	PlayerState.local = bob
+	_ok(not SampleBuilds.owned.has(5), "a second pilot does not own the first's ship")
+	_ok(SampleBuilds.current == 3, "...and is still aboard the starter (got %d)"
+		% SampleBuilds.current)
+
+	PlayerState.local = alice
+	_ok(SampleBuilds.current == 5 and SampleBuilds.owned.has(5),
+		"the first pilot still owns and flies hers")
+
+
+## THE DRIFT GUARD. wipe() resets from a fresh instance rather than a hand-written
+## field list, so adding a field cannot leave a stale value alive across New Game —
+## the shape of the Nemesis/Pilot.met leak fixed on 2026-07-26. This asserts the
+## property actually holds for EVERY declared field, not just the ones I remembered.
+func _case_wipe_cannot_drift() -> void:
+	var fresh := PlayerState.new()
+	var dirty := PlayerState.new()
+	var touched := 0
+	for prop in fresh.get_property_list():
+		if not (prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var clean = fresh.get(prop.name)
+		# Dirty every field with something that is definitely not its default.
+		match typeof(clean):
+			TYPE_INT: dirty.set(prop.name, 4242)
+			TYPE_FLOAT: dirty.set(prop.name, 42.5)
+			TYPE_BOOL: dirty.set(prop.name, not bool(clean))
+			TYPE_STRING: dirty.set(prop.name, "dirty")
+			TYPE_DICTIONARY: dirty.set(prop.name, {"dirty": 1})
+			_: continue      # typed arrays: filled below only if we can
+		touched += 1
+	_ok(touched > 10, "the guard actually dirtied a meaningful number of fields (%d)" % touched)
+
+	dirty.wipe()
+	var stale: Array[String] = []
+	for prop in fresh.get_property_list():
+		if not (prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		if str(dirty.get(prop.name)) != str(fresh.get(prop.name)):
+			stale.append(str(prop.name))
+	_ok(stale.is_empty(), "wipe() clears EVERY declared field — stale: %s" % str(stale))
 
 
 func _ok(cond: bool, what: String) -> void:
