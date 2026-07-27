@@ -123,8 +123,6 @@ var _sel_gem := -1     # gem slot selected for memorizing in the Loadout panel
 var _offers_list: ItemList
 var _active_box: VBoxContainer
 var _yard_list: ItemList
-var _reset_button: Button
-var _reset_armed := false
 var _lab_status: RichTextLabel
 var _lab_leads: ItemList
 var _mission_log: RichTextLabel
@@ -289,12 +287,6 @@ func _build_overview_tab(title: String) -> void:
 		var stash_col := _stakes_column(row, "✔  STATION STASH — SAFE", Color(0.5, 0.82, 0.56),
 			"Kept safe here between runs. Death never touches it.", Color(0.48, 0.68, 0.53))
 		_overview_stash = _grid_in(stash_col)
-		_reset_button = Button.new()
-		_reset_button.text = "New Pilot (wipe all progress)"
-		_reset_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		_reset_button.modulate = Color(0.8, 0.55, 0.5)
-		_reset_button.pressed.connect(_on_reset_pressed)
-		stash_col.add_child(_reset_button)
 	else:
 		# The planet is the neutral hub — the Counter (hermit) will put in a word
 		# to mend a faction you've wronged. Slow, and only out of the red.
@@ -1702,14 +1694,13 @@ func _board_ship(index: int) -> void:
 	refresh()
 
 
-func _on_reset_pressed() -> void:
-	if not _reset_armed:
-		_reset_armed = true
-		_reset_button.text = "Really wipe everything? Click again"
-		_reset_button.modulate = Color(1.0, 0.35, 0.3)
-		return
-	SaveGame.reset_all_progress()
-	get_tree().reload_current_scene()
+## NO WIPE BUTTON ON THE DOCK (user, 2026-07-27). "New Pilot (wipe all progress)"
+## sat inside the STATION STASH column -- an irreversible action parked among the
+## items the column exists to promise are safe. Two clicks from "your stash is
+## protected" to "your stash is gone".
+##
+## Nothing is lost by removing it: the main menu's NEW GAME already calls
+## SaveGame.reset_all_progress(), which is where starting over belongs.
 
 
 func _on_buy_ship() -> void:

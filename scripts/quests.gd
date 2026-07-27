@@ -765,6 +765,24 @@ static func _enter_stage(id: String) -> void:
 ## `target_poi` is where the waypoint should point: the stage's own `poi` for
 ## goto/survive beats, else the VENUE's landmark for a talk/report beat (so even
 ## "meet Odessa at the station" gets a diamond, which it never had before).
+## THE STEP LINE WITH ITS PROGRESS FILLED IN.
+##
+## A step may carry "%d/%d" (contracts stages count toward `n`), and it has to be
+## formatted before a player ever sees it. This used to be done inline in _entry()
+## and NOWHERE ELSE, so the quest log read "Complete station contracts (0/2)" while
+## the Landing Bay banner -- fed by current_step() -- printed the raw
+## "Complete station contracts (%d/%d)" as the first line of every dock.
+## Found by screenshotting the running game, not by reading the code.
+##
+## `count` is passed rather than looked up because _entry() also renders COMPLETED
+## quests, which have no `active` entry to read a count from.
+static func step_text(st: Dictionary, count: int) -> String:
+	var step := str(st.get("step", ""))
+	if not step.contains("%d"):
+		return step
+	return step % [count, int(st.get("n", 0))]
+
+
 static func current_step() -> Dictionary:
 	for id in active.keys():
 		if quest_def(id).is_empty():
@@ -785,7 +803,7 @@ static func current_step() -> Dictionary:
 		return {
 			"quest": id,
 			"title": str(quest_def(id).get("title", "")),
-			"step": str(st.get("step", "")),
+			"step": step_text(st, int((active.get(id, {}) as Dictionary).get("count", 0))),
 			"target_poi": poi,
 		}
 	return {}
@@ -1040,8 +1058,7 @@ static func _entry(q: Dictionary, upto: int, count: int, done_quest: bool) -> Di
 	var current := ""
 	if not done_quest and upto < (q.stages as Array).size():
 		var st: Dictionary = q.stages[upto]
-		var step: String = st.step
-		current = step % [count, int(st.n)] if step.contains("%d") else step
+		current = step_text(st, count)
 	return {"id": q.id, "title": q.title, "giver": Npcs.display_name(q.giver),
 		"giver_id": q.giver, "body": q.body, "done": done, "current": current,
 		"rewards": rewards_text(q), "done_quest": done_quest}
