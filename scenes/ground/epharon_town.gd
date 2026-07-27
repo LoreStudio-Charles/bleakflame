@@ -509,16 +509,13 @@ func _tick_npcs(delta: float) -> void:
 				n.look_t = 1.6                                # hold facing you, don't robo-wander off
 				# She SAYS something (non-locking) but never opens a panel — the PLAYER opens every
 				# interaction ([E], in _poll_actions), and `met_<npc>` fires there, not on her arrival.
-				# 2.4s WAS TOO SHORT (user, 2026-07-26: "the words she says pop up and go
-				# away a tiny bit too fast"). This is the last place an NPC SPEAKS as a
-				# transient flash — the talks you initiate now open a DialoguePanel — and
-				# it is the one line a player is least prepared for, because SHE started
-				# it and they may still be reading the room.
-				#
-				# TODO STANDS: promote this to a real chat BUBBLE over her head (user's
-				# idea). That is the actual fix — an NPC could hail you without ever
-				# grabbing the centre of the screen. Until then, long enough to read.
-				_flash("%s: \"Got a moment, pilot?\"" % n.name, 4.5)
+				# A BUBBLE OVER HER HEAD, not a centre-screen flash (user, 2026-07-26 —
+				# this was a standing TODO in this file and is now done). A flash was
+				# the wrong channel twice: it seized the middle of the screen for
+				# something the player never asked for, and it did not say WHO was
+				# speaking, which in a town with six people is a real question. It also
+				# had to be read fast or not at all.
+				ChatBubble.say(self, n.node, "\"Got a moment, pilot?\"", 4.5)
 			continue
 
 		# Someone with BUSINESS (a quest talk, or the tutor's target) walks over the moment they
