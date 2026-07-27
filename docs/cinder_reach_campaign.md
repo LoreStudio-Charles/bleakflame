@@ -203,8 +203,55 @@ climax** (see The Braid).
    be *too quiet*, and a single distant engine note fading out would tell the whole
    story without a word — worth trying, and worth cutting if it reads as a cheap sting.
 
-3. **Who is asking.** Pulling the thread: who the hunters are, why an old man on a
-   dust ball is worth Ooshu attention, and how much Odessa has been sitting on.
+3. **Who is asking — BUILT 2026-07-27** (`legend_who_is_asking`).
+
+   **ITS JOB CHANGED, and the old one-liner is why this note exists.** This beat used
+   to read "who the hunters are, why an old man on a dust ball is worth Ooshu
+   attention, and how much Odessa has been sitting on" — all of which the DRONE
+   (added to beat 2 on 2026-07-25) now spends in beat 2's debrief. Beat 4 holds who
+   HE is. So beat 3 was defined as the gap between two things with no gap left.
+
+   **What it does now (user, 2026-07-27):** *"We might know WHAT they are, but not
+   WHO they are. Just that they are Ooshu and probably bounty hunters, but why are
+   they here? Who would hire them? Where did he go? How did he know to run? Still
+   lots of questions loaded into the chamber."* Every stage trades one closed
+   question for two open ones.
+
+   **AND IT IS THE PLAYER'S OWN THREAD.** Beats 1 and 2 are errands — Odessa points,
+   you go, you report. A third passive beat before the reveal would make the player a
+   courier in their own campaign. Nobody sends you to Dex; you still have the drone,
+   and he is the only person in the Reach who can read it. That is what EARNS beat 4:
+   she gives up the man because you proved you will dig without her, not because a
+   timer elapsed. (Giver is `lab`, not `odessa` — load-bearing for the breadcrumb
+   rule AND for the point that this lead is not hers.)
+
+   The three stages:
+   - **Dex reads the drone.** It has no storage — it was a RELAY, not a recorder, so
+     somebody was *listening*. And the corrosion says **six weeks**, against Odessa's
+     "three days." Dex's reading: you do not watch a man for six weeks if you mean to
+     take him; you watch because someone is paying you to be CERTAIN FIRST. Which
+     means they were not sure. Which means somebody told them to look, and that
+     somebody was not sure either. He gives up a bearing pointing at empty grid, and
+     the line that sets the price of everything: *an Ooshu contract costs more than
+     this station earns in a year.*
+   - **The unlisted return** (`ooshu_relay`, ephemeral POI at 11800,-9400 — far off
+     the Orivel axis, nowhere near the lane). An unlit, unpainted, transponder-less
+     buoy visible only because it occults the stars. It FORWARDS, so there is another
+     beyond it: a chain strung across the dark on the assumption nobody from the Reach
+     would ever come this far off-lane. **Its traffic runs INWARD — toward the
+     station.** The Ooshu did not arrive and start looking; somebody in Cinder Reach
+     was already looking and sent for them. And the log's hole: no outbound traffic
+     after the raid, no pursuit, no handoff. **They lost him too.**
+   - **Odessa.** She hears "six weeks" and gives up the thing she has been holding
+     since beat 1: a very polite man came into Ember Row **nine or ten weeks ago** and
+     asked whether she had known anyone come out from Percival years back. *"They
+     didn't start at his door. They started at mine. Which means they already knew to
+     ask me. Somebody told them where to start."*
+
+   **THIS RETROACTIVELY REFRAMES BEAT 1.** Odessa did not send you to look in on an
+   old friend out of sentiment — she sent a stranger because someone had already come
+   asking, and she did not say so. The player re-reads her carefulness in beat 1 as
+   fear, which is the best possible use of a scene that has already been played.
 4. **The reveal.** Who Conall is, what he did at Percival, and the stakes of his
    being found: not one old man's life — a **new war.**
 5. **The job: keep him buried.** Divert the hunters, muddy the trail, protect the
@@ -276,9 +323,27 @@ each leg an objective and a natural difficulty ramp.
 
 **And Odessa is FROM Percival.** She sheltered Conall when he first made it out to
 the Reach. So the trip is not only "learn who he is" — it is going to the place they
-both came from, and the place she has been not-asking about for years. Open, and
-worth deciding deliberately: **does she come, or is Percival exactly where she
-cannot go?**
+both came from, and the place she has been not-asking about for years.
+
+**DECIDED 2026-07-27 (user): SHE CANNOT GO.** *"Ember Row needs her and she might
+bring trouble with her. They know she knows something or they'd have never come
+knocking at her door. She knows."*
+
+Three reasons, and the third is the one that matters:
+- **Ember Row needs her.** The bar is not scenery; it is her reason to be reachable,
+  and the Campaign's fixed point in the Reach.
+- **She would bring trouble.** She is watched. Anyone travelling with her is a
+  courier carrying a return address.
+- **She knows she is watched** — beat 3 is where the player learns the Ooshu came to
+  HER door first, and she has known it since before beat 1. Going to Percival is not
+  a thing she is unable to do; it is a thing she has already decided she cannot risk,
+  years ago, and never said out loud.
+
+So **beat 4 is walked alone.** The reveal lands in the Quarn Wastes with nobody to
+explain it — the player assembles who Conall is from a place rather than a person,
+which is the whole argument for making Percival a journey. It also keeps the noir
+shape: the client stays behind, and the only one who goes is the one with nothing
+to lose by being seen there.
 
 ### The Recluse — the beat the player writes themselves
 

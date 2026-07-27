@@ -208,6 +208,9 @@ func _ready() -> void:
 	PoiMap.register("cold_patch_site", "Anomalous Return", Vector2(4200, -1600), "signal", false, true)
 	PoiMap.register("ambush_site", "Plotted Intercept", Vector2(2800, -2800), "signal", false, true)
 	PoiMap.register("tendril_site", "Severed Tendril", Vector2(3400, -3300), "signal", false, true)
+	# THE LEGEND, beat 3. Where the drone's last handshake points: far out on the
+	# Orivel axis, off the lane, in dark nobody has any business being in.
+	PoiMap.register("ooshu_relay", "Unlisted Return", Vector2(11800, -9400), "signal", false, true)
 	PoiMap.register("waygate", "The Ancient Gate", Vector2(-6800, 8200), "gate")
 	if PoiMap.waypoint_id == "":
 		PoiMap.waypoint_id = "station"   # a new pilot can always find home

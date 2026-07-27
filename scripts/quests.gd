@@ -380,6 +380,99 @@ const QUESTS := [
 				}},
 		],
 		"rewards": {"credits": 300, "xp": 60}},
+
+	# THE LEGEND, beat 3 — "Who Is Asking" (user, 2026-07-27).
+	#
+	# THE BEAT'S JOB CHANGED, and this is why it is not what the campaign doc's
+	# one-liner says. That line ("who the hunters are") predates the DRONE, and beat
+	# 2's debrief now spends exactly that: Odessa names the Ooshu, says what they are
+	# for, and admits she has been sitting on it. Beat 4 holds who HE is. So beat 3
+	# was defined as the gap between two things with no gap left between them.
+	#
+	# Its job now (user): "We might know WHAT they are, but not WHO they are... why
+	# are they here? Who would hire them? Where did he go? How did he know to run?
+	# Still lots of questions loaded into the chamber." So this beat LOADS rather than
+	# answers — every stage trades one closed question for two open ones.
+	#
+	# AND IT IS THE PLAYER'S OWN THREAD. Beats 1 and 2 are errands: Odessa points, you
+	# go, you report. Three passive beats in a row before the reveal would make the
+	# player a courier in their own campaign. Nobody sends you to Dex — you still have
+	# the drone, and he is the only person in the Reach who can read it. Odessa does
+	# not know you did this until you walk back in with it, which is what earns beat
+	# 4: she gives up the man because you proved you will dig without her, not because
+	# a timer elapsed.
+	#
+	# GIVER IS `lab`, NOT `odessa` — and that is load-bearing twice. The breadcrumb
+	# rule needs a giver standing where the lead is handed (Dex, station; test_campaign
+	# enforces it against beat 2's giver venue), and narratively the whole point is
+	# that this lead does not come from her.
+	#
+	# NO `requires_days`. Beat 2 ends on "they were watching his door" — a cold gate
+	# there would read as the game losing interest at the exact moment the player
+	# stopped being able to. The campaign's authored cold stretches belong to the
+	# later beats, behind level gates.
+	{"id": "legend_who_is_asking", "title": "Who Is Asking", "giver": "lab", "layer": "campaign",
+		"requires": "legend_empty_cave",
+		"body": "The drone was talking to something. Dex at the Research Lab can read what, and where it was sending.",
+		"debrief": "Odessa listens to all of it without moving.\n\nThen: \"Six weeks.\"\n\n\"Six weeks,\" you say.\n\nShe puts both hands flat on the bar, and for the first time since you met her she looks her age.\n\n\"A man came in here. Nine weeks ago, maybe ten. Ordered something he didn't drink and asked whether I'd known anybody come out from Percival, years back.\" Her mouth goes thin. \"I said the Reach is full of people from somewhere. He thanked me. He was very polite.\"\n\nShe doesn't say *and then I sent you to check on Conall*. She doesn't have to; the arithmetic assembles itself in the quiet.\n\n\"They didn't start at his door,\" she says. \"They started at mine. Which means they already knew to ask me.\" She looks up. \"Somebody told them where to start.\"",
+		"stages": [
+			{"kind": "talk", "npc": "lab", "venue": "station",
+				"step": "Take the smashed drone to Dex at the Research Lab.",
+				"flash": "It was a RELAY, not a recorder — and it had been out there six weeks. Dex has a bearing.",
+				"dialogue": {
+					"start": {
+						"text": "Dex turns the stalk under the lamp with the delight of a man handed a puzzle and no deadline.\n\n\"Oh, this is lovely. Look — no storage. None. It wasn't remembering anything, it was TALKING.\" He taps the shattered lens. \"Eye here, mouth in the housing. Somebody parked it, and somebody else listened.\"\n\nHe frowns at the casing, and some of the delight goes out of him.\n\n\"The corrosion layer, though. That's six weeks of Epharon dust, minimum.\"",
+						"choices": [
+							{"text": "Six weeks? She said he'd been missing three days.", "next": "weeks", "style": "primary"},
+							{"text": "Can you find out who was listening?", "next": "bearing"},
+						]},
+					"weeks": {
+						"text": "\"Then he was missing for three days and WATCHED for six weeks.\" Dex says it gently, the way you'd correct a child's sum. \"Those aren't the same event. The second one is much worse.\"\n\nHe sets it down.\n\n\"Whoever put this there wasn't hunting him. You don't watch a man for six weeks if you mean to take him. You watch him because somebody is paying you to be certain first.\"",
+						"choices": [
+							{"text": "Certain of what?", "next": "certain"},
+						]},
+					"certain": {
+						"text": "\"That he's the right man.\" Dex shrugs, uncomfortable with his own conclusion. \"Which means they weren't sure. Which means somebody TOLD them to look, and that somebody wasn't sure either.\"\n\nHe pulls the housing open with a thumbnail.\n\n\"I can give you the last thing it said, and roughly which direction it said it in. That's the whole of what I can do — and I'd rather you didn't tell anyone I did it.\"",
+						"choices": [
+							{"text": "Where was it sending?", "next": "bearing", "style": "primary"},
+						]},
+					"bearing": {
+						"text": "He works in silence for a while, then reads off a bearing and looks at it like it has personally disappointed him.\n\n\"That's not toward the gate. That's not toward Orivel, or the lane, or anywhere with a name on it.\" He turns the screen so you can see the empty grid. \"There is nothing out there. There's no reason for there to be anything out there.\"\n\nA pause.\n\n\"An Ooshu contract costs more than this station earns in a year. Whoever is paying for a six-week stakeout over an old man on a dust ball — they can afford to put things where there is no reason for things to be.\"",
+						"choices": [
+							{"text": "Then that's where I'm going.", "next": "end", "style": "primary"},
+						]}}},
+
+			{"kind": "goto", "pos": [11800, -9400], "radius": 480.0, "poi": "ooshu_relay",
+				"step": "Fly the drone's bearing — an unlisted return, far off the Orivel axis.",
+				"flash": "A relay buoy, cold and unlisted. It isn't the only one — and its traffic runs INWARD, toward the station.",
+				"dialogue": {
+					"start": {
+						"text": "There is nothing here, and then there is.\n\nIt hangs unlit and unpainted, no transponder, no running lights — a spar of dark alloy the length of your hull, and it is only visible at all because it occults the stars behind it. Your sensors want to call it debris. It is not debris. It is aimed.\n\nAs you drift past, something in it wakes just enough to notice you, and goes back to sleep.",
+						"choices": [
+							{"text": "Read whatever it will give me.", "next": "log", "style": "primary"},
+						]},
+					"log": {
+						"text": "It gives up almost nothing, and the almost-nothing is the problem.\n\nIt is a RELAY. It does not originate; it forwards. Which means there is one further out, and probably one beyond that, and this is a chain somebody strung across the dark on the assumption that no one in the Reach would ever come this far off the lane to find it.\n\nThe traffic log is four lines of handshake and one direction.\n\nThe reports are not going OUT toward Percival, or Quarn space, or anywhere you would expect a hunter's paymaster to sit.\n\nThey are going IN. Toward the station.",
+						"choices": [
+							{"text": "Toward the station.", "next": "cold"},
+						]},
+					"cold": {
+						"text": "You sit with that longer than is comfortable, out where there is nothing to hide behind.\n\nThe Ooshu did not arrive in Cinder Reach and start looking. Somebody in Cinder Reach was already looking, and they sent for the Ooshu.\n\nAnd there is one more thing the log is missing, and it takes you a moment to notice the shape of the hole: in six weeks, nothing went out from Epharon after the raid. No pursuit traffic. No handoff.\n\nThey lost him. Wherever the Counter went, he did not go far, and they do not know where he is either.",
+						"choices": [
+							{"text": "Take it to Odessa. All of it.", "next": "end", "style": "primary"},
+						]}}},
+
+			{"kind": "talk", "npc": "odessa", "venue": "station",
+				"step": "Tell Odessa what the relay said — and that its traffic points home.",
+				"flash": "They started at HER door, nine weeks ago. Somebody told them where to start.",
+				"dialogue": {
+					"start": {
+						"text": "You tell her in order: the drone that was talking, the six weeks, the buoy strung out in the dark where nothing is, and the direction the reports were going.\n\nShe does not interrupt. She has stopped pretending to work.\n\n\"Say the last part again.\"",
+						"choices": [
+							{"text": "The reports were coming here. Inward. To the station.", "next": "end", "style": "primary"},
+						]}}},
+		],
+		"rewards": {"credits": 450, "xp": 90}},
 ]
 
 static var active := {}                 # id -> {"stage": int, "count": int}
