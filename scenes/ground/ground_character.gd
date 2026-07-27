@@ -10,18 +10,10 @@ extends CharacterBody2D
 
 const DIRS := ["south", "north", "east", "west"]
 
-## THE SUN — one light, shared by every projected shadow (characters AND buildings). A shadow
-## is a dark, transparent copy of the sprite, flipped + squashed + skewed so it lies on the
-## ground; SCALE.y is its LENGTH (low sun = longer), SKEW is its LEAN (the sun's bearing).
-## Change these two and the whole town's shadows rotate + stretch together — the seam for a
-## real fake-lighting / day-night pass (animate them and every shadow follows).
-const SHADOW_TINT := Color(0.06, 0.05, 0.10, 0.45)
-const SHADOW_SCALE := Vector2(1.0, -0.55)   # x = 1.0 so the base width MATCHES (corners line up); y flips + squashes (= length)
-const SHADOW_SKEW := 0.5                       # radians lean (= the sun's bearing)
-## Lift the shadow's start up onto the sprite's true base by this FRACTION of the sprite's
-## visible height (art usually has a soft margin below the base, so the raw pivot sits low).
-## One value auto-scales across sizes — a person vs a big building. Tune by eye.
-const SHADOW_ANCHOR_PCT := 0.22
+## THE SUN lives with the WORLD (GroundScenery.sun), not with the people standing in it —
+## one light shared by every projected shadow on the surface, and a VALUE a scene sets
+## rather than a constant baked into the people. Read at setup() so a planet that assigns
+## its own light before building its actors gets it on every shadow it casts.
 
 var speed := 175.0
 var _anim: AnimatedSprite2D
@@ -406,10 +398,10 @@ func setup(char_dir: String) -> void:
 	_shadow = AnimatedSprite2D.new()
 	_shadow.sprite_frames = _anim.sprite_frames
 	_shadow.offset = _anim.offset
-	_shadow.scale = SHADOW_SCALE
-	_shadow.skew = SHADOW_SKEW
-	_shadow.modulate = SHADOW_TINT
-	_shadow.position = Vector2(0, -h * SHADOW_ANCHOR_PCT)   # lift onto the true base
+	_shadow.scale = GroundScenery.sun_val("scale")
+	_shadow.skew = GroundScenery.sun_val("skew")
+	_shadow.modulate = GroundScenery.sun_val("tint")
+	_shadow.position = Vector2(0, -h * float(GroundScenery.sun_val("anchor_pct")))   # lift onto the true base
 	add_child(_shadow)   # added FIRST, so it draws behind the main sprite (no z_index vs y-sort fight)
 	add_child(_anim)
 	# Collide with buildings (layer 1) but not with each other, so nobody walks through a

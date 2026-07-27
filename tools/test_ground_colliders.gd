@@ -97,7 +97,10 @@ func _ready() -> void:
 	# 6) NO PROP OVERLAPS ANOTHER (user bug: overlapping props stacked TWO projected
 	#    shadows into a dark blot). The scatter placed at pure random with no checks; it
 	#    now rejects a spot that isn't clear. Assert the field it actually produced.
-	var placed: Array = town.get("_placed_props")
+	# The placement record now belongs to the reusable GroundScenery.Scatter the town owns,
+	# rather than being a bare array on the town — so this reads the scatter's own ledger.
+	var scatter = town.get("_scatter")
+	var placed: Array = scatter.placed if scatter != null else []
 	_chk(placed.size() > 20, "the roam is still populated after decluttering (%d props)" % placed.size())
 	var worst := 0.0
 	var clashes := 0

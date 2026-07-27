@@ -171,6 +171,10 @@ var _trader: GroundCharacter   # interior-only actor (Bram, the colony market)
 var _world: Node2D             # y-sorted container: building sprites + actors sort by depth
 var _art := {}                 # building name -> true when a real sprite stands in for the box
 var _shadow_pairs := []        # [{spr, shd}] building sprite + its shadow, for the contact test
+## Where the ground is already spoken for. Owned by this scene and HANDED the facts it
+## needs (see _seed_scatter_blockers) — it never reaches back in here for BUILDINGS or the
+## apron, so a second planet reuses it by declaring different blockers.
+var _scatter := GroundScenery.Scatter.new()
 var _dust_tex: Texture2D       # footstep-puff texture (sand cloud)
 var _puff_accum := 0.0         # distance walked since the last kicked-up puff
 var _walk_total := 0.0         # total distance walked this visit (for the "get out and walk" step)
@@ -211,8 +215,11 @@ var _ambush_sprung := false
 func _ready() -> void:
 	add_to_group("ground_town")   # the character sheet freezes us by this group while open
 	_font = ThemeDB.fallback_font
-	_build_dusk()
-	_build_weather()
+	# EPHARON'S OWN LIGHT AND AIR. The machinery is GroundScenery's; these two values are
+	# what make this planet feel like this planet, so they stay here as data.
+	GroundScenery.apply_light(self, $HUD, DUSK_CAST)
+	_weather = GroundScenery.build_weather($HUD,
+		GroundScenery.load_tex("res://assets/ground/fx/dust_wisp.png"), BLOWING_SAND)
 	_world = Node2D.new()
 	_world.y_sort_enabled = true   # buildings + actors occlude by depth
 	add_child(_world)
@@ -239,7 +246,7 @@ func _ready() -> void:
 	cam.zoom = Vector2(1.3, 1.3)
 	_player.add_child(cam)
 	cam.make_current()
-	_dust_tex = _load_tex("res://assets/ground/fx/dust_cloud.png")
+	_dust_tex = GroundScenery.load_tex("res://assets/ground/fx/dust_cloud.png")
 	_last_ppos = _player.global_position
 
 	# wants_talk drives the notice reaction: TRUE = walk over + start the conversation, FALSE =
@@ -302,7 +309,7 @@ func _spawn_player_ship() -> void:
 		return
 	var path: String = b.hull.art_path if b.hull.art_path != "" \
 		else "res://assets/ships/%s.png" % b.hull.display_name.to_snake_case()
-	var tex := _load_tex(path)
+	var tex := GroundScenery.load_tex(path)
 	if tex == null:
 		# No sprite for this hull yet (the Dowager ships without one). The berth and its
 		# [E] launch still stand — an empty pad is honest, a placeholder would not be.
@@ -330,7 +337,7 @@ func _spawn_player_ship() -> void:
 	shd.scale = Vector2(sc, sc)
 	shd.rotation = facing
 	shd.position = PAD_CENTER + Vector2(-30, 22)
-	shd.modulate = GroundCharacter.SHADOW_TINT
+	shd.modulate = GroundScenery.sun_val("tint")
 	# NEAREST-NEIGHBOUR. The project default is linear, which nothing else notices because
 	# nothing else is scaled far past 1x — blown up ~9x it turned the hull to mush.
 	shd.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -604,10 +611,10 @@ func _spawn_warren() -> void:
 ## depend on where a seeded scatter happened to drop sand) with the pack tucked behind it.
 ## Called BEFORE _scatter_props so the dune claims its ground and the scatter avoids it.
 func _spawn_ambush() -> void:
-	var dune := _load_tex("res://assets/ground/props/dune.png")
+	var dune := GroundScenery.load_tex("res://assets/ground/props/dune.png")
 	if dune != null:
-		var pair := _spawn_prop(dune, AMBUSH_DUNE, 520.0, Color(0.80, 0.70, 0.55), false)
-		_placed_props.append({"pos": AMBUSH_DUNE, "r": 260.0})   # scatter keeps its distance
+		var pair := GroundScenery.spawn_prop(_world, dune, AMBUSH_DUNE, 520.0, Color(0.80, 0.70, 0.55), false)
+		_scatter.block(AMBUSH_DUNE, 260.0)   # scatter keeps its distance
 		if pair.is_empty():
 			pass
 	for i in AMBUSH_PACK:
@@ -1569,69 +1576,17 @@ func _flash(msg: String, secs: float) -> void:
 ## Film-noir dusk: a low SW sun, so everything throws a long shadow to the NE. Procedural
 ## for now (drop-in PixelLab sprites layer over this later, per the WayGate/anomaly seam).
 
+## EPHARON'S LIGHT AND AIR — the two values that make this planet feel like this planet
+## rather than the next one. The machinery that applies them is GroundScenery's; these are
+## the data, and a second planet supplies its own.
+const DUSK_CAST := Color(0.93, 0.75, 0.60)           # warm golden-hour cast over everything
+const BLOWING_SAND := Color(0.86, 0.76, 0.56)        # the drifting dust wisps
+
 const SHADOW_COL := Color(0.09, 0.06, 0.12, 0.22)   # cool shadow against warm sand
 const SAND := Color(0.70, 0.54, 0.38)
 const WINDOW := Color(1.0, 0.72, 0.34)               # lit at dusk
 const B_OFS := Vector2(34, -20)                      # building drop-shadow (small — a flat roof on sand)
 const A_OFS := Vector2(36, -22)                      # actor shadow offset
-
-
-func _build_dusk() -> void:
-	var cm := CanvasModulate.new()
-	cm.color = Color(0.93, 0.75, 0.60)   # warm golden-hour cast over everything
-	add_child(cm)
-	# Screen-space vignette for the noir framing — behind the HUD text, over the world.
-	var vig := TextureRect.new()
-	vig.texture = _vignette_tex()
-	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vig.stretch_mode = TextureRect.STRETCH_SCALE
-	$HUD.add_child(vig)
-	$HUD.move_child(vig, 0)
-
-
-## Ambient blowing sand: dust wisps drift across the screen on the wind. Screen-space (on
-## the HUD, behind the vignette) so it always reads regardless of where the camera is. A
-## full storm EVENT can crank amount/velocity/alpha off this same emitter later.
-func _build_weather() -> void:
-	var tex := _load_tex("res://assets/ground/fx/dust_wisp.png")
-	if tex == null:
-		return
-	var p := CPUParticles2D.new()
-	_weather = p
-	p.texture = tex
-	p.amount = 14
-	p.lifetime = 7.0
-	p.preprocess = 7.0            # start mid-stream so the screen isn't bare on arrival
-	p.local_coords = false
-	p.position = Vector2(-160, 540)
-	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	p.emission_rect_extents = Vector2(40, 720)
-	p.direction = Vector2(1, 0.15)
-	p.spread = 12.0
-	p.gravity = Vector2.ZERO
-	p.initial_velocity_min = 150.0
-	p.initial_velocity_max = 250.0
-	p.scale_amount_min = 0.8
-	p.scale_amount_max = 2.4
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
-	g.colors = PackedColorArray([
-		Color(0.86, 0.76, 0.56, 0.0), Color(0.86, 0.76, 0.56, 0.22), Color(0.86, 0.76, 0.56, 0.0)])
-	p.color_ramp = g
-	$HUD.add_child(p)
-	$HUD.move_child(p, 0)   # behind the vignette + labels
-
-
-func _vignette_tex() -> Texture2D:
-	var n := 128
-	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
-	var c := (n - 1) * 0.5
-	for y in n:
-		for x in n:
-			var d := Vector2(x - c, y - c).length() / (c * 1.16)
-			img.set_pixel(x, y, Color(0.02, 0.01, 0.05, clampf((d - 0.55) / 0.45, 0.0, 1.0) * 0.6))
-	return ImageTexture.create_from_image(img)
 
 
 ## Spawn a base-anchored sprite for every building that has drop-in art. The node sits at
@@ -1640,13 +1595,13 @@ func _vignette_tex() -> Texture2D:
 func _build_buildings() -> void:
 	for b in BUILDINGS:
 		var key: String = BUILDING_ART.get(b.name, "")
-		var tex := _load_tex("res://assets/ground/buildings/%s.png" % key) if key != "" else null
+		var tex := GroundScenery.load_tex("res://assets/ground/buildings/%s.png" % key) if key != "" else null
 		if tex == null:
 			_add_building_body(b, {})   # no art: the procedural box IS the footprint
 			continue
 		var base: Vector2 = b.pos + Vector2(0, b.size.y * 0.5)
 		var tint: Color = Color(0.55, 0.55, 0.62) if b.name == "SEALED" else Color.WHITE
-		var pair := _spawn_prop(tex, base, b.size.x * 1.25, tint, true)
+		var pair := GroundScenery.spawn_prop(_world, tex, base, b.size.x * 1.25, tint, true)
 		pair["name"] = str(b.name)
 		_shadow_pairs.append(pair)
 		_art[b.name] = true
@@ -1655,44 +1610,23 @@ func _build_buildings() -> void:
 		_add_building_body(b, pair)
 
 
-## Place a base-anchored art prop in the y-sorted world: pivots on its WIDEST base row so it
-## sits on the sand, and (if cast_shadow) drops the same projected shadow the buildings use —
-## which then touches at the base corners (see test_ground_shadow). Used by buildings AND the
-## scattered rocks/dunes. Returns the sprite/shadow pair + base-corner columns for the test.
-func _spawn_prop(tex: Texture2D, base_pos: Vector2, target_w: float, tint: Color, cast_shadow: bool) -> Dictionary:
-	var img := tex.get_image()
-	if img != null and img.is_compressed():
-		img.decompress()
-	var br: Dictionary = _base_row(img) if img != null else {
-		"y": tex.get_height(), "left": 0, "right": tex.get_width(), "center": tex.get_width() * 0.5}
-	var off := ArtAnchor.base_offset(br)
-	var sc: float = target_w / float(tex.get_width())
-	var shd: Sprite2D = null
-	if cast_shadow:
-		shd = Sprite2D.new()
-		shd.texture = tex
-		shd.centered = false
-		shd.offset = off
-		shd.position = base_pos
-		shd.scale = Vector2(sc * GroundCharacter.SHADOW_SCALE.x, sc * GroundCharacter.SHADOW_SCALE.y)
-		shd.skew = GroundCharacter.SHADOW_SKEW
-		shd.modulate = GroundCharacter.SHADOW_TINT
-		_world.add_child(shd)   # before the sprite -> drawn behind it
-	var spr := Sprite2D.new()
-	spr.texture = tex
-	spr.centered = false
-	spr.scale = Vector2(sc, sc)
-	spr.offset = off
-	spr.position = base_pos
-	spr.modulate = tint
-	_world.add_child(spr)
-	return {"spr": spr, "shd": shd, "y": int(br.y), "left": int(br.left), "right": int(br.right),
-		"scale": sc, "base": base_pos}
-
-
 ## Scatter rocks + dunes across the OPEN ROAM (the ring of dust between the town and the heat
 ## boundary), drop-in from assets/ground/props/<key>.png. Seeded, so the field is stable.
+## What the ground here is already spoken for by, handed to the scatter as plain
+## {position, radius} facts rather than the scatter reaching into this scene for them.
+## A second planet declares its own blockers and gets the same declutter for free.
+func _seed_scatter_blockers() -> void:
+	for b in BUILDINGS:
+		# Buildings draw 1.25x their footprint, so block the ART's half-width, not the box's.
+		_scatter.block(b.pos, maxf(b.size.x, b.size.y) * 0.75)
+	# THE APRON IS SWEPT GROUND. Nothing scatters onto a working berth — an early pass
+	# dropped a stack of crates inside the painted box, which read as the pad being
+	# derelict rather than the colony's live front door.
+	_scatter.block_rect(Rect2(PAD_CENTER - PAD_SIZE * 0.5, PAD_SIZE))
+
+
 func _scatter_props() -> void:
+	_seed_scatter_blockers()
 	# `solid` = you bump into it. `spread` = how much elbow room it claims, as a fraction of
 	# its width: rock stands well apart (its shadow must not touch another's), while a dune
 	# is flat sand that can nestle close without reading as clutter.
@@ -1707,7 +1641,7 @@ func _scatter_props() -> void:
 	]
 	var avail: Array = []
 	for d in defs:
-		var t := _load_tex("res://assets/ground/props/%s.png" % d.key)
+		var t := GroundScenery.load_tex("res://assets/ground/props/%s.png" % d.key)
 		if t != null:
 			avail.append({"tex": t, "key": str(d.key), "w": float(d.w), "shadow": bool(d.shadow),
 				"solid": bool(d.get("solid", false)), "spread": float(d.spread),
@@ -1719,85 +1653,33 @@ func _scatter_props() -> void:
 	for i in 30:
 		var d: Dictionary = avail[rng.randi() % avail.size()]
 		var w: float = float(d.w) * rng.randf_range(0.7, 1.35)
-		var pos := _prop_spot(rng, 1500.0, HEAT_LIMIT - 260.0, w * float(d.spread))
+		var pos := _scatter.spot(rng, 1500.0, HEAT_LIMIT - 260.0, w * float(d.spread))
 		if is_inf(pos.x):
 			continue   # the field is full here; skip rather than stack one on another
-		var pair := _spawn_prop(d.tex, pos, w, d.tint, bool(d.shadow))
+		var pair := GroundScenery.spawn_prop(_world, d.tex, pos, w, d.tint, bool(d.shadow))
 		if bool(d.shadow):
 			pair["name"] = "prop"
 			_shadow_pairs.append(pair)
 		# Rock is SOLID (user: props had no colliders at all). Dunes are drifts you walk
 		# over, so they stay passable — `solid` says which is which.
 		if bool(d.get("solid", false)):
-			_add_prop_body(pair, str(d.key))
+			GroundScenery.add_body(self, pair, str(d.key))
 
 	# Ambient small boulders across the mid + far field — these REPLACE the old procedural
 	# pebbles (whose fake ellipse shadow pointed the wrong way). Real pixel boulders with the
 	# correct projected shadow, kept clear of the town's buildings AND of each other.
-	var boulder := _load_tex("res://assets/ground/props/boulders.png")
+	var boulder := GroundScenery.load_tex("res://assets/ground/props/boulders.png")
 	if boulder != null:
 		var brng := RandomNumberGenerator.new()
 		brng.seed = 771
 		for i in 40:
 			var w: float = brng.randf_range(55.0, 130.0)
-			var pos := _prop_spot(brng, 1000.0, HEAT_LIMIT - 140.0, w * 0.55)
+			var pos := _scatter.spot(brng, 1000.0, HEAT_LIMIT - 140.0, w * 0.55)
 			if is_inf(pos.x):
 				continue
-			_add_prop_body(_spawn_prop(boulder, pos, w, Color.WHITE, true), "boulders")
-
-
-## Breathing room between two props, on top of their own radii — touching art reads as one
-## clumsy blob even when it isn't overlapping.
-const PROP_GAP := 26.0
-## How many times to re-roll a position before giving up on a prop entirely.
-const PROP_TRIES := 24
-
-## Every prop already placed, as {pos, r} — the declutter pass tests against this.
-var _placed_props: Array = []
-
-
-## Find somewhere in the roam ring this prop actually FITS: clear of every prop already
-## placed and of every building. Vector2.INF if the field is too crowded to take it.
-##
-## WHY (user, 2026-07-25): the scatter placed props at pure random with NO checks at all —
-## so art overlapped art and, because each prop casts its own projected shadow, two
-## overlapping props stacked TWO darkenings into a confusing blot. It also let props sit on
-## top of buildings (only the boulder pass tested for that, and only against b.pos). One
-## helper now enforces both, for every prop.
-func _prop_spot(rng: RandomNumberGenerator, min_d: float, max_d: float, radius: float) -> Vector2:
-	for _try in PROP_TRIES:
-		var a := rng.randf() * TAU
-		var dist := rng.randf_range(min_d, max_d)
-		var pos := Vector2(cos(a), sin(a)) * dist
-		if _prop_clear(pos, radius):
-			_placed_props.append({"pos": pos, "r": radius})
-			return pos
-	return Vector2.INF
-
-
-func _prop_clear(pos: Vector2, radius: float) -> bool:
-	for p in _placed_props:
-		if pos.distance_to(p.pos) < radius + float(p.r) + PROP_GAP:
-			return false
-	for b in BUILDINGS:
-		# Buildings draw 1.25x their footprint, so clear the ART's half-width, not the box's.
-		var half: float = maxf(b.size.x, b.size.y) * 0.75
-		if pos.distance_to(b.pos) < radius + half + PROP_GAP:
-			return false
-	# THE APRON IS SWEPT GROUND. Nothing scatters onto a working berth — the first pass
-	# dropped a stack of crates inside the painted box, which read as the pad being
-	# derelict rather than the colony's live front door.
-	if Rect2(PAD_CENTER - PAD_SIZE * 0.5, PAD_SIZE).grow(radius + PROP_GAP).has_point(pos):
-		return false
-	return true
-
-
-## How deep a building's ground footprint is, as a fraction of its drawn base width. A 3/4
-## sprite can't tell us how far "back" the building goes, so we assume a roughly square
-## footprint standing behind its front edge.
-const FOOTPRINT_DEPTH := 0.55
-## Shave the collider slightly inside the art so corners feel forgiving rather than sticky.
-const FOOTPRINT_INSET := 0.94
+			GroundScenery.add_body(self,
+				GroundScenery.spawn_prop(_world, boulder, pos, w, Color.WHITE, true),
+				"boulders")
 
 
 ## The solid a building presents to walkers.
@@ -1818,7 +1700,7 @@ func _add_building_body(b: Dictionary, pair: Dictionary) -> void:
 	# A HAND-AUTHORED polygon wins over the measurement (see collider_points): open
 	# scenes/ground/colliders/<art key>.tscn and drag the points to match the art exactly.
 	var art_key: String = BUILDING_ART.get(str(b.name), "")
-	var pts := collider_points(art_key) if (art_key != "" and not pair.is_empty()) \
+	var pts := GroundScenery.collider_points(art_key) if (art_key != "" and not pair.is_empty()) \
 		else PackedVector2Array()
 	if not pts.is_empty():
 		body.position = pair["base"]
@@ -1841,8 +1723,8 @@ func _add_building_body(b: Dictionary, pair: Dictionary) -> void:
 		var sc: float = float(pair["scale"])
 		var base: Vector2 = pair["base"]
 		var w: float = (float(pair["right"]) - float(pair["left"])) * sc
-		var depth: float = w * FOOTPRINT_DEPTH
-		shape.size = Vector2(w * FOOTPRINT_INSET, depth)
+		var depth: float = w * GroundScenery.FOOTPRINT_DEPTH
+		shape.size = Vector2(w * GroundScenery.FOOTPRINT_INSET, depth)
 		# Front edge ON the drawn base, footprint standing BEHIND it (north).
 		body.position = base + Vector2(0.0, -depth * 0.5)
 	var col := CollisionShape2D.new()
@@ -1850,96 +1732,6 @@ func _add_building_body(b: Dictionary, pair: Dictionary) -> void:
 	body.add_child(col)
 	body.set_meta("building", str(b.name))
 	add_child(body)
-
-
-## HAND-AUTHORED COLLIDER SHAPES (user, 2026-07-25 — "can I adjust the point data of the
-## polygon in the Godot UI?"). Drop a scene at `scenes/ground/colliders/<key>.tscn` holding
-## a CollisionPolygon2D and its points REPLACE the measured rectangle for that art. Points
-## are authored in SOURCE-PIXEL space relative to the art's BASE ANCHOR (origin = the
-## middle of the sprite's base line, +y down/toward the viewer), which is exactly what the
-## authoring scene shows you, so what you drag is what you get at any prop scale.
-##
-## Generate the starter scenes with:
-##   <godot> --headless --path . --script res://tools/make_collider_scenes.gd
-## then open one in the editor and drag the points. No code, no re-generation needed —
-## missing file = the automatic rectangle, unchanged.
-const COLLIDER_DIR := "res://scenes/ground/colliders/%s.tscn"
-
-static var _poly_cache := {}
-
-
-## Points for a hand-authored collider, in source-pixel space, or [] if none exists.
-static func collider_points(key: String) -> PackedVector2Array:
-	if _poly_cache.has(key):
-		return _poly_cache[key]
-	var pts := PackedVector2Array()
-	var path := COLLIDER_DIR % key
-	if ResourceLoader.exists(path):
-		var packed: PackedScene = load(path)
-		var inst := packed.instantiate()
-		for c in inst.get_children():
-			if c is CollisionPolygon2D:
-				pts = (c as CollisionPolygon2D).polygon
-				break
-		inst.queue_free()
-	_poly_cache[key] = pts
-	return pts
-
-
-## The same art-measured footprint, for a scattered prop (rock, mesa). Props had NO
-## colliders at all — you walked straight through a boulder the size of a hab (user).
-## Dunes stay passable; only `solid` props get one. A hand-authored polygon wins.
-func _add_prop_body(pair: Dictionary, key := "") -> void:
-	if pair.is_empty():
-		return
-	var sc: float = float(pair["scale"])
-	var base: Vector2 = pair["base"]
-	var body := StaticBody2D.new()
-	body.collision_layer = 1
-	body.collision_mask = 0
-	var pts := collider_points(key) if key != "" else PackedVector2Array()
-	if not pts.is_empty():
-		# Authored in source pixels about the base anchor: just scale to this instance.
-		body.position = base
-		var poly := CollisionPolygon2D.new()
-		var scaled := PackedVector2Array()
-		for p in pts:
-			scaled.append(p * sc)
-		poly.polygon = scaled
-		body.add_child(poly)
-	else:
-		var w: float = (float(pair["right"]) - float(pair["left"])) * sc
-		var depth: float = w * FOOTPRINT_DEPTH
-		body.position = base + Vector2(0.0, -depth * 0.5)
-		var shape := RectangleShape2D.new()
-		shape.size = Vector2(w * FOOTPRINT_INSET, depth)
-		var col := CollisionShape2D.new()
-		col.shape = shape
-		body.add_child(col)
-	add_child(body)
-
-
-func _load_tex(path: String) -> Texture2D:
-	if ResourceLoader.exists(path):
-		var r = load(path)
-		if r is Texture2D:
-			return r
-	if not FileAccess.file_exists(path):
-		return null   # art not dropped in yet — fall back to the procedural box, quietly
-	var img := Image.new()
-	if img.load(path) == OK:
-		return ImageTexture.create_from_image(img)
-	return null
-
-
-## The sprite's ground-CONTACT ROW: the WIDEST opaque row in the lower part of the sprite —
-## its left/right ends are the base's outer corners (for a 3/4 cube, the left + right points
-## of the base diamond). The shadow flips about THIS row, so those two corners stay fixed and
-## the shadow touches the sprite there (no gap = not floating). Returns {y, left, right, center}.
-## The art's base line. Delegates to the SHARED measurement (ArtAnchor) so the collider
-## authoring tool anchors polygons to exactly the row the game places them against.
-func _base_row(img: Image) -> Dictionary:
-	return ArtAnchor.base_row(img)
 
 
 func _draw() -> void:
