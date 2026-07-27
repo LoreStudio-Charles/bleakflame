@@ -77,6 +77,20 @@ var ship_current: int = 3  # starter: Rooster (index 3)
 var ship_owned: Array[int] = [3]
 var ship_builds: Dictionary = {}
 
+# --- Faction standing ------------------------------------------
+var standing_points: Dictionary = {}  # faction id -> signed standing
+var standing_peace: Dictionary = {}  # faction id -> bool (absent = at peace)
+var standing_mend_day: Dictionary = {}  # faction id -> last game-day mediated
+var standing__seeded: bool = false
+
+# --- Comms inbox -----------------------------------------------
+var comms_messages: Array[Dictionary] = []
+
+# --- Contracts this pilot holds --------------------------------
+var mission_active: Array = []  # contracts THIS pilot took
+var mission_total_kills: int = 0  # bounty progress baseline
+var mission_next_uid: int = 1
+
 
 ## Hand this pilot a clean slate. Used by New Game; also the honest way to build a
 ## second pilot in a test without disturbing the one already loaded.

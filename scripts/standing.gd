@@ -18,10 +18,26 @@ const ALLIED_AT := 500      # hearts won — full alliance
 const HOSTILE_AT := -100    # at war — their ships will fight you
 const KOS_AT := -500        # kill on sight; docking denied; peace toggle locked
 
-static var points := {}          # faction id -> signed standing
-static var peace := {}            # faction id -> bool (absent = at peace); the PLAYER's toggle
-static var mend_day := {}         # faction id -> last game-day the hermit mediated (once/day)
-static var _seeded := false
+static var points: Dictionary:
+	get:
+		return PlayerState.local.standing_points
+	set(value):
+		PlayerState.local.standing_points = value
+static var peace: Dictionary:
+	get:
+		return PlayerState.local.standing_peace
+	set(value):
+		PlayerState.local.standing_peace = value
+static var mend_day: Dictionary:
+	get:
+		return PlayerState.local.standing_mend_day
+	set(value):
+		PlayerState.local.standing_mend_day = value
+static var _seeded: bool:
+	get:
+		return PlayerState.local.standing__seeded
+	set(value):
+		PlayerState.local.standing__seeded = value
 
 
 ## ---- PEACE TOGGLE (player choice; the piracy declaration) ----

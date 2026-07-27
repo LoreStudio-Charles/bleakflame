@@ -6,7 +6,11 @@ class_name Comms
 ## the other session state; persists via SaveGame under "comms".
 
 ## Newest last: {from (npc id), name, title, body, read}.
-static var messages: Array[Dictionary] = []
+static var messages: Array[Dictionary]:
+	get:
+		return PlayerState.local.comms_messages
+	set(value):
+		PlayerState.local.comms_messages = value
 
 
 ## Log a delivered transmission. `from` is an npc id (for the portrait).

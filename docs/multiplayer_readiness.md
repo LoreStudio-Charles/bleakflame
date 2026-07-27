@@ -93,9 +93,9 @@ ahead of it, and should, so the flag rule has somewhere to live.
 | `Stash` | items, commodities | **done** (`8d599e1`) |
 | `Pilot` | 16 — identity, commission, skills, gems, ground kit | **done** |
 | `SampleBuilds` | current, owned, cached builds | **done** |
-| `Standing` | points, peace, mend_day | next |
-| `Comms` | messages | next |
-| `MissionLog` | active, total_kills, next_uid | next (`offers` stays world) |
+| `Standing` | points, peace, mend_day, _seeded | **done** |
+| `Comms` | messages | **done** |
+| `MissionLog` | active, total_kills, next_uid | **done** (`offers` stays world) |
 | `Research` | insight, catalogued, journal, chains | after the flag rule lands |
 | `Quests` | active, completed, pending | after the flag rule lands |
 | `Tutor` | seen/step/_progress/_did | last — needs splitting from the engine tables |

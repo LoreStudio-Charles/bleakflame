@@ -7,12 +7,24 @@ class_name MissionLog
 const MAX_ACTIVE := 2
 
 static var offers: Array = []
-static var active: Array = []
-static var total_kills := 0
+static var active: Array:
+	get:
+		return PlayerState.local.mission_active
+	set(value):
+		PlayerState.local.mission_active = value
+static var total_kills: int:
+	get:
+		return PlayerState.local.mission_total_kills
+	set(value):
+		PlayerState.local.mission_total_kills = value
 ## A monotonic id stamped on each accepted contract, so the mission tracker can
 ## reference a specific one across a save round-trip (two identical bounties are
 ## still distinct). Persisted; assigned lazily to legacy saves via uid_of().
-static var next_uid := 1
+static var next_uid: int:
+	get:
+		return PlayerState.local.mission_next_uid
+	set(value):
+		PlayerState.local.mission_next_uid = value
 
 ## Every contract has a face AND a place: it is OFFERED at `venue` and TURNED
 ## IN at `turn_in`. The trade route is reciprocal and physical — the station

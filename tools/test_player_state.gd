@@ -29,6 +29,7 @@ func _ready() -> void:
 	_case_collections_are_live_not_copies()
 	_case_two_pilots_are_different_people()
 	_case_two_pilots_own_different_ships()
+	_case_two_pilots_stand_apart()
 	_case_a_wipe_clears_only_that_pilot()
 	_case_wipe_cannot_drift()
 
@@ -171,6 +172,36 @@ func _case_two_pilots_own_different_ships() -> void:
 	PlayerState.local = alice
 	_ok(SampleBuilds.current == 5 and SampleBuilds.owned.has(5),
 		"the first pilot still owns and flies hers")
+
+
+## STANDING, INBOX AND CONTRACTS. Reputation is earned by a PERSON — shared
+## standing would mean one pilot's massacre burns their whole party's docking
+## rights, and one pilot's contract would tick down on someone else's kills.
+func _case_two_pilots_stand_apart() -> void:
+	var alice := PlayerState.new()
+	var bob := PlayerState.new()
+
+	PlayerState.local = alice
+	Standing.add("guardian", 30)
+	Comms.post("ruel", "Docking Control", "Mind the arm.")
+	MissionLog.active.append({"type": "bounty", "n": 3, "desc": "test", "reward": 50})
+	MissionLog.total_kills = 12
+
+	PlayerState.local = bob
+	_ok(Standing.get_points("guardian") == 0,
+		"a second pilot has their OWN standing (got %d)" % Standing.get_points("guardian"))
+	_ok(Comms.messages.is_empty(), "...their own comms inbox")
+	_ok(MissionLog.active.is_empty(), "...and holds none of the first's contracts")
+	_ok(MissionLog.total_kills == 0, "...with their own bounty baseline")
+
+	Standing.add("guardian", -5)
+	PlayerState.local = alice
+	_ok(Standing.get_points("guardian") == 30,
+		"the first pilot's reputation is untouched by the second's (got %d)"
+			% Standing.get_points("guardian"))
+	_ok(Comms.messages.size() == 1, "...and still has their own mail")
+	_ok(MissionLog.active.size() == 1 and MissionLog.total_kills == 12,
+		"...and their own contract and kill count")
 
 
 ## THE DRIFT GUARD. wipe() resets from a fresh instance rather than a hand-written
