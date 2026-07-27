@@ -452,25 +452,34 @@ func _init() -> void:
 		failures += 1
 	Wallet.xp = 0
 
-	# ---- SPINE NAMES: every throughline is "The <Something>" (user, 2026-07-26) ----
-	# The Saga is titled by its CURRENT MOVEMENT rather than its own name, because its
-	# own name is the late reveal (docs/the_convergence.md). "The Gate" is visible from
-	# hour one and spoils nothing.
+	# ---- SPINE NAMES: every throughline is "The <Something>" (user) ----
+	# The Saga is "The Rise" -- the awkward rise of the Galeans onto the grand stage.
+	# The spine's TITLE is stable; the current MOVEMENT rides as position, because a
+	# log entry that renames itself underneath the player is disorienting.
 	Quests.reset()
-	if Quests.spine_name("saga") != "The Gate":
-		print("FAIL: Movement I should read 'The Gate', got '%s'" % Quests.spine_name("saga"))
+	if Quests.spine_name("saga") != "The Rise":
+		print("FAIL: the Saga should read 'The Rise', got '%s'" % Quests.spine_name("saga"))
 		failures += 1
 	if Quests.spine_name("campaign") != "The Legend":
 		print("FAIL: the Campaign should read 'The Legend', got '%s'"
 			% Quests.spine_name("campaign"))
 		failures += 1
-	# THE REVEAL MUST NOT LEAK. Whatever the Saga is titled, it is never its own name.
-	for forbidden in ["Convergence", "Idiot"]:
-		if forbidden in Quests.spine_name("saga"):
-			print("FAIL: the Saga's log title says '%s' — that is the late reveal, "
+	if Quests.movement_name("saga") != "The Gate":
+		print("FAIL: Movement I should read 'The Gate', got '%s'"
+			% Quests.movement_name("saga"))
+		failures += 1
+
+	# THE REVEAL MUST NEVER REACH THE LOG. This guards the PROPERTY, not the string:
+	# "The Convergence" and "The Idiot" were both live candidates, and either would
+	# hand the player the shape of the ending in their first hour. Whoever names
+	# Movement II will be tempted the same way.
+	for forbidden in ["Convergence", "Idiot", "Warden", "Prison"]:
+		if forbidden in Quests.spine_name("saga") or forbidden in Quests.movement_name("saga"):
+			print("FAIL: the Saga's log text says '%s' — that is the late reveal, "
 				% forbidden + "printed from the first hour")
 			failures += 1
-	# Finishing a movement re-titles the spine rather than blanking it.
+
+	# Finishing a movement must not blank the entry: the spine outlives its parts.
 	Quests.completed.append("nothing_left_behind")
 	if Quests.spine_name("saga") == "":
 		print("FAIL: with Movement I done the Saga has no title at all")

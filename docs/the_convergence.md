@@ -1,5 +1,39 @@
 # THE CONVERGENCE — the Saga's spine
 
+> ## The Saga is called **THE RISE**
+> **Named 2026-07-26 (user):** *"it chronicles the awkward rise of the Galeans onto
+> the universe's grand stage."*
+>
+> It is ironic at both ends without lying at either. At hour one it reads as plain
+> triumph — a scrappy pilot in a junk hull, a people finding their feet. By the end
+> it means you rose by breaking open a prison, and the win condition is literally to
+> **ascend** and earn a stay of execution. It also sits against **ADO'VIETES —
+> "The Idiots"** (§ below), which is what the elders call the same event.
+>
+> **And it is safe to print.** "The Convergence" and "The Idiot" were both
+> considered and rejected as the player-facing name: each states the late reveal, so
+> either would hand the player the shape of the ending in their first hour. "The
+> Rise" is about the Galeans, not the threat — it gives nothing away and gains its
+> weight in hindsight.
+>
+> **STRUCTURE.** Every spine is *The &lt;Something&gt;*, and so is every movement:
+>
+> | | |
+> |---|---|
+> | **The Rise** | the Saga — the whole cross-system story |
+> | **The Gate** | Saga Movement I (`docs/campaign_starter_system.md`) |
+> | **The Legend** | the Cinder Reach Campaign (`docs/cinder_reach_campaign.md`) |
+>
+> Movements beyond I are **not yet named** — nothing in this repo records them. The
+> list lives in `Quests.SAGA_MOVEMENTS`; adding one entry re-titles the log with no
+> other edit. The quest log shows the SPINE as the title and the MOVEMENT as
+> position ("The Gate — To be continued…"), so the entry never renames itself
+> underneath the player.
+>
+> A test asserts the Saga's log text never contains the reveal — guarding the
+> property, not the string, because whoever names Movement II will face the same
+> temptation.
+
 The spine of the whole game (and the series). Everything else — the gates, the
 Cinderweb, the Wardens, the Threshers, the factions, the professions — hangs off
 this. Set by the user 2026-07-22. Read this before writing any Campaign beat.

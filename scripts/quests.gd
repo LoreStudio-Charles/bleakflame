@@ -820,42 +820,50 @@ static func cold_beat() -> Dictionary:
 ## ends at the gate, "campaign" is The Legend. Every Saga quest was untagged until
 ## 2026-07-26, so the data could not distinguish a spine from a side contract at
 ## all -- which is why the log could only ever show what was active.
-## PLAYER-FACING SPINE NAMES — and the Saga is named by its CURRENT MOVEMENT.
+## PLAYER-FACING SPINE NAMES. Every spine is "The <Something>" (user) — The Rise,
+## The Legend — and each Saga MOVEMENT is too: The Gate, and whatever follows.
 ##
-## EVERY SPINE IS "THE <SOMETHING>" (user, 2026-07-26). The rhythm is deliberate:
-## The Gate, The Legend, and whatever follows.
+## THE SAGA IS "THE RISE" (user, 2026-07-26): it chronicles the awkward rise of the
+## Galeans onto the universe's grand stage. It is ironic at both ends without lying
+## at either — triumphant when you are a scrappy pilot in a junk hull, and much
+## heavier once you learn you rose by breaking open a prison and that the win
+## condition is literally to ASCEND and earn a stay of execution. It also sits
+## against ADO'VIETES, "The Idiots", which is what the elders call the same event.
 ##
-## THE SAGA'S REAL NAME IS A SPOILER. The Convergence is a LATE reveal --
-## docs/the_convergence.md: the gates are a Warden prison and humanity has been
-## unlocking it -- so printing it in the log from hour one would hand the player the
-## name of the threat decades before the story does. (The user's other candidate,
-## "The Idiot", is accurate and an even bigger one.)
-##
-## Naming it by MOVEMENT solves that without going meta: "The Gate" is visible from
-## the first hour and is the obvious goal, so it spoils nothing, reads in-fiction,
-## and changes as the story turns over. Movement II gets an entry below and the log
-## re-titles itself with no other edit.
-const SAGA_MOVEMENTS := [
-	# `until` = the quest whose completion ENDS this movement.
-	{"name": "The Gate", "until": "nothing_left_behind"},
-]
-## Fallback when every listed movement is done -- better a plain word than a blank.
-const SAGA_FALLBACK := "The Saga"
-
+## AND IT IS SAFE TO PRINT, which its alternatives were not. "The Convergence" and
+## "The Idiot" both name the late reveal (docs/the_convergence.md: the gates are a
+## Warden prison and humanity has been unlocking it), so either would hand the
+## player the shape of the ending in their first hour. "The Rise" is about the
+## Galeans, not the threat — it gives nothing away and gains meaning in hindsight.
+## The test below guards that property rather than this particular string.
 const SPINES := {
-	"saga": "",          # resolved per-movement; see spine_name()
+	"saga": "The Rise",
 	"campaign": "The Legend",
 }
 
+## Where you are WITHIN the Saga. The spine's title stays put — a log entry that
+## renames itself underneath the player is disorienting, and the point of listing a
+## dormant spine is "this story continues" — so the movement rides as position
+## instead. Movement II adds one entry here and the log follows it.
+const SAGA_MOVEMENTS := [
+	# `until` = the quest whose completion ENDS this movement. "" = still open-ended.
+	{"name": "The Gate", "until": "nothing_left_behind"},
+]
 
-## What this throughline is CALLED right now.
+
 static func spine_name(layer: String) -> String:
+	return str(SPINES.get(layer, ""))
+
+
+## The Saga's current movement ("" for anything else, or once all are done).
+static func movement_name(layer: String) -> String:
 	if layer != "saga":
-		return str(SPINES.get(layer, ""))
+		return ""
 	for m in SAGA_MOVEMENTS:
-		if not completed.has(str(m["until"])):
+		var until := str(m.get("until", ""))
+		if until == "" or not completed.has(until):
 			return str(m["name"])
-	return SAGA_FALLBACK
+	return ""
 
 
 ## Has the player begun this throughline (anything in it active or done)?
@@ -914,12 +922,19 @@ static func dormant_spines() -> Array:
 			"giver": "",
 			"body": "This thread is under way. It is not asking anything of you right now.",
 			"done": [],
-			"current": why if why != "" else "To be continued...",
+			"current": _spine_step(str(layer), why),
 			"rewards": "",
 			"done_quest": false,
 			"spine": true,
 		})
 	return out
+
+
+## "The Gate — To be continued..." — where you are, then what is happening.
+static func _spine_step(layer: String, why: String) -> String:
+	var tail := why if why != "" else "To be continued..."
+	var mv := movement_name(layer)
+	return ("%s — %s" % [mv, tail]) if mv != "" else tail
 
 
 static func rewards_text(q: Dictionary) -> String:
