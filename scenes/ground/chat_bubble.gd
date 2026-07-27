@@ -56,7 +56,15 @@ const TAIL_H := 10.0
 ## the whole assembly and leaves the join exact -- which is exactly what the first
 ## version of this constant did, and the test agreed with it because it encoded the
 ## same arithmetic. The test now demands a real overlap.
-const TAIL_OVERLAP := 1.0
+## 2, not 1 -- MEASURED OFF A RENDERED FRAME, not reasoned about. At 1 the
+## bubble's bottom border still drew one row ABOVE the tail's top, so the black
+## line crossed the mouth exactly as if the tail were behind the body.
+##
+## AND THIS CANNOT BE FIXED IN THE ART. The body is positioned from the tail's
+## measured ink height, so ink_top - body_bottom == -TAIL_OVERLAP whatever the
+## arrow's height is: adding rows to the top of the tail moves the BUBBLE up with
+## it and the seam comes out identical. The overlap is the only lever.
+const TAIL_OVERLAP := 2.0
 
 ## How far in from the bubble's edge the tail attaches, as a fraction of width.
 ## Not 0: a tail flush with the corner reads as a mistake rather than a stem.

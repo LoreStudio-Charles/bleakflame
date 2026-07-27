@@ -7,7 +7,7 @@
 > It is ironic at both ends without lying at either. At hour one it reads as plain
 > triumph — a scrappy pilot in a junk hull, a people finding their feet. By the end
 > it means you rose by breaking open a prison, and the win condition is literally to
-> **ascend** and earn a stay of execution. It also sits against **ADO'VIETES —
+> **ascend** and earn a stay of execution. It also sits against **TU ADÉN —
 > "The Idiots"** (§ below), which is what the elders call the same event.
 >
 > **And it is safe to print.** "The Convergence" and "The Idiot" were both
@@ -55,7 +55,7 @@ finale). "The Light" is *why*: the light-weapon is the thing that finally makes 
 Leviathan mortal. The retreat rule is not a limitation, it is a promise.
 
 **The epilogue is allowed to say the quiet part.** "The Idiot" is the elders' name
-for us (**ADO'VIETES**, § below) and the entire late reveal in two words — which is
+for us (**Tu Adén**, § below) and the entire late reveal in two words — which is
 exactly why it is forbidden everywhere else and earned here. `SAGA_MOVEMENTS` carries
 an `epilogue` flag that exempts it from the spoiler guard, and a test asserts **only
 one** movement may claim that exemption, so the rule cannot quietly be opted out of.
@@ -175,17 +175,45 @@ and must unite against three fronts to prove it deserves to exist.
    sequel sees humanity AND Wardens together against new threats (and the Dhakar's
    unanswered "why"). The trial's reward is a future.
 
-## The elder name for humanity — ADO'VIETES ("The Idiots")
+## The elder name for humanity — TU ADÉN ("The Idiots")
+
+**The Wardens' words, revised 2026-07-27 (user).** Supersedes *Ado'vietes*.
+
+| Warden | English |
+|---|---|
+| **tu** | the *(definite article)* |
+| **adé** | idiot *(singular)* |
+| **adén** | idiots *(plural)* |
+| **Tu Adén** | **The Idiots** |
+
 To the Wardens and the Dhakar — ancient beyond language — humanity has no proper
-name. We are **Ado'vietes**: *the idiots*. Not a threat-designation, not even
+name. We are **Tu Adén**: *the idiots*. Not a threat-designation, not even
 contempt with heat in it — a filing category. The idiots who wandered into the
 archive and started pulling gates open until the wing collapsed. Every decoded
 Warden transmission calls us this; it is the drumbeat of the elders' judgment.
 
+> ### THE GAME IS NAMED FOR THIS — **RISE OF ADÉN**
+> The Saga is **The Rise**; the game is **Rise of Adén**. It states the ending on
+> the title screen and gives nothing away, because the player cannot read it yet
+> (user: *"this gives it away but in an unknown conlang, so it isn't a spoiler
+> until you already know"*).
+>
+> It re-reads completely once *adén* is decoded. First pass: a proud name for a
+> people finding their feet — whoever Adén are, this is their rise. Last pass:
+> *the rise of the idiots*, which is affectionate, accurate, and the whole Saga in
+> three words. This is why **"The Idiot" in English is still forbidden** anywhere
+> the player can read it before the epilogue: it is the SAME joke with the safety
+> off. The conlang is the delivery mechanism, not a decoration.
+>
+> Windows title, main menu and store listing all read **Rise of Adén**. The save
+> directory stays `Bleakflame` — pinned via `config/custom_user_dir_name`, because
+> Godot derives `user://` from the project name and a rename would otherwise
+> orphan every existing pilot.
+
 **THE REDEMPTION IS TONAL, NOT LINGUISTIC.** They NEVER stop calling us the
 idiots — because we are, gloriously, idiots, and pretending otherwise would be a
 lie. The word does not change. Its TEMPERATURE does. For the whole game
-*Ado'vietes* is said with cold contempt (a filing category). The endgame beat:
+*Tu Adén* is said with cold contempt (a filing category). The endgame beat:
 the shooting stops, and an ancient, immortal, infinitely superior Warden looks at
 these ridiculous short-lived creatures who — against all sense and all odds —
 turned and did the RIGHT thing, and just... exhales. Shakes its head. The
@@ -203,7 +231,7 @@ reckless, in-over-its-head inch — and accepted whole."
 The Dhakar's motive reveals what the whole Saga is *about*. The gates were never
 just a prison — they are a **FIREWALL**: the Wardens keep the Leviathans APART
 specifically to deny the Dhakar their fuel. Every lock is a "no" to their sundered
-kin's gamble, held for eons. Then the *Ado'vietes* wandered in and began opening
+kin's gamble, held for eons. Then the *Adén* wandered in and began opening
 it — **doing the Dhakar's work by accident.** (This is why the Wardens assumed
 COLLABORATION and marked us for extinction: from where they stand, breaking those
 gates *is* the enemy's entire plan.)
@@ -214,7 +242,7 @@ appetite. So humanity's trial is not only "will you survive?" but "**are you
 Dhakar-in-embryo, or something better?**" We broke the gates out of ignorant
 reaching; they would break the last one out of calculated greed. Stopping them is
 humanity REJECTING what it could grow into — choosing existence over power. THAT
-is what turns *Ado'vietes* from a slur into an endearment (see above): the Wardens
+is what turns *Adén* from a slur into an endearment (see above): the Wardens
 accept us not because we stopped being idiots, but because — offered the exact
 temptation that made the Dhakar — the idiots said **no**. Same word, said with a
 smile now.

@@ -828,7 +828,9 @@ static func cold_beat() -> Dictionary:
 ## at either — triumphant when you are a scrappy pilot in a junk hull, and much
 ## heavier once you learn you rose by breaking open a prison and that the win
 ## condition is literally to ASCEND and earn a stay of execution. It also sits
-## against ADO'VIETES, "The Idiots", which is what the elders call the same event.
+## against TU ADÉN ("the idiots"), the Wardens' name for us — and the name the
+## GAME itself carries, Rise of Adén, which states the ending on the title screen
+## and gives nothing away because the player cannot read it yet.
 ##
 ## AND IT IS SAFE TO PRINT, which its alternatives were not. "The Convergence" and
 ## "The Idiot" both name the late reveal (docs/the_convergence.md: the gates are a
@@ -864,7 +866,7 @@ const SAGA_MOVEMENTS := [
 	{"name": "The Dark", "until": "",
 		"blurb": "The Dhakar. Stop them, or it is oblivion or worse."},
 	# THE EPILOGUE IS ALLOWED TO SAY IT. "The Idiot" is the elders' name for us
-	# (ADO'VIETES) and the whole late reveal in two words — which is why it is
+	# (TU ADÉN) and the whole late reveal in two words — which is why it is
 	# forbidden everywhere else and earned here. Weapons down, the head-shake,
 	# "...you idiots", said with love. `epilogue` is what exempts it from the
 	# spoiler guard; nothing else may carry that flag.

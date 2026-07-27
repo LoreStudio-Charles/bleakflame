@@ -128,7 +128,7 @@ func _build_menu() -> void:
 	center.add_child(_menu_col)
 
 	var title := Label.new()
-	title.text = "BLEAKFLAME"
+	title.text = "RISE OF ADÉN"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 66)
 	title.add_theme_color_override("font_color", UiTheme.AMBER)
