@@ -140,8 +140,18 @@ func _case_chat_bubble_tail_points_at_the_speaker() -> void:
 		% -seam)
 
 	# And the point lands where the speaker is, horizontally under the bubble.
-	_ok(absf(b._tail.position.y + m.y - ChatBubble.TAIL_OVERLAP + ChatBubble.LIFT) < 0.51,
+	_ok(absf(b._tail.position.y + m.y + ChatBubble.LIFT + ChatBubble.TAIL_OVERLAP) < 0.51,
 		"the tip sits LIFT above the speaker's origin")
+
+	# THE OVERLAP MUST BE REAL. Shifting body and tail by the same amount moves the
+	# assembly and leaves the join exact -- which is what the first version did, and
+	# this assertion is what would have caught it.
+	_ok(seam < -0.5,
+		"the tail rides UP INTO the bubble (seam %.1f) — it draws on top, and its "
+		% seam + "fill has to cover the bubble's 1px bottom border or a line runs "
+		+ "across the tail's mouth")
+	_ok(b._tail.get_index() > b._body.get_index(),
+		"the tail is added after the body, so it draws OVER it")
 
 	b.queue_free()
 	speaker.queue_free()

@@ -37,14 +37,30 @@ const FONT_SIZE := 15
 const LIFT := 96.0
 const TAIL_H := 10.0
 
-## The tail is tucked this far UNDER the bubble's bottom edge.
+## How far the tail rides UP INTO the bubble.
 ##
-## An exact join is one rounding error from a hairline seam — the bubble lives in
-## world space, so a fractional camera zoom can land the two edges on either side of
-## a pixel boundary. An overlap cannot show a gap at any zoom, and it costs a pixel
-## of a shape that is solid there anyway. Done in code rather than by asking for two
-## more rows in the art: the art is correct, the join was the fragile part.
+## THE TAIL DRAWS ON TOP (user, 2026-07-26). It is added after the body so it wins
+## the z-order, and that is required rather than incidental: the bubble's bottom
+## border is a 1px black line, and behind the body that line would run straight
+## across the tail's mouth, like a balloon with its neck tied off. Drawn over it,
+## the tail's own white fill covers the border exactly where the two meet and the
+## outline appears to open into the stem. The shipped tail is open-topped (every row
+## is black edge plus white fill), which is what makes that work -- no art change
+## needed.
+##
+## 1px is the MEASURED thickness of that border. It also makes the join immune to
+## rounding, since this lives in world space and an exact edge-to-edge join can
+## split across a pixel boundary at a fractional camera zoom.
+##
+## APPLIED TO THE TAIL ONLY. Shifting body and tail by the same amount just moves
+## the whole assembly and leaves the join exact -- which is exactly what the first
+## version of this constant did, and the test agreed with it because it encoded the
+## same arithmetic. The test now demands a real overlap.
 const TAIL_OVERLAP := 1.0
+
+## How far in from the bubble's edge the tail attaches, as a fraction of width.
+## Not 0: a tail flush with the corner reads as a mistake rather than a stem.
+const TAIL_INSET := 0.22
 
 const FADE := 0.35
 
@@ -54,6 +70,8 @@ var _body: Control = null
 var _tail: Node2D = null
 var _label: Label = null
 var _size := Vector2.ZERO
+## Which way the body extends from the speaker; see the layout in _build.
+var _open_right := true
 
 
 ## `speaker` is followed every frame — an NPC who wanders off takes their words
@@ -113,8 +131,21 @@ func _build(text: String) -> void:
 		_body = np
 	else:
 		_body = Control.new()      # procedural: _draw() handles it
+	# WHICH SIDE THE BUBBLE OPENS TOWARD (user, 2026-07-26). The tail stays over the
+	# speaker; the BODY slides so a long line does not run off the edge. Speaker on
+	# the left of the view -> bubble opens right (tail near its left end), and the
+	# mirror on the other side. Falls back to centred when there is no camera to ask.
+	var open_right := true
+	var cam := get_viewport().get_camera_2d() if is_inside_tree() else null
+	if cam != null and _target != null and is_instance_valid(_target):
+		open_right = _target.global_position.x <= cam.get_screen_center_position().x
+	_open_right = open_right
+
 	_body.size = _size
-	_body.position = -Vector2(_size.x * 0.5, _size.y + tail_h + LIFT - TAIL_OVERLAP)
+	# Attach point sits TAIL_INSET in from the near edge, so the body offset puts
+	# x=0 (the speaker) at that spot rather than at the body's middle.
+	var shift: float = _size.x * TAIL_INSET if open_right else _size.x * (1.0 - TAIL_INSET)
+	_body.position = Vector2(-shift, -(_size.y + tail_h + LIFT))
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_body)
 
@@ -133,7 +164,14 @@ func _build(text: String) -> void:
 		# than the bottom-middle. Positioning by texture width would hang it off to
 		# one side and aim it at nothing. Found by measuring the PNG, because a
 		# transparent canvas hides all of this.
-		t.position = Vector2(-tip.x, -LIFT - tip.y + TAIL_OVERLAP)
+		# FLIPPED WHEN THE BUBBLE OPENS THE OTHER WAY. The arrow is swept, so a
+		# mirrored copy is exactly the stem the other side needs — and flip_h mirrors
+		# WITHIN the sprite's rect, so the tip moves to (width - tip.x) and the
+		# placement has to follow it or the point drifts off the speaker.
+		t.flip_h = not open_right
+		var tip_x: float = tip.x if open_right else float(t.texture.get_width()) - tip.x
+		# MINUS: up into the bubble, so the mouth is covered by what it overlaps.
+		t.position = Vector2(-tip_x, -LIFT - tip.y - TAIL_OVERLAP)
 		_tail = t
 		add_child(t)
 
@@ -206,7 +244,8 @@ func _draw() -> void:
 	var edge := Color(0.10, 0.12, 0.16, 0.9)
 	var top := -(_size.y + TAIL_H + LIFT)   # fallback path: no art, so the constant is the truth
 	if not (_body is NinePatchRect):
-		var r := Rect2(Vector2(-_size.x * 0.5, top), _size)
+		var shift: float = _size.x * TAIL_INSET if _open_right else _size.x * (1.0 - TAIL_INSET)
+		var r := Rect2(Vector2(-shift, top), _size)
 		draw_rect(r, fill)
 		draw_rect(r, edge, false, 2.0)
 	if _tail == null:
