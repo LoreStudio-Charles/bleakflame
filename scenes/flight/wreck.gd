@@ -36,6 +36,19 @@ const BURNT := Color(0.62, 0.53, 0.48)
 var _age := 0.0
 var _spin := 0.0
 var _drift := Vector2.ZERO
+## THE CORPSE RUN (user, 2026-07-27): "leave the cargo on the wreckage and allow the
+## player to recover if they arrive in the 7 minute window."
+##
+## The hold is scattered as REAL loot pickups around the hull rather than as an inventory
+## this class would have to expose: right-click grab, Salvage All and fly-over recovery
+## then all work with no new code, and the window enforces itself because the wreck takes
+## them with it when it goes. Death still costs you — it costs you the FLIGHT BACK, and
+## the risk of dying again on the way, which is a far better price than a silent deletion.
+var _held: Array[Node] = []
+## A wreck holding somebody's hold is never culled to make room. The cap is oldest-first,
+## and the player's corpse is exactly the oldest thing on a busy lane — without this the
+## run could be made impossible by other people's deaths.
+var protected := false
 var _sprite: Sprite2D
 var _poly: Polygon2D
 
@@ -79,6 +92,8 @@ static func _cull(tree: SceneTree) -> void:
 	var oldest: Wreck = null
 	for n in all:
 		var w := n as Wreck
+		if w != null and w.protected:
+			continue
 		if w != null and (oldest == null or w._age > oldest._age):
 			oldest = w
 	if oldest != null:
@@ -111,9 +126,36 @@ func _adopt_look(ship: Node2D) -> void:
 		add_child(_poly)
 
 
+## Scatter a hold across the wreck. Called right after spawn, by whoever died holding it.
+func hold_cargo(comps: Array, goods: Dictionary) -> void:
+	protected = true
+	for c in comps:
+		if c != null:
+			_held.append(LootPickup.spawn(get_parent(), global_position + _scatter(), c))
+	for key in goods:
+		for _i in mini(int(goods[key]), 12):   # a cap, or a full ore hold is 300 nodes
+			_held.append(LootPickup.spawn_commodity(get_parent(),
+				global_position + _scatter(), str(key)))
+
+
+func _scatter() -> Vector2:
+	return Vector2(randf_range(-70.0, 70.0), randf_range(-70.0, 70.0))
+
+
+## THE WINDOW CLOSES WITH THE WRECK. Anything still lying there goes with it — that is
+## what makes the seven minutes mean something rather than being a delay before free
+## salvage. Already-collected pickups have freed themselves and are skipped.
+func _take_hold_with_me() -> void:
+	for n in _held:
+		if is_instance_valid(n):
+			n.queue_free()
+	_held.clear()
+
+
 func _process(delta: float) -> void:
 	_age += delta
 	if _age >= LIFETIME:
+		_take_hold_with_me()
 		queue_free()
 		return
 	rotation += _spin * delta

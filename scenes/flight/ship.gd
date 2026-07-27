@@ -2040,6 +2040,18 @@ func _normal_physics(delta: float) -> void:
 ## The player ship lingers as a wreck so the camera and HUD survive; the
 ## flight scene handles the restart key. Cargo dies with the ship.
 func _on_death() -> void:
+	# THE HOLD STAYS WITH THE HULL (user, 2026-07-27). It used to be deleted outright —
+	# "cargo lost on death" — which is a cost you cannot see, cannot answer, and cannot
+	# tell from a bug. Now it is lying out there, on your wreck, for as long as the wreck
+	# lasts: the price of dying becomes the flight back and the risk of dying on the way.
+	var corpse: Wreck = null
+	for n in get_tree().get_nodes_in_group("wrecks"):
+		var w := n as Wreck
+		if w != null and w._age < 0.5 and global_position.distance_to(w.global_position) < 60.0:
+			corpse = w
+	if corpse != null and (not cargo.is_empty() or not commodities.is_empty()):
+		corpse.hold_cargo(cargo, commodities)
+		_flash_note("YOUR HOLD IS ON THE WRECK. Get back to it before it's gone.")
 	cargo.clear()
 	commodities.clear()
 	_record_nemesis()

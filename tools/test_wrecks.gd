@@ -18,6 +18,7 @@ func _ready() -> void:
 	await _case_the_beast_leaves_nothing()
 	await _case_wrecks_do_not_accumulate_forever()
 	_case_a_wreck_is_not_an_obstacle()
+	await _case_a_hold_survives_on_the_wreck()
 
 	if _fails.is_empty():
 		print("test_wrecks: ALL PASS (%d checks)" % _checks)
@@ -114,3 +115,54 @@ func _ok(cond: bool, what: String) -> void:
 	_checks += 1
 	if not cond:
 		_fails.append(what)
+
+
+## THE CORPSE RUN (user, 2026-07-27). Death used to DELETE the hold, which is a cost you
+## cannot see, cannot answer and cannot tell from a bug. Now it lies on the wreck.
+func _case_a_hold_survives_on_the_wreck() -> void:
+	_clear()
+	for n in get_tree().get_nodes_in_group("loot"):
+		n.free()
+	var ship := _ship(Vector2(6000, 0))
+	ship.take_damage(1e7, null)
+	await get_tree().process_frame
+	var wrecks := get_tree().get_nodes_in_group("wrecks")
+	if wrecks.is_empty():
+		_ok(false, "a wreck exists to hold anything")
+		return
+	var w := wrecks[0] as Wreck
+	var part: ComponentDef = load("res://data/components/weapons/vk2_autocannon.tres")
+	# KNOWN GAP, stated rather than hidden: this calls hold_cargo DIRECTLY, so it proves the
+	# helper and NOT the wiring in TestShip._on_death that is supposed to call it. Sabotaging
+	# that call goes undetected here — the "a correct helper nobody calls" shape, caught by
+	# sabotage rather than by trust. Closing it needs a real TestShip driven through death,
+	# which wants the flight scene; until then treat the player-side hook as UNVERIFIED.
+	w.hold_cargo([part], {"aurite_ore": 3})
+	await get_tree().process_frame
+
+	var loot := get_tree().get_nodes_in_group("loot")
+	_ok(loot.size() == 4, "the hold is scattered as recoverable pickups (%d)" % loot.size())
+	var near := 0
+	for n in loot:
+		if (n as Node2D).global_position.distance_to(w.global_position) < 140.0:
+			near += 1
+	_ok(near == loot.size(), "...all of it lying ON the wreck, not drifting off")
+	_ok(w.protected, "...and the wreck is protected from the cull while it holds a hold")
+
+	# A protected corpse must survive a busy lane, or other people's deaths end your run.
+	for i in Wreck.MAX_WRECKS + 4:
+		var s := _ship(Vector2(200 * i, 9000))
+		s.take_damage(1e7, null)
+	await get_tree().process_frame
+	_ok(is_instance_valid(w), "a corpse holding cargo is never culled to make room")
+
+	# THE WINDOW CLOSES WITH THE WRECK — otherwise seven minutes is a delay before free
+	# salvage rather than a deadline.
+	w._age = Wreck.LIFETIME + 1.0
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var left := 0
+	for n in get_tree().get_nodes_in_group("loot"):
+		if is_instance_valid(n):
+			left += 1
+	_ok(left == 0, "when the wreck goes, the hold goes with it (%d left)" % left)
