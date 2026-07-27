@@ -2903,6 +2903,16 @@ func _chip_error(chip: AbilityChipDef) -> String:
 	for c in ship.build.chips:
 		if c != null and c.tags == chip.tags:
 			return "That ability is already loaded."
+	# LEVEL GATES CHIPS TOO (2026-07-27). _fit_error has carried this since the level
+	# requirement shipped, but the Coupling had its own error path and never got it --
+	# so every chip (all 14 are level 5) loaded for any pilot, while a level-5 GUN on
+	# the same shelf was refused with a visible reason. The tile had already dimmed
+	# itself and painted a red L5 badge, and the tooltip already read "Requires level
+	# 5 — you are 2"; only the code disagreed.
+	var need := int(chip.level)
+	if need > Pilot.level():
+		return "%s needs pilot level %d — you are level %d." % [
+			chip.display_name, need, Pilot.level()]
 	return ""
 
 

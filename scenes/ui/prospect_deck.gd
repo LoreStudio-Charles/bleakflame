@@ -20,6 +20,10 @@ const ORE_PREMIUM := 1.35
 
 var ship: TestShip
 var _body: RichTextLabel
+## THE DECK HAD NO VOICE. Every rejection and confirmation here was a bare Sfx
+## click, which the project rule forbids ("every rejection must be VISIBLE").
+## Cleared on the next refresh so it never goes stale.
+var _msg := ""
 var _ore_box: VBoxContainer
 var _talk_box: VBoxContainer
 var _offers: ItemList
@@ -125,7 +129,11 @@ func refresh() -> void:
 	Tutor.context = "dock"
 	Tutor.venue = "verge"
 	var bill := int(ship.dock_bill.get("repairs", 0))
-	var txt := "[i][color=#a8b0c2]%s[/color][/i]\n\n" % Npcs.flavor("doug")
+	var txt := ""
+	if _msg != "":
+		txt += "[color=#f2b859]%s[/color]\n\n" % _msg
+		_msg = ""
+	txt += "[i][color=#a8b0c2]%s[/color][/i]\n\n" % Npcs.flavor("doug")
 	txt += "Her engines have been cold for a decade. Doug cut the holds open into "
 	txt += "hoppers and welded a berth on the flank, and now the Verge has a door.\n\n"
 	if bill > 0:
@@ -204,11 +212,17 @@ func _accept_selected() -> void:
 
 func _turn_in(index: int) -> void:
 	var m: Dictionary = MissionLog.active[index] if index < MissionLog.active.size() else {}
-	if MissionLog.turn_in(index, ship):
-		var fac := MissionLog.faction_for(m)   # Doug's board is mining, but credit the giver
-		if fac != "":
-			Standing.add(fac, 2)
+	# THROUGH THE SHARED PATH. MissionLog.complete() exists so a board does not
+	# re-implement the trailing effects, and this re-implemented two of them and
+	# dropped the rest: Quests.check_new_work (so the next campaign beat did not
+	# unlock until you docked somewhere else) and the turn-in tutor signals (so the
+	# lesson stayed queued until the 50s stall watchdog retired it).
+	var r := MissionLog.complete(index, ship, "verge", SaveGame.tutorial_done)
+	if r.ok:
+		Tutor.did("turned_in")
+		Tutor.retire("turn_in")
 		Sfx.play("jingle", -8.0)
+		_flash(str(r.msg))
 	refresh()
 
 
@@ -286,11 +300,31 @@ func _buy_ware(path: String) -> void:
 	var comp: ComponentDef = load(path)
 	var price := int(comp.value() * DockScreen.BUY_MULT)
 	if Wallet.credits < price:
+		# Every rejection must be VISIBLE (project rule) -- this played a quiet click
+		# and nothing else, so a broke pilot got no reason at all.
+		_flash("Not enough credits — %s costs %dc." % [comp.display_name, price])
 		Sfx.play("click", -16.0, 0.6)
 		return
+	# INTO YOUR HOLD, like every other counter. This appended to the STATION STASH,
+	# so a chip bought at The Dig was not in the hold when you opened the Coupling
+	# three feet away -- it was back at Cinder Reach, and nothing said so. Falls back
+	# to the stash only when the hold genuinely cannot take it, and SAYS which.
 	Wallet.credits -= price
-	Stash.items.append(comp)
+	if ship.can_carry(comp):
+		ship.add_cargo(comp)
+		_flash("Bought %s — %dc" % [comp.display_name, price])
+	else:
+		Stash.items.append(comp)
+		_flash("Bought %s — %dc  ·  HOLD FULL, sent to the station stash" % [
+			comp.display_name, price])
 	Sfx.play("jingle", -10.0)
+
+
+## Say something to the player, then redraw. Anything that can be refused has to
+## be able to explain itself.
+func _flash(text: String) -> void:
+	_msg = text
+	refresh()
 
 
 func _talk() -> void:

@@ -62,11 +62,22 @@ func _process(_delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# ONE HULL, ONE PULL. A WANTED player is in player_team AND hostile_team
+	# (ship.gd _refresh_wanted), so this loop ran the whole body twice on them:
+	# double gravity and 220 crash damage instead of 110. And DockingPad.try_dock
+	# sends outlaws HERE ("the Guardians won't clear an outlaw. Head for the
+	# planet"), so the one situation the game funnels you into planetside landing
+	# was the one where the landing physics was doubled. flight_hud's GroupOverlay
+	# walks the same two groups and dedupes; this did not.
+	var seen := {}
 	for group in ["player_team", "hostile_team"]:
 		for node in get_tree().get_nodes_in_group(group):
 			var ship := node as BuildShip
 			if ship == null or ship.dead or ship.get("docked_at") != null:
 				continue
+			if seen.has(ship.get_instance_id()):
+				continue
+			seen[ship.get_instance_id()] = true
 			# A ship HELD by a scripted beat is exempt — gravity must not keep
 			# pulling (nor the surface keep hitting it) while a modal has the
 			# screen or a cinematic is flying it. Without this the hard-set-down

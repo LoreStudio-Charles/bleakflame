@@ -959,6 +959,14 @@ func _engage_cloak() -> void:
 	if _cloak_cd > 0.0:
 		_ability_fail("CLOAK COOLING — %.0fs" % ceil(_cloak_cd))
 		return
+	# CHARGED ON CAST, not on drop. The cost used to be taken in _drop_cloak AFTER
+	# `_cloak_t = 0.0`, so a failed spend returned with `_hidden` still true, no
+	# cooldown set, and nothing left to retry it -- the pilot stayed invisible to
+	# every hostile in the game, indefinitely, with the cloak re-castable. It also
+	# broke this file's own invariant that every _ability_fail sits BEFORE any state
+	# mutation, which is exactly the rule that makes a refusal cost nothing.
+	if not _spend(_cloak_energy, "Cloak"):
+		return
 	_cloak_t = _cloak_dur
 	_hidden = true
 	set_veil(0.32)
@@ -969,9 +977,10 @@ func _engage_cloak() -> void:
 func _drop_cloak(reason: String) -> void:
 	if _cloak_t <= 0.0 and not _hidden:
 		return
+	# UNCONDITIONAL from here: dropping the cloak can never fail, because the energy
+	# was already taken at cast. Anything that can abort mid-drop leaves the pilot
+	# permanently hidden.
 	_cloak_t = 0.0
-	if not _spend(_cloak_energy, "Cloak"):
-		return
 	_cloak_cd = _cloak_cd_max
 	_hidden = false
 	set_veil(1.0)

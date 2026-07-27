@@ -182,6 +182,8 @@ var _flash_t := 0.0
 var _flash_msg := ""
 var _e_was := false
 var _esc_was := false
+## True for the first frame after a panel closes -- see _poll_actions.
+var _thawed_frame := false
 var _lmb_was := false
 var _rmb_was := false
 var _q_was := false
@@ -646,6 +648,18 @@ func _on_player_down() -> void:
 	_player.dead = false
 	_player.health = _player.max_health
 	_player.set_pose("")
+	# REVIVE UNDOES EVERYTHING DEATH DID. Each of these was set on the way down and
+	# never cleared on the way up:
+	#  · meditating -- a SOFT-LOCK. _physics_process roots the pilot while it is
+	#    true, so dying mid-meditate left them awake, standing, and unable to move
+	#    or use a technique, with no clue but to guess [K].
+	#  · the shadow -- die() tweens it to alpha 0 and nothing brings it back, so the
+	#    pilot walked the rest of the session as the one thing in town casting none.
+	#  · _kneeling -- the town's mirror of the pose, which desynced so the next
+	#    [SPACE] silently did nothing and cover mitigation was not applied.
+	_player.set_meditating(false)
+	_player.restore_shadow()
+	_kneeling = false
 	# YOU WAKE OUTSIDE (playtest: died in the cave, respawned in a corner of it). The
 	# death seam already says you wake at the Starport; leaving you in the room you were
 	# killed in — with whatever killed you — is neither that nor survivable.
@@ -1059,7 +1073,16 @@ func _poll_actions() -> void:
 	if e and not _e_was:
 		_interact()
 	_e_was = e
+	# RESYNC ACROSS THE FREEZE. _poll_actions is skipped entirely while a panel is up
+	# (the `not _active` guard), so _esc_was stayed false while the player held Esc to
+	# CLOSE that panel -- and the frame the town thawed it read the still-held key as a
+	# fresh press and also walked them out of the room. Closing a shop inside the
+	# Market ejected you to the square in the same gesture. Latch the key as already
+	# down for the first frame back.
 	var esc := Input.is_key_pressed(KEY_ESCAPE)
+	if _thawed_frame:
+		_thawed_frame = false
+		_esc_was = esc          # whatever is held right now is NOT a new press
 	if esc and not _esc_was and _interior_id != "":
 		_exit_interior()
 	_esc_was = esc
@@ -1208,6 +1231,8 @@ func reject_launch(msg: String) -> void:
 
 ## flight_test freezes the town while a dock panel is open over it, and thaws it on close.
 func set_active(on: bool) -> void:
+	if on and not _active:
+		_thawed_frame = true      # do not read a still-held Esc as a new press
 	_active = on
 	if not on:
 		_player.move_dir(Vector2.ZERO)

@@ -120,6 +120,14 @@ func take_damage(raw: float, attacker: GroundCharacter = null) -> float:
 	return taken
 
 
+## Undo what die() did to the shadow. die() tweens it to alpha 0 and the revive
+## path never brought it back, so a pilot who died once walked the rest of the
+## session as the only thing in town casting no shadow.
+func restore_shadow() -> void:
+	if _shadow != null:
+		_shadow.modulate.a = 1.0
+
+
 func die() -> void:
 	if dead:
 		return
