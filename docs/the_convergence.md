@@ -24,15 +24,46 @@
 > | **The Gate** | Saga Movement I (`docs/campaign_starter_system.md`) |
 > | **The Legend** | the Cinder Reach Campaign (`docs/cinder_reach_campaign.md`) |
 >
-> Movements beyond I are **not yet named** — nothing in this repo records them. The
-> list lives in `Quests.SAGA_MOVEMENTS`; adding one entry re-titles the log with no
-> other edit. The quest log shows the SPINE as the title and the MOVEMENT as
-> position ("The Gate — To be continued…"), so the entry never renames itself
-> underneath the player.
->
-> A test asserts the Saga's log text never contains the reveal — guarding the
-> property, not the string, because whoever names Movement II will face the same
-> temptation.
+> The quest log shows the SPINE as the title and the MOVEMENT as position
+> ("The Gate — To be continued…"), so the entry never renames itself underneath the
+> player. The list is mirrored in `Quests.SAGA_MOVEMENTS`.
+
+---
+
+## The six Movements
+
+**Recovered from conversation 2026-07-26 and written down here** — they had never
+been recorded in the repo, which is the same way "Nothing Left Behind" drifted from
+a quest title into being read as a Campaign name. This table is the source of truth;
+`Quests.SAGA_MOVEMENTS` mirrors it for the log.
+
+The arc, in one line each: **the crime, the first hope, the too-late, the reveal,
+the last threat, the grace.**
+
+| # | Movement | What it is |
+|---|---|---|
+| **I** | **The Gate** | System 1, the demo. **The crime.** Cinderweb, the pirates, opening the WayGate. *(The one being shipped.)* |
+| **II** | **The Light** | The light-weapon that finally makes a Leviathan **mortal**, and first contact with the **Wraithlight Wardens**. The first crack of hope, and the first ancient face. |
+| **III** | **The Choir** | The **Threshers**. The reaping tide. The sound that means it is too late. |
+| **IV** | **The Key** | Reverse-engineering the Wardens' tech until you can **read the message**. The reveal: *"Oh. We're the bad guys."* |
+| **V** | **The Dark** | The **Dhakar**. Stop them, or it is oblivion — or worse. |
+| — | **Epilogue: The Idiot** | Weapons down. The head-shake. *"…you idiots."* **Said with love.** |
+
+**Movement II answers a mechanic already load-bearing.** Cinderweb cannot be killed
+in open play — at 0 HP it retreats (`Leviathan.mortal` is set once, at a system
+finale). "The Light" is *why*: the light-weapon is the thing that finally makes a
+Leviathan mortal. The retreat rule is not a limitation, it is a promise.
+
+**The epilogue is allowed to say the quiet part.** "The Idiot" is the elders' name
+for us (**ADO'VIETES**, § below) and the entire late reveal in two words — which is
+exactly why it is forbidden everywhere else and earned here. `SAGA_MOVEMENTS` carries
+an `epilogue` flag that exempts it from the spoiler guard, and a test asserts **only
+one** movement may claim that exemption, so the rule cannot quietly be opted out of.
+Tests also hold the *The &lt;Something&gt;* rhythm across all six.
+
+Only Movement I has a finale quest (`nothing_left_behind`); the rest carry
+`until: ""`, so each stays current once reached — correct, since it *is* where the
+story is until something ends it.
 
 The spine of the whole game (and the series). Everything else — the gates, the
 Cinderweb, the Wardens, the Threshers, the factions, the professions — hangs off

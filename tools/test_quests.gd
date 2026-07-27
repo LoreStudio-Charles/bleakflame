@@ -473,10 +473,38 @@ func _init() -> void:
 	# "The Convergence" and "The Idiot" were both live candidates, and either would
 	# hand the player the shape of the ending in their first hour. Whoever names
 	# Movement II will be tempted the same way.
-	for forbidden in ["Convergence", "Idiot", "Warden", "Prison"]:
-		if forbidden in Quests.spine_name("saga") or forbidden in Quests.movement_name("saga"):
-			print("FAIL: the Saga's log text says '%s' — that is the late reveal, "
-				% forbidden + "printed from the first hour")
+	# NOT BEFORE IT IS EARNED, rather than never. The EPILOGUE is called "The Idiot"
+	# on purpose -- it is the elders' name for us and the whole reveal in two words,
+	# which is the joke landing after five movements, not a leak. Every movement
+	# before it, and the spine's own name, must stay clean.
+	var forbidden := ["Convergence", "Idiot", "Warden", "Prison"]
+	for word in forbidden:
+		if word in Quests.spine_name("saga"):
+			print("FAIL: the Saga's own title says '%s' — that is the late reveal, "
+				% word + "printed from the first hour")
+			failures += 1
+	for m in Quests.SAGA_MOVEMENTS:
+		if bool(m.get("epilogue", false)):
+			continue
+		for word in forbidden:
+			if word in str(m["name"]):
+				print("FAIL: movement '%s' states the reveal before it is earned"
+					% str(m["name"]))
+				failures += 1
+	# ...and exactly ONE movement may claim that exemption, or the guard is a
+	# formality anyone can opt out of.
+	var epilogues := 0
+	for m in Quests.SAGA_MOVEMENTS:
+		if bool(m.get("epilogue", false)):
+			epilogues += 1
+	if epilogues != 1:
+		print("FAIL: %d movements are flagged `epilogue` — exactly one may be exempt "
+			% epilogues + "from the spoiler rule")
+		failures += 1
+	# Every movement keeps the rhythm: The <Something>.
+	for m in Quests.SAGA_MOVEMENTS:
+		if not str(m["name"]).begins_with("The "):
+			print("FAIL: movement '%s' breaks the 'The <Something>' rhythm" % str(m["name"]))
 			failures += 1
 
 	# Finishing a movement must not blank the entry: the spine outlives its parts.

@@ -843,11 +843,33 @@ const SPINES := {
 
 ## Where you are WITHIN the Saga. The spine's title stays put — a log entry that
 ## renames itself underneath the player is disorienting, and the point of listing a
-## dormant spine is "this story continues" — so the movement rides as position
-## instead. Movement II adds one entry here and the log follows it.
+## dormant spine is "this story continues" — so the movement rides as position.
+##
+## SIX MOVEMENTS, EVERY ONE "THE <SOMETHING>" (user, 2026-07-26 — recovered from
+## conversation, which is exactly where they should NOT have been living). The arc:
+## the crime, the first hope, the too-late, the reveal, the last threat, the grace.
+##
+## `until` = the quest whose completion ENDS that movement. "" means the finale
+## quest does not exist yet, so the movement stays current once reached — which is
+## correct: it IS where the story is until something ends it.
 const SAGA_MOVEMENTS := [
-	# `until` = the quest whose completion ENDS this movement. "" = still open-ended.
-	{"name": "The Gate", "until": "nothing_left_behind"},
+	{"name": "The Gate", "until": "nothing_left_behind",
+		"blurb": "System 1. The crime — Cinderweb, the pirates, opening the WayGate."},
+	{"name": "The Light", "until": "",
+		"blurb": "The light-weapon that finally makes a Leviathan mortal, and first contact with the Wraithlight Wardens. The first crack of hope, and the first ancient face."},
+	{"name": "The Choir", "until": "",
+		"blurb": "The Threshers. The reaping tide. The sound that means it is too late."},
+	{"name": "The Key", "until": "",
+		"blurb": "Reverse-engineering the Wardens' tech until you can read the message. The reveal: oh. We are the bad guys."},
+	{"name": "The Dark", "until": "",
+		"blurb": "The Dhakar. Stop them, or it is oblivion or worse."},
+	# THE EPILOGUE IS ALLOWED TO SAY IT. "The Idiot" is the elders' name for us
+	# (ADO'VIETES) and the whole late reveal in two words — which is why it is
+	# forbidden everywhere else and earned here. Weapons down, the head-shake,
+	# "...you idiots", said with love. `epilogue` is what exempts it from the
+	# spoiler guard; nothing else may carry that flag.
+	{"name": "The Idiot", "until": "", "epilogue": true,
+		"blurb": "Weapons down. The head-shake. \"...you idiots.\" Said with love."},
 ]
 
 
