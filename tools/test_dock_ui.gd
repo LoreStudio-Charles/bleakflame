@@ -55,6 +55,7 @@ func _ready() -> void:
 	_case_armory_filters()
 	_case_level_gates_equipping()
 	_case_the_campaign_banner_never_goes_silent()
+	_case_started_spines_stay_in_the_log()
 	_case_contracts_credit_their_giver_guild()
 	_case_gem_bar_never_starts_crossed_out()
 	_case_odessa_has_no_dead_ask()
@@ -1369,3 +1370,44 @@ func _case_the_campaign_banner_never_goes_silent() -> void:
 	Wallet.xp = was
 	Quests.reset()
 	screen.queue_free()
+
+
+## A STORY YOU HAVE STARTED STAYS IN THE LOG, even while it is resting.
+##
+## The log listed LIVE objectives only, so a spine between beats vanished from it —
+## and an absent story reads identically to one never begun and one already
+## finished. Level-gated cold stretches make resting the Campaign's normal state,
+## so this is the invisible-story failure one surface deeper than the banner.
+##
+## Three states, and they must look different: not started (absent), started and
+## resting (present, "to be continued"), finished (absent again).
+func _case_started_spines_stay_in_the_log() -> void:
+	Quests.reset()
+	Research.reset()
+
+	_ok(Quests.dormant_spines().is_empty(),
+		"a fresh pilot has no dormant spines — nothing has been started, which is "
+		+ "different from waiting")
+
+	# Started, and resting: one Legend beat done, the next held by its 3-day wait.
+	Quests.completed.append("legend_check_in")
+	Quests.completed_day["legend_check_in"] = 0
+	Research.day = 0
+	var dormant := Quests.dormant_spines()
+	_ok(dormant.size() == 1, "the started Campaign is listed while resting (got %d)"
+		% dormant.size())
+	if not dormant.is_empty():
+		_ok(str(dormant[0].get("title", "")) != "", "the dormant spine is named")
+		_ok(str(dormant[0].get("current", "")) != "",
+			"...and carries a step line rather than an empty node")
+		_ok(not dormant[0].has("key"),
+			"a dormant spine has NO tracker key — otherwise the log would offer to "
+			+ "star and reorder a thing that is not an objective")
+
+	# With a beat ACTIVE the spine is represented by the beat itself, not doubled.
+	Quests.active["legend_empty_cave"] = {"stage": 0, "count": 0}
+	_ok(Quests.dormant_spines().is_empty(),
+		"an active beat replaces the placeholder — the spine must not appear twice")
+
+	Quests.reset()
+	Research.reset()

@@ -72,7 +72,13 @@ func _active_entries() -> Array:
 		if not t.hidden:
 			current_key = str(t.key)
 			break
-	var out: Array = []
+	# SPINES FIRST, and always. A started story with nothing active used to drop out
+	# of the log entirely, which reads exactly like one you never began or one you
+	# already finished. Cold stretches make that the Campaign's resting state, so the
+	# throughlines stay listed with a "to be continued" node rather than vanishing.
+	# They carry no tracker key, so the star/reorder controls skip them — a dormant
+	# spine is a bookmark, not something you curate onto the HUD.
+	var out: Array = Quests.dormant_spines()
 	for t in tracked:
 		var key := str(t.key)
 		var e: Dictionary = (rich[key] as Dictionary).duplicate() if rich.has(key) \

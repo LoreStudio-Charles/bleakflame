@@ -43,7 +43,7 @@ const QUESTS := [
 	# as confusing rather than hard. So the first post-tutorial job is a milk run
 	# dirtside: the trip forces a landing, the first-landing cinematic teaches by
 	# consequence, and Imari names the technique in plain words afterward.
-	{"id": "dirtside_run", "title": "Dirtside Run", "giver": "ruel",
+	{"id": "dirtside_run", "title": "Dirtside Run", "layer": "saga", "giver": "ruel",
 		"requires": "",
 		"body": "The colony is waiting on a crate off the last freighter, and Ruel has nobody dirtside. Fly it down, hand it to Imari — and put the hull on the ground without leaving a crater.",
 		"briefing": "Ruel finally looks up. \"Before I put you on anything that matters — milk run. Colony's short a crate off the last freighter and I've no one dirtside.\" He raps the crate with a knuckle. \"And pilot — setting down is NOT docking. There's no lane to line up on. A planet has gravity; it pulls you in whether you're ready or not. Your only job is slowing it. Come in slow, and drop TOWARD the pad, not across it.\" He jerks his chin at your console. \"And use your chart — [M] pulls up the nav map. Set the colony as your waypoint and fly the diamond. The Reach is bigger than it looks. Imari signs for the crate.\"",
@@ -65,7 +65,7 @@ const QUESTS := [
 				}},
 		],
 		"rewards": {"credits": 120, "xp": 20}},
-	{"id": "prove_wings", "title": "Standing With the Board", "giver": "ruel",
+	{"id": "prove_wings", "title": "Standing With the Board", "layer": "saga", "giver": "ruel",
 		"requires": "dirtside_run",
 		"body": "Ruel doesn't hand the interesting work to unknowns. Run contracts off the board — bounties, recoveries, deliveries — and make your callsign mean something on this dock.",
 		"briefing": "Ruel doesn't look up from the ledger. \"New transponder on my dock. Means nothing to me yet.\" He finally meets your eye. \"Board's got work — bounties, hauling, salvage recovery. Run a couple, come back in one piece, and maybe your callsign starts meaning something. Off you go.\"",
@@ -76,7 +76,7 @@ const QUESTS := [
 				"flash": "RUEL: 'Twice now you've come back whole. Good. Voss has been asking for someone exactly that lucky.'"},
 		],
 		"rewards": {"credits": 150, "xp": 20}},
-	{"id": "overdue", "title": "Overdue: The Long Meridian", "giver": "voss",
+	{"id": "overdue", "title": "Overdue: The Long Meridian", "layer": "saga", "giver": "voss",
 		"requires": "prove_wings",
 		"body": "The hauler Long Meridian is nine days overdue on the planet run. No distress call. No debris report. No beacon. Voss needs an on-site verification for the claim file: fly the route, sweep her last transmitted fix, and report what you find.",
 		"briefing": "Voss doesn't waste the pleasantries. \"The Long Meridian. Freight hauler, nine days overdue on the planet run. No distress call, no beacon, no claim from anyone who hit her.\" She slides a fix across. \"I need eyes on her last transmitted position for the file. Fly it, sweep it, tell me what's there. Precisely what's there.\"",
@@ -90,7 +90,7 @@ const QUESTS := [
 				"flash": "VOSS: 'No debris? Pirates leave debris.' The stamp says LOST, CAUSE UNKNOWN. Her eyes say something worse."},
 		],
 		"rewards": {"credits": 220, "xp": 30}},
-	{"id": "ember_word", "title": "The Word at Ember Row", "giver": "voss",
+	{"id": "ember_word", "title": "The Word at Ember Row", "layer": "saga", "giver": "voss",
 		"requires": "overdue",
 		"body": "That empty sweep won't leave Voss alone. She's sent you to Odessa at Ember Row — the dock rats hear things no claim file ever records. Pull the thread.",
 		"briefing": "Voss catches you before you've stowed your helmet. \"The Meridian's going to cost me sleep, and I'd rather it cost yours.\" A thin almost-smile. \"Ember Row. Odessa. She owes me a listen, and she hears everything on this deck before I do. Go find out what people are too sober to say to an underwriter.\"",
@@ -119,7 +119,7 @@ const QUESTS := [
 				}},
 		],
 		"rewards": {"credits": 120, "xp": 20}},
-	{"id": "cold_patch", "title": "The Cold Patch", "giver": "lab",
+	{"id": "cold_patch", "title": "The Cold Patch", "layer": "saga", "giver": "lab",
 		"requires": "ember_word",
 		"body": "The lab wants an instrument reading, not a bar story. There's a residue lingering off the lane where a hauler was lost — cold, violet, wrong. Take a survey scanner out and read it directly.",
 		"briefing": "The lab tech doesn't look up from the bench. \"Rumors don't calibrate. I need numbers.\" A marker blinks onto your chart. \"There's a residue off the lane — right where the Kestrel-class Pale Wager stopped transmitting. Survey scanner, select it, channel a full scan. Bring me what the instruments say, not what the dock rats feel.\"",
@@ -130,7 +130,7 @@ const QUESTS := [
 				"flash": "SCAN RETURN: the reading is a hole. Matter that should be here, isn't. Nothing did this that leaves debris."},
 		],
 		"rewards": {"credits": 260, "xp": 40}},
-	{"id": "caught_looking", "title": "Caught in the Open", "giver": "lab",
+	{"id": "caught_looking", "title": "Caught in the Open", "layer": "saga", "giver": "lab",
 		"requires": "cold_patch",
 		"body": "The absence had a heading. The lab ran it back through the colony almanac and went quiet. Something passes through a set of coordinates soon — and they need a live sensor return the instant it does. You're the rig they're sending.",
 		"briefing": "The tech won't quite meet your eye. \"The absence had a vector. I ran it against the old colony almanac and I need you to not ask me what I found.\" A marker burns onto your chart, far out past the lane. \"Something comes through there. Soon. Hold position and record everything. Then come straight home — I mean straight — the moment your instruments so much as flinch.\"",
@@ -141,7 +141,7 @@ const QUESTS := [
 				"flash": "YOU MADE THE LIGHT. Whatever that was, you are the first to run from it and live."},
 		],
 		"rewards": {"credits": 320, "xp": 60}},
-	{"id": "first_contact", "title": "First Contact", "giver": "lab",
+	{"id": "first_contact", "title": "First Contact", "layer": "saga", "giver": "lab",
 		"requires": "caught_looking",
 		"body": "After the last pass, something LINGERED — a piece of the web itself, sheared off and drifting where the ambush happened. It has never left a piece of itself before. The lab needs it scanned before it dissipates. A Guardian wing flies escort this time; the Board is done losing pilots to the approach.",
 		"briefing": "The tech can barely sit still. \"It left something. It has NEVER left something. A fragment — a tendril, sheared off and just... hanging there in the dark.\" A breath. \"Scan it before it's gone. And Ruel's sending a Guardian wing with you — real hardware, not volunteers this time. Let them handle whatever's on the lane. You get the reading.\"",
@@ -153,7 +153,7 @@ const QUESTS := [
 				"flash": "SCAN LOCKED — you have a piece of the thing itself. Get it to the lab."},
 		],
 		"rewards": {"credits": 400, "xp": 80}},
-	{"id": "the_hermit", "title": "The Lantern-Drinker", "giver": "lab",
+	{"id": "the_hermit", "title": "The Lantern-Drinker", "layer": "saga", "giver": "lab",
 		"requires": "first_contact",
 		"body": "The colony calls him the Counter — an old spacer who has tallied the thing's breathing for thirty years. Land on the planetoid and hear what he knows.",
 		"stages": [
@@ -180,7 +180,7 @@ const QUESTS := [
 				}},
 		],
 		"rewards": {"credits": 200, "xp": 40}},
-	{"id": "rust_shoal", "title": "Ask the Only One Who Ran", "giver": "krayt",
+	{"id": "rust_shoal", "title": "Ask the Only One Who Ran", "layer": "saga", "giver": "krayt",
 		"requires": "the_hermit",
 		"grants_shoal": true,   # the hermit hands you Krayt's invitation — the Shoal opens to you
 		"body": "Krayt — a pirate quartermaster gone to ground in the Rust Shoal — is the only soul who has flown the system's rim and come home. Fly to the Shoal and get him to talk.",
@@ -215,7 +215,7 @@ const QUESTS := [
 				}},
 		],
 		"rewards": {"credits": 300, "xp": 80}},
-	{"id": "nothing_left_behind", "title": "Nothing Left Behind", "giver": "krayt",
+	{"id": "nothing_left_behind", "title": "Nothing Left Behind", "layer": "saga", "giver": "krayt",
 		"requires": "rust_shoal",
 		"manual_start": true,   # NOT auto-handed at a dock — the flight set-piece (the Shoal's fall,
 		                        # Krayt's final transmission) starts it via Quests.begin_manual().
@@ -812,6 +812,82 @@ static func cold_beat() -> Dictionary:
 		if why != "":
 			return {"quest": str(q.id), "title": str(q.get("title", "")), "step": why}
 	return {}
+
+
+## THE STORY SPINES, and whether each is under way.
+##
+## A layer is a THROUGHLINE, not a category: "saga" is the Convergence chain that
+## ends at the gate, "campaign" is The Legend. Every Saga quest was untagged until
+## 2026-07-26, so the data could not distinguish a spine from a side contract at
+## all -- which is why the log could only ever show what was active.
+const SPINES := {
+	"saga": "The Convergence",
+	"campaign": "The Legend",
+}
+
+
+## Has the player begun this throughline (anything in it active or done)?
+static func spine_started(layer: String) -> bool:
+	for q in QUESTS:
+		if str(q.get("layer", "")) != layer:
+			continue
+		if active.has(str(q.id)) or completed.has(str(q.id)):
+			return true
+	return false
+
+
+static func spine_complete(layer: String) -> bool:
+	var any := false
+	for q in QUESTS:
+		if str(q.get("layer", "")) != layer:
+			continue
+		any = true
+		if not completed.has(str(q.id)):
+			return false
+	return any
+
+
+static func spine_has_active(layer: String) -> bool:
+	for id in active.keys():
+		if str(quest_def(str(id)).get("layer", "")) == layer:
+			return true
+	return false
+
+
+## A LOG ENTRY FOR EVERY SPINE THAT IS UNDER WAY BUT RESTING (user, 2026-07-26).
+##
+## The log showed only LIVE objectives, so a started story with nothing active
+## simply vanished from it -- indistinguishable from one that was never begun or
+## one already finished. With level-gated cold stretches making "resting" the
+## Campaign's normal state, that absence would be the invisible-story problem all
+## over again, one surface further in.
+##
+## Carries NO tracker `key`, which is what keeps the star/reorder controls off it:
+## a dormant spine is a bookmark, not something you curate onto the HUD.
+static func dormant_spines() -> Array:
+	var out: Array = []
+	for layer in SPINES:
+		if not spine_started(layer) or spine_complete(layer) or spine_has_active(layer):
+			continue
+		# Say WHY when we know (a level or day gate); stay evocative when we do not.
+		var why := ""
+		for q in QUESTS:
+			if str(q.get("layer", "")) == layer:
+				why = pending_reason(str(q.id))
+				if why != "":
+					break
+		out.append({
+			"id": "spine:" + layer,
+			"title": str(SPINES[layer]),
+			"giver": "",
+			"body": "This thread is under way. It is not asking anything of you right now.",
+			"done": [],
+			"current": why if why != "" else "To be continued...",
+			"rewards": "",
+			"done_quest": false,
+			"spine": true,
+		})
+	return out
 
 
 static func rewards_text(q: Dictionary) -> String:
