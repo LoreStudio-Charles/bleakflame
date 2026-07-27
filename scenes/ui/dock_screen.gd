@@ -1747,6 +1747,12 @@ func _refresh_overview() -> void:
 	# the story can sit invisible for ~46 days). One line, its own step, always
 	# on top. Empty when the campaign is idle between beats.
 	var beat := Quests.current_step()
+	# ...and when nothing is ACTIVE, say what is being waited for. Level-gated cold
+	# stretches make "idle between beats" the campaign's normal state, so a banner
+	# that only speaks during a live beat would go quiet for most of the game — which
+	# is the invisible-story failure it was built to prevent.
+	if beat.is_empty():
+		beat = Quests.cold_beat()
 	if not beat.is_empty():
 		txt += "[b][color=#f2b859]▸ CAMPAIGN · %s[/color][/b]\n[color=#cdd3dd]%s[/color]\n\n" % [
 			str(beat.title), str(beat.step)]

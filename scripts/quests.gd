@@ -791,6 +791,29 @@ static func current_step() -> Dictionary:
 	return {}
 
 
+## THE BEAT THAT IS WAITING, when nothing is active — same shape as current_step()
+## so the banner can show one or the other without caring which.
+##
+## `current_step()` is empty "when the campaign is idle between beats", which was a
+## rare, brief state. LEVEL GATES MAKE IT THE CAMPAIGN'S NORMAL RESTING STATE, so
+## the one surface built to stop the story going invisible would have been silent
+## for most of the game — the exact failure the banner exists to prevent, arriving
+## through the front door.
+##
+## Returns the first campaign beat whose prerequisite is DONE but which is still
+## held back, with the reason in the player's words. Prerequisite-not-done is not
+## cold — you simply have not got there yet — and pending_reason() already returns
+## "" for that.
+static func cold_beat() -> Dictionary:
+	for q in QUESTS:
+		if str(q.get("layer", "")) != "campaign":
+			continue
+		var why := pending_reason(str(q.id))
+		if why != "":
+			return {"quest": str(q.id), "title": str(q.get("title", "")), "step": why}
+	return {}
+
+
 static func rewards_text(q: Dictionary) -> String:
 	var r: Dictionary = q.get("rewards", {})
 	var parts := PackedStringArray()

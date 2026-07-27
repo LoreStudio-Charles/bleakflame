@@ -54,6 +54,7 @@ func _ready() -> void:
 	_case_quest_log_is_the_tracker()
 	_case_armory_filters()
 	_case_level_gates_equipping()
+	_case_the_campaign_banner_never_goes_silent()
 	_case_contracts_credit_their_giver_guild()
 	_case_gem_bar_never_starts_crossed_out()
 	_case_odessa_has_no_dead_ask()
@@ -1242,7 +1243,13 @@ func _shop_tiles(screen: DockScreen) -> Array:
 	return out
 
 
+## CHECKS THE NODE ITSELF, then its children. It only walked children at first,
+## which meant handing it the very Label you cared about reported "not found" —
+## a false failure that looks exactly like a real one.
 func _finds_text(root: Node, needle: String) -> bool:
+	var own = root.get("text")
+	if own != null and needle in str(own):
+		return true
 	for child in root.get_children():
 		if child.is_queued_for_deletion():
 			continue
@@ -1310,4 +1317,55 @@ func _case_level_gates_equipping() -> void:
 			% [c.display_name, int(c.level)])
 
 	Wallet.xp = was
+	screen.queue_free()
+
+
+## THE SPINE IS ALWAYS ON SCREEN — including while it is deliberately waiting.
+##
+## THE FAILURE THIS IS FOR is the one that actually happened: a real save sat at
+## `ember_word` for ~46 game days with the campaign invisible, and the Landing Bay
+## banner was built in response. But the banner only spoke during a LIVE beat and
+## went blank "when the campaign is idle between beats" — rare and brief at the
+## time. Level-gated cold stretches make idle the campaign's NORMAL resting state,
+## so the fix for the invisible-story bug would have reintroduced it by the front
+## door, this time by design.
+##
+## So: whenever a campaign beat is merely being held back, the dock must say so.
+## Silence is only allowed when there is genuinely nothing waiting.
+func _case_the_campaign_banner_never_goes_silent() -> void:
+	var screen := _fresh_dock(true)
+	Quests.reset()
+	Research.reset()
+	var was := Wallet.xp
+
+	# A beat whose prerequisite is DONE but which is gated behind a wait: nothing is
+	# active, so the banner has no live step to show — and must fall back to the
+	# reason rather than showing nothing at all.
+	Quests.completed.append("legend_check_in")
+	Quests.completed_day["legend_check_in"] = 0
+	Research.day = 0                               # 3-day wait not yet served
+	Quests.active.clear()
+
+	_ok(Quests.current_step().is_empty(),
+		"no beat is active — this is the state the banner used to go blank in")
+	var cold := Quests.cold_beat()
+	_ok(not cold.is_empty(), "the held beat is reported as cold")
+	_ok(str(cold.get("step", "")) != "",
+		"...and it explains itself rather than just naming a title")
+
+	screen.refresh()
+	_ok(_finds_text(screen._overview_text, "CAMPAIGN"),
+		"the Landing Bay still shows the campaign line while the trail is cold — "
+		+ "a blank banner is indistinguishable from a finished story")
+
+	# ...and it must NOT invent one out of nothing. With the chain untouched there is
+	# no held beat, so the banner stays quiet — otherwise it would nag from a new game.
+	Quests.reset()
+	Research.reset()
+	_ok(Quests.cold_beat().is_empty(),
+		"a fresh pilot with the chain not yet reached is NOT 'cold' — the campaign "
+		+ "has not started, which is different from waiting")
+
+	Wallet.xp = was
+	Quests.reset()
 	screen.queue_free()
