@@ -116,8 +116,10 @@ const BASE := {
 ##
 ## So `_toward_player` now just reads the ledger like every other faction does.
 ##
-## STILL TO WIRE (the beats, not the rule): the -100 seed, Krayt's -50, Vyper's 0, and the
-## truce-break -100. Those live in the campaign flow, and the rule they set is here.
+## ALL FOUR RUNGS ARE WIRED, each where its beat lives: the -100 opening in
+## Standing.OPENING, Krayt's -50 as `rewards.standing_floor` on the rust_shoal quest,
+## Vyper's 0 in flight_test._apply_vyper_truce, and the truce-break -100 in
+## flight_test._break_shoal_truce. The rule they express is here; the moments are theirs.
 
 ## PILOTS ARE MUTUALLY NEUTRAL — no PvP (user, 2026-07-27, "yet").
 ##

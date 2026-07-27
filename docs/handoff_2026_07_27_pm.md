@@ -27,10 +27,10 @@ day. Every "did it still compile" run was ageing the playtester's save. Tests se
 this session, including one written that same afternoon.
 
 ### 2. Two known gaps, both marked in code, neither pretended away
-- **Krayt's −50 is UNWIRED.** The Shoal ladder's floor (−100 opening) and top (Vyper sets 0,
-  truce-break slams to −100) are in. The middle step — Krayt's in-person visit at the
-  Speak's Easy signalling a truce — is not. **A fresh playthrough opens at war with the
-  Shoal and only the end-of-campaign Vyper beat lifts it.** Fix this before any test run.
+- ~~**Krayt's −50 is UNWIRED.**~~ **FIXED** (`4d5235d`). All four rungs are in, each where
+  its beat lives: −100 in `Standing.OPENING`, Krayt's −50 as `rewards.standing_floor` on
+  the `rust_shoal` quest, Vyper's 0 and the truce-break −100 in `flight_test`. It is a
+  FLOOR, not a set — the beat can never cost a pilot standing they arrived with.
 - **The corpse-run's player hook is UNVERIFIED.** `test_wrecks` calls `Wreck.hold_cargo()`
   directly, so it proves the helper and not the call in `TestShip._on_death`. Sabotaging
   that call goes undetected. Closing it needs a real `TestShip` driven through death, which
