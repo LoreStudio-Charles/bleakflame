@@ -242,6 +242,12 @@ static func reset_all_progress() -> void:
 	SampleBuilds.owned.clear()
 	SampleBuilds.owned.append(3)
 	SampleBuilds.current = 3
+	# NEMESIS TOO. Its grudges are saved and loaded like everything else, but
+	# Nemesis.reset() was called from a TEST and nowhere else -- so a brand-new
+	# pilot inherited the last one's deaths and was told "That is 4 times. This
+	# stops being bad luck somewhere." on their first meeting with Recluse, then
+	# had the debt written into their own save at the first dock.
+	Nemesis.reset()
 	MissionLog.offers = []
 	MissionLog.active = []
 	MissionLog.total_kills = 0

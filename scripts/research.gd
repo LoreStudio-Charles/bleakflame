@@ -409,6 +409,13 @@ static func unlock(id: String) -> String:
 static func _apply_effect(id: String) -> void:
 	if id == "xeno_1":
 		for p in PoiMap.pois:
+			# EPHEMERAL MARKERS ARE NOT DISCOVERIES. The "signal" sites exist only
+			# while their beat is live and are shown/hidden by Quests.refresh_pois;
+			# charting them here pinned four permanent markers to empty space, and
+			# they persisted into the save. PoiMap.tick_discovery already honours
+			# this flag -- this was the one path that did not.
+			if bool(p.get("ephemeral", false)):
+				continue
 			PoiMap.discover(p.id)
 
 

@@ -298,6 +298,14 @@ func _allies_within(radius: float) -> Array[BuildShip]:
 	for other in get_tree().get_nodes_in_group("hostile_team"):
 		if not is_instance_valid(other) or other == self:
 			continue
+		# A WANTED PLAYER RIDES IN hostile_team (ship.gd _refresh_wanted), so the
+		# specialists were mending and shielding the person they were shooting at --
+		# a MENDER healing 55 HP off the pilot's attacker list every 9s, a WARDEN
+		# handing them 45% damage reduction, with the callout announcing it.
+		# GuardianShip._nearest_hostile_near filters this same group for the mirror
+		# reason; the specialist path had no filter at all.
+		if other.is_in_group("player_ship"):
+			continue
 		var b := other as BuildShip
 		if b == null or b.dead:
 			continue
@@ -346,6 +354,15 @@ func _physics_process(delta: float) -> void:
 	# Prey = the nearest EXPOSED target — the player OR a Trader-guild hauler
 	# (both ride "player_team"). Held stable so the pirate doesn't flap between
 	# marks mid-strafe; ships under the station's guns are never prey.
+	# A FREED NODE IS NOT null. `_prey` is never cleared when the prey dies, and in
+	# Godot 4 a freed object fails `== null`, so the stale reference went straight
+	# into _prey_valid, whose first statement dereferences it. A pirate whose hauler
+	# was taken by a Guardian or devoured by Cinderweb then aborted its physics frame
+	# on that call -- and since nothing reassigned _prey, it aborted EVERY frame
+	# after, freezing in space with cold guns. Cinderweb._tick_hunger already guards
+	# its own prey this way; this is the copy that drifted.
+	if _prey != null and not is_instance_valid(_prey):
+		_prey = null
 	if _prey == null or not _prey_valid(_prey, LEASH_RANGE):
 		_prey = _pick_prey()
 	var prey: BuildShip = _prey

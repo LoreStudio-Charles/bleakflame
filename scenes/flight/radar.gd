@@ -31,7 +31,15 @@ func _radar_range() -> float:
 
 func _to_radar(world_pos: Vector2, clamp_to_rim: bool) -> Variant:
 	var center := size * 0.5
-	var offset := (world_pos - ship.global_position) * (radius / _radar_range())
+	# NO SENSOR MEANS NO SCOPE, not a divide by zero. sensor_reach returns 0.0 for a
+	# ship with no suite (the no-free-grants rule), and this divided by it: offset
+	# became INF, `.normalized()` produced NaN, and the charted landmarks and waypoint
+	# -- the layer that is meant to SURVIVE blindness, since you still have nav charts
+	# -- drew at garbage coordinates instead of simply not scaling.
+	var reach := _radar_range()
+	if reach <= 0.0:
+		return null
+	var offset := (world_pos - ship.global_position) * (radius / reach)
 	if offset.length() > radius - 4.0:
 		if not clamp_to_rim:
 			return null

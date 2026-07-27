@@ -183,6 +183,12 @@ func _sigil() -> Control:
 
 
 func _on_key(idx: int) -> void:
+	# THE SEQUENCE IS ALREADY IN. _finish() is reached through an `await` of ~0.35s
+	# and the keypad stays live through it, so one more tap indexed CODE[5] on a
+	# 5-element array -- an out-of-range read that fell through to the WRONG-KEY
+	# branch and flashed the entry row red at the exact moment the gate opens.
+	if _entered.size() >= CODE.size():
+		return
 	if idx == CODE[_entered.size()]:
 		_entered.append(idx)
 		Sfx.play("click", -6.0, 1.5)

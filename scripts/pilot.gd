@@ -642,3 +642,8 @@ static func reset() -> void:
 	ground_kit_granted = false
 	shoal_invited = false
 	shoal_truce_kills = 0
+	# `met` IS SAVED AND LOADED, so leaving it here made a New Game pilot an
+	# acquaintance of everyone. Three tutor predicates invert on it -- meet_dex and
+	# meet_doug never arm, and meet_sella's done-check passes instantly -- so the
+	# new pilot was never taught to find any of the three.
+	met.clear()

@@ -24,7 +24,12 @@ const ORBIT_SPEED := 170.0
 const GAZE_RANGE := 1500.0
 const HUNT_SPEED := 380.0      # a fighter can still flee, but only just
 const BREAK_CHASE_RANGE := 2800.0
-const STATION_SAFE_RADIUS := 1800.0
+## THE SANCTUARY IS ONE NUMBER, and it lives on AIShip. This was its own 1800
+## while AIShip.SANCTUARY_R grew to 2600, which opened an 800-unit ring where
+## pirates disengage and the tutor calls the pilot "sheltered" -- and the one thing
+## that can one-shot them still hunts. A new pilot loitering at ~2100u from home was
+## inside every other system's definition of safe and not safe from the beast.
+const STATION_SAFE_RADIUS := AIShip.SANCTUARY_R
 
 ## SIMULATED HUNGER: between passes at the player, the ambient beast preys on
 ## lane HAULERS — traceless, so the world fills with vanished ships and clipped
@@ -449,7 +454,11 @@ func _physics_process(delta: float) -> void:
 	var player := get_tree().get_first_node_in_group("player_ship") as TestShip
 	var player_exposed := player != null and not player.dead \
 		and player.docked_at == null \
-		and player.global_position.length() > STATION_SAFE_RADIUS
+		# MEASURED FROM THE STATION, not from the world origin. This read
+		# `.length()` -- distance from (0,0) -- and worked only because
+		# flight_test happens to park the station there. _find_lane_prey 100 lines
+		# below already used station_pos correctly.
+		and player.global_position.distance_to(AIShip.station_pos) > STATION_SAFE_RADIUS
 
 	var target := _orbit_point(_t)
 	var speed := ORBIT_SPEED
