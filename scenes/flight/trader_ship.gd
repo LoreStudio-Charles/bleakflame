@@ -45,6 +45,10 @@ func setup_trader(new_build: ShipBuild, tint: Color = Color(0.72, 0.68, 0.56)) -
 	use_variant_skin = true
 	apply_build(new_build)
 	set_hull_tint(tint)
+	# LICENSED FREIGHT. The registry is what makes the lane read as a governed road
+	# rather than a spawn field — and it is what a hail has to say back.
+	faction = "civilian"
+	ship_name = ShipNames.registry("hauler")
 	_seed_cargo()
 
 

@@ -32,7 +32,7 @@ const WIDOW_RED := Color(0.80, 0.05, 0.09)
 ## A PAIR SHARES ONE CALLSIGN on purpose — Recluse hunts as two hulls and one
 ## animal. Either one that kills you writes the same grudge, and killing either
 ## settles it.
-var callsign := ""
+# `callsign` now lives on BuildShip — see there. Named hunters set it via setup_widow.
 
 
 ## Where the Navy's reach begins, published by flight_test (the AIShip.station_pos
@@ -149,6 +149,7 @@ var _widow_mark: Node2D = null
 ## refusal to talk. Pass a `name` to make it a named hunter.
 func setup_widow(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 		name_tag: String = "") -> void:
+	faction = "widow"
 	callsign = name_tag
 	faction_livery = true      # keep off the shared rust-and-orange skin pool
 	setup(new_build, p_tactic, HULL_BLACK)

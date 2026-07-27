@@ -48,6 +48,9 @@ func _ready() -> void:
 
 
 func setup_guard(new_build: ShipBuild, ring_r: float) -> void:
+	# PRIVATE POLICE AND INVESTIGATORS (user) — licensed, not enlisted.
+	faction = "guardian"
+	ship_name = ShipNames.registry("guardian")
 	enemy_group = "hostile_team"
 	ally_groups = ["player_team", "friendly_targets"]
 	apply_build(new_build)

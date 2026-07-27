@@ -33,11 +33,20 @@ func _ready() -> void:
 
 	# THE PIRATE VULTURE — ELITE (user, 2026-07-27). It haunts the deep east and is the
 	# heaviest ambient thing a rim pilot can run into.
-	var vult := _by_hull(ships, "Vulture")
-	_ok(not vult.is_empty(), "a Vulture is spawned in the world (found %d)" % vult.size())
+	# BY FACTION, not by hull. The Navy picket flies a Vulture too and is correctly MILITARY,
+	# so "every Vulture is ELITE" was a claim about the wrong thing — it passed only while
+	# the picket was an uncorrected GuardianShip. This is the faction field earning its keep
+	# on its first day: the question was always "the PIRATE Vulture", and now that is askable.
+	var vult: Array = []
+	for v in _by_hull(ships, "Vulture"):
+		if str(v.get("faction")) == "shoal":
+			vult.append(v)
+	_ok(not vult.is_empty(), "a Shoal Vulture is spawned in the world (found %d)" % vult.size())
 	for v in vult:
 		_ok(Threat.rank_of(v) == Threat.Rank.ELITE,
-			"the Vulture reads ELITE, not %s" % Threat.label(Threat.rank_of(v)))
+			"the Shoal Vulture reads ELITE, not %s" % Threat.label(Threat.rank_of(v)))
+		_ok(str(v.get("callsign")) == "Raptor",
+			"...and the one at the haunt is RAPTOR (got '%s')" % str(v.get("callsign")))
 
 	# RECLUSE — MILITARY. Named, level 25, and hunting the stretch just short of safety.
 	var rec: Array = []

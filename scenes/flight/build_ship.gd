@@ -37,6 +37,20 @@ var stats: Dictionary = {}
 ## Progression.toughness_between for why that scales from the hull's own level
 ## rather than from 1.
 var spawn_level := 0
+## WHAT THIS HULL IS CALLED. A registry mark for anything licensed (GCT/GVIT/GCN/GEU),
+## scrambled characters for anything not — see ShipNames. The absence of a prefix is
+## the character: a pirate has no authority behind it and nothing to file against.
+## WHICH FACTION THIS HULL BELONGS TO (scripts/factions.gd). Set by each class at setup.
+## Nothing targets by it YET — the switch-over needs a parity net first (assert the
+## faction verdict matches the old group verdict for every pairing in the live world).
+## Landing the field early means the data is already right when that day comes.
+var faction := ""
+var ship_name := ""
+## AN EARNED NAME, which outranks the registry entirely. Declared HERE rather than on
+## the raider class because a name is not a raider-only idea — the Vulture at the haunt
+## is a Shoal elite and wants one too. The HUD was already duck-typing its way to this
+## field (`if "callsign" in t`), which was the tell that it sat too far down the tree.
+var callsign := ""
 var enemy_group := ""          # the group this ship's weapons target
 ## EVERYONE ON THIS SHIP'S SIDE — the other half of `enemy_group`, and set
 ## everywhere that is. A LIST because the player's side spans two groups that

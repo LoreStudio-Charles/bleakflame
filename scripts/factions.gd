@@ -27,6 +27,11 @@ enum Att {HOSTILE, NEUTRAL, ALLIED}
 ## Every faction that can hold or be held an opinion. `color` is the hull tint that already
 ## means faction (see the ROLE-IS-SENSOR-DATA rule: hull colour is faction, exclusively).
 const LIST := {
+	# TWO DIFFERENT INSTITUTIONS, allied but not the same (user, 2026-07-27): the Guardians
+	# are PRIVATE police and investigators — licensed, hired, local to the Reach — while the
+	# Navy is the Confederacy's actual armed force. They share a habit (patrolling in
+	# formation) and nothing else, which is why NavyShip exists rather than the Navy being
+	# GuardianShip in different paint.
 	"guardian": {"name": "Cinder Reach Guardians", "color": Color(0.35, 0.55, 0.95)},
 	"navy": {"name": "Galean Confederate Navy", "color": Color(0.23, 0.44, 0.85)},
 	"civilian": {"name": "Reach Civilians", "color": Color(0.82, 0.84, 0.88)},

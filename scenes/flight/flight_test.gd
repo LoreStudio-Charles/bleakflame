@@ -1521,30 +1521,23 @@ func _spawn_galean_fleet(center: Vector2) -> GuardianShip:
 	var route: Array[Vector2] = [
 		center + Vector2(r, 0.0), center + Vector2(0.0, r),
 		center + Vector2(-r, 0.0), center + Vector2(0.0, -r)]
-	var cap := GuardianShip.spawn_lane_patrol(self, center,
+	var cap := NavyShip.spawn_patrol(self, center,
 		SampleBuilds.galean_supercruiser(), route)
-	# These are the GALEAN CONFEDERATE NAVY, not the Guardians — strip the guardian
-	# blue tint so the hull shows its own livery. (GuardianShip is only borrowed here
-	# for its friendly-patrol behaviour; the real fix is a Galean Confederacy faction
-	# with its own team/colours/standing — deferred.)
-	cap.set_hull_tint(Color.WHITE)
-	cap.apply_livery(Color(0.23, 0.44, 0.85))   # Galean Navy blue chevron (retint via /livery)
-	# MILITARY (user, 2026-07-27: "Navy is Military"). GuardianShip.setup_guard stamps
-	# ELITE, which is right for a Guardian patrol and wrong for the Navy — this class is
-	# only BORROWED here for its friendly-patrol behaviour, so the rank has to be corrected
-	# after the fact exactly like the hull tint above.
-	cap.rank = Threat.Rank.MILITARY
 	# A fighter screen flying formation on the capital — the "a capital wants a
 	# screen" fiction, and it reads as a real fleet element.
 	for i in 3:
 		var esc := GuardianShip.spawn_protector(self, SampleBuilds.guardian_kestrel(), cap, i, 3)
+		# The screen flies GuardianShip's formation behaviour but IS Navy — until PatrolShip
+		# exists these three lines are the seam, and they are the argument for building it.
+		esc.faction = "navy"
 		esc.set_hull_tint(Color.WHITE)
-		esc.apply_livery(Color(0.23, 0.44, 0.85))
+		esc.apply_livery(NavyShip.NAVY_BLUE)
 		# The screen is Navy too, so it ranks Navy. A JUDGEMENT CALL on a light hull:
 		# "Navy is Military" was stated as a faction rule, and a fighter screen welded to a
 		# capital's guns is not a thing you take alone whatever it is flying. Drop this line
 		# if the screen should read ELITE on its own merits.
 		esc.rank = Threat.Rank.MILITARY
+		esc.ship_name = ShipNames.registry("navy")
 	return cap
 
 
@@ -2106,10 +2099,8 @@ func _spawn_escort(build: ShipBuild, protect: Node2D, slot: int, wing: int) -> G
 ## The Navy's end of the road. Galean colours, borrowed patrol behaviour, and a
 ## leash that stops well short of the Gap.
 func _spawn_navy_picket(route: Array[Vector2]) -> void:
-	var p := GuardianShip.spawn_lane_patrol(self, route[0] + _jitter(400.0),
+	var p := NavyShip.spawn_patrol(self, route[0] + _jitter(400.0),
 		SampleBuilds.guardian_vulture(), route, navy_level(LANE_NAVY_LEG.x))
-	p.set_hull_tint(Color.WHITE)
-	p.apply_livery(Color(0.23, 0.44, 0.85))   # Galean Navy blue
 	p.died.connect(_respawn_navy_picket_later.bind(route))
 
 
@@ -2143,6 +2134,9 @@ func _respawn_gap_raider_later(build: ShipBuild, p_tactic: AIShip.Tactic,
 func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
 		posting: String = "") -> void:
 	var pirate := AIShip.new()
+	# UNLICENSED. No prefix, no standard length — at a glance, wrong, which is the read.
+	pirate.faction = "shoal"
+	pirate.ship_name = ShipNames.scrambled()
 	pirate.position = pos
 	add_child(pirate)
 	pirate.patrol_points = route
@@ -2164,6 +2158,12 @@ func _spawn_pirate(pos: Vector2, kind: String, route: Array[Vector2] = [],
 			# it more than ordinary. It is a BIG ship, and big-for-its-level is exactly
 			# what level scaling already accounts for. What it is FOR has to be stated.
 			pirate.rank = Threat.Rank.ELITE
+			# RAPTOR (user, 2026-07-27) — the Shoal elite that haunts the deep east near
+			# Epharon. An elite that has earned a name never goes back to being a smear of
+			# characters, and a name is what makes a death worth coming back from: the
+			# same premise the Nemesis system runs on, applied outside the Widows.
+			pirate.callsign = "Raptor"
+			pirate.ship_name = "Raptor"
 		_:
 			pirate.setup(SampleBuilds.pirate_raider(), AIShip.Tactic.STRAFE)
 	pirate.died.connect(_grant_kill_xp.bind(pirate, kind))

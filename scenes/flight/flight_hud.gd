@@ -469,6 +469,13 @@ func _target_text() -> String:
 		var tag := str(t.get("callsign")) if "callsign" in t else ""
 		if tag != "":
 			name_text = "%s  «%s»" % [tag, name_text]
+		else:
+			# THE REGISTRY, for anything without an earned name. A licensed hull reads
+			# GCT/GVIT/GCN/GEU + code; an unlicensed one reads as noise, and the ABSENCE of
+			# a prefix is the tell that you are looking at a pirate before the hull resolves.
+			var mark := str(t.get("ship_name")) if "ship_name" in t else ""
+			if mark != "":
+				name_text = "%s  «%s»" % [mark, name_text]
 	elif t is MineableAsteroid:
 		name_text = "Asteroid — " + (t.survey_text() if t.surveyed else "unsurveyed")
 	elif t is TargetDrone:
