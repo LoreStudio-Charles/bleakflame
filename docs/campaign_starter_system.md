@@ -1,4 +1,25 @@
-# Starter System Campaign — "Nothing Left Behind"
+# The Saga in Cinder Reach — Movement I
+
+> **NAMING, corrected 2026-07-26 (user).** This document was titled *Starter System
+> Campaign — "Nothing Left Behind"*, which conflated two things. **"Nothing Left
+> Behind" is the title of the FINALE QUEST** of this chain (`nothing_left_behind`,
+> given by Krayt, the reach-the-gate beat) — a beat name that drifted upward into
+> being read as the name of a Campaign.
+>
+> Under the locked vocabulary this chain is the **SAGA's first movement**, not a
+> Campaign. **Cinder Reach's Campaign is "The Legend"**
+> (`docs/cinder_reach_campaign.md`). The quest keeps its title; only the framing was
+> wrong.
+>
+> **EVERY SPINE IS "THE &lt;SOMETHING&gt;"** — The Gate, The Legend, and whatever
+> follows. The rhythm is deliberate (user).
+>
+> The log titles the Saga by its **current MOVEMENT** (`Quests.SAGA_MOVEMENTS`),
+> not by its own name: the Convergence is a late reveal, so printing it from hour
+> one would name the threat decades before the story does. **"The Gate" is visible
+> from the first hour and is the obvious goal, so it spoils nothing** — and the
+> title turns over on its own as Movement II lands. A test asserts the Saga's log
+> title never contains the reveal.
 
 Working title. Cinder Reach's Campaign (its system story within the Saga), from
 first missing ship to the gate out of the system. Premise and beat structure authored by the user

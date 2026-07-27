@@ -452,6 +452,31 @@ func _init() -> void:
 		failures += 1
 	Wallet.xp = 0
 
+	# ---- SPINE NAMES: every throughline is "The <Something>" (user, 2026-07-26) ----
+	# The Saga is titled by its CURRENT MOVEMENT rather than its own name, because its
+	# own name is the late reveal (docs/the_convergence.md). "The Gate" is visible from
+	# hour one and spoils nothing.
+	Quests.reset()
+	if Quests.spine_name("saga") != "The Gate":
+		print("FAIL: Movement I should read 'The Gate', got '%s'" % Quests.spine_name("saga"))
+		failures += 1
+	if Quests.spine_name("campaign") != "The Legend":
+		print("FAIL: the Campaign should read 'The Legend', got '%s'"
+			% Quests.spine_name("campaign"))
+		failures += 1
+	# THE REVEAL MUST NOT LEAK. Whatever the Saga is titled, it is never its own name.
+	for forbidden in ["Convergence", "Idiot"]:
+		if forbidden in Quests.spine_name("saga"):
+			print("FAIL: the Saga's log title says '%s' — that is the late reveal, "
+				% forbidden + "printed from the first hour")
+			failures += 1
+	# Finishing a movement re-titles the spine rather than blanking it.
+	Quests.completed.append("nothing_left_behind")
+	if Quests.spine_name("saga") == "":
+		print("FAIL: with Movement I done the Saga has no title at all")
+		failures += 1
+	Quests.reset()
+
 	Quests.reset()
 	PoiMap.reset()
 	Research.reset()

@@ -820,10 +820,42 @@ static func cold_beat() -> Dictionary:
 ## ends at the gate, "campaign" is The Legend. Every Saga quest was untagged until
 ## 2026-07-26, so the data could not distinguish a spine from a side contract at
 ## all -- which is why the log could only ever show what was active.
+## PLAYER-FACING SPINE NAMES — and the Saga is named by its CURRENT MOVEMENT.
+##
+## EVERY SPINE IS "THE <SOMETHING>" (user, 2026-07-26). The rhythm is deliberate:
+## The Gate, The Legend, and whatever follows.
+##
+## THE SAGA'S REAL NAME IS A SPOILER. The Convergence is a LATE reveal --
+## docs/the_convergence.md: the gates are a Warden prison and humanity has been
+## unlocking it -- so printing it in the log from hour one would hand the player the
+## name of the threat decades before the story does. (The user's other candidate,
+## "The Idiot", is accurate and an even bigger one.)
+##
+## Naming it by MOVEMENT solves that without going meta: "The Gate" is visible from
+## the first hour and is the obvious goal, so it spoils nothing, reads in-fiction,
+## and changes as the story turns over. Movement II gets an entry below and the log
+## re-titles itself with no other edit.
+const SAGA_MOVEMENTS := [
+	# `until` = the quest whose completion ENDS this movement.
+	{"name": "The Gate", "until": "nothing_left_behind"},
+]
+## Fallback when every listed movement is done -- better a plain word than a blank.
+const SAGA_FALLBACK := "The Saga"
+
 const SPINES := {
-	"saga": "The Convergence",
+	"saga": "",          # resolved per-movement; see spine_name()
 	"campaign": "The Legend",
 }
+
+
+## What this throughline is CALLED right now.
+static func spine_name(layer: String) -> String:
+	if layer != "saga":
+		return str(SPINES.get(layer, ""))
+	for m in SAGA_MOVEMENTS:
+		if not completed.has(str(m["until"])):
+			return str(m["name"])
+	return SAGA_FALLBACK
 
 
 ## Has the player begun this throughline (anything in it active or done)?
@@ -878,7 +910,7 @@ static func dormant_spines() -> Array:
 					break
 		out.append({
 			"id": "spine:" + layer,
-			"title": str(SPINES[layer]),
+			"title": spine_name(str(layer)),
 			"giver": "",
 			"body": "This thread is under way. It is not asking anything of you right now.",
 			"done": [],
