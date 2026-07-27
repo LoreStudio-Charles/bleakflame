@@ -103,7 +103,10 @@ func _faction_row(fid: String) -> Control:
 		var toggle := CheckButton.new()
 		toggle.text = "At Peace" if Standing.at_peace(fid) else "At War"
 		toggle.button_pressed = Standing.at_peace(fid)
-		toggle.disabled = Standing.is_hostile(fid)   # they're fighting you — can't sue for peace
+		# THE NAMED PREDICATE, not a second spelling of it. Standing.can_make_peace is
+		# what set_peace() enforces; re-deriving it here as is_hostile() made a third
+		# copy of one rule, and left can_make_peace looking like dead code.
+		toggle.disabled = not Standing.can_make_peace(fid)
 		toggle.tooltip_text = "They're hostile — mend standing first" if Standing.is_hostile(fid) \
 			else "On = friendly & untargetable · Off = declare war"
 		toggle.toggled.connect(func(on: bool) -> void:

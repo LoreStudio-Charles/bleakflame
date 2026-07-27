@@ -81,19 +81,6 @@ func _add_guard_livery() -> void:
 	_hull_sprite.add_child(stripe)
 
 
-## Emergency escort (beat 3): a wing that broke the leash to answer a
-## distress call, flies to the ambush, and dies buying the player nothing.
-## Off the station's board entirely — no ring, no leash.
-static func spawn_escort(parent: Node, pos: Vector2, build: ShipBuild,
-		target: Node2D) -> GuardianShip:
-	var g := GuardianShip.new()
-	parent.add_child(g)
-	g.position = pos
-	g.setup_guard(build, MIN_R + 100.0)
-	g.escort_target = target
-	return g
-
-
 ## Shadow escort (survive_event): launched from HOME when the stage arms. It trails
 ## the players out to the objective and patrols it OUT OF SIGHT — a normal-looking
 ## patrol behind the player, coop-ready (it hangs back from the nearest player_ship,

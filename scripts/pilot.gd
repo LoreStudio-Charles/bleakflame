@@ -116,11 +116,6 @@ static func full_name() -> String:
 	return handle()
 
 
-## VO stem for Sfx.play_vo(): plays audio/vo/callsign/<handle>.ogg if present.
-static func callsign_vo() -> String:
-	return "callsign/" + callsign.to_lower() if callsign != "" else ""
-
-
 static func background_def(id: String) -> Dictionary:
 	for b in BACKGROUNDS:
 		if b.id == id:

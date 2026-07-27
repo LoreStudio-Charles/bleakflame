@@ -134,7 +134,6 @@ var _bar_last_rumor := ""
 var _talk_queue: Array[Dictionary] = []
 var _active_talk: DialoguePanel
 var _bar_panel: DialoguePanel            # live bar conversation, so choices can re-dress
-var _bar_pending_talk: Dictionary = {}   # Odessa's quest talk, held for Ember Row
 var _tech_list: ItemList
 var _fab_list: ItemList
 
@@ -1514,27 +1513,6 @@ func _on_talk_closed(talk: Dictionary) -> void:
 		_show_next_talk()
 
 
-## Present a held Odessa talk-stage the moment the player is actually in Ember
-## Row (fired on dock if already there, and on switching to the tab).
-func _present_bar_talk_if_shown() -> void:
-	if _bar_pending_talk.is_empty() \
-			or (_active_talk != null and is_instance_valid(_active_talk)):
-		return
-	if _tabs.get_current_tab_control() == null \
-			or _tabs.get_current_tab_control().name != "Ember Row":
-		return
-	var talk := _bar_pending_talk
-	_bar_pending_talk = {}
-	Comms.post(str(talk.giver), "Ember Row",
-		str(talk.nodes.get("start", {}).get("text", "")))
-	var panel := DialoguePanel.new(str(talk.giver), talk.nodes, func(_a: String) -> String:
-		return "")
-	panel.vo_prefix = str(talk.get("advance", ""))
-	_active_talk = panel
-	panel.closed.connect(_on_talk_closed.bind(talk))
-	add_child(panel)
-
-
 ## Tab display name -> the one-step lesson that introduces it. Names must match
 ## the `row.name` each _build_*_tab sets, since that IS the tab's title.
 const _TAB_LESSON := {
@@ -1617,20 +1595,6 @@ func _dock_context() -> Dictionary:
 	}
 
 
-func _note_open_tab() -> void:
-	var ctrl := _tabs.get_current_tab_control()
-	if ctrl == null:
-		return
-	match ctrl.name:
-		"Pilot": Tutor.note("tab_pilot")
-		"Armory": Tutor.note("tab_armory")
-		"Engineering Bay": Tutor.note("tab_engineering")
-		"Market Terminal", "Market":
-			Tutor.note("tab_market" if is_station else "tab_market_planet")
-		"Mission Computer", "Mission Uplink":
-			Tutor.note("tab_missions" if is_station else "tab_missions_planet")
-
-
 func _on_tab_changed(_index: int) -> void:
 	# Tutor: reaching the Pilot tab completes the "open PILOT" step, so the ping
 	# moves on to the loadout panel rather than still pointing at the tab you're
@@ -1639,7 +1603,6 @@ func _on_tab_changed(_index: int) -> void:
 	# (open Armory / Market / …) and the first-visit tab-intro filler both arm off
 	# the current tab in the dock context.
 	Tutor.observe(_dock_context())
-	_present_bar_talk_if_shown()
 	# An inspect belongs to the tab you inspected it on (the Armory has its own
 	# detail panel). Don't let a stale module readout haunt the Market/Missions.
 	_detail = ""
@@ -2075,16 +2038,6 @@ func _move_material(key: String, source: String, target: String) -> void:
 	refresh()
 
 
-## Periodic-style glyph + category tint for a material tile (placeholder until
-## real icon art lands — the icon pass replaces these AND the component marks).
-func _material_glyph(key: String) -> String:
-	return ItemVisuals.material_glyph(key)
-
-
-func _material_color(key: String) -> Color:
-	return ItemVisuals.material_color(key)
-
-
 func _component_icon(comp: ComponentDef) -> Texture2D:
 	return ItemVisuals.component_icon(comp)
 
@@ -2244,33 +2197,6 @@ func _refresh_paperdoll() -> void:
 			sq.tooltip_text = "%s (%s Mk%d) — empty" % [
 				hp.display_name, HardpointDef.SlotType.keys()[hp.slot_type].capitalize(), hp.mark]
 		_doll.add_child(sq)
-
-
-## Components from both hold and stash in one list, tagged by source.
-## Affixed salvage gets a ◆ and an amber row — treasure should look like it.
-func _populate_component_hold(list: ItemList, price_fmt: String) -> void:
-	list.clear()
-	for comp in ship.cargo:
-		var i := list.add_item("%s[hold]  %s  Mk%d %s  (%s)" % [
-			"◆ " if not comp.affix_ids.is_empty() else "",
-			comp.display_name, comp.mark, Grades.display_name(comp.grade),
-			price_fmt % comp.value()])
-		list.set_item_metadata(i, [comp, "hold"])
-		if not comp.affix_ids.is_empty():
-			list.set_item_custom_fg_color(i, UiTheme.AMBER)
-		else:
-			list.set_item_custom_fg_color(i, Grades.color(comp.grade))
-	for comp in Stash.items:
-		var i := list.add_item("%s[stash]  %s  Mk%d %s  (%s)" % [
-			"◆ " if not comp.affix_ids.is_empty() else "",
-			comp.display_name, comp.mark, Grades.display_name(comp.grade),
-			price_fmt % comp.value()])
-		list.set_item_metadata(i, [comp, "stash"])
-		if not comp.affix_ids.is_empty():
-			list.set_item_custom_fg_color(i, UiTheme.AMBER)
-		else:
-			list.set_item_custom_fg_color(i, Grades.color(comp.grade))
-	_placeholder_if_empty(list, "— no components —")
 
 
 func _remove_from_source(comp: ComponentDef, source: String) -> void:
@@ -2767,13 +2693,6 @@ func _on_armory_tile_selected(comp: ComponentDef) -> void:
 	_detail = _describe(comp)
 	if _armory_detail != null:
 		_armory_detail.text = _detail
-
-
-func _on_list_selected(index: int, getter: Callable) -> void:
-	_detail = _describe(getter.call(index))
-	if _armory_detail != null:
-		_armory_detail.text = _detail
-	_refresh_info()
 
 
 func _on_tile_selected(comp: ComponentDef, source: String) -> void:

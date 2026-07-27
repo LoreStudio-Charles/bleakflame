@@ -1339,7 +1339,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				hud.comm.close()
 				get_viewport().set_input_as_handled()
 			return
-		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+		# THROUGH Keys, not a literal. keys.gd is meant to be the one place a binding
+		# lives, and this hardcoded pair meant Keys.COMM_TERMINAL and its _ALT read as
+		# dead constants -- one audit away from being deleted as unused, which would
+		# have ratified the drift instead of fixing it.
+		if event.keycode == Keys.COMM_TERMINAL or event.keycode == Keys.COMM_TERMINAL_ALT:
 			hud.comm.open()
 			get_viewport().set_input_as_handled()
 			return

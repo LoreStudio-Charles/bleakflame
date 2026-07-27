@@ -1135,22 +1135,6 @@ func _needs_scan_ability() -> bool:
 	return false
 
 
-func _arm_memorize_lesson() -> void:
-	# The lab has asked for a scan and there is no scanner aboard: teach the
-	# whole gear loop (buy → fit) first. It ends holding an ability, which arms
-	# the memorize lesson below on the very next apply_build.
-	if _needs_scan_ability():
-		Tutor.arm("buy_scanner")
-		return
-	if _known_abilities.is_empty():
-		return
-	for aid in _known_abilities:
-		for i in Pilot.GEM_SLOTS:
-			if Pilot.gem_at(i) == aid:
-				return      # something is already memorized; they know the drill
-	Tutor.arm("memorize")
-
-
 ## Everything that can carry an ability tag + tuning: chips in the Coupling
 ## first, then fitted modules (legacy saves). Both duck-type `has_tag`/`extra`.
 func _ability_sources() -> Array:
@@ -1217,8 +1201,6 @@ func _end_soft_hide() -> void:
 
 
 # --- Going Dark: systems offline, in-flight Processor Bus re-flash ------------
-func is_dark() -> bool:
-	return dark
 
 
 ## Only the DELIBERATE shutdown drops your signature. Flying blind does not: see
@@ -1814,12 +1796,6 @@ func _refresh_wanted() -> void:
 		add_to_group("hostile_team")
 	elif not outlaw and is_in_group("hostile_team"):
 		remove_from_group("hostile_team")
-
-
-func _toggle_array(index: int, label: String) -> void:
-	array_enabled[index] = not array_enabled[index]
-	_flash_note("%s ARRAY %s" % [label, "ONLINE" if array_enabled[index] else "OFFLINE"])
-	Sfx.play("click", -8.0, 1.5 if array_enabled[index] else 0.7)
 
 
 ## WEAPONS FREE / WEAPONS TIGHT — the guns' state. Said out loud every time it changes,

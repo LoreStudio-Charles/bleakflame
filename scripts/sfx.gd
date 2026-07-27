@@ -84,20 +84,6 @@ func play_music(track: String) -> void:
 	_music.play()
 
 
-## Voice lines: res://audio/vo/<name>.(ogg|wav|mp3). Silent if absent.
-## Fire-and-forget on the round-robin pool — for one-offs that may overlap.
-func play_vo(line: String, volume_db := -4.0) -> void:
-	var stream_res = _find_audio("res://audio/vo/" + line)
-	if stream_res == null:
-		return
-	var p := _ui_pool[_ui_i]
-	_ui_i = (_ui_i + 1) % _ui_pool.size()
-	p.stream = stream_res
-	p.volume_db = volume_db
-	p.pitch_scale = 1.0
-	p.play()
-
-
 ## Interruptible voice: dialogue / quest / tutorial lines play HERE. Starting
 ## a line cuts whatever was speaking; a step transition calls stop_voice().
 ## Returns true if a clip was found. Empty `line` just stops the channel.

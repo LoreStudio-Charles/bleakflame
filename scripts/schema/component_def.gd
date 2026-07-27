@@ -38,16 +38,6 @@ func value() -> int:
 	return int(round(v))
 
 
-## Affix lines for detail panels; empty string for clean factory gear.
-func affix_text() -> String:
-	if affix_ids.is_empty():
-		return ""
-	var lines: Array[String] = []
-	for id in affix_ids:
-		lines.append(Affixes.text(id))
-	return "\n".join(lines)
-
-
 ## One-line gameplay stats for shop/refit UI. Subclasses override.
 func stat_summary() -> String:
 	return ""

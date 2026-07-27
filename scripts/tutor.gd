@@ -588,18 +588,6 @@ static func current() -> Dictionary:
 	return steps[step] if step < steps.size() else {}
 
 
-## The current (unfinished) step of ANY lesson — active, queued, or paused. Lets a
-## spatial host (the town) peek at a dock lesson still waiting in the queue and map its
-## objective to a place, so "open the Market tab" can be redirected to "walk to the
-## MARKET building" while the tabbed lesson itself never has to know about the town.
-static func step_for(id: String) -> Dictionary:
-	if not LESSONS.has(id):
-		return {}
-	var at := step if id == active else int(_progress.get(id, 0))
-	var steps: Array = LESSONS[id]
-	return steps[at] if at < steps.size() else {}
-
-
 ## Is this anchor the thing we're currently pointing at?
 static func is_pointing(anchor: String) -> bool:
 	var c := current()
