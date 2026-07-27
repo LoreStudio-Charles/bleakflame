@@ -163,16 +163,16 @@ func _physics_process(delta: float) -> void:
 	# splash will hurt — that's near enough. Ships only; rocks don't set
 	# off fuzes (belt flying would be miserable), direct hits still do.
 	if blast > 0.0:
-		for target in get_tree().get_nodes_in_group(target_group):
-			if not is_instance_valid(target) or target.get("dead") == true or target == shooter:
+		for target in BuildShip.engageable(get_tree(), shooter, target_group):
+			if target.get("dead") == true:
 				continue
 			var r := BuildShip.hit_profile_of(target)
 			var fuze := blast * 0.7 + r
 			if global_position.distance_squared_to(target.global_position) <= fuze * fuze:
 				_detonate()
 				return
-	for target in get_tree().get_nodes_in_group(target_group):
-		if not is_instance_valid(target) or target.get("dead") == true or target == shooter:
+	for target in BuildShip.engageable(get_tree(), shooter, target_group):
+		if target.get("dead") == true:
 			continue
 		# Evasion shrinks the target's effective profile (player-only; 0 for the
 		# rest) — a harder target, deterministically, not an RNG miss. Shared with
@@ -229,8 +229,8 @@ func _band_of(node: Node) -> int:
 func _nearest_in_group() -> Node:
 	var best: Node = null
 	var best_d := INF
-	for n in get_tree().get_nodes_in_group(target_group):
-		if not is_instance_valid(n) or n.get("dead") == true or n == shooter:
+	for n in BuildShip.engageable(get_tree(), shooter, target_group):
+		if n.get("dead") == true:
 			continue
 		var d: float = global_position.distance_squared_to(n.global_position)
 		if d < best_d:
@@ -252,8 +252,8 @@ func _detonate() -> void:
 	flash.global_position = global_position
 	# The shooter may have died mid-flight — pass null, never a freed object.
 	var src: Node = shooter if is_instance_valid(shooter) else null
-	for target in get_tree().get_nodes_in_group(target_group):
-		if not is_instance_valid(target) or target.get("dead") == true or target == shooter:
+	for target in BuildShip.engageable(get_tree(), shooter, target_group):
+		if target.get("dead") == true:
 			continue
 		var r := BuildShip.hit_profile_of(target)
 		var d := maxf(global_position.distance_to(target.global_position) - r, 0.0)

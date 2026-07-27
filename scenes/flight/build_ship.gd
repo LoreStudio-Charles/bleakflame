@@ -41,9 +41,6 @@ var spawn_level := 0
 ## scrambled characters for anything not — see ShipNames. The absence of a prefix is
 ## the character: a pirate has no authority behind it and nothing to file against.
 ## WHICH FACTION THIS HULL BELONGS TO (scripts/factions.gd). Set by each class at setup.
-## Nothing targets by it YET — the switch-over needs a parity net first (assert the
-## faction verdict matches the old group verdict for every pairing in the live world).
-## Landing the field early means the data is already right when that day comes.
 var faction := ""
 var ship_name := ""
 ## AN EARNED NAME, which outranks the registry entirely. Declared HERE rather than on
@@ -398,6 +395,48 @@ func interaction_radius() -> float:
 ##
 ## Duck-typed and static: asteroids, decoys and the leviathan carry a `hit_radius`
 ## and no `evasion`, so they get their honest full size.
+## MAY `shooter` SHOOT `target`? The one question every weapon, reticle and AI asks —
+## asked in one place so the answer cannot drift between them (stage 3 of the faction
+## switch-over; the parity net in test_faction_parity is what made it safe to land).
+##
+## ADDITIVE, DELIBERATELY. The obvious conversion — iterate group "ships" and filter by
+## faction — silently stops bolts hitting DECOYS and the CINDERWEB, because neither is a
+## BuildShip and neither joins "ships"; the decoy exists precisely to be shot at in the
+## real hull's place. So the legacy group verdict stays the floor and the faction verdict
+## is consulted only when BOTH sides actually declare a faction. Everything hit before is
+## still hit; what is new is the pairing two teams could never express, which is the
+## Widows preying on Shoal raiders.
+##
+## Static and duck-typed so a station turret, a decoy or a leviathan — none of them
+## BuildShips — can be asked about without any of them having to grow a faction first.
+static func may_engage(shooter: Object, target: Object, legacy_group: String) -> bool:
+	if target == null or not is_instance_valid(target) or shooter == target:
+		return false
+	var sf := str(shooter.get("faction")) if shooter != null and shooter.get("faction") != null else ""
+	var tf := str(target.get("faction")) if target.get("faction") != null else ""
+	if sf != "" and tf != "":
+		return Factions.hostile(sf, tf)
+	# One side has no faction (a decoy, a turret, the beast): fall back to the teams.
+	return legacy_group != "" and target.is_in_group(legacy_group)
+
+
+## Everything `shooter` may currently shoot, as one list. Broad phase is the legacy group
+## UNION every factioned hull, so a Widow can find a Shoal raider that its own team
+## membership would never have iterated.
+static func engageable(tree: SceneTree, shooter: Object, legacy_group: String) -> Array:
+	var out := []
+	var seen := {}
+	for grp in [legacy_group, "ships"]:
+		if str(grp) == "":
+			continue
+		for n in tree.get_nodes_in_group(str(grp)):
+			if seen.has(n) or not may_engage(shooter, n, legacy_group):
+				continue
+			seen[n] = true
+			out.append(n)
+	return out
+
+
 static func hit_profile_of(node: Object, fallback := 12.0) -> float:
 	if node == null:
 		return fallback
