@@ -1,0 +1,129 @@
+extends Node
+## PLAYER STATE — the container that makes a second pilot representable.
+##
+## The whole game's player state used to live in ~97 `static var`s, which encode
+## exactly one claim: there is one pilot, forever. This suite asserts the claim is
+## gone — that two PlayerStates hold genuinely separate money and storage, and that
+## the old module names still reach whichever one is `local`.
+##
+## THE FACADE IS THE POINT. Wallet/Stash keep their API so ~137 existing call sites
+## did not have to change; if the forwarding silently broke, every one of them would
+## quietly read a stale copy instead of the live pilot. So this drives the FACADES,
+## not the container — testing PlayerState directly would prove nothing about the
+## 137 readers.
+##
+## RUN AS A SCENE (autoloads):
+##   <godot> --headless --path . res://tools/test_player_state.tscn
+## Never writes the save.
+
+var _fails: Array[String] = []
+var _checks := 0
+
+
+func _ready() -> void:
+	var was := PlayerState.local
+
+	_case_the_facade_reaches_the_container()
+	_case_two_pilots_do_not_share_a_wallet()
+	_case_two_pilots_do_not_share_a_stash()
+	_case_collections_are_live_not_copies()
+	_case_a_wipe_clears_only_that_pilot()
+
+	PlayerState.local = was
+	if _fails.is_empty():
+		print("test_player_state: ALL PASS (%d checks)" % _checks)
+	else:
+		for f in _fails:
+			printerr("  FAIL: %s" % f)
+		printerr("test_player_state: %d FAILED of %d checks" % [_fails.size(), _checks])
+	get_tree().quit(0 if _fails.is_empty() else 1)
+
+
+## The old names must still work, or 137 call sites are lying.
+func _case_the_facade_reaches_the_container() -> void:
+	PlayerState.local = PlayerState.new()
+	Wallet.credits = 500
+	_ok(PlayerState.local.credits == 500, "Wallet.credits writes THROUGH to the pilot")
+	PlayerState.local.credits = 900
+	_ok(Wallet.credits == 900, "...and reads back from it")
+	Wallet.credits += 100            # the compound-assign idiom used all over
+	_ok(Wallet.credits == 1000, "read-modify-write through the facade still works")
+
+
+## THE ONE THAT MATTERS. Before the container this was not expressible: there was
+## one `static var credits` and two pilots would have spent the same money.
+func _case_two_pilots_do_not_share_a_wallet() -> void:
+	var alice := PlayerState.new()
+	var bob := PlayerState.new()
+
+	PlayerState.local = alice
+	Wallet.credits = 250
+	Wallet.xp = 40
+
+	PlayerState.local = bob
+	Wallet.credits = 999
+	Wallet.xp = 7
+
+	_ok(alice.credits == 250 and alice.xp == 40, "the first pilot kept their own money and XP")
+	_ok(bob.credits == 999 and bob.xp == 7, "the second pilot has their own")
+
+	PlayerState.local = alice
+	_ok(Wallet.credits == 250, "switching back reads the first pilot again (got %d)" % Wallet.credits)
+
+
+func _case_two_pilots_do_not_share_a_stash() -> void:
+	var alice := PlayerState.new()
+	var bob := PlayerState.new()
+	var part: ComponentDef = load("res://data/components/weapons/vk2_autocannon.tres")
+
+	PlayerState.local = alice
+	Stash.items.append(part)
+	Stash.store_commodity("aurite_ore", 12)
+
+	PlayerState.local = bob
+	_ok(Stash.items.is_empty(), "a second pilot's stash starts EMPTY, not shared")
+	_ok(int(Stash.commodities.get("aurite_ore", 0)) == 0, "...and holds none of their ore")
+	Stash.store_commodity("aurite_ore", 3)
+
+	_ok(int(alice.stash_commodities.get("aurite_ore", 0)) == 12,
+		"the first pilot's ore is untouched by the second's")
+	_ok(int(bob.stash_commodities.get("aurite_ore", 0)) == 3, "each keeps their own count")
+	_ok(alice.stash_items.size() == 1 and bob.stash_items.is_empty(),
+		"and their component storage is separate")
+
+
+## The getters hand back the pilot's OWN array, not a copy — every existing call
+## site mutates in place (`Stash.items.append`, `.assign`, `.clear`), so a getter
+## that copied would swallow all of it silently.
+func _case_collections_are_live_not_copies() -> void:
+	var pilot := PlayerState.new()
+	PlayerState.local = pilot
+	Stash.items.clear()
+	Stash.items.append(load("res://data/components/weapons/vk2_autocannon.tres"))
+	_ok(pilot.stash_items.size() == 1, "append through the facade reaches the pilot's array")
+	Stash.commodities["ferrite_ore"] = 5
+	_ok(int(pilot.stash_commodities.get("ferrite_ore", 0)) == 5,
+		"dictionary writes land on the pilot, not on a throwaway copy")
+	# take_commodity is a facade STATIC operating on that same dictionary.
+	_ok(Stash.take_commodity("ferrite_ore", 2) == 2, "the helper statics still work")
+	_ok(int(pilot.stash_commodities.get("ferrite_ore", 0)) == 3, "...and write to the right pilot")
+
+
+func _case_a_wipe_clears_only_that_pilot() -> void:
+	var keep := PlayerState.new()
+	var scrub := PlayerState.new()
+	keep.credits = 777
+	keep.stash_commodities["aurite_ore"] = 4
+	scrub.credits = 100
+	scrub.stash_commodities["aurite_ore"] = 9
+
+	scrub.wipe()
+	_ok(scrub.credits == 0 and scrub.stash_commodities.is_empty(), "wipe() empties its own pilot")
+	_ok(keep.credits == 777 and int(keep.stash_commodities.get("aurite_ore", 0)) == 4,
+		"...and leaves every other pilot alone")
+
+
+func _ok(cond: bool, what: String) -> void:
+	_checks += 1
+	if not cond:
+		_fails.append(what)
