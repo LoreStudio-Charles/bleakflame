@@ -24,6 +24,7 @@ func _ready() -> void:
 	_case_a_bolt_outlives_its_shooter()
 	_case_a_played_pilot_can_still_shoot_pirates()
 	_case_a_bolt_actually_lands_damage()
+	_case_a_fast_bolt_cannot_tunnel()
 	_case_you_may_always_declare_war()
 
 	if _fails.is_empty():
@@ -33,6 +34,51 @@ func _ready() -> void:
 			printerr("  FAIL: %s" % f)
 		printerr("test_faction_fire: %d FAILED of %d checks" % [_fails.size(), _checks])
 	get_tree().quit(0 if _fails.is_empty() else 1)
+
+
+## THE CASE THE SWEPT SEGMENT EXISTS FOR, and the one that had no coverage until the
+## collision scan was bounded to a spatial query (2026-07-28, a perf pass).
+##
+## A bolt does not test where it IS, it tests the SEGMENT it crossed this frame —
+## otherwise anything fast enough to step over a hull in one tick passes through it. The
+## bounded query has to cover that whole segment, not just where the bolt ended up, and
+## getting that radius wrong produces a game where fast weapons quietly stop working
+## against small targets. Nothing about that is visible in a frame-time number, which is
+## exactly why it is asserted here.
+##
+## 2,400 units in a single 0.12 s step, against a target 1,000 units away: the bolt both
+## starts and finishes far outside its own hit radius.
+func _case_a_fast_bolt_cannot_tunnel() -> void:
+	# ITS OWN STRETCH OF SKY. The earlier cases leave their fixtures parented, so the
+	# origin is crowded -- the first draft of this failed because a pirate another case
+	# had left at x=120 sat in the firing line, ate the bolt, and the test read that as
+	# a tunnel. It failed identically against the UNBOUNDED scan, which is what gave it
+	# away: a result that does not change when you remove the thing under test is not
+	# measuring the thing under test.
+	const LANE := 50000.0
+	var pirate := _ship("shoal", "hostile_team")
+	pirate.global_position = Vector2(1000, LANE)
+	var me := _ship("shoal", "player_team")
+	me.faction = Factions.player_id()
+	me.global_position = Vector2(-40, LANE)
+
+	var def := WeaponDef.new()
+	def.damage = 12.0
+	def.projectile_speed = 20000.0
+	def.weapon_range = 60000.0
+	var bolt := Projectile.spawn(self, Vector2(0, LANE), Vector2.RIGHT, def,
+		"hostile_team", 0.0, 1.0, me)
+	# The index reads positions when it is BUILT, and this fixture placed its ships
+	# without a physics frame going by — so the grid it would otherwise reuse predates
+	# them. The engine invalidates at every frame boundary; a test has to say so.
+	SpaceHash.invalidate()
+	var before := _hp(pirate)
+	bolt._physics_process(0.12)
+	_ok(_hp(pirate) < before,
+		"a bolt that crosses 2400u in one step still hits a target 1000u out (%.1f -> %.1f)"
+			% [before, _hp(pirate)])
+	if is_instance_valid(bolt):
+		bolt.queue_free()
 
 
 ## THE POINT OF THE WHOLE EXERCISE.

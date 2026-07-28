@@ -189,11 +189,26 @@ func _tick(delta: float) -> void:
 			_end_flight()
 		return
 
+	# WHAT IS NEAR THE SEGMENT WE JUST SWEPT — asked once, used by the fuze, the hit
+	# test and the rock test alike. Every one of those walked the full engageable list
+	# (every hull in the system) per bolt per frame; measured in the seat, bolts were
+	# 11.6% of the frame at ~98 us each with only twelve in flight.
+	#
+	# THE RADIUS HAS TO COVER THE WHOLE SWEEP, not just where the bolt ended up: a fast
+	# bolt crosses hundreds of units in a frame and the segment test exists precisely so
+	# it cannot tunnel. Half the segment from its midpoint, plus the largest profile any
+	# target could present, plus the fuze reach.
+	var mid := (prev + global_position) * 0.5
+	var sweep := prev.distance_to(global_position) * 0.5 + grace
+	var foe_reach := sweep + BuildShip.BIGGEST_HULL_R + maxf(blast * 0.7, 0.0)
+	var near_foes := BuildShip.engageable_near(get_tree(), live_shooter(), target_group,
+		mid, foe_reach)
+
 	# Proximity fuze: a target inside ~70% of the blast radius means the
 	# splash will hurt — that's near enough. Ships only; rocks don't set
 	# off fuzes (belt flying would be miserable), direct hits still do.
 	if blast > 0.0:
-		for target in _foes():
+		for target in near_foes:
 			if target.get("dead") == true:
 				continue
 			var r := BuildShip.hit_profile_of(target)
@@ -201,7 +216,7 @@ func _tick(delta: float) -> void:
 			if global_position.distance_squared_to(target.global_position) <= fuze * fuze:
 				_detonate()
 				return
-	for target in _foes():
+	for target in near_foes:
 		if target.get("dead") == true:
 			continue
 		# Evasion shrinks the target's effective profile (player-only; 0 for the
@@ -222,7 +237,8 @@ func _tick(delta: float) -> void:
 			return
 	# Asteroids are terrain: they stop everyone's bolts. Cover for prey and
 	# predator alike — and where the mining actually happens.
-	for rock in get_tree().get_nodes_in_group("asteroids"):
+	for rock in SpaceHash.near(get_tree(), "asteroids", mid,
+			sweep + BuildShip.BIGGEST_ROCK_R):
 		if not is_instance_valid(rock):
 			continue
 		var closest := Geometry2D.get_closest_point_to_segment(

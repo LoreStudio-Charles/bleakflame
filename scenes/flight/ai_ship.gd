@@ -569,9 +569,22 @@ func _pick_prey() -> BuildShip:
 	# continuously — so a per-frame allocation here is multiplied by the pirate count and
 	# then by 60. Duplicates between the two groups are harmless: we are taking a
 	# MINIMUM, so a hull considered twice simply loses to itself.
+	# THROUGH THE SPATIAL INDEX, not the whole group. This walked EVERY hull in the
+	# system twice over, per hunter, per physics frame -- to answer a question whose
+	# radius is at most AGGRO_RANGE. Measured in the seat it was the single largest
+	# cost in the game: ai.think at 183 us a tick, 40.7% of a 38 ms frame, against
+	# GuardianShip's 41 us for comparable work -- and the only difference between them
+	# was that the Guardian already asked SpaceHash.
+	#
+	# THE RESULT IS UNCHANGED, which is the only reason this is safe: near() returns
+	# everything in the CELLS the radius covers, so it is a superset of what is within
+	# reach, and the precise tests below (_prey_valid against reach, then the
+	# distance_squared compare against best_d) were already doing the real filtering.
+	# Nothing within reach can be missed -- the cells span pos +/- (reach + QUERY_PAD).
+	var tree := get_tree()
 	for pass_i in 2:
-		for node in get_tree().get_nodes_in_group(
-				enemy_group if pass_i == 0 else "ships"):
+		for node in SpaceHash.near(tree,
+				enemy_group if pass_i == 0 else "ships", global_position, reach):
 			var bs := node as BuildShip
 			if bs == null or not BuildShip.may_engage(self, bs, enemy_group) 					or not _prey_valid(bs, reach):
 				continue

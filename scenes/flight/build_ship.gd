@@ -519,6 +519,32 @@ static func engageable(tree: SceneTree, shooter: Object, legacy_group: String) -
 	return out
 
 
+## EVERYTHING `shooter` MAY ENGAGE WITHIN `radius` OF `pos` — the same union and the
+## same may_engage rule as engageable(), sourced from the spatial index instead of the
+## whole group.
+##
+## Use this whenever the question has a RADIUS, which is nearly always: a bolt tests a
+## swept segment a few dozen units long and a hunter acquires inside AGGRO_RANGE, yet
+## both used to walk every hull in an 91,000-unit system to find out.
+##
+## Approximate in the same way near() is: it returns everything in the CELLS the radius
+## covers, so it is a superset and the caller still does its own precise test. Nothing
+## inside `radius` can be missed.
+static func engageable_near(tree: SceneTree, shooter: Object, legacy_group: String,
+		pos: Vector2, radius: float) -> Array:
+	var out := []
+	var seen := {}
+	for grp in [legacy_group, "ships"]:
+		if str(grp) == "":
+			continue
+		for n in SpaceHash.near(tree, str(grp), pos, radius):
+			if seen.has(n) or not may_engage(shooter, n, legacy_group):
+				continue
+			seen[n] = true
+			out.append(n)
+	return out
+
+
 static func hit_profile_of(node: Object, fallback := 12.0) -> float:
 	if node == null:
 		return fallback
