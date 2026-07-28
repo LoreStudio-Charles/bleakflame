@@ -92,8 +92,22 @@ func _paint_d() -> void:
 		var size: float = layer["size"]
 		var per_cell: int = layer["per_cell"]
 		var brightness: float = layer["brightness"]
+		# SQUARE STARS, NOT CIRCLES. draw_circle tessellates a polygon per call, and at
+		# ~650 stars a frame that measured 3.02 ms in the seat -- 17.4% of the frame, to
+		# round off a dot one to two pixels across. A rect is two triangles. At this size
+		# the shapes are indistinguishable, and square points are if anything the more
+		# honest choice in a game drawn from pixel art.
+		#
+		# If they ever need to be round again, this is the one line to change back --
+		# but reach for a batched primitive rather than draw_circle.
+		# EQUAL AREA, not equal bounding box. `size` was a RADIUS, so a square of side 2r
+		# covers 4r^2 against the disc's 3.14r^2 and reads a quarter bolder -- a visible
+		# change dressed up as an optimisation. sqrt(PI) * r keeps the weight identical.
+		var side := size * 1.7725
+		var half := Vector2(side, side) * 0.5
+		var box := Vector2(side, side)
 		for cy in range(first_cell.y, first_cell.y + cells_y):
 			for cx in range(first_cell.x, first_cell.x + cells_x):
 				for star in cell_stars(layer_i, cx, cy, cell, parallax, per_cell,
 						brightness):
-					draw_circle(star[0] + to_world, size, star[1])
+					draw_rect(Rect2(star[0] + to_world - half, box), star[1])
