@@ -59,15 +59,24 @@ const OVERLAY_PARALLAX := 0.11
 ## composing light, so it is far easier to add another layer than to unpick an
 ## over-bright one. 0.3, then 0.5, then here (user, 2026-07-28).
 ##
-## THE DUST IS HELD DOWN AT 0.25 DELIBERATELY, and it is a READABILITY rule rather than a
-## taste one: at 0.5 the sky was bright enough to compete with the ships and hulls got
-## lost against it. The background is SCENERY, the ships are INFORMATION, and scenery
-## gives way. The brightness taken off the dust was put onto the star layers instead,
-## which puts the light where the player is actually looking.
+## THE DUST LAYER IS OFF (user, 2026-07-28) — 0.5, then 0.25, then out entirely, because
+## at every strength it was competing with the ships rather than framing them. The
+## background is SCENERY and the ships are INFORMATION; scenery gives way, and this
+## particular scenery could not give way far enough to be worth its cost.
+##
+## Measuring it is what settled the argument: the nebula was 90.8% of all the light on
+## screen, against 9.0% for the star tiles and 0.1% for the point stars. Everything a hull
+## was getting lost in was this one layer. Turning the star layers up and down had barely
+## moved the busiest patch of sky, which is the tell.
+##
+## KEPT, NOT DELETED. starfield_1.png stays on disk and is still scanned and classified,
+## so this is a one-constant decision to revisit — a nebula belongs somewhere (a specific
+## region, a set-piece, a system that is meant to feel choked), just not as the everywhere
+## backdrop of open space.
 ##
 ## Dialled HERE, never by re-authoring the art: the tiles stay full-strength on disk so
 ## the balance is a live decision and not a destructive one.
-const BACKDROP_ALPHA := 0.25
+const BACKDROP_ALPHA := 0.0
 
 ## Star art, but the FURTHEST star layer — parallax 0.11, between the dust and the point
 ## stars — so it sits at the dim end of the same ladder the LAYERS table continues.
@@ -77,24 +86,22 @@ static var _backdrops: Array[Texture2D] = []
 static var _overlays: Array[Texture2D] = []
 static var _tiles_scanned := false
 
-## `alpha` LADDERS WITH DEPTH — 0.10 / 0.20 / 0.60, dimmest furthest out (user,
+## `alpha` LADDERS WITH DEPTH — 0.25 / 0.45 / 0.60, dimmest furthest out (user,
 ## 2026-07-28). Brightness agrees with parallax instead of fighting it: slow distant
 ## stars faint, fast near ones sharp, which reads as depth before anything moves.
 ##
-## THE LADDER IS DELIBERATELY STEEP, not evenly spaced. An even 0.25/0.45/0.65 still left
-## a lot of mid-depth light spread across the screen, and diffuse light everywhere is
-## exactly what a ship gets lost in. Collapsing the two far layers to 0.10 and 0.20 and
-## leaving the near one at 0.60 concentrates the sky's brightness into the FEWEST, LARGEST
-## stars — the ones that streak past fastest and sell speed — while the distant layers go
-## back to being texture rather than competition.
+## THESE CAME BACK UP once the dust was switched off. They had been pushed to 0.10/0.20
+## while the nebula was still there, and with the thing they were competing with gone
+## there was room for them again — which is the useful shape of the whole exercise: it
+## was never the stars, so the stars did not need to pay for it.
 ##
 ## The whole reason this is tuned at all: the background is SCENERY, the ships are
 ## INFORMATION, and scenery gives way. That is a gameplay rule, not a taste one.
 const LAYERS := [
 	{"parallax": 0.15, "cell": 140.0, "per_cell": 3, "size": 1.0, "brightness": 0.45,
-		"alpha": 0.10},
+		"alpha": 0.25},
 	{"parallax": 0.35, "cell": 180.0, "per_cell": 2, "size": 1.6, "brightness": 0.7,
-		"alpha": 0.20},
+		"alpha": 0.45},
 	{"parallax": 0.65, "cell": 260.0, "per_cell": 1, "size": 2.2, "brightness": 1.0,
 		"alpha": 0.60},
 ]
@@ -193,7 +200,10 @@ static func _coverage(tex: Texture2D) -> float:
 ## interior neighbour delta. There is very little there to mismatch.
 func _paint_tiles(set: Array[Texture2D], scale_i: int, parallax: float, alpha: float,
 		salt: int, cam_pos: Vector2, view_size: Vector2) -> void:
-	if set.is_empty():
+	# A layer turned off must cost nothing. Under additive blending an alpha of 0 adds
+	# exactly nothing, so without this the dust layer would go on stamping its tiles every
+	# frame to produce no pixels — invisible work is the easiest kind to leave running.
+	if set.is_empty() or alpha <= 0.0:
 		return
 	var tex_size := Vector2(set[0].get_size())
 	var span := tex_size.x * float(scale_i)
