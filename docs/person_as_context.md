@@ -205,8 +205,59 @@ incrementally while tabs still work.
 - **A sparse room is the design; a sparse room hanging off the ceiling is a bug.** With
   the columns gone the venue is a desk, some flavour, a meter and the local trade — so
   the band is capped to a readable measure and centred instead of stretched over 1920.
-  OPEN: the Shoal now has real space in it, which is the argument for **the concourse**
-  (below) arriving sooner than planned — a room should look like a place.
+
+## THE EMPTINESS DECIDES IT (user, 2026-07-28)
+
+I flagged the space step 4 opened up at the Speak's Easy as a judgement call. The
+answer resolves the parked question below, so it is recorded here rather than left in a
+conversation:
+
+> **"Sparse rooms are interesting to explore. Sparse tabs are just dead, negative
+> space."**
+
+Emptiness is not one thing. In a PLACE it is atmosphere, and a reason to look around —
+the quiet bar, the half-lit deck, the freighter with three people on it. In a TAB it is
+a panel that failed to fill, and it reads as unfinished software.
+
+**So the space person-as-context frees up is an argument for making venues ROOMS, never
+an argument for putting the furniture back.** That flips the "what decides walk vs.
+tab" question below in one direction, and it comes with a second rule that binds
+immediately, before any spatial work is done:
+
+**A TAB THAT EMPTIES OUT SHOULD GO AWAY, NOT SIT THERE.** As services move behind
+addressees, the tab count should FALL. The strip is already 9–10 at the station; the
+migration must not leave thinned-out tabs standing as monuments to where a thing used
+to be. If a tab's content is now one line in someone's offer list, delete the tab.
+
+The one-quarter venues (Shoal, Verge) are where this lands first — by the rule below
+they already *are* their rooms, and they are bespoke `CanvasLayer`s rather than tabs, so
+nothing is in the way of them becoming places.
+
+## AN ADDRESSEE IS FOR A CHOICE, NOT FOR EVERY PERSON
+
+Found while sizing the walkable town as the next venue to convert (2026-07-28). It would
+have made things worse, and the reason is in this document's own opening quote:
+
+> "I spoke with Imari and a dialog opened. **I spoke with Bram and his shop opened.**"
+
+Bram's counter opening *immediately* is the thing that was praised. He has exactly one
+piece of business, the town already authors the verb on the prompt (`[E] Trade with
+Bram`, not `[E] Speak with`), and putting a menu in front of a single door adds a click
+to the exact flow that produced this design.
+
+**So the addressee earns its place where a person has SEVERAL things and they would
+otherwise compete** — Vyper's board, shelf, back room and campaign talk; Ruel's
+invitation arriving behind a queued beat. Where there is one thing and the venue already
+names it, go straight there.
+
+That is not a mechanic to bolt on blind (a leader with only a commission offer must not
+drop you into their office without a word — the button says *talk*). It is a check on
+where the pattern is applied.
+
+**What the town would actually gain, if it is converted:** Sella's survey board is a
+separate piece of furniture across the room from Sella, and Imari and Sella lead
+commissions whose doors exist only at the colony dock, never in the town where they
+live. Those are the people with a choice. Bram is not.
 
 ### What step 3 actually settled
 
