@@ -41,14 +41,18 @@ func _ready() -> void:
 	refresh_hostility()
 
 
-func setup_trader(new_build: ShipBuild, tint: Color = Color(0.72, 0.68, 0.56)) -> void:
+## `role` picks the registry class (ShipNames.PREFIX), which is also what a hail answers
+## from (ShipHails) — so a passenger run announces itself as one without needing its own
+## ship class. Freight is the default because freight is most of the road.
+func setup_trader(new_build: ShipBuild, tint: Color = Color(0.72, 0.68, 0.56),
+		role := "hauler") -> void:
 	use_variant_skin = true
 	apply_build(new_build)
 	set_hull_tint(tint)
 	# LICENSED FREIGHT. The registry is what makes the lane read as a governed road
 	# rather than a spawn field — and it is what a hail has to say back.
 	faction = "civilian"
-	ship_name = ShipNames.registry("hauler")
+	ship_name = ShipNames.registry(role)
 	_seed_cargo()
 
 

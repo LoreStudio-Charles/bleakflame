@@ -1947,6 +1947,11 @@ func _spawn_long_lane() -> void:
 	#
 	# Escort weight rises with the danger of the stretch a convoy spawns into: bare
 	# near the guarded rim, heaviest through the Gap where nothing patrols.
+	# Two passenger runs among the freight, started at opposite ends so they cross
+	# somewhere out in the middle where nobody is watching.
+	_spawn_lane_liner("liner", road, 0.18)
+	_spawn_lane_liner("common_liner", road, 0.72)
+
 	for c in LANE_CONVOYS:
 		var hauler := _spawn_lane_freighter(_convoy_build(str(c["hull"])), road, float(c["t"]))
 		var wing := int(c["escorts"])
@@ -2069,6 +2074,37 @@ func _tick_patrol_limit() -> void:
 ## one convoy's losses show up on another's paperdoll.
 func _convoy_build(hull: String) -> ShipBuild:
 	return SampleBuilds.lane_bellwether() if hull == "bellwether" else SampleBuilds.lane_dray()
+
+
+## PASSENGER TRAFFIC ON THE LONG LANE (docs/cinder_reach_campaign.md, beat 4 — the
+## loneliness). The road had six freight convoys and nobody aboard them worth hailing.
+## A liner is the beat's whole thesis in one contact: "a list of people who are RIGHT
+## THERE and not with you", and the two classes make the point twice over — a GVIT
+## answers gracious and unhurried, a GCVT answers cold coffee and homesickness, and they
+## pass each other going opposite ways.
+##
+## NO LINER HULL EXISTS YET (ShipNames notes it), so these wear freight hulls: the mark,
+## the tint and the hail carry the fiction until the art lands, which is the same
+## drop-in convention every hull here follows. The Bellwether is the biggest civilian
+## thing that flies, which is right for a liner regardless.
+##
+## UNESCORTED, deliberately. A liner running the Gap alone is the road at its loneliest,
+## and it gives the danger curve something to threaten that is not cargo.
+func _spawn_lane_liner(role: String, route: Array[Vector2], t: float) -> TraderShip:
+	var liner := TraderShip.new()
+	liner.position = _lane_point(t) + _jitter(500.0)
+	add_child(liner)
+	liner.patrol_points = route
+	var tint := Color(0.93, 0.94, 0.97) if role == "liner" 		else Color(0.70, 0.73, 0.78)          # pale and kept vs plain and working
+	liner.setup_trader(SampleBuilds.lane_bellwether(), tint, role)
+	liner.died.connect(_respawn_lane_liner_later.bind(role, route, t))
+	return liner
+
+
+func _respawn_lane_liner_later(role: String, route: Array[Vector2], t: float) -> void:
+	await get_tree().create_timer(50.0).timeout
+	if is_inside_tree():
+		_spawn_lane_liner(role, route, t)
 
 
 func _spawn_lane_freighter(build: ShipBuild, route: Array[Vector2], t: float) -> TraderShip:

@@ -36,7 +36,27 @@ func _ready() -> void:
 	_panel.draw.connect(_draw_panel)
 
 
+## The worst frame in the last WORST_WINDOW seconds, and when that window resets.
+## A ROLLING PEAK, not an average: a stutter is one bad frame among sixty good ones, and
+## an average of the sixty says everything is fine. Held for a couple of seconds so the
+## number is readable by a human who just felt the hitch, rather than gone before they
+## can look down.
+const WORST_WINDOW := 2.0
+var _worst_ms := 0.0
+var _worst_age := 0.0
+
+
 func _process(delta: float) -> void:
+	# MEASURED EVEN WHILE HIDDEN. A peak that only exists while the overlay is up cannot
+	# answer "was it already stuttering before I opened this?"
+	var ms := delta * 1000.0
+	_worst_age += delta
+	if ms > _worst_ms or _worst_age >= WORST_WINDOW:
+		if _worst_age >= WORST_WINDOW:
+			_worst_age = 0.0
+			_worst_ms = ms
+		else:
+			_worst_ms = ms
 	if not visible:
 		return
 	_t += delta
@@ -72,10 +92,28 @@ func _draw_panel() -> void:
 		_energy_str(),
 		get_tree().get_nodes_in_group("ships").size()]
 	_text(f, Vector2(x + 14, y + 40), line2, 11, Color(0.6, 0.66, 0.74))
-	_line(Vector2(x + 10, y + 50), Vector2(x + W - 10, y + 50), Color(0.3, 0.85, 0.6, 0.25))
+
+	# FRAME TIME, AND THE WORST ONE RECENTLY — because "it feels herky-jerky" has two
+	# completely different causes and they need opposite fixes. A steady 16.7 with the
+	# motion still stuttering is a BEHAVIOUR bug (something oscillating frame to frame);
+	# a flat average with a fat WORST is a SPIKE, and spikes are what actually read as
+	# jerk. An average alone hides them entirely, which is why the peak is the number
+	# that matters and the one this leads with.
+	var proc := Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+	var phys := Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	var spike_col := Color(0.6, 0.66, 0.74)
+	if _worst_ms > 33.0:
+		spike_col = Color(0.95, 0.4, 0.35)      # dropped below 30fps at least once
+	elif _worst_ms > 20.0:
+		spike_col = Color(0.95, 0.75, 0.35)
+	_text(f, Vector2(x + 14, y + 54),
+		"fps %d   frame %.1f   phys %.1f   WORST %.1f ms" % [
+			Engine.get_frames_per_second(), proc + phys, phys, _worst_ms],
+		11, spike_col)
+	_line(Vector2(x + 10, y + 64), Vector2(x + W - 10, y + 64), Color(0.3, 0.85, 0.6, 0.25))
 
 	# Event feed — newest at top, colour by severity.
-	var fy := y + 66.0
+	var fy := y + 80.0
 	var ev: Array = Telemetry.events
 	for i in range(ev.size() - 1, maxi(-1, ev.size() - 1 - SHOWN), -1):
 		var e: Dictionary = ev[i]
