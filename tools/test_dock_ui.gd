@@ -2113,6 +2113,22 @@ func _case_no_counter_pays_back_what_it_charges() -> void:
 				% [comp.display_name, ItemVisuals.sell_price(comp),
 					ItemVisuals.buy_price(comp)])
 
+	# --- THE 50% RULE, in the DATA ---
+	#
+	# A counter pays half what it charges for the same good, so profit can only come from
+	# carrying goods somewhere that wants them. Asserted against the tables because it is
+	# authored data, and the next market someone writes is exactly where it would drift.
+	for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET]:
+		for key in market["buys"]:
+			if not market["sells"].has(key):
+				continue      # one-sided (ore) — it has no local spread to hold
+			var charges: int = market["sells"][key]
+			var pays: int = market["buys"][key]
+			_ok(pays <= int(round(float(charges) * TradeGoods.BUYBACK)),
+				"%s pays %dc for %s and charges %dc — at or under the %d%% buy-back"
+					% [str(market["name"]), pays, TradeGoods.display_name(str(key)),
+						charges, int(TradeGoods.BUYBACK * 100.0)])
+
 	# --- THE BACKSTOP, exercised directly ---
 	#
 	# TradeGoods.MAX_EDGE is unreachable through the game today: Pilot.TRADE_EDGE_MAX caps

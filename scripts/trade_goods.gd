@@ -39,17 +39,36 @@ const GOODS := {
 ## `local` = what this venue MAKES. It drives the deal colouring (buy a local export
 ## cheap = green, an import = red; the sell side inverts) and lives HERE rather than in
 ## a storefront, so the tabbed dock and the ground shop teach the same lesson.
+## A COUNTER PAYS HALF WHAT IT CHARGES for the same good (user, 2026-07-28: "arbitrage
+## traders should sell for 50% buy price, so you have to find a place that really wants
+## your goods to make them profitable").
+##
+## THE POINT IS WHERE THE PROFIT COMES FROM. At 0.75-0.85 — what these tables used to
+## carry — a venue's own spread was thin enough that a percentage bonus could reach
+## across it, and profit could come from standing still. At 0.5 it cannot: the only way
+## to make money is to carry goods somewhere that WANTS them, which is the trade game.
+## It also means the Trader's bonus has a 2x gap to work inside, so it mitigates a real
+## cost instead of threatening to invert a small one.
+##
+## IMPORT PRICES ROSE; BUY-BACKS DID NOT MOVE. Halving what a venue pays would have
+## killed every route at once — the colony paid 34 for circuits and the station sells
+## them at 22, so a buy-back of 20 turns the Reach's staple run into a loss. Doubling the
+## import premium instead keeps every route's profit exactly what it was and puts the
+## change where the fiction already said it was: a frontier colony pays dearly for what
+## it cannot make. Asserted in test_dock_ui, so the next market authored cannot drift.
+const BUYBACK := 0.5
+
 const STATION_MARKET := {
 	"name": "Station",
 	"local": ["circuits"],
-	"sells": {"circuits": 22, "food": 24, "water": 16},   # food/water imported, premium
+	"sells": {"circuits": 22, "food": 36, "water": 24},   # food/water imported, premium
 	"buys": {"food": 18, "water": 12, "ferrite_ore": 8, "cobalt_ore": 22,
 		"aurite_ore": 60},
 }
 const PLANET_MARKET := {
 	"name": "Planet Colony",
 	"local": ["food", "water"],
-	"sells": {"food": 10, "water": 6, "circuits": 40},    # circuits imported, premium
+	"sells": {"food": 10, "water": 6, "circuits": 68},    # circuits imported, premium
 	"buys": {"circuits": 34},
 }
 
