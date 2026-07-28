@@ -51,6 +51,73 @@ Three things to get right:
 - **Per save, not global.** Irrelevant today; matters the moment alt characters exist for
   playing with different groups.
 
+### Do trade professions become an ENGINE in the economy? (user, 2026-07-28)
+
+> "Once trade skills land we will need to make demand cause wild swings in buy sell price
+> so that trade skills cause the arbitrage to become a little more wild. Do trade skill
+> professions become an engine in the economy that either crushes or fuels arbitrage
+> traders?"
+
+**Yes — and the direction is the whole design. DEMAND CREATES ARBITRAGE; THE SKILL ONLY
+AMPLIFIES IT.** Never the reverse. A profession that *manufactures* opportunity makes
+trade a stat check; a profession that exploits opportunity better than anyone else makes
+trade about **knowledge — where is demand right now** — which is the thing worth playing.
+The ±20% Trader cap (`Pilot.TRADE_EDGE_MAX`) is deliberately an amplifier and nothing
+more.
+
+**Volatility scales the profession for free.** 20% of a wild spread is worth far more
+than 20% of a tame one, so as demand swings harder the commission gets stronger *without
+retuning the cap*. That is why the cap can stay a modest number as the economy grows
+teeth.
+
+**A trader is an engine that burns its own fuel.** Running a route depletes the cheap
+source and floods the expensive destination, so margins close behind you — Guard 2 above,
+seen from the other end. That is what forces route diversity, and it is exactly the
+"find a place that really wants your goods" the 50% buy-back rule was chosen for. The
+two mechanisms are the same idea at different timescales.
+
+**The CRUSH comes from other professions, and that is when it becomes a real economy.**
+A Miner flooding the Reach with aurite drops what aurite fetches — for everyone, the
+trader included. A Guardian clearing the Long Lane makes hauling safe, which is Guard 1
+(risk) collapsing and margins with it. Professions stop being parallel progress tracks
+and start being **inputs to one another's markets**. That is the difference between an
+economy and six treadmills.
+
+**One system pays for all of it: LOCAL STOCK.** What a venue actually has and actually
+needs already appears three times in these docs as a prerequisite — the Market's
+scarcity display (`docs/person_as_context.md`, deferred for exactly this reason),
+price decay above, and generating contracts from world state rather than a fixed pool.
+All three want the same table. Build it once.
+
+**ORE IS THE PROOF CASE (user, 2026-07-28):** *"for now all Ore routes should lose. The
+reason is that I think someday trade skills might handle this. Allow the demand from
+trade skills fuel the supply and demand swing to prove that markets are affected."*
+
+Ore is deliberately the one commodity that **cannot be traded profitably in any
+direction** today — mining is the only way rock pays, and that is shipped and asserted
+(`tools/audit_arbitrage.gd`, and the ore block in `test_dock_ui`). That makes it the
+cleanest possible demonstration when demand lands: the day a colony's foundry runs short
+and an ore route *opens*, the player learns in one run that **the market is a thing that
+changes**, not a table they misread. A route that always pays a little teaches nothing;
+a route that pays only when the world says so teaches everything.
+
+It also means the ore tests are not merely regression guards — they are the **baseline
+the demand system will be measured against**. When they start failing on purpose, that is
+the feature working, and the assertions should move to "ore pays only under a demand
+swing" rather than being deleted.
+
+**Two things to watch when it lands:**
+
+- **Replenishment rate is the whole feel.** Too fast and it is a faucet with a commute;
+  too slow and a heavy trader bricks their own economy and has nothing to do but wait.
+  Converge-and-recover, never punish.
+- **NPC haulers move prices too, or they are scenery.** The Long Lane already flies
+  freighters. If they consume and supply the same stock, a player who never trades still
+  arrives to a market that has moved — which is the living-world pillar applied to the
+  economy, and also means a route can be *worked out from under you*. That is good, and
+  it needs to be legible: the player must be able to see that it happened, not just that
+  the number is worse.
+
 ---
 
 ## 2. Interdiction — the same encounter, three meanings
