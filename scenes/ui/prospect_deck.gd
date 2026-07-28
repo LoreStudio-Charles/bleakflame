@@ -2,10 +2,9 @@ class_name ProspectDeck
 extends CanvasLayer
 ## THE DIG — Doug Diggs' deck aboard his freighter in the Verge.
 ##
-## Bespoke + minimal, same reasoning as the Speak's Easy: DockScreen's
-## is_station flag runs through its whole construction, so a third venue isn't
-## worth shoehorning into it. Repairs and the save still ride ship.dock() like
-## any berth; this shows the receipt and what Doug is actually for.
+## ON THE STANDARD VENUE LAYOUT (2026-07-27, docs/venue_layout.md). The desk, the
+## board, the hand-ins, the standing meter, the trust-gated quartermaster and the
+## office door are VenueLayout's; what stays here is what makes the trip worth it.
 ##
 ## WHAT MAKES THE TRIP WORTH IT — he pays a PREMIUM on ore, because you hauled
 ## it to him instead of making him fetch it. That is the whole economic argument
@@ -18,16 +17,18 @@ extends CanvasLayer
 ## from everything else; the premium is the trip.
 const ORE_PREMIUM := 1.35
 
+## THE MINERS' LADDER, in Doug's words. Ore sold across his scale is the verb that
+## moves it, and the meter sits directly under the board that pays it.
+const RUNGS := [
+	{"at": Standing.INVITE_AT, "label": "the Assay Office opens — and his counter"},
+	{"at": Standing.FRIENDLY_AT, "label": "he cuts you in on the good seams"},
+	{"at": Standing.ALLIED_AT, "label": "the Guild calls the Verge your yard"},
+]
+
 var ship: TestShip
+var _venue: VenueLayout
 var _body: RichTextLabel
-## THE DECK HAD NO VOICE. Every rejection and confirmation here was a bare Sfx
-## click, which the project rule forbids ("every rejection must be VISIBLE").
-## Cleared on the next refresh so it never goes stale.
-var _msg := ""
 var _ore_box: VBoxContainer
-var _talk_box: VBoxContainer
-var _offers: ItemList
-var _active_box: VBoxContainer
 var _active_talk: DialoguePanel
 
 
@@ -39,9 +40,6 @@ func _init(p_ship: TestShip) -> void:
 
 func _ready() -> void:
 	add_to_group("dock_screens")
-	var ping := TutorPing.new()
-	ping.anchor = "office_door"
-	add_child(ping)
 	var shade := ColorRect.new()
 	shade.color = Color(0.05, 0.04, 0.03, 1.0)   # dust and worklight
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -56,65 +54,30 @@ func _ready() -> void:
 	panel.offset_bottom = -26
 	add_child(panel)
 
-	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 12)
-	panel.add_child(root)
+	_venue = VenueLayout.new({
+		"ship": ship, "venue": "verge", "board": "The Dig",
+		"npc": "doug", "faction": "miner", "rungs": RUNGS,
+		"board_title": "DIG WORK — all of it involves rock",
+	})
+	panel.add_child(_venue)
+	_venue.build("THE DIG — Doug Diggs, Prospector Guild")
+	_venue.mount_pings(self)
+	_venue.changed.connect(refresh)
+	_venue.talk_pressed.connect(_on_talk)
+	_venue.office_opened.connect(_open_office)
+	_venue.ware_bought.connect(_buy_ware)
+	_venue.talks.chain_finished.connect(refresh)
 
-	var head := Label.new()
-	head.text = "THE DIG — Doug Diggs, Prospector Guild        [E] launch"
-	head.add_theme_font_size_override("font_size", 17)
-	head.add_theme_color_override("font_color", UiTheme.AMBER)
-	root.add_child(head)
+	_body = _venue.body
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 18)
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(row)
-
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	row.add_child(left)
-	var face := TextureRect.new()
-	face.custom_minimum_size = Vector2(128, 128)
-	face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	face.texture = Npcs.portrait("doug")
-	left.add_child(face)
-	_body = RichTextLabel.new()
-	_body.bbcode_enabled = true
-	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left.add_child(_body)
-	_talk_box = VBoxContainer.new()
-	left.add_child(_talk_box)
-
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	row.add_child(right)
+	# HIS ORE COUNTER — the reason the Verge has a door.
 	var ore_head := Label.new()
 	ore_head.text = "ORE BUYER — pays over station rate"
 	ore_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	right.add_child(ore_head)
+	_venue.venue_box.add_child(ore_head)
 	_ore_box = VBoxContainer.new()
-	right.add_child(_ore_box)
-
-	# HIS BOARD. Every job Doug posts is mining: rock he wants cut and hauled,
-	# or guns cleared off the field so his customers can work it.
-	var work_head := Label.new()
-	work_head.text = "DIG WORK — all of it involves rock"
-	work_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	right.add_child(work_head)
-	_offers = ItemList.new()
-	_offers.custom_minimum_size = Vector2(0, 130)
-	_offers.fixed_icon_size = Vector2i(32, 32)
-	_offers.icon_mode = ItemList.ICON_MODE_LEFT
-	right.add_child(_offers)
-	var accept := Button.new()
-	accept.text = "Accept selected"
-	accept.pressed.connect(_accept_selected)
-	right.add_child(accept)
-	_active_box = VBoxContainer.new()
-	right.add_child(_active_box)
+	_ore_box.add_theme_constant_override("separation", 4)
+	_venue.venue_box.add_child(_ore_box)
 
 
 func show_deck() -> void:
@@ -125,15 +88,8 @@ func show_deck() -> void:
 func refresh() -> void:
 	if not visible:
 		return
-	Tutor.safe = true
-	Tutor.context = "dock"
-	Tutor.venue = "verge"
 	var bill := int(ship.dock_bill.get("repairs", 0))
-	var txt := ""
-	if _msg != "":
-		txt += "[color=#f2b859]%s[/color]\n\n" % _msg
-		_msg = ""
-	txt += "[i][color=#a8b0c2]%s[/color][/i]\n\n" % Npcs.flavor("doug")
+	var txt := "[i][color=#a8b0c2]%s[/color][/i]\n\n" % Npcs.flavor("doug")
 	txt += "Her engines have been cold for a decade. Doug cut the holds open into "
 	txt += "hoppers and welded a berth on the flank, and now the Verge has a door.\n\n"
 	if bill > 0:
@@ -142,6 +98,15 @@ func refresh() -> void:
 	txt += "\"You hauled it out here. That's worth something, and I'd rather pay it than fetch it.\""
 	_body.text = txt % int(round((ORE_PREMIUM - 1.0) * 100.0))
 
+	_venue.refresh()
+	# Doug is ALWAYS talkable — he is the game's mining teacher, and a player who wants
+	# to ask how any of this works should never find a person with nothing to say.
+	_venue.desk.set_news(_venue.talks.has_news("doug"),
+		"Ask him about rock any time.")
+	_refresh_ore()
+
+
+func _refresh_ore() -> void:
 	for c in _ore_box.get_children():
 		c.queue_free()
 	var any := false
@@ -164,77 +129,6 @@ func refresh() -> void:
 		none.add_theme_color_override("font_color", UiTheme.DIM)
 		_ore_box.add_child(none)
 
-	_refresh_work()
-	_refresh_talk()
-
-
-## Doug's postings, and anything of his you can hand in right now.
-func _refresh_work() -> void:
-	_offers.clear()
-	for entry in MissionLog.offers_at("verge", "The Dig"):
-		var m: Dictionary = entry.m
-		var idx := _offers.add_item("%s  —  %dc" % [MissionLog.label(m), m.reward])
-		_offers.set_item_metadata(idx, int(entry.index))
-		var face := Npcs.portrait("doug")
-		if face != null:
-			_offers.set_item_icon(idx, face)
-	if _offers.item_count == 0:
-		_offers.add_item("— nothing posted; he's between buyers —")
-		_offers.set_item_disabled(0, true)
-
-	for c in _active_box.get_children():
-		c.queue_free()
-	for i in MissionLog.active.size():
-		var m: Dictionary = MissionLog.active[i]
-		if not MissionLog.venue_ok_at(m, "verge"):
-			continue
-		var done: bool = MissionLog.is_complete(m, ship)
-		var b := Button.new()
-		b.text = "%s  —  %s" % [MissionLog.label(m),
-			"HAND IN (%dc)" % m.reward if done else "in progress"]
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.disabled = not done
-		if done:
-			UiTheme.button_flavor(b, "primary")
-		b.pressed.connect(_turn_in.bind(i))
-		_active_box.add_child(b)
-
-
-func _accept_selected() -> void:
-	var sel := _offers.get_selected_items()
-	if sel.is_empty() or _offers.is_item_disabled(sel[0]):
-		return
-	# THROUGH take(), not accept(). accept() returns a bare bool, so a full log was
-	# answered with a quiet click and nothing else — the pilot pressed Accept, heard
-	# a noise, and the contract did not appear. take() wraps it with the reason
-	# ("Mission log full (max N active).") and calls ensure_offers itself. Both the
-	# dock board and the ground board already went through it; this was the copy
-	# still talking to the raw call.
-	var r := MissionLog.take(int(_offers.get_item_metadata(sel[0])))
-	if r.ok:
-		Tutor.did("accepted_contract")   # they took the work themselves
-	else:
-		Sfx.play("click", -16.0, 0.6)
-	_flash(str(r.msg))
-
-
-func _turn_in(index: int) -> void:
-	var m: Dictionary = MissionLog.active[index] if index < MissionLog.active.size() else {}
-	# THROUGH THE SHARED PATH. MissionLog.complete() exists so a board does not
-	# re-implement the trailing effects, and this re-implemented two of them and
-	# dropped the rest: Quests.check_new_work (so the next campaign beat did not
-	# unlock until you docked somewhere else) and the turn-in tutor signals (so the
-	# lesson stayed queued until the 50s stall watchdog retired it).
-	var r := MissionLog.complete(index, ship, "verge", SaveGame.tutorial_done)
-	if r.ok:
-		Tutor.did("turned_in")
-		Tutor.retire("turn_in")
-		Sfx.play("jingle", -8.0)
-	# OUTSIDE the ok branch — see dock_screen._on_turn_in. A refused turn-in was
-	# completely silent here too. _flash() calls refresh() itself, so this is the
-	# whole tail.
-	_flash(str(r.msg))
-
 
 ## Derived from the STATION's standing price, so Doug's premium is always
 ## visibly "more than they'd give you back home" even if that table moves.
@@ -255,39 +149,19 @@ func _sell_ore(key: String) -> void:
 	refresh()
 
 
-## Doug uses the same home/pip rule as everyone else: he speaks when you choose.
-## Doug is ALWAYS talkable, like Odessa — he is the game's mining teacher, and a
-## player who wants to ask how any of this works should never find a person with
-## nothing to say. Quest business, when he has some, comes first.
-func _refresh_talk() -> void:
-	for c in _talk_box.get_children():
-		c.queue_free()
-	var b := Button.new()
-	var waiting := Quests.talks_for("doug")
-	b.text = "Talk to Doug Diggs" + ("  ●" if not waiting.is_empty() else "")
-	UiTheme.button_flavor(b, "primary" if not waiting.is_empty() else "secondary")
-	b.pressed.connect(_talk)
-	_talk_box.add_child(b)
-
-	# The Assay Office is a door off this deck — the same GuildOffice the station
-	# leaders use. A Miner's commission is administered at the Verge, which is
-	# exactly the point: your commission decides where home is.
-	var prof := Professions.led_by("doug")
-	if prof != "" and Professions.office_open(prof):
-		var door := Button.new()
-		door.text = "%s  →  %s" % [
-			"Enter" if Pilot.profession == prof else "Visit",
-			Professions.office_name(prof)]
-		UiTheme.button_flavor(door, "secondary")
-		door.pressed.connect(_open_office.bind(prof))
-		_talk_box.add_child(door)
-		Tutor.register("office_door", door)
-	# The "office" lesson arms itself off `office_open` in the deck context below.
-	Tutor.observe({
-		"flying": false,
-		"venue": "verge",
-		"office_open": prof != "" and Professions.office_open(prof),
-	})
+## THROUGH THE SHARED TalkChain — drains everything he holds, runs check_new_work
+## here, and never replays the line just spoken. This used to pop one talk and stop.
+func _on_talk(_who: String) -> void:
+	if _venue.talks.drain("doug"):
+		return
+	Pilot.meet("doug")
+	# No business — just Doug, and the mining lesson nothing else teaches.
+	var chat := DialoguePanel.new("doug", Dialogues.DOUG_DECK,
+		func(_a: String) -> String: return "")
+	chat.vo_prefix = "doug_deck"
+	chat.closed.connect(refresh)
+	_active_talk = chat
+	add_child(chat)
 
 
 func _open_office(prof: String) -> void:
@@ -303,16 +177,17 @@ func _open_office(prof: String) -> void:
 	add_child(office)
 
 
-## Quartermaster purchase, Doug's counter. Lands in the hold like any buy.
+## Quartermaster purchase, Doug's counter. Lands in the hold like any buy — unlike
+## Vyper, who bolts it on, because a pilot at the Verge can still fly home to refit.
 func _buy_ware(path: String) -> void:
 	if not ResourceLoader.exists(path):
 		return
 	var comp: ComponentDef = load(path)
-	var price := int(comp.value() * DockScreen.BUY_MULT)
+	var price := int(_venue.price_of.call(comp))
 	if Wallet.credits < price:
-		# Every rejection must be VISIBLE (project rule) -- this played a quiet click
-		# and nothing else, so a broke pilot got no reason at all.
-		_flash("Not enough credits — %s costs %dc." % [comp.display_name, price])
+		# Every rejection must be VISIBLE (project rule) -- and NOT through
+		# ship._flash_note, which writes to a label the flight HUD hides while docked.
+		_venue.flash("Not enough credits — %s costs %dc." % [comp.display_name, price])
 		Sfx.play("click", -16.0, 0.6)
 		return
 	# INTO YOUR HOLD, like every other counter. This appended to the STATION STASH,
@@ -322,46 +197,9 @@ func _buy_ware(path: String) -> void:
 	Wallet.credits -= price
 	if ship.can_carry(comp):
 		ship.add_cargo(comp)
-		_flash("Bought %s — %dc" % [comp.display_name, price])
+		_venue.flash("Bought %s — %dc" % [comp.display_name, price])
 	else:
 		Stash.items.append(comp)
-		_flash("Bought %s — %dc  ·  HOLD FULL, sent to the station stash" % [
+		_venue.flash("Bought %s — %dc  ·  HOLD FULL, sent to the station stash" % [
 			comp.display_name, price])
 	Sfx.play("jingle", -10.0)
-
-
-## Say something to the player, then redraw. Anything that can be refused has to
-## be able to explain itself.
-func _flash(text: String) -> void:
-	_msg = text
-	refresh()
-
-
-func _talk() -> void:
-	Pilot.meet("doug")
-	var waiting := Quests.talks_for("doug")
-	if waiting.is_empty():
-		# No business — just Doug, and the mining lesson nothing else teaches.
-		var chat := DialoguePanel.new("doug", Dialogues.DOUG_DECK,
-			func(_a: String) -> String: return "")
-		chat.vo_prefix = "doug_deck"
-		chat.closed.connect(refresh)
-		_active_talk = chat
-		add_child(chat)
-		return
-	var talk: Dictionary = waiting[0]
-	Quests.take_talk("doug")
-	var panel := DialoguePanel.new("doug", talk.get("nodes", {}),
-		func(_a: String) -> String: return "")
-	if talk.has("text"):
-		panel = DialoguePanel.new("doug",
-			{"start": {"text": str(talk.text),
-				"choices": [{"text": "Understood.", "next": "end", "style": "primary"}]}},
-			func(_a: String) -> String: return "")
-	panel.vo_prefix = str(talk.get("vo", ""))
-	panel.closed.connect(func() -> void:
-		if talk.has("advance"):
-			Quests.advance_talk(str(talk.advance))
-		refresh())
-	_active_talk = panel
-	add_child(panel)

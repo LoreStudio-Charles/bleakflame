@@ -383,7 +383,7 @@ func _refresh_meter() -> void:
 	var p := Standing.get_points(key)
 	var st := Standing.state(key)
 	var txt := "[b]%s[/b]\n[color=%s]%s[/color]   [color=#8890a0]standing %d[/color]" % [
-		Factions.display_name(faction), _state_color(st), st.to_upper(), p]
+		faction_label(faction), _state_color(st), st.to_upper(), p]
 	var climb := climb_to_next(rungs, p)
 	if climb.is_empty():
 		txt += "\n%s\n[color=#8890a0]top of their ladder — there is nothing left to prove[/color]" % _bar(1.0)
@@ -536,6 +536,19 @@ static func requirement(comp: ComponentDef, prof_id: String, standing_key: Strin
 	return {"met": true, "text": ""}
 
 
+## WHOSE ROOM THIS IS, named the way the player knows them. NOT EVERY VENUE'S OWNER IS
+## A COMBAT FACTION: the Rust Shoal is in Factions.LIST, the Prospector Guild and the
+## Explorer's Union are COMMISSIONS and are not. Factions.display_name falls back to the
+## raw id, so the Verge's meter would have been headed "miner" in lower case. Ask both
+## registries, in the order that gets the better name.
+static func faction_label(id: String) -> String:
+	if Factions.LIST.has(id):
+		return Factions.display_name(id)
+	if not Professions.def(id).is_empty():
+		return Professions.display_name(id)
+	return id.capitalize()
+
+
 static func band_name(points: int) -> String:
 	if points >= Standing.ALLIED_AT:
 		return "Allied"
@@ -587,12 +600,19 @@ func turn_in(index: int) -> void:
 		Tutor.did("turned_in")
 		Tutor.retire("turn_in")
 		Sfx.play("jingle", -8.0)
-	# Quest notes raised by the turn-in (a completed beat, new work) are said HERE too
-	# — they used to go to the hidden flight note and vanish.
-	var said := str(r.msg)
+	# UNCONDITIONALLY, and as the FIRST statement out of the ok-branch: a refusal must
+	# never be silent, and the structural check in test_dock_ui reads exactly this shape
+	# so the next board cannot quietly nest it back inside `if r.ok:`.
+	flash(_with_notes(str(r.msg)))
+
+
+## Quest notes raised by a turn-in (a beat completed, new work opened) are said HERE
+## too — they used to go to the flight note, which is hidden while docked, and vanish.
+func _with_notes(msg: String) -> String:
+	var said := msg
 	for note in Quests.take_notes():
 		said += "\n%s" % str(note)
-	flash(said)
+	return said
 
 
 func _standing_key() -> String:

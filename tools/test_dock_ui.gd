@@ -159,7 +159,14 @@ func _case_a_refused_turn_in_says_so() -> void:
 	# STRUCTURAL, so the NEXT board cannot repeat it. Every file that calls
 	# MissionLog.complete must report the result at the SAME indent as `if r.ok:` —
 	# i.e. unconditionally — rather than nested inside the success branch.
-	for path in ["res://scenes/ui/dock_screen.gd", "res://scenes/ui/prospect_deck.gd",
+	#
+	# FOLLOW THE CODE WHERE IT MOVED (2026-07-27). The bespoke boards adopted
+	# VenueLayout, so prospect_deck no longer calls complete() at all — the shell does,
+	# once, for every venue on it. Scanning the old file would have kept "passing" while
+	# checking a function that no longer exists, so the list names the shell instead. A
+	# structural test has to be re-aimed when the structure changes, or it quietly stops
+	# guarding anything.
+	for path in ["res://scenes/ui/dock_screen.gd", "res://scenes/ui/venue_layout.gd",
 			"res://scenes/ground/board_view.gd"]:
 		var src := FileAccess.get_file_as_string(path)
 		_ok(src.contains("MissionLog.complete("),
@@ -194,7 +201,10 @@ func _case_a_refused_turn_in_says_so() -> void:
 				continue                      # still inside the ok branch
 			if here.length() < indent.length():
 				break                         # left the function without reporting
-			if line.contains("_flash(") or line.contains("_report("):
+			# `flash(` not `_flash(` — the venue shell's is PUBLIC (its hosts call it),
+			# and matching only the private spelling would have read a correct report as
+			# a missing one. The shorter needle still matches both.
+			if line.contains("flash(") or line.contains("_report("):
 				reported = true
 			break
 		_ok(reported,
