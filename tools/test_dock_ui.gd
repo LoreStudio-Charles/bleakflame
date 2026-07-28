@@ -72,6 +72,7 @@ func _ready() -> void:
 		_case_every_npc_desk_is_uniform,
 		_case_quest_log_is_the_tracker,
 		_case_the_action_sits_on_the_contract,
+		_case_the_lab_puts_the_spend_on_the_project,
 		_case_armory_filters,
 		_case_level_gates_equipping,
 		_case_the_campaign_banner_never_goes_silent,
@@ -1702,6 +1703,102 @@ func _case_the_action_sits_on_the_contract() -> void:
 	MissionLog.active.clear()
 	for m in kept:
 		MissionLog.active.append(m)
+	screen.queue_free()
+
+
+## THE LAB PUTS THE SPEND ON THE PROJECT (docs/person_as_context.md, second screen).
+##
+## It was two ItemLists side by side with "Research selected" and "Trade in all Scan
+## Data" floating underneath — the Mission Computer's bug with different nouns. And
+## because there was nowhere for a paragraph to live, clicking a lead opened a MODAL
+## to show one.
+##
+## The interesting half is the REASON. A project can be out of reach two ways (a
+## prerequisite, or not enough Insight), and both are knowable BEFORE the click, so
+## `Research.blocker()` is the query and `Research.unlock()` is the command that
+## defers to it. The sentence under the greyed button has to be the sentence a
+## refused click would have produced, or the lab can promise what unlock refuses.
+func _case_the_lab_puts_the_spend_on_the_project() -> void:
+	var screen := _fresh_dock(true)
+	Research.unlocked.clear()
+	Research.insight = 0.0
+	screen.refresh()
+	var lab: ResearchLabView = screen._lab
+
+	_ok(_count_lists(lab) == 1, "the lab shows exactly ONE list")
+
+	# A project gated by a PREREQUISITE, not by money.
+	var gated := {}
+	var open_node := {}
+	for tree in Research.TREES:
+		for node in tree.nodes:
+			if str(node.requires) != "" and gated.is_empty():
+				gated = node
+			if str(node.requires) == "" and open_node.is_empty():
+				open_node = node
+	_ok(not gated.is_empty() and not open_node.is_empty(),
+		"precondition: the trees have a gated project and an open one")
+
+	# PIN THE REASON'S OWN WORDS. The detail panel ALSO carries "Requires" and "Insight"
+	# in its stat block, so asserting on those passed with the reason line deleted
+	# outright — the same way the Mission Computer's venue assertion did, caught by
+	# sabotage the same day. "first." and "needed)" belong to the blocker sentence alone.
+
+	# (1) CANNOT AFFORD IT — nothing in the way but the price.
+	Research.insight = 0.0
+	lab._sel = "t:" + str(open_node.id)
+	lab.refresh()
+	var poor := _find_button(lab, "Research —")
+	_ok(poor != null and poor.disabled, "a project you cannot afford greys its button")
+	_ok(_find_text(lab._detail, "needed)"), "...and says how much Insight it wants")
+
+	# (2) SOMETHING COMES FIRST — with Insight to spare, so only the prerequisite bites.
+	Research.insight = 9999.0
+	lab._sel = "t:" + str(gated.id)
+	lab.refresh()
+	var b := _find_button(lab, "Research —")
+	_ok(b != null and b.disabled, "a project behind a prerequisite greys its button")
+	_ok(b != null and _is_descendant(b, lab._detail),
+		"...and the spend sits on the project, not under the column")
+	_ok(_find_text(lab._detail, "first."), "...and names the project that comes first")
+
+	# (3) Affordable and unblocked: the button is live and actually spends.
+	lab._sel = "t:" + str(open_node.id)
+	lab.refresh()
+	var go := _find_button(lab, "Research —")
+	_ok(go != null and not go.disabled, "an affordable, unblocked project is researchable")
+	_press(go)
+	_ok(Research.is_unlocked(str(open_node.id)),
+		"pressing it researches THAT project (%s)" % str(open_node.id))
+
+	# ONE RULE, TWO SURFACES. If someone re-inlines the checks into unlock(), the two
+	# can drift and the lab starts describing a refusal that no longer happens.
+	for tree in Research.TREES:
+		for node in tree.nodes:
+			var stop := Research.blocker(str(node.id))
+			if stop == "":
+				continue          # never CALL unlock on a researchable node — it spends
+			_ok(Research.unlock(str(node.id)) == stop,
+				"'%s': the stated obstacle is the one unlock enforces" % str(node.name))
+
+	# THE ARCHIVE IS A THING, so the trade-in has something to sit on — and an empty
+	# hold is the teaching state, not an error.
+	lab._sel = "archive"
+	lab.refresh()
+	var arch := _find_button(lab, "Archive")
+	_ok(arch != null and arch.disabled, "with no readings aboard, filing them is refused")
+	_ok(_find_text(lab._detail, "scanner"), "...and says how to get some")
+	screen.ship.add_commodity("scan_data", 3)
+	lab.refresh()
+	var file_it := _find_button(lab, "Archive")
+	_ok(file_it != null and not file_it.disabled, "readings aboard make the archive live")
+	var before := Research.insight
+	_press(file_it)
+	_ok(Research.insight == before + 3 * Research.SCAN_DATA_INSIGHT,
+		"filing them pays Insight (%.0f -> %.0f)" % [before, Research.insight])
+
+	Research.unlocked.clear()
+	Research.insight = 0.0
 	screen.queue_free()
 
 

@@ -475,9 +475,13 @@ static func is_unlocked(id: String) -> bool:
 	return unlocked.has(id)
 
 
-## Returns "" on success, else the reason shown to the player (every
-## rejection must be VISIBLE).
-static func unlock(id: String) -> String:
+## WHY THIS PROJECT CANNOT BE RESEARCHED RIGHT NOW — "" when it can. A QUERY: it
+## answers and changes nothing (docs/engineering_principles.md, command/query
+## separation), so a screen can state the obstacle BEFORE the click rather than
+## only after one. `unlock` is the command and defers to this, so the sentence the
+## lab prints under a greyed button is the same sentence a refused click produces —
+## one rule, two surfaces, no chance of them drifting apart.
+static func blocker(id: String) -> String:
 	var node := find_node(id)
 	if node.is_empty():
 		return "Unknown project."
@@ -487,6 +491,16 @@ static func unlock(id: String) -> String:
 		return "Requires %s first." % find_node(node.requires).name
 	if insight < node.cost:
 		return "Not enough Insight (%d needed)." % node.cost
+	return ""
+
+
+## Returns "" on success, else the reason shown to the player (every
+## rejection must be VISIBLE).
+static func unlock(id: String) -> String:
+	var stop := blocker(id)
+	if stop != "":
+		return stop
+	var node := find_node(id)
 	insight -= node.cost
 	unlocked[id] = true
 	_apply_effect(id)

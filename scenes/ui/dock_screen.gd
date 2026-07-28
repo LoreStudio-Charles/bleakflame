@@ -121,16 +121,14 @@ var _commission_info: VBoxContainer
 var _loadout_box: VBoxContainer
 var _sel_gem := -1     # gem slot selected for memorizing in the Loadout panel
 var _missions: MissionComputer
+var _lab: ResearchLabView
 var _yard_list: ItemList
-var _lab_status: RichTextLabel
-var _lab_leads: ItemList
 var _bar_row: Control
 var _bar_feed: RichTextLabel
 var _bar_last_rumor := ""
 var _talk_queue: Array[Dictionary] = []
 var _active_talk: DialoguePanel
 var _bar_panel: DialoguePanel            # live bar conversation, so choices can re-dress
-var _tech_list: ItemList
 var _fab_list: ItemList
 
 
@@ -812,27 +810,17 @@ func _titled_grid(parent: Node, title: String, tint: Color, fixed_h: float,
 ## The lab: the artifact COLLECTION trickles Insight by the calendar (a day
 ## passes per docking), LEADS track discovery chains in progress, Scan Data
 ## trades in flat, and the tech trees are where Insight goes to work.
+## Dex's room on the person-as-context shape (docs/person_as_context.md): one list,
+## one detail, every action on the thing it acts on. The host stands Dex in the
+## header and owns the two spends.
 func _build_research_tab() -> void:
-	var row := HBoxContainer.new()
-	row.name = "Research Lab"
-	Tutor.register("panel_research", row)
-	row.add_theme_constant_override("separation", 18)
-	_tabs.add_child(row)
-	var lab_col := _column(row, "ARTIFACT COLLECTION & EXPEDITION LEADS")
-	_mount_desk(lab_col, "lab")
-	_lab_status = RichTextLabel.new()
-	_lab_status.bbcode_enabled = true
-	_lab_status.fit_content = true
-	_lab_status.custom_minimum_size = Vector2(0, 44)
-	lab_col.add_child(_lab_status)
-	_lab_leads = _list(lab_col)
-	_lab_leads.item_selected.connect(_on_lead_selected)
-	_button(lab_col, "Trade in all Scan Data (+%d Insight each)" % Research.SCAN_DATA_INSIGHT,
-		_on_trade_scan_data)
-	var tech_col := _column(row, "TECH TREES — spend Insight")
-	_tech_list = _list(tech_col)
-	_tech_list.item_selected.connect(_on_tech_selected)
-	_button(tech_col, "Research selected", _on_research_node)
+	_lab = ResearchLabView.new(ship)
+	_lab.name = "Research Lab"
+	_tabs.add_child(_lab)
+	Tutor.register("panel_research", _lab)
+	_mount_desk(_lab.header_left, "lab")
+	_lab.research_requested.connect(_on_research_node)
+	_lab.archive_requested.connect(_on_trade_scan_data)
 
 
 ## Ember Row: the station lounge. Rumors are OVERHEARD here — walking in
@@ -2284,113 +2272,8 @@ func _refresh_missions() -> void:
 
 
 func _refresh_research() -> void:
-	_refresh_lab_status()
-	_lab_leads.clear()
-	for id in Research.recovered:
-		var art: Dictionary = Research.ARTIFACTS[id]
-		var i := _lab_leads.add_item("✦ %s — +1 Insight / %s, forever" % [
-			art.name, _rate_text(art.rate_days)])
-		_lab_leads.set_item_custom_fg_color(i, UiTheme.AMBER)
-		_lab_leads.set_item_metadata(i, id)
-	for id in Research.active_leads():
-		var i := _lab_leads.add_item("◈ LEAD:  %s   (click for details)" % Research.journal_line(id, ship))
-		_lab_leads.set_item_custom_fg_color(i, UiTheme.AMBER)   # a lead is a big deal — make it read like one
-		_lab_leads.set_item_metadata(i, id)
-	_placeholder_if_empty(_lab_leads, "— no leads yet — rumors travel on dockhands' lips —")
-
-	_tech_list.clear()
-	for tree in Research.TREES:
-		var h := _tech_list.add_item("—— %s ——" % str(tree.name).to_upper())
-		_tech_list.set_item_disabled(h, true)
-		_tech_list.set_item_custom_fg_color(h, UiTheme.ACCENT)
-		for node in tree.nodes:
-			var i: int
-			if Research.is_unlocked(node.id):
-				i = _tech_list.add_item("✓ %s — researched" % node.name)
-				_tech_list.set_item_custom_fg_color(i, Color(0.45, 0.75, 0.5))
-			elif node.requires != "" and not Research.is_unlocked(node.requires):
-				i = _tech_list.add_item("%s — %d Insight (requires %s)" % [
-					node.name, node.cost, Research.find_node(node.requires).name])
-				_tech_list.set_item_custom_fg_color(i, Color(0.38, 0.41, 0.5))
-			else:
-				i = _tech_list.add_item("%s — %d Insight" % [node.name, node.cost])
-				if Research.insight >= node.cost:
-					_tech_list.set_item_custom_fg_color(i, UiTheme.AMBER)
-			_tech_list.set_item_metadata(i, node.id)
-
-
-func _refresh_lab_status() -> void:
-	var txt := "[b][color=#f2b859]INSIGHT  %d[/color][/b]     [color=#8890a0]%s — %s[/color]\n" % [
-		int(Research.insight), GameClock.label(), GameClock.cadence_text()]
-	txt += "[color=#8890a0]collection income +%.2f Insight/day   •   Scan Data aboard: %d[/color]" % [
-		Research.income_per_day(), ship.commodities.get("scan_data", 0)]
-	_lab_status.text = txt
-
-
-func _rate_text(days: int) -> String:
-	return "day" if days == 1 else "%d days" % days
-
-
-func _on_lead_selected(index: int) -> void:
-	var id = _lab_leads.get_item_metadata(index)
-	if id == null:
-		return
-	if Research.recovered.has(id):
-		var art: Dictionary = Research.ARTIFACTS[id]
-		_detail = "[b]%s[/b] — yields 1 Insight every %s, forever\n[i][color=#8890a0]%s[/color][/i]" % [
-			art.name, _rate_text(art.rate_days), art.desc]
-		_show_info_modal("✦ %s" % str(art.name), _detail)
-	else:
-		_detail = "[b]Expedition lead[/b]\n%s" % Research.journal_line(id, ship)
-		_show_info_modal("◈ EXPEDITION LEAD",
-			"[color=#f2b859]%s[/color]\n\n[color=#8890a0]Follow it in flight — the chart marks the way, and this lead updates as you make progress.[/color]" \
-			% Research.journal_line(id, ship))
-	_refresh_info()
-
-
-## A centered, dismissable info modal — used to give a lead the spotlight it
-## deserves (it was buried in the bottom status line before). Generic: title +
-## BBCode body + Close. CenterContainer so it never drifts off-centre.
-func _show_info_modal(title: String, body: String) -> void:
-	var shade := ColorRect.new()
-	shade.color = Color(0, 0, 0, 0.6)
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(shade)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.add_child(center)
-	var panel := PanelContainer.new()
-	panel.theme = UiTheme.get_theme()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(UiTheme.BG, 0.99)
-	style.border_color = UiTheme.AMBER
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(26.0)
-	panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
-	panel.add_child(col)
-	var h := Label.new()
-	h.text = title
-	h.add_theme_color_override("font_color", UiTheme.AMBER)
-	h.add_theme_font_size_override("font_size", 20)
-	col.add_child(h)
-	var rt := RichTextLabel.new()
-	rt.bbcode_enabled = true
-	rt.fit_content = true
-	rt.custom_minimum_size = Vector2(500, 0)
-	rt.text = body
-	col.add_child(rt)
-	var close := Button.new()
-	close.text = "Close"
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	UiTheme.button_flavor(close, "tertiary", 220.0)
-	close.pressed.connect(func() -> void:
-		Sfx.play("click", -14.0)
-		shade.queue_free())
-	col.add_child(close)
+	if _lab != null:
+		_lab.refresh()
 
 
 func _on_trade_scan_data() -> void:
@@ -2407,30 +2290,10 @@ func _on_trade_scan_data() -> void:
 	refresh()
 
 
-func _on_tech_selected(index: int) -> void:
-	var id = _tech_list.get_item_metadata(index)
-	if id == null:
-		return
-	var node := Research.find_node(id)
-	if Research.is_unlocked(id):
-		_detail = "[b]%s[/b] — RESEARCHED\n[i][color=#8890a0]%s[/color][/i]" % [node.name, node.desc]
-	else:
-		var req_txt := ""
-		if node.requires != "":
-			req_txt = "   (requires %s)" % Research.find_node(node.requires).name
-		_detail = "[b]%s[/b] — %d Insight%s\n[i][color=#8890a0]%s[/color][/i]" % [
-			node.name, node.cost, req_txt, node.desc]
-	_refresh_info()
-
-
-func _on_research_node() -> void:
+## The project's own button hands over its id — no "research whatever is selected",
+## which is the pattern that let an action drift away from the thing it acts on.
+func _on_research_node(id: String) -> void:
 	_flash_msg = ""
-	var sel := _tech_list.get_selected_items()
-	if sel.is_empty():
-		return
-	var id = _tech_list.get_item_metadata(sel[0])
-	if id == null:
-		return
 	var err := Research.unlock(id)
 	if err != "":
 		_flash(err)

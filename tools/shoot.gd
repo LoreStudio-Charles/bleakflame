@@ -68,6 +68,15 @@ func _ready() -> void:
 	_ship = TestShip.new()
 	add_child(_ship)
 	_ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	# CARGO AFTER the build — the hold does not exist until the ship is fitted, and
+	# several screens (the lab's archive, the market, the mission board) only have
+	# anything to say about a hold with something in it.
+	for pair in str(_args.get("cargo", "")).split(",", false):
+		var kv := str(pair).split(":")
+		if kv.size() == 2:
+			_ship.add_commodity(str(kv[0]), int(kv[1]))
+		else:
+			printerr("shoot: --cargo wants k:v pairs, got \"%s\"" % pair)
 
 	var screen: Node = (_builders[id] as Callable).call(_ship)
 	add_child(screen)
@@ -149,6 +158,8 @@ func _apply_state() -> void:
 		Pilot.join_profession(str(_args.prof))
 	if _args.has("tutorial-done"):
 		SaveGame.tutorial_done = true
+	if _args.has("insight"):
+		Research.insight = float(_args.insight)
 	MissionLog.ensure_offers()
 	# CONTRACTS IN HAND — the state the mission board is actually FOR. An empty log
 	# photographs the empty case and nothing else, and "take one, and pretend it is
