@@ -57,16 +57,17 @@ const OVERLAY_PARALLAX := 0.11
 ##
 ## Starting low and building up is the right way round for an additive stack — you are
 ## composing light, so it is far easier to add another layer than to unpick an
-## over-bright one. 0.3 each is the starting point (user, 2026-07-28); tune from here.
+## over-bright one. Started at 0.3, settled at 0.5 on sight (user, 2026-07-28): the dust
+## reads as structure again without the stack clipping anywhere.
 ##
 ## Dialled HERE, never by re-authoring the art: the tiles stay full-strength on disk so
 ## the balance is a live decision and not a destructive one.
-const BACKDROP_ALPHA := 0.3
-const OVERLAY_ALPHA := 0.3
+const BACKDROP_ALPHA := 0.5
+const OVERLAY_ALPHA := 0.5
 
 ## The procedural point stars are a layer too, and get the same knob so the whole sky is
 ## balanced from one place rather than half here and half in the LAYERS table.
-const STAR_ALPHA := 0.3
+const STAR_ALPHA := 0.5
 
 static var _backdrops: Array[Texture2D] = []
 static var _overlays: Array[Texture2D] = []
