@@ -1114,6 +1114,32 @@ func _on_desk_talk(npc: String) -> void:
 	add_child(panel)
 
 
+## WHOSE CONVERSATION HANDED OFF, so business can hand you back to them. Only ever set
+## by an offer the PLAYER chose: a talk that auto-presents on docking must not reopen
+## into an addressee, because nobody ambushes you at the ramp.
+var _resume_with := ""
+
+## Conversations already presented THIS visit, for the replay warning below. Cleared on
+## undock, not on refresh: a chain legitimately spans several refreshes.
+var _talks_shown := {}
+
+
+## BUSINESS RETURNS YOU TO THE PERSON (rule 6, docs/person_as_context.md). VenueLayout
+## does this for the board and the shelf; the dock did not, so taking one item closed the
+## conversation and anything else they held needed a fresh click on their desk — user,
+## playtest: "I had to talk to her twice about pirates."
+##
+## Only when they STILL HAVE SOMETHING. A person with nothing left does not reopen, so
+## finishing your business ends the conversation exactly as it always did, and this can
+## never feel sticky.
+func _resume_addressee() -> void:
+	var npc := _resume_with
+	_resume_with = ""
+	if npc == "" or not _has_news(npc):
+		return
+	_on_desk_talk(npc)
+
+
 ## WHAT THIS PERSON WILL DO WITH YOU. The host decides what EXISTS; Addressee decides
 ## the ORDER — so a service added here can never accidentally out-rank the campaign.
 ##
@@ -1147,6 +1173,7 @@ func _addressee_offers(npc: String) -> Array:
 
 
 func _on_addressee(npc: String, action: String) -> String:
+	_resume_with = npc
 	match action:
 		"quest":
 			_talk_to(npc)
@@ -1340,6 +1367,7 @@ func _show_next_talk() -> void:
 	if _talk_queue.is_empty():
 		return
 	var talk: Dictionary = _talk_queue.pop_front()
+	_note_if_replayed(talk)
 	var nodes: Dictionary
 	if talk.has("nodes"):
 		# A full talk-stage conversation, authored in the quest def.
@@ -1366,6 +1394,26 @@ func _show_next_talk() -> void:
 	_active_talk = panel
 	panel.closed.connect(_on_talk_closed.bind(talk))
 	add_child(panel)
+
+
+## A CONVERSATION SHOWN TWICE IN ONE VISIT — instrumented rather than guessed at.
+##
+## Playtest report (user, 2026-07-28) that neither of us could reproduce: Odessa's
+## ember_word talk appeared to loop — "About the Job -> Pirates Surely -> So what do
+## people say it is -> Pirates Surely." That tree CANNOT loop; its `stories` node has one
+## exit and it is `end`. So the conversation was PRESENTED AGAIN and replayed from its
+## start node, and the only known path to that is check_new_work re-queueing a talk stage
+## that did not advance, with `_same_talk` as the sole guard.
+##
+## Rather than harden a path we cannot see failing, say so when it happens. DEBUG-ONLY
+## (Telemetry.mark no-ops in release), visible live on the dev heartbeat, and it turns
+## "I can't reproduce it" into "the log says it happened, here is which quest".
+func _note_if_replayed(talk: Dictionary) -> void:
+	var id := "%s|%s" % [str(talk.get("giver", "")), str(talk.get("quest", ""))]
+	if _talks_shown.has(id):
+		Telemetry.warn("talk", "REPLAYED this visit: %s (%s) — it should have advanced"
+			% [str(talk.get("quest", "?")), str(talk.get("giver", "?"))])
+	_talks_shown[id] = true
 
 
 ## Two queued talks that are the SAME conversation. Compared on quest + opening line,
@@ -1416,6 +1464,7 @@ func _on_talk_closed(talk: Dictionary) -> void:
 			_held_talks[str(t.get("giver", ""))].append(t)
 	if _talk_queue.is_empty():
 		refresh()   # chain done: reflect final quest/journal state once
+		_resume_addressee()
 	else:
 		_show_next_talk()
 

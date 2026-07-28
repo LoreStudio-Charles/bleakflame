@@ -49,6 +49,7 @@ func _ready() -> void:
 		_case_office_door_is_earned,
 		_case_the_addressee_ranks_quest_business_first,
 		_case_the_desk_and_the_greeting_agree,
+		_case_business_returns_you_to_the_person,
 		_case_a_shut_board_still_closes_work_you_took,
 		_case_an_authored_conversation_survives_the_addressee,
 		_case_office_shows_tree_and_terms,
@@ -423,6 +424,57 @@ func _case_an_authored_conversation_survives_the_addressee() -> void:
 		_dispose(deck, lesson)
 	deck.queue_free()
 	ship.queue_free()
+
+
+## "I HAD TO TALK TO HER TWICE ABOUT PIRATES" (user, playtest 2026-07-28).
+##
+## Rule 6 says a context "returns to the addressee, not to the venue" — VenueLayout does
+## that for the board and the shelf, and the DOCK did not. So taking one piece of
+## business closed the conversation, and anything else that person was holding needed a
+## fresh click on their desk.
+##
+## THIS IS A BUG CLASS THIS PROJECT ALREADY FIXED ONCE, reintroduced one level up. The
+## comment in _on_talk_closed says it exactly: "handing Ruel a finished job ended the
+## conversation and left his next contract sitting behind a pip — you shut the door, then
+## opened it again to hear 'one more thing'." That fix chained QUEST talk to QUEST talk.
+## The addressee then put a person's OTHER business — the rumour, the commission — on the
+## same list, and hand-off dropped the player back to the room without it.
+func _case_business_returns_you_to_the_person() -> void:
+	var screen := _fresh_dock(true)
+	Standing.reset()
+	Pilot.profession = ""
+	Research.reset()
+	screen.refresh()
+	_ok(Research.rumor_ready(), "precondition: Odessa is holding a rumour")
+
+	# ...and a campaign talk on top of it, which is the state that reads as "twice".
+	screen._held_talks["odessa"] = [{"giver": "odessa", "quest": "The Word at Ember Row",
+		"nodes": {"start": {"text": "hi", "choices": [{"text": "ok", "next": "end"}]}}}]
+	var panel := _addressee(screen, "odessa")
+	var quest_line := _find_button(panel, "The Word at Ember Row")
+	_ok(quest_line != null, "her campaign business is on the list")
+	_ok(_find_button(panel, "What's the word") != null,
+		"...and so is the rumour, in the same conversation")
+	if quest_line == null:
+		screen.queue_free()
+		return
+
+	# Take the quest. The talk plays; when it ends she should still be standing there
+	# with the rumour she was holding, not behind a closed door.
+	quest_line.pressed.emit()
+	_dispose(screen, panel)
+	var talk := _live_panel(screen)
+	_ok(talk != null, "taking it opens the campaign talk")
+	if talk != null:
+		talk.close()
+	_ok((screen._held_talks.get("odessa", []) as Array).is_empty(),
+		"the campaign talk drained")
+
+	var resumed := _live_panel(screen)
+	_ok(resumed != null and _find_button(resumed, "What's the word") != null,
+		"she is still talking, with the rumour still on offer — no second click")
+	_dispose(screen, resumed)
+	screen.queue_free()
 
 
 ## A SCREEN MUST NOT CONTRADICT ITSELF. The desk outside says whether someone is holding
