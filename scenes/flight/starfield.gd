@@ -77,19 +77,26 @@ static var _backdrops: Array[Texture2D] = []
 static var _overlays: Array[Texture2D] = []
 static var _tiles_scanned := false
 
-## `alpha` LADDERS WITH DEPTH — 0.25 / 0.45 / 0.65, dimmest furthest out (user,
-## 2026-07-28). Brightness now agrees with parallax instead of fighting it: the slow
-## distant stars are faint and the fast near ones are sharp, which reads as depth even
-## before anything moves. It is also the readability fix — the sky was bright enough to
-## compete with the ships, and a background that competes with the foreground is a
-## gameplay problem, not a taste one.
+## `alpha` LADDERS WITH DEPTH — 0.10 / 0.20 / 0.60, dimmest furthest out (user,
+## 2026-07-28). Brightness agrees with parallax instead of fighting it: slow distant
+## stars faint, fast near ones sharp, which reads as depth before anything moves.
+##
+## THE LADDER IS DELIBERATELY STEEP, not evenly spaced. An even 0.25/0.45/0.65 still left
+## a lot of mid-depth light spread across the screen, and diffuse light everywhere is
+## exactly what a ship gets lost in. Collapsing the two far layers to 0.10 and 0.20 and
+## leaving the near one at 0.60 concentrates the sky's brightness into the FEWEST, LARGEST
+## stars — the ones that streak past fastest and sell speed — while the distant layers go
+## back to being texture rather than competition.
+##
+## The whole reason this is tuned at all: the background is SCENERY, the ships are
+## INFORMATION, and scenery gives way. That is a gameplay rule, not a taste one.
 const LAYERS := [
 	{"parallax": 0.15, "cell": 140.0, "per_cell": 3, "size": 1.0, "brightness": 0.45,
-		"alpha": 0.25},
+		"alpha": 0.10},
 	{"parallax": 0.35, "cell": 180.0, "per_cell": 2, "size": 1.6, "brightness": 0.7,
-		"alpha": 0.45},
+		"alpha": 0.20},
 	{"parallax": 0.65, "cell": 260.0, "per_cell": 1, "size": 2.2, "brightness": 1.0,
-		"alpha": 0.65},
+		"alpha": 0.60},
 ]
 
 ## A CELL'S STARS NEVER CHANGE. They are hashed from the cell's own coordinates, which is
