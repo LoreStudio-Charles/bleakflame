@@ -54,6 +54,7 @@ const BUY_MULT := 2.0
 ## TabContainer's minimum for EVERY tab (it sizes to its tallest child) and
 ## squeezes the info bar off the panel.
 const DOLL_MIN := Vector2(500, 360)
+const YARD_GAP := 8            # gutter between hull tiles; the column fit reads it
 const HOLO_BLUE := Color(0.45, 0.85, 1.0)
 
 var ship: TestShip
@@ -546,16 +547,30 @@ func _build_shipyard_tab() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	shelf.add_child(scroll)
 	_yard_grid = GridContainer.new()
-	_yard_grid.columns = 4
-	_yard_grid.add_theme_constant_override("h_separation", 8)
-	_yard_grid.add_theme_constant_override("v_separation", 8)
+	_yard_grid.add_theme_constant_override("h_separation", YARD_GAP)
+	_yard_grid.add_theme_constant_override("v_separation", YARD_GAP)
 	_yard_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_yard_grid)
+	# COLUMNS ARE DERIVED FROM THE SHELF'S ACTUAL WIDTH, not hardcoded. A fixed 4 left
+	# a third of the shelf empty at the 1920 design base, and any hardcoded number is
+	# wrong at the next window size or the moment the tile changes size — which it
+	# already did once today. Recomputed on resize so it is right everywhere.
+	scroll.resized.connect(func() -> void: _fit_yard_columns(scroll.size.x))
+	_fit_yard_columns(scroll.size.x)
 	var detail_col := _column(row, "DETAILS")
 	_yard_detail = RichTextLabel.new()
 	_yard_detail.bbcode_enabled = true
 	_yard_detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	detail_col.add_child(_yard_detail)
+
+
+## How many hull tiles fit across `width`, floored at one so a narrow window still
+## draws a shelf rather than dividing by zero into nothing.
+func _fit_yard_columns(width: float) -> void:
+	if _yard_grid == null:
+		return
+	var per := HullTile.TILE.x + float(YARD_GAP)
+	_yard_grid.columns = maxi(1, int(floor((width + float(YARD_GAP)) / per)))
 
 
 func _build_armory_tab() -> void:
