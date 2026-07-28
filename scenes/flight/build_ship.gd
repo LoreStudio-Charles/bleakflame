@@ -412,12 +412,32 @@ func interaction_radius() -> float:
 static func may_engage(shooter: Object, target: Object, legacy_group: String) -> bool:
 	if target == null or not is_instance_valid(target) or shooter == target:
 		return false
+	# THE LEGACY GROUP IS A FLOOR, NOT A FALLBACK (fixed 2026-07-27 — game-breaking).
+	#
+	# This used to read "if BOTH sides have a faction, the matrix decides; otherwise fall
+	# back to the teams", which is not additive at all — the matrix could REVOKE a
+	# hostility the teams asserted. It did, immediately and totally:
+	#
+	#   Ambient pirates carry faction "shoal" (flight_test) and the player is
+	#   "pilot:local", so both sides had one and the teams stopped being consulted.
+	#   Factions._player_toward("shoal") reads Standing.is_hostile("privateer"), whose
+	#   ledger OPENS at -100 -- so a BRAND NEW pilot is hostile and combat works. The
+	#   instant Shoal standing rises above -100 (Krayt's truce, one fenced crate, a
+	#   single Vyper contract) Standing.add's auto-peace guard flips you to peace, the
+	#   matrix answers NEUTRAL, and EVERY PIRATE BECOMES UNSHOOTABLE IN BOTH DIRECTIONS.
+	#   Nothing in the game took damage.
+	#
+	# So: hostile if the matrix says so OR the team it was fired at says so. That
+	# restores every pre-faction behaviour exactly and KEEPS the thing the matrix was
+	# built for -- a Widow may fire on a Shoal raider that shares its team.
+	#
+	# Whether a peace TOGGLE should be able to call off a fight is a real design
+	# question, and a live combat regression is not the place to answer it.
+	if legacy_group != "" and target.is_in_group(legacy_group):
+		return true
 	var sf := str(shooter.get("faction")) if shooter != null and shooter.get("faction") != null else ""
 	var tf := str(target.get("faction")) if target.get("faction") != null else ""
-	if sf != "" and tf != "":
-		return Factions.hostile(sf, tf)
-	# One side has no faction (a decoy, a turret, the beast): fall back to the teams.
-	return legacy_group != "" and target.is_in_group(legacy_group)
+	return sf != "" and tf != "" and Factions.hostile(sf, tf)
 
 
 ## Everything `shooter` may currently shoot, as one list. Broad phase is the legacy group

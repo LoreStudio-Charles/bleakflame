@@ -22,6 +22,8 @@ func _ready() -> void:
 	_case_unfactioned_targets_still_work()
 	_case_the_broad_phase_finds_across_teams()
 	_case_a_bolt_outlives_its_shooter()
+	_case_a_played_pilot_can_still_shoot_pirates()
+	_case_a_bolt_actually_lands_damage()
 
 	if _fails.is_empty():
 		print("test_faction_fire: ALL PASS (%d checks)" % _checks)
@@ -106,6 +108,85 @@ func _case_the_broad_phase_finds_across_teams() -> void:
 	shoal.queue_free()
 
 
+## THE GAME-BREAKER: A PLAYED PILOT COULD NOT SHOOT ANYTHING (playtest, 2026-07-27).
+##
+## Ambient pirates carry faction "shoal" and the player is "pilot:local", so BOTH sides
+## had a faction — and may_engage used to let the matrix decide alone whenever that was
+## true. Factions._player_toward("shoal") reads Standing.is_hostile("privateer"), a
+## ledger that OPENS AT -100. A brand new pilot is therefore hostile and everything
+## works; the moment Shoal standing rises above -100 the auto-peace guard flips you to
+## peace, the matrix answers NEUTRAL, and every pirate becomes unshootable both ways.
+##
+## WHY NOTHING CAUGHT IT, and this is the lesson: test_faction_parity walks every ordered
+## pair in the live world, but FIRST does `PlayerState.local = PlayerState.new()` — a
+## FRESH pilot — with a comment explaining that the developer's played save had made
+## peace with the Shoal and skewed the run. The test removed the exact state that breaks
+## the feature, and documented itself doing it. A fresh-pilot check is necessary and not
+## sufficient: the game is played by played pilots.
+func _case_a_played_pilot_can_still_shoot_pirates() -> void:
+	var me := _ship("shoal", "hostile_team")     # stand-in with the pirate's own faction
+	me.faction = Factions.player_id()
+	me.remove_from_group("hostile_team")
+	me.add_to_group("player_team")
+	var pirate := _ship("shoal", "hostile_team")
+
+	# EVERY RUNG OF THE SHOAL LADDER, because each one is a real save state a tester can
+	# be sitting in — and all but the first used to disarm the game.
+	for points in [-100, -50, 0, Standing.INVITE_AT, Standing.FRIENDLY_AT]:
+		Standing.reset()
+		Standing.add("privateer", points - Standing.get_points("privateer"))
+		_ok(BuildShip.may_engage(me, pirate, "hostile_team"),
+			"at Shoal standing %d a pirate on hostile_team is still shootable" % points)
+		_ok(BuildShip.may_engage(pirate, me, "player_team"),
+			"...and it can still shoot back at %d" % points)
+	Standing.reset()
+	me.queue_free()
+	pirate.queue_free()
+
+
+## END TO END: DOES A BOLT ACTUALLY REMOVE HIT POINTS?
+##
+## Everything else here asks a PREDICATE. The predicate was correct in isolation the
+## whole time — it was correct about the wrong pilot. Only firing a real Projectile at a
+## real ship and reading its hull afterwards can tell you the game still works, which is
+## the difference between "the rule is right" and "the game does damage".
+func _case_a_bolt_actually_lands_damage() -> void:
+	var pirate := _ship("shoal", "hostile_team")
+	pirate.global_position = Vector2(120, 0)
+	# A PLAYED pilot, at peace with the Shoal — the state that broke it.
+	Standing.reset()
+	Standing.add("privateer", 50 - Standing.get_points("privateer"))
+
+	# EFFECTIVE HP, not hull: take_damage tiers shield -> armor -> hull, so a small bolt
+	# against a shielded hull leaves `hull` untouched and a hull-only assertion reads a
+	# perfectly good hit as a miss.
+	var before := _hp(pirate)
+	var def := WeaponDef.new()
+	def.damage = 12.0
+	def.projectile_speed = 600.0
+	def.weapon_range = 900.0
+	# FIRED BY A PILOT, not by nobody. The first draft passed `null` as the shooter — so
+	# `sf` was empty, may_engage never reached the faction branch, and the case sailed
+	# through the very bug it was written for. Sabotage caught that; a green test that
+	# cannot fail is worse than no test. A real bolt always has an owner.
+	var me := _ship("shoal", "player_team")
+	me.faction = Factions.player_id()
+	var bolt := Projectile.spawn(self, Vector2(60, 0), Vector2.RIGHT, def,
+		"hostile_team", 0.0, 1.0, me)
+	# Step until it either lands or expires — a swept test needs the bolt to move.
+	for _i in 30:
+		if not is_instance_valid(bolt):
+			break
+		bolt._physics_process(0.05)
+	_ok(_hp(pirate) < before,
+		"a bolt fired at a pirate DOES DAMAGE (%.1f -> %.1f)" % [before, _hp(pirate)])
+	Standing.reset()
+	if is_instance_valid(bolt):
+		bolt.queue_free()
+	me.queue_free()
+	pirate.queue_free()
+
+
 ## A BOLT OUTLIVES THE SHIP THAT FIRED IT — and killing the shooter mid-flight CRASHED
 ## the game (playtest, 2026-07-27): "Invalid type in function 'engageable' ... argument 2
 ## (previously freed) is not a subclass of the expected argument class."
@@ -156,11 +237,23 @@ func _case_a_bolt_outlives_its_shooter() -> void:
 	mark.queue_free()
 
 
+## Effective hit points across all three tiers. take_damage spends shield, then armor,
+## then hull, so only the SUM answers "did that land".
+func _hp(n: Node) -> float:
+	return float(n.shield) + float(n.armor) + float(n.hull)
+
+
 func _ship(fac: String, team: String) -> AIShip:
 	var a := AIShip.new()
 	add_child(a)
 	a.setup(SampleBuilds.get_build(0))
 	a.faction = fac
+	# AIShip._ready joins "hostile_team" UNCONDITIONALLY. A fixture standing on another
+	# team has to leave it, or it sits in both at once — a state no real ship is ever in
+	# (GuardianShip extends BuildShip, not AIShip, precisely so it never joins), and it
+	# makes a synthetic Guardian look shootable by a synthetic Navy.
+	if team != "hostile_team":
+		a.remove_from_group("hostile_team")
 	if not a.is_in_group(team):
 		a.add_to_group(team)
 	return a
