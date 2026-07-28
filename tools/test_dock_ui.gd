@@ -79,6 +79,7 @@ func _ready() -> void:
 		_case_the_lab_puts_the_spend_on_the_project,
 		_case_the_shipyard_is_a_shop_shelf,
 		_case_a_ship_is_worth_what_is_bolted_to_it,
+		_case_no_counter_pays_back_what_it_charges,
 		_case_armory_filters,
 		_case_the_armory_sells_from_your_own_shelf,
 		_case_level_gates_equipping,
@@ -2074,6 +2075,96 @@ func _case_the_lab_puts_the_spend_on_the_project() -> void:
 ## while ComponentDef.value() is intrinsic and doubled on its way to a shelf. Add them the
 ## obvious way and the hull is priced at half its worth relative to its parts — which is
 ## exploit 1, arriving quietly, on whichever hull happens to carry the richest loadout.
+## A COUNTER NEVER PAYS BACK WHAT IT CHARGES. Two rules from the user (2026-07-28),
+## sharing one boundary:
+##
+##   · the trade skill may "chip away at the diff from buy and sell without ever making
+##     it profitable to buy and sell";
+##   · faction "should harm the base cost as they move away from adoring you, but never
+##     improve the base prices in your favour."
+##
+## The second is why only the first needs a guard: a modifier that can only ever move
+## prices AGAINST you can only ever widen this gap. The trade skill is the one thing that
+## closes it — and it had already closed it past zero on commodities, where a level-60
+## Trader bought food at the station for 17c and sold it back at the same counter for
+## 23c.
+##
+## SWEPT ACROSS THE WHOLE PERK RANGE, not checked at today's numbers. The cap is a
+## balance dial someone will move; the invariant is not, and a test that only samples the
+## current value tells you nothing about the one it is changed to.
+func _case_no_counter_pays_back_what_it_charges() -> void:
+	# --- COMPONENTS: the rule, swept past anything a perk could plausibly reach ---
+	for pct in [0, 25, 50, 75, 90, 100, 150]:
+		var buy := 200
+		var raw := int(buy * pct / 100.0)
+		_ok(ItemVisuals.recovery_capped(raw, buy) < buy,
+			"a %d%% sell offer on a %dc part is capped below what it costs (%dc)"
+				% [pct, buy, ItemVisuals.recovery_capped(raw, buy)])
+	_ok(ItemVisuals.recovery_capped(10, 200) == 10,
+		"...and a normal offer is left alone — the cap is a ceiling, not a price")
+
+	# ...and through the REAL prices, for every part the game sells.
+	for path in DockScreen.SHOP_STOCK:
+		var comp: ComponentDef = load(str(path))
+		if comp == null:
+			continue
+		_ok(ItemVisuals.sell_price(comp) < ItemVisuals.buy_price(comp),
+			"%s sells back for less than it costs (%dc vs %dc)"
+				% [comp.display_name, ItemVisuals.sell_price(comp),
+					ItemVisuals.buy_price(comp)])
+
+	# --- THE BACKSTOP, exercised directly ---
+	#
+	# TradeGoods.MAX_EDGE is unreachable through the game today: Pilot.TRADE_EDGE_MAX caps
+	# the perk at 0.20, far under it. Sabotaging MAX_EDGE therefore changed NOTHING and
+	# every test stayed green — which is what an untested guard looks like from the
+	# outside, and it is only a guard at all for the day someone raises the trader cap.
+	# So it is asserted against the input it exists for: an edge past 1.0, which without
+	# the clamp would push the two prices straight through each other.
+	for wild in [0.9, 1.0, 2.0, 5.0]:
+		var high := TradeGoods._toward_mid(40.0, 34.0, wild)
+		var low := TradeGoods._toward_mid(34.0, 40.0, wild)
+		_ok(high > low,
+			"an edge of %.1f still cannot cross a 40/34 spread (%.1f vs %.1f)"
+				% [wild, high, low])
+	_ok(Pilot.TRADE_EDGE_MAX < TradeGoods.MAX_EDGE,
+		"the trader cap sits inside the backstop, so the backstop is the outer bound")
+
+	# --- COMMODITIES: same desk, both directions, at every rung of the perk ---
+	var kept_prof := Pilot.profession
+	var kept_xp := Wallet.xp
+	for xp in [0, 5_000, 100_000, 9_000_000]:
+		Pilot.profession = "trader"
+		Wallet.xp = xp
+		for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET]:
+			for key in market["sells"]:
+				if not market["buys"].has(key):
+					continue      # no round trip exists here; nothing to protect
+				var pays := TradeGoods.buy_price(market, str(key))
+				var gets := TradeGoods.sell_price(market, str(key))
+				_ok(gets < pays,
+					"L%d trader: %s at %s pays %dc, gets %dc back"
+						% [Pilot.level(), TradeGoods.display_name(str(key)),
+							str(market["name"]), pays, gets])
+
+	# AND THE ROUTE STILL PAYS BETTER FOR A TRADER — closing the loop is worthless if it
+	# flattens the gameplay it protects (user: "it's okay to cross on market items from
+	# one region to another, that's the trader gameplay").
+	Wallet.xp = 9_000_000
+	var trader_run := TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits") \
+		- TradeGoods.buy_price(TradeGoods.STATION_MARKET, "circuits")
+	Pilot.profession = ""
+	Wallet.xp = 0
+	var plain_run := TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits") \
+		- TradeGoods.buy_price(TradeGoods.STATION_MARKET, "circuits")
+	_ok(trader_run > plain_run,
+		"the cross-region run still rewards a Trader (%+dc vs %+dc a unit)"
+			% [trader_run, plain_run])
+
+	Pilot.profession = kept_prof
+	Wallet.xp = kept_xp
+
+
 func _case_a_ship_is_worth_what_is_bolted_to_it() -> void:
 	for i in SampleBuilds.count():
 		var stock := SampleBuilds.stock(i)          # the FACTORY ship, not the pilot's

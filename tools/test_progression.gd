@@ -52,10 +52,20 @@ func _init() -> void:
 	if absf(Pilot.evasion() - 0.15) > 0.001:
 		f += 1; print("FAIL: evasion = ", Pilot.evasion())
 
-	# Trader perk: 0.5%/level -> 30% at 60.
+	# Trader perk: 0.5%/level, CAPPED at Pilot.TRADE_EDGE_MAX (user, 2026-07-28 —
+	# "clamp at +/- 15 or maybe 20%"). Read off the constant, not a copy of its value:
+	# the whole point of the cap is that it is one number to move.
 	Pilot.join_profession("trader")
-	if absf(Pilot.trade_buy_mult() - 0.70) > 0.001 or absf(Pilot.trade_sell_mult() - 1.30) > 0.001:
+	var cap := Pilot.TRADE_EDGE_MAX
+	if absf(Pilot.trade_buy_mult() - (1.0 - cap)) > 0.001 \
+			or absf(Pilot.trade_sell_mult() - (1.0 + cap)) > 0.001:
 		f += 1; print("FAIL: trader mults ", Pilot.trade_buy_mult(), " ", Pilot.trade_sell_mult())
+	# THE CAP MUST ACTUALLY BITE at level 60, or it is decoration: the uncapped perk is
+	# 0.5%/level = 30%, so a cap that sits above that never engages and the arbitrage it
+	# exists to bound comes back the moment anyone raises the per-level rate.
+	if cap >= 60.0 * Professions.PERK_PER_LEVEL:
+		f += 1; print("FAIL: TRADE_EDGE_MAX ", cap, " never binds — perk maxes at ",
+			60.0 * Professions.PERK_PER_LEVEL)
 	# A combat profession has no trade perk.
 	Pilot.join_profession("guardian")
 	if absf(Pilot.trade_buy_mult() - 1.0) > 0.001:

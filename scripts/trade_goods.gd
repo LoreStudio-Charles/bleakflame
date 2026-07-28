@@ -76,14 +76,56 @@ static func unit_mass(key: String) -> float:
 ## storefronts from drifting apart. `ship` is duck-typed (commodities /
 ## can_carry_mass / add_commodity / remove_commodity).
 
+## THE TRADE PERK NARROWS A LOCAL SPREAD; IT MAY NEVER CROSS ONE (user, 2026-07-28: the
+## trade skill should "chip away at the diff from buy and sell without ever making it
+## profitable to buy and sell").
+##
+## THIS FILE ALREADY CLAIMED THAT — "the premium is always ABOVE that market's own
+## buy-back price, so there's no same-dock arbitrage" — and it was true of the LISTED
+## numbers and false the moment a commission moved both ends. A level-60 Trader bought
+## food at the station for 17c and sold it back at the same counter for 23c: +6c a unit,
+## no travel, no risk, repeatable forever. Circuits at the colony paid +16c.
+## (tools/audit_arbitrage.gd prints it.)
+##
+## WHERE A VENUE TRADES A GOOD BOTH WAYS, the perk now moves each price toward the
+## MIDPOINT of that venue's own spread instead of pushing the two ends past each other.
+## The gap closes; it cannot invert. `edge` is a fraction strictly under 1.0, so the two
+## prices approach and never meet.
+##
+## CROSS-REGION TRADE IS UNTOUCHED — deliberately (user: "it's okay to cross on market
+## items from one region to another, that's the trader gameplay"). A venue that only
+## SELLS a good, or only BUYS it, has no local spread to protect, so the perk applies in
+## full there. Buying circuits at the station (sell-only, 22 -> 15) and selling them at
+## the colony still pays a maxed Trader 20c a unit against a fresh pilot's 12.
+
+## The most of a local spread a perk may ever close. Under 1.0 by definition: at 1.0 the
+## two prices meet, and a round trip becomes free rather than merely unprofitable.
+const MAX_EDGE := 0.9
+
+
 ## Unit price the player PAYS here (their trade background/skill discounts it).
 static func buy_price(market: Dictionary, key: String) -> int:
-	return int(round(float(market["sells"][key]) * Pilot.trade_buy_mult()))
+	var listed := float(market["sells"][key])
+	if not market["buys"].has(key):
+		return int(round(listed * Pilot.trade_buy_mult()))
+	return int(round(_toward_mid(listed, float(market["buys"][key]),
+		1.0 - Pilot.trade_buy_mult())))
 
 
 ## Unit price the player RECEIVES here.
 static func sell_price(market: Dictionary, key: String) -> int:
-	return int(round(float(market["buys"][key]) * Pilot.trade_sell_mult()))
+	var listed := float(market["buys"][key])
+	if not market["sells"].has(key):
+		return int(round(listed * Pilot.trade_sell_mult()))
+	return int(round(_toward_mid(listed, float(market["sells"][key]),
+		Pilot.trade_sell_mult() - 1.0)))
+
+
+## Move `price` a fraction of the way toward the midpoint between it and `other`. Pure and
+## static so the boundary is assertable without a market, a pilot or a screen.
+static func _toward_mid(price: float, other: float, edge: float) -> float:
+	var mid := (price + other) * 0.5
+	return price - (price - mid) * clampf(edge, 0.0, MAX_EDGE)
 
 
 static func buy(ship, market: Dictionary, key: String) -> Dictionary:

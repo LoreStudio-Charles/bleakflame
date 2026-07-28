@@ -87,12 +87,37 @@ static func material_color(key: String) -> Color:
 
 ## ---- PRICES ----
 
+## THE MOST A COUNTER EVER PAYS BACK, as a fraction of what it charges for the same part.
+## Under 1.0 by definition — at 1.0 a pilot can buy and immediately re-sell for free, and
+## above it for profit.
+##
+## THE BOUNDARY IS WRITTEN DOWN BEFORE ANYTHING CAN CROSS IT (user, 2026-07-28): the
+## trader skill should "chip away at the diff from buy and sell without ever making it
+## profitable", and faction standing may "harm the base cost ... but never improve the
+## base prices to buy/sale in your favour". Faction can therefore only ever WIDEN this
+## gap, which is why it needs no guard; the trade skill is the only thing that can close
+## it, and this is where it will be stopped.
+##
+## INERT TODAY, deliberately. Components sell at value x1.0 (x1.1 for a Scrapper) against
+## a x2.0 counter price, so recovery sits at 0.50-0.55 and nothing here binds. It exists
+## so that the day a trade perk reaches ship parts — it already reaches commodities, and
+## it broke the same-desk rule there (see TradeGoods) — the invariant is enforced at the
+## one place both prices are computed, rather than remembered at each shelf.
+const MAX_RECOVERY := 0.9
+
+
 static func buy_price(comp: ComponentDef) -> int:
 	return int(comp.value() * BUY_MULT)
 
 
 static func sell_price(comp: ComponentDef) -> int:
-	return int(round(comp.value() * Pilot.sell_mult()))
+	return recovery_capped(int(round(comp.value() * Pilot.sell_mult())), buy_price(comp))
+
+
+## What a counter may pay for something it would charge `buy` for. Pure and static: the
+## rule is assertable without a shop, a pilot or an item.
+static func recovery_capped(raw: int, buy: int) -> int:
+	return mini(raw, int(floor(float(buy) * MAX_RECOVERY)))
 
 
 ## ---- GRADE DRESS ----

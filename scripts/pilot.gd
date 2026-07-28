@@ -587,12 +587,30 @@ static func starting_credits() -> int:
 ## Trade-rate seams for the eventual Trader profession / skills: a discount on
 ## what you BUY and a bump on what you SELL, "to a small degree." 1.0 = no
 ## effect (today). Applied at the market so professions just fill these in.
+## HOW FAR A TRADER MAY EVER MOVE A PRICE, either way (user, 2026-07-28: "Trader should
+## clamp at +/- 15 or maybe 20%"). Taken at the top of that range: the same-desk
+## arbitrage this used to open is now closed structurally in TradeGoods, so the cap is
+## free to be the generous one — it is a question of how strong the commission FEELS, not
+## of whether it can be abused.
+##
+## CAPPED HERE, NOT VIA Professions.PERK_PER_LEVEL, because that rate is shared with
+## mining, scan value and insight; dialling it back would quietly nerf three commissions
+## nobody asked about.
+const TRADE_EDGE_MAX := 0.20
+
+
 static func trade_buy_mult() -> float:
-	return 1.0 - _perk_bonus("trade")     # Trader commission: cheaper buys (to -30%)
+	return 1.0 - trade_edge()             # Trader commission: cheaper buys
 
 
 static func trade_sell_mult() -> float:
-	return 1.0 + _perk_bonus("trade")     # Trader commission: better sells (to +30%)
+	return 1.0 + trade_edge()             # Trader commission: better sells
+
+
+## The Trader's edge on a price, as a fraction. One function, so the two ends can never
+## be capped differently — which would be a spread that widens as you level.
+static func trade_edge() -> float:
+	return minf(_perk_bonus("trade"), TRADE_EDGE_MAX)
 
 
 static func to_dict() -> Dictionary:
