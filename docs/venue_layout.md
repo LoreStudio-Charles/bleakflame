@@ -1,6 +1,30 @@
 # The standard venue layout
 
-**Decided with user 2026-07-27. NOT BUILT — this is the design of record.**
+**Decided with user 2026-07-27. BUILT the same day** — `scenes/ui/venue_layout.gd`,
+with the Speak's Easy moved onto it (commit `5ad5754`). This stays the design of
+record; the notes below are what shipped and what is still owed.
+
+## Status
+
+- **The shell exists.** `VenueLayout` owns the header, the `NpcDesk`, the contract
+  board + take + hand-ins, the standing meter, the trust-gated quartermaster and the
+  office door. A host supplies `body` (its flavour) and `venue_box` (its own trade),
+  and connects five signals. Config is a Dictionary: `venue`, `board`, `npc`,
+  `faction`, `rungs`, plus overridable `trust` / `board_open` / `price_of`.
+- **The Speak's Easy is on it.** Everything duplicated between it and the Verge deck
+  was deleted rather than copied.
+- **Still owed:** Doug's deck, Sella's desk. The station DockScreen last / never.
+
+Two things learned in the build, worth keeping:
+
+- **The shell owns the SHAPE, the venue owns the WORDS.** The first pass flattened
+  "VYPER'S WORK" into a generic "CONTRACTS" heading and the venues lost their voice —
+  a test caught it. Headings, refusals and rung labels are all venue-authored
+  (`board_title`, `board_shut_text`, `rungs`).
+- **A meter must measure the climb the player is actually on.** Scaled to
+  `Standing.MAX` the bar did not visibly move anywhere on the Shoal's ladder, whose
+  every rung sits between -100 and 100. `climb_to_next()` measures from the rung you
+  passed to the one ahead, and the meter names what that next rung opens.
 
 Every place you can dock has been built separately, and they are the same screen four
 times over. This is the shape they should share.
