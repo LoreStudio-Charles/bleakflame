@@ -35,6 +35,12 @@ signal changed                      ## something here altered the world; host sh
 ## scrollbar. The spacer below takes the leftover instead.
 const BOARD_H := 200
 
+## THE ANCHORS EVERY VENUE OFFERS, so a lesson can point at the board or the meter at
+## ANY faction quarter without knowing which one it is standing in. The shell registers
+## the widgets and mounts the ping overlays; a venue that adopts the shell gets both for
+## free, which is the difference between a lesson that draws and one that silently jams.
+const ANCHORS := ["venue_board", "venue_standing", "office_door"]
+
 var ship: TestShip
 var venue: String                   ## MissionLog venue key + Tutor.venue ("shoal"/"verge")
 var board: String                   ## board name this venue's postings carry
@@ -68,6 +74,10 @@ var price_of: Callable = func(comp: ComponentDef) -> int: return ItemVisuals.buy
 ## authored by the host; the meter shows the first one above your current points.
 var rungs: Array = []
 
+var talks: TalkChain                ## drain-all / check_new_work / no-replay / pip routing
+
+var _msg := ""                      ## said once, then cleared — never goes stale
+var _msg_label: RichTextLabel
 var _offers: ItemList
 var _take_btn: Button
 var _active_box: VBoxContainer
@@ -94,6 +104,7 @@ func _init(cfg: Dictionary) -> void:
 	board_open = cfg.get("board_open", func() -> bool: return true)
 	board_shut_text = str(cfg.get("board_shut_text", ""))
 	board_title = str(cfg.get("board_title", "CONTRACTS"))
+	talks = TalkChain.new(self, venue)
 	if cfg.has("price_of"):
 		price_of = cfg.price_of
 	add_theme_constant_override("separation", 12)
@@ -108,6 +119,18 @@ func build(title: String) -> void:
 	head.add_theme_color_override("font_color", UiTheme.AMBER)
 	add_child(head)
 
+	# EVERY REFUSAL MUST BE VISIBLE (project rule), and at a dock venue that CANNOT be
+	# ship._flash_note: flight_hud hides `_center_note` whenever the ship is docked
+	# (`_center_note.visible = flying`), so the Speak's Easy was writing every "Not
+	# enough credits", every "Mission log full", every turn-in result and every quest
+	# note from Krayt's table into a hidden label. The screen had no voice at all.
+	# The Verge deck had already solved this with its own `_msg`; the shell owns it now.
+	_msg_label = RichTextLabel.new()
+	_msg_label.bbcode_enabled = true
+	_msg_label.fit_content = true
+	_msg_label.visible = false
+	add_child(_msg_label)
+
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 22)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -115,6 +138,18 @@ func build(title: String) -> void:
 
 	cols.add_child(_build_left())
 	cols.add_child(_build_right())
+	Tutor.register("venue_board", _offers)
+	if _meter != null:
+		Tutor.register("venue_standing", _meter)
+
+
+## Ping overlays go on the HOST canvas, never in this VBox: a TutorPing is a full-rect
+## Control and a container would lay it out as a row. The host calls this once.
+func mount_pings(canvas: Node) -> void:
+	for a in ANCHORS:
+		var ping := TutorPing.new()
+		ping.anchor = str(a)
+		canvas.add_child(ping)
 
 
 func _build_left() -> Control:
@@ -228,10 +263,59 @@ func refresh() -> void:
 	Tutor.safe = true
 	Tutor.context = "dock"
 	Tutor.venue = venue
+	_msg_label.visible = _msg != ""
+	_msg_label.text = "[color=#f2b859]%s[/color]" % _msg
+	_msg = ""
 	_refresh_board()
 	_refresh_meter()
 	_refresh_quartermaster()
 	_refresh_door()
+	# LAST, so the snapshot sees the finished screen (the same ordering rule
+	# DockScreen's _dock_context follows — a context built mid-refresh describes a
+	# half-drawn room).
+	Tutor.observe(context())
+
+
+## THE VENUE'S TUTOR SNAPSHOT. Without one, the declarative engine cannot arm or
+## complete a single lesson here: predicates poll this dictionary, and a venue that
+## publishes nothing is a venue where the tutor is simply switched off. Doug's deck
+## published three keys; the Speak's Easy published none.
+##
+## STANDING IS IN IT (user, 2026-07-27): "the tutor should trigger off pirate faction
+## >= 0." A venue's lessons should arm off your standing with the faction that owns the
+## room — that is the modern way to say "you are welcome here", and the Tutor.safe /
+## venue machinery predates factions entirely.
+func context() -> Dictionary:
+	var key := _standing_key()
+	return {
+		"flying": false,
+		"venue": venue,
+		"faction": faction,
+		"standing": Standing.get_points(key) if key != "" else 0,
+		"board_open": board_open.call(),
+		"trusted": prof != "" and trust.call(),
+		"office_open": prof != "" and Professions.office_open(prof),
+		"no_profession": Pilot.profession == "",
+		"commission_eligible": key != "" and Standing.eligible(key),
+		"pip_showing": talks.has_news(npc),
+		"turn_in_here": _has_turn_in_here(),
+	}
+
+
+## Is there work here you could hand in right now? The pip that says so, which the
+## station's Missions tab has worn since 2026-07-22 and no bespoke venue ever did.
+func _has_turn_in_here() -> bool:
+	for m in MissionLog.active:
+		if MissionLog.venue_ok_at(m, venue) and MissionLog.is_complete(m, ship):
+			return true
+	return false
+
+
+## SAY IT, then redraw. Anything that can be refused has to be able to explain itself,
+## and at a dock the flight HUD is not listening.
+func flash(text: String) -> void:
+	_msg = text
+	changed.emit()
 
 
 func _refresh_board() -> void:
@@ -491,8 +575,7 @@ func take_selected() -> void:
 		Tutor.did("accepted_contract")
 	else:
 		Sfx.play("click", -16.0, 0.6)
-	ship._flash_note(str(r.msg))
-	changed.emit()
+	flash(str(r.msg))
 
 
 ## THROUGH MissionLog.complete(), which carries the standing credit, Quests.
@@ -504,8 +587,12 @@ func turn_in(index: int) -> void:
 		Tutor.did("turned_in")
 		Tutor.retire("turn_in")
 		Sfx.play("jingle", -8.0)
-	ship._flash_note(str(r.msg))
-	changed.emit()
+	# Quest notes raised by the turn-in (a completed beat, new work) are said HERE too
+	# — they used to go to the hidden flight note and vanish.
+	var said := str(r.msg)
+	for note in Quests.take_notes():
+		said += "\n%s" % str(note)
+	flash(said)
 
 
 func _standing_key() -> String:

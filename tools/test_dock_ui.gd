@@ -55,6 +55,9 @@ func _ready() -> void:
 		_case_no_trust_no_shelf,
 		_case_a_stocked_row_states_its_price_of_entry,
 		_case_the_meter_measures_the_rung_being_climbed,
+		_case_a_venue_can_speak,
+		_case_a_bespoke_venue_drains_every_held_talk,
+		_case_the_shoal_lesson_arms_off_pirate_standing,
 		_case_withheld_abilities_are_not_on_sale,
 		_case_withholding_is_all_or_nothing,
 		_case_ability_tooltips_carry_numbers,
@@ -715,6 +718,109 @@ func _case_the_meter_measures_the_rung_being_climbed() -> void:
 		"at the top rung there is nothing left to climb")
 
 
+## EVERY REJECTION MUST BE VISIBLE (project rule), and at a dock the flight HUD is not
+## listening: flight_hud hides `_center_note` whenever the ship is docked. So the
+## Speak's Easy was writing every refusal — "Not enough credits", "Mission log full",
+## every turn-in result, every quest note from Krayt's table — into a hidden label. The
+## screen was mute and nothing said so.
+##
+## THE ASSERTION IS ON SCREEN, not on the call: `ship._flash_note` was being CALLED
+## correctly the whole time. Only a walk of the real control tree can tell the
+## difference between "said it" and "said it where nobody could hear".
+func _case_a_venue_can_speak() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true
+	Standing.reset()
+	bar.refresh()
+
+	_ok(not _find_visible_text(bar, "Not enough credits"),
+		"the venue says nothing it has not been asked to say")
+	bar._venue.flash("Not enough credits (180c needed).")
+	_ok(_find_visible_text(bar, "Not enough credits"),
+		"a refusal is VISIBLE on the venue itself, not on the hidden flight note")
+
+	# AND IT DOES NOT GO STALE. A message that survives the next redraw becomes a lie
+	# the moment the state it described changes.
+	bar.refresh()
+	_ok(not _find_visible_text(bar, "Not enough credits"),
+		"...and is said once, then cleared")
+	bar.queue_free()
+	ship.queue_free()
+
+
+## HEAR EVERYTHING THEY ARE HOLDING, IN ONE VISIT — the station learned this in
+## 2026-07-22 ("Standing With the Board" sat un-started behind a second click on the
+## same button) and the bespoke venues were written afterwards WITHOUT the fix, each
+## popping a single talk. Vyper holds a debrief and the next briefing at the same
+## moment for exactly the same reason Ruel does.
+func _case_a_bespoke_venue_drains_every_held_talk() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true
+	Standing.reset()
+	bar.refresh()
+
+	Quests.pending_talks.append({"giver": "vyper", "text": "First thing.", "quest": "a"})
+	Quests.pending_talks.append({"giver": "vyper", "text": "Second thing.", "quest": "b"})
+	_ok(bar._venue.talks.has_news("vyper"), "the desk knows she is holding something")
+	_ok(bar._venue.talks.held_for("vyper").size() == 2, "...both of them")
+
+	bar._venue.talks.drain("vyper")
+	# Draining takes them out of the global queue, so a second click cannot re-serve
+	# them — the old path popped one and left the other behind a redundant button.
+	_ok(Quests.talks_for("vyper").is_empty(),
+		"one visit clears her queue — no second click for the second thing")
+	_ok(not bar._venue.talks.has_news("vyper"), "...and the news dot goes out")
+	Quests.pending_talks.clear()
+	bar.queue_free()
+	ship.queue_free()
+
+
+## "The tutor should trigger off pirate faction >= 0" (user, 2026-07-27). The Shoal's
+## lesson arms off the ledger of the faction that owns the room, which is the only
+## honest way to say "you are welcome here now" — Tutor.safe/venue predates factions.
+func _case_the_shoal_lesson_arms_off_pirate_standing() -> void:
+	var arm: Callable = Tutor._arm_pred.get("shoal_standing", Callable())
+	_ok(arm.is_valid(), "the Shoal lesson has an arming predicate")
+	if not arm.is_valid():
+		return
+	_ok(not arm.call({"venue": "shoal", "standing": -50}),
+		"under Krayt's truce it stays quiet — you are a guest, not crew")
+	_ok(arm.call({"venue": "shoal", "standing": 0}),
+		"Vyper's banner at 0 is what wakes it")
+	_ok(arm.call({"venue": "shoal", "standing": 140}), "...and it holds above that")
+	_ok(not arm.call({"venue": "station", "standing": 500}),
+		"a Guardian's good name never triggers the Shoal's lesson")
+	# A missing key must be falsy, never a crash — the "can't jam" rule for predicates.
+	_ok(not arm.call({}), "an empty context is simply not the Shoal")
+
+	# AND THE VENUE PUBLISHES WHAT IT READS. A predicate polling a key nobody writes is
+	# a lesson that can never arm; this is the half that is easy to forget.
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true
+	Standing.reset()
+	Standing.add("privateer", 20 - Standing.get_points("privateer"))
+	bar.refresh()
+	var c := bar._venue.context()
+	_ok(str(c.get("venue", "")) == "shoal", "the venue names itself in its snapshot")
+	_ok(int(c.get("standing", -1000)) == 20,
+		"...and publishes the standing the predicate reads (%s)" % str(c.get("standing")))
+	_ok(arm.call(c), "so the real snapshot arms the real lesson")
+	bar.queue_free()
+	ship.queue_free()
+
+
 ## A tooltip that only says what an ability DOES cannot settle "which of these
 ## two goes in my last gem slot". Every ability must state its cost, and the
 ## timed ones their cadence — read LIVE off the fitted module, so a better chip
@@ -1201,9 +1307,9 @@ func _case_every_lesson_is_completable() -> void:
 	# What the built screens actually offer, at both venues.
 	# Registration/pings are collected PER VENUE, because a station-only anchor is
 	# correctly absent from the colony and vice versa.
-	var reg := {"station": {}, "planet": {}}
-	var ping := {"station": {}, "planet": {}}
-	var tabs := {"station": {}, "planet": {}}
+	var reg := {"station": {}, "planet": {}, "shoal": {}}
+	var ping := {"station": {}, "planet": {}, "shoal": {}}
+	var tabs := {"station": {}, "planet": {}, "shoal": {}}
 	for is_station in [true, false]:
 		var vkey := "station" if is_station else "planet"
 		Tutor._anchors.clear()
@@ -1216,6 +1322,37 @@ func _case_every_lesson_is_completable() -> void:
 		_collect_pings(screen, pd)
 		ping[vkey] = pd
 		screen.queue_free()
+
+	# THE BESPOKE VENUES ARE REAL SCREENS TOO. The Verge was skipped here with a
+	# "checked by hand" comment, which meant a Shoal- or Verge-tagged lesson could name
+	# an anchor nothing registers and ship — the exact class of authoring mistake this
+	# whole case exists to catch, exempted at the two venues least likely to be noticed.
+	# Now that VenueLayout registers a standard anchor set, building one is three lines
+	# and every venue on the shell is validated the same way.
+	Tutor._anchors.clear()
+	var bar_ship := TestShip.new()
+	add_child(bar_ship)
+	bar_ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(bar_ship)
+	add_child(bar)
+	bar.visible = true
+	bar.refresh()
+	for a in Tutor._anchors:
+		reg["shoal"][str(a)] = true
+	var bar_pings := {}
+	_collect_pings(bar, bar_pings)
+	ping["shoal"] = bar_pings
+	# The shell's standard anchor set must actually be claimed and drawable, or a lesson
+	# pointing at "the board" or "the meter" jams at every venue at once.
+	for a in VenueLayout.ANCHORS:
+		if a == "office_door":
+			continue          # lazy: registers only once you have an invitation
+		_ok(reg["shoal"].has(str(a)),
+			"the venue shell registers '%s' at a bespoke venue" % a)
+		_ok(bar_pings.has(str(a)),
+			"...and mounts a ping overlay to draw it" % [])
+	bar.queue_free()
+	bar_ship.queue_free()
 
 	# Anchors that register the moment their widget is DRAWN rather than when the
 	# screen is built — the office door only exists once you have an invitation.
@@ -1244,7 +1381,7 @@ func _case_every_lesson_is_completable() -> void:
 			_ok(anchor != "", "%s names an anchor" % label)
 			_ok(str(st.get("text", "")) != "", "%s has copy to show" % label)
 			var venue := str(st.get("venue", ""))
-			_ok(venue in ["", "station", "planet", "verge"],
+			_ok(venue in ["", "station", "planet", "verge", "shoal"],
 				"%s has a legal venue ('%s')" % [label, venue])
 
 			if lazy.has(anchor):

@@ -296,7 +296,11 @@ static func complete(index: int, ship, here: String, tutorial_done: bool) -> Dic
 	var fac := faction_for(m)
 	if fac != "":
 		Standing.add(fac, 2)
-	Quests.check_new_work(here == "station", tutorial_done)
+	# BY VENUE, not by a station/planet bool: `here` is already the venue name, and
+	# collapsing it to a bool made every non-station dock read as the COLONY — so
+	# handing in a contract at the Shoal let Elder Imari post you freight work in a
+	# pirate bar.
+	Quests.check_new_work(here == "station", tutorial_done, here)
 	return {"ok": true, "msg": "Contract complete. Payment received.", "faction": fac}
 
 

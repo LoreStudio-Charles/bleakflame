@@ -54,10 +54,6 @@ func _init(p_ship: TestShip) -> void:
 
 func _ready() -> void:
 	add_to_group("dock_screens")
-	var ping := TutorPing.new()
-	ping.anchor = "office_door"
-	add_child(ping)
-
 	var shade := ColorRect.new()
 	shade.color = Color(0.03, 0.02, 0.02, 1.0)   # smoky, rust-dark
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -83,10 +79,14 @@ func _ready() -> void:
 	})
 	panel.add_child(_venue)
 	_venue.build("THE SPEAK'S EASY — Rust Shoal")
+	_venue.mount_pings(self)
 	_venue.changed.connect(refresh)
 	_venue.talk_pressed.connect(_on_talk)
 	_venue.office_opened.connect(_open_office)
 	_venue.ware_bought.connect(_on_buy_install)
+	# When the whole chain of talks has played out, redraw once against the final
+	# quest/journal state — not after each panel, which would flicker mid-conversation.
+	_venue.talks.chain_finished.connect(refresh)
 
 	_body = _venue.body
 
@@ -115,7 +115,7 @@ func refresh() -> void:
 
 	_venue.refresh()
 	# Vyper speaks when she has something; otherwise the desk still opens on a word.
-	_venue.desk.set_news(not Quests.talks_for("vyper").is_empty(),
+	_venue.desk.set_news(_venue.talks.has_news("vyper"),
 		"She's watching the door, not you.")
 	_refresh_fence()
 
@@ -158,36 +158,21 @@ func _refresh_fence() -> void:
 	row.add_child(btn)
 
 
-## Quest business first, a word with her otherwise. Same shape as every other desk:
-## the button is never a dead click.
+## Quest business first, a word with her otherwise. THROUGH THE SHARED TalkChain: this
+## used to pop ONE held talk and stop, with no check_new_work and no replay guard —
+## three playtest bugs DockScreen had already fixed and the bar was written without.
+## The button is never a dead click.
 func _on_talk(_who: String) -> void:
-	Pilot.meet("vyper")
-	var waiting := Quests.talks_for("vyper")
-	if waiting.is_empty():
-		var chat := DialoguePanel.new("vyper",
-			{"start": {"text": Npcs.idle_line("vyper"),
-				"choices": [{"text": "Later, then.", "next": "end"}]}},
-			func(_a: String) -> String: return "")
-		chat.closed.connect(refresh)
-		_active_talk = chat
-		add_child(chat)
+	if _venue.talks.drain("vyper"):
 		return
-	var talk: Dictionary = waiting[0]
-	Quests.take_talk("vyper")
-	var panel := DialoguePanel.new("vyper", talk.get("nodes", {}),
+	Pilot.meet("vyper")
+	var chat := DialoguePanel.new("vyper",
+		{"start": {"text": Npcs.idle_line("vyper"),
+			"choices": [{"text": "Later, then.", "next": "end"}]}},
 		func(_a: String) -> String: return "")
-	if talk.has("text"):
-		panel = DialoguePanel.new("vyper",
-			{"start": {"text": str(talk.text),
-				"choices": [{"text": "Understood.", "next": "end", "style": "primary"}]}},
-			func(_a: String) -> String: return "")
-	panel.vo_prefix = str(talk.get("vo", ""))
-	panel.closed.connect(func() -> void:
-		if talk.has("advance"):
-			Quests.advance_talk(str(talk.advance))
-		refresh())
-	_active_talk = panel
-	add_child(panel)
+	chat.closed.connect(refresh)
+	_active_talk = chat
+	add_child(chat)
 
 
 func _open_office(prof: String) -> void:
@@ -248,35 +233,35 @@ func _on_buy_install(path: String) -> void:
 	var comp: ComponentDef = load(path)
 	var price := int(ItemVisuals.buy_price(comp) * QUART_MARKUP)
 	if Wallet.credits < price:
-		ship._flash_note("Not enough credits (%dc needed)." % price)
+		_venue.flash("Not enough credits (%dc needed)." % price)
 		Sfx.play("click", -16.0, 0.6)
 		return
 
 	if comp is AbilityChipDef:
 		var err := ship.build.chip_error(comp as AbilityChipDef, Pilot.profession, Pilot.level())
 		if err != "":
-			ship._flash_note(err)
+			_venue.flash(err)
 			Sfx.play("click", -16.0, 0.6)
 			return
 		Wallet.credits -= price
 		ship.build.chips.append(comp)
 		ship.apply_build(ship.build)
 		Sfx.play("jingle", -6.0)
-		ship._flash_note("The Shoal's crew slots it into your Coupling — %s is in your library." \
+		_venue.flash("The Shoal's crew slots it into your Coupling — %s is in your library." \
 			% comp.display_name)
 		refresh()
 		return
 
 	var slot := _install_slot(comp)
 	if slot < 0:
-		ship._flash_note("No free System berth — unfit something first, then come back.")
+		_venue.flash("No free System berth — unfit something first, then come back.")
 		Sfx.play("click", -16.0, 0.6)
 		return
 	Wallet.credits -= price
 	ship.build.slots[slot] = comp
 	ship.apply_build(ship.build)
 	Sfx.play("jingle", -6.0)
-	ship._flash_note("The Shoal's crew bolts it on — %s installed." % comp.display_name)
+	_venue.flash("The Shoal's crew bolts it on — %s installed." % comp.display_name)
 	refresh()
 
 
@@ -300,6 +285,6 @@ func _present_krayt_if_due() -> void:
 		_active_talk = null
 		Quests.advance_goto_dialogue(qid)
 		for note in Quests.take_notes():
-			ship._flash_note(note)
+			_venue.flash(note)
 		refresh())
 	add_child(panel)

@@ -177,6 +177,18 @@ const LESSONS := {
 			"text": "A door has opened. Commissions are signed in person, in their office — and reading the terms costs you nothing. Step inside and see what it grants before you decide."},
 	],
 
+	# THE SHOAL'S LADDER, taught the moment Vyper's banner lands (user, 2026-07-27:
+	# "the tutor should trigger off pirate faction >= 0"). ARMED OFF STANDING, which is
+	# the only honest way to say "you are welcome here now" — the old Tutor.safe/venue
+	# machinery predates factions and could not express it.
+	#
+	# UNPINNED + dwell on purpose: it can only fire at a bespoke venue with no tab bar,
+	# and an informational step with nothing to click can never starve the queue.
+	"shoal_standing": [
+		{"venue": "shoal", "where": "dock", "anchor": "venue_standing", "pin": false, "dwell": 14.0,
+			"text": "Krayt's truce got you through the door; the banner over the bar means Vyper will deal with you. Everything here is bought with STANDING, not credits — run her work and the meter under the board climbs. It opens her back room, then her fence. The Shoal remembers who flew for it."},
+	],
+
 	# --- INTRODUCTIONS. The campaign personally presents Ruel, Voss, Dex, Imari,
 	# the Counter and Krayt; it never presents SELLA or DOUG at all, so a pilot
 	# could finish the whole starter arc without learning that the Explorer's
@@ -902,6 +914,11 @@ static func _build_preds() -> void:
 	_arm_pred["pips"] = func(c): return c.get("pip_showing", false)
 	# A commission door has been drawn (earned).
 	_arm_pred["office"] = func(c): return c.get("office_open", false)
+	# THE SHOAL, off the pirate faction's own ledger. `standing` is published by
+	# VenueLayout.context() and is that venue's faction, so this reads "Vyper's banner
+	# is up" without the lesson needing to know which key the Shoal is filed under.
+	_arm_pred["shoal_standing"] = func(c): return str(c.get("venue", "")) == "shoal" \
+		and int(c.get("standing", -1000)) >= 0
 	# A commission is available and the pilot has never taken one.
 	_arm_pred["commission"] = func(c): return str(c.get("venue", "")) == "station" and c.get("no_profession", false) and c.get("commission_eligible", false)
 	_done_pred["commission"] = [

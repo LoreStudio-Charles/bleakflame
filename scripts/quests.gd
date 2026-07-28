@@ -638,7 +638,16 @@ static func on_dock(is_station: bool, _ship, tutorial_done: bool) -> void:
 ## Split out of on_dock so it can also fire the instant a contract turn-in
 ## COMPLETES a quest — the next giver greets you on the same dock, no re-docking.
 ## "one fresh per call" pacing stands; a completion is one call.
-static func check_new_work(is_station: bool, tutorial_done: bool) -> void:
+## `venue` NAMES WHERE YOU ARE, and outranks `is_station` when given (2026-07-27).
+## The bool could only ever say station-or-planet, so everywhere else in the system
+## resolved to "planet" — a turn-in at the Rust Shoal ran this as though you were
+## standing on the colony's landing pad, and Elder Imari could hand you freight work
+## in a pirate bar. That is the same "harbourmaster following you around the system"
+## bug the guard below was written to stop, one venue further out.
+## Bespoke-venue givers (Krayt, Vyper) are unaffected either way: they are not
+## `is_dockside`, so the guard never applied to them.
+static func check_new_work(is_station: bool, tutorial_done: bool, venue := "") -> void:
+	var here := venue if venue != "" else ("station" if is_station else "planet")
 	for q in QUESTS:
 		if active.has(q.id) or completed.has(q.id):
 			continue
@@ -647,7 +656,7 @@ static func check_new_work(is_station: bool, tutorial_done: bool) -> void:
 		# A giver can only hand you work WHERE THEY ARE. Without this Ruel
 		# briefed station contracts over the colony's landing pad, which reads
 		# as the harbourmaster following you around the system.
-		if Npcs.is_dockside(str(q.giver)) and not Npcs.at_venue(str(q.giver), is_station):
+		if Npcs.is_dockside(str(q.giver)) and Npcs.venue_of(str(q.giver)) != here:
 			continue
 		var req: String = q.requires
 		if not _prereq_met(q, req, tutorial_done):

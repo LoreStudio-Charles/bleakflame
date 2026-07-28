@@ -556,12 +556,46 @@ func _init() -> void:
 		failures += 1
 	Quests.reset()
 
+	# ---- A GIVER CAN ONLY HAND YOU WORK WHERE THEY STAND (venue, not a bool) ----
+	# check_new_work took a station/planet BOOLEAN, so every venue that is neither --
+	# the Rust Shoal, the Verge -- resolved to "planet", and MissionLog.complete passed
+	# `here == "station"` straight into it. Hand in a contract at the Shoal and Elder
+	# Imari, who has never left the colony, could post you freight work in a pirate bar.
+	# That is the same bug the giver guard was written to stop, one venue further out.
+	Quests.reset()
+	Quests.completed.append("prove_wings")
+	var colony_giver_at_shoal := false
+	Quests.check_new_work(false, true, "shoal")
+	for qid in Quests.active:
+		if Npcs.venue_of(str(Quests.quest_def(qid).giver)) == "planet":
+			colony_giver_at_shoal = true
+	if colony_giver_at_shoal:
+		print("FAIL: a colony giver handed out work at the Rust Shoal")
+		failures += 1
+
+	# ...and the venue it IS theirs still works, or the guard has simply shut everything.
+	Quests.reset()
+	Quests.completed.append("prove_wings")
+	Quests.check_new_work(true, true, "station")
+	var started_at_station := Quests.active.size()
+	if started_at_station == 0:
+		print("FAIL: no station work starts at the station — the venue guard shut the door on everyone")
+		failures += 1
+
+	# The bool path must be untouched for the two venues that always had it.
+	Quests.reset()
+	Quests.completed.append("prove_wings")
+	Quests.check_new_work(true, true)
+	if Quests.active.size() != started_at_station:
+		print("FAIL: omitting the venue changed what starts at the station")
+		failures += 1
+
 	Quests.reset()
 	PoiMap.reset()
 	Research.reset()
 	Wallet.credits = 0
 	Wallet.xp = 0
-	
+
 	if failures == 0:
 		print("test_quests: ALL PASS")
 	else:
