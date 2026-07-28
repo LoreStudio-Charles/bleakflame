@@ -33,9 +33,12 @@ const SCRAMBLE_CHARS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 ##
 ##   G    Galean
 ##   CT   Cargo Transport
-##   VIT  Vitality Insured Transport — LIVE CARGO. Colloquially "Very Important Things":
-##        when your family ships out, that is just what folk say. "Be careful, you're
-##        carrying very important things."
+##   VIT  Vitality Insured Transport — LIVE CARGO, the premium tier. Colloquially "Very
+##        Important Things": when your family ships out, that is just what folk say.
+##        "Be careful, you're carrying very important things."
+##   CVT  Common Vital Transport — the same cargo, carried cheap. The pairing is the
+##        whole class system in four letters: everyone's people are vital, and only
+##        some of them are insured.
 ##   CN   Confederate Navy
 ##   EU   Enforcement Unit
 ##
@@ -48,12 +51,8 @@ const NATION := {
 }
 const ROLE_CODE := {
 	"hauler": "CT",
-	"liner": "VIT",      # reserved: no liner hull exists yet — the PREMIUM passenger tier
-	# THE BUDGET PASSENGER CLASS IS A KNOWN GAP (user, 2026-07-28): "lower rate liners
-	# should exist too, but I don't have a callsign for them." Deliberately unnamed
-	# rather than invented — a made-up code would read as canon the moment it shipped.
-	# Its VOICE IS ALREADY WRITTEN and waiting under ShipHails.LINES["budget_liner"];
-	# adding the prefix here is what wires it up, and nothing else has to change.
+	"liner": "VIT",         # PREMIUM passenger; reserved, no liner hull exists yet
+	"common_liner": "CVT",  # the cheap crossing; reserved, same
 	"navy": "CN",
 	"guardian": "EU",
 }
@@ -61,6 +60,7 @@ const ROLE_CODE := {
 const PREFIX := {
 	"hauler": "GCT",
 	"liner": "GVIT",
+	"common_liner": "GCVT",
 	"navy": "GCN",
 	"guardian": "GEU",
 }

@@ -52,20 +52,12 @@ const LINES := {
 		"\"Signal received. We are carrying very important things, and we know it.\"",
 		"\"Acknowledged, and courteous of you to ask. Few do this far out.\"",
 	],
-	# THE CHEAP CROSSING — WRITTEN, KEPT, AND NOT YET REACHABLE (user, 2026-07-28: "I do
-	# need the one you created though, so don't remove it entirely").
-	#
-	# These were the liner lines until the tier was settled: cold coffee, homesickness, a
-	# long way to go. Wrong for a GVIT, which is the fancy end — right for the lower-rate
-	# passenger class that exists in the fiction and HAS NO CALLSIGN YET
-	# (ShipNames.ROLE_CODE). So the voice waits here as DATA rather than as prose in a
-	# comment, because a comment is what gets deleted in the next tidy-up.
-	#
-	# NOTHING ROUTES HERE. No prefix maps to it, so `line()` can never pick this set —
-	# and the key is deliberately plain rather than lore-shaped, because inventing a
-	# canon-sounding name for something the user has not named is how a placeholder
-	# becomes the record. It gets its real name when the callsign does.
-	"budget_liner": [
+	# GCVT — COMMON VITAL TRANSPORT, the cheap crossing (user, 2026-07-28). These were
+	# the liner lines until the tier was settled, and they were wrong for a GVIT and
+	# exactly right here: cold coffee, homesickness, a long way to go. The pairing does
+	# the work — a GVIT answers gracious and unhurried two hundred metres away, and the
+	# difference between the two replies IS the class system.
+	"common_liner": [
 		"\"Reading you. Two hundred and six souls and a lot of cold coffee. All well.\"",
 		"\"Clear signal, Captain. We're carrying very important things. Aren't we all.\"",
 		"\"Copy. Half of them asleep, half of them homesick. Standard crossing.\"",

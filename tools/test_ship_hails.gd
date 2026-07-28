@@ -37,15 +37,29 @@ func _init() -> void:
 		_ok(ShipHails.LINES.has(str(role)),
 			"a %s can answer as a %s, not as unregistered noise" % [role, role])
 
-	# A WRITTEN VOICE WAITING FOR ITS CALLSIGN. The lower-rate passenger class exists in
-	# the fiction and has no prefix yet (user), so its lines live in LINES with nothing
-	# routing to them. Asserted BOTH ways: the writing must not be tidied away as dead
-	# data, and it must not be wired up before the user has named the class — an
-	# invented prefix reads as canon the moment it ships.
-	_ok(not (ShipHails.LINES.get("budget_liner", []) as Array).is_empty(),
-		"the cheap crossing's voice is kept, waiting for a callsign")
-	_ok(not ShipNames.ROLE_CODE.has("budget_liner"),
-		"...and nothing routes to it yet, because the class is still unnamed")
+	# NO PREFIX MAY BE A PREFIX OF ANOTHER. role_of() matches with begins_with, so an
+	# ambiguous pair would misroute silently to whichever key the dictionary yields
+	# first — and the marks are getting denser: GCVT joined GCT this session, and the
+	# user has said other nations and races bring their own. GCVT is safe (G-C-V vs
+	# G-C-T) but "safe by inspection" is exactly what stops being true at the fifth
+	# nation, so it is checked rather than eyeballed.
+	for a in ShipNames.PREFIX.values():
+		for b in ShipNames.PREFIX.values():
+			if str(a) == str(b):
+				continue
+			_ok(not str(a).begins_with(str(b)),
+				"%s is not swallowed by %s — role_of matches on begins_with" % [a, b])
+
+	# THE CHEAP CROSSING IS WIRED. GCVT — Common Vital Transport (user, 2026-07-28) —
+	# and the pairing with GVIT is the point: the same cargo, carried cheap.
+	_ok(ShipNames.PREFIX.get("common_liner", "") == "GCVT",
+		"the cheap crossing has its callsign")
+	_ok(ShipHails.role_of("GCVT4K7B2") == "common_liner",
+		"...a GCVT reads as one, not as a GCT hauler")
+	_ok(ShipHails.role_of("GCT4K7B2") == "hauler",
+		"...and a GCT still reads as a hauler, not as a GCVT")
+	_ok(not (ShipHails.LINES.get("common_liner", []) as Array).is_empty(),
+		"...and the voice written for it survived the wait")
 
 	# THE SAME SHIP ALWAYS SAYS THE SAME THING. A stranger who answers differently every
 	# time you raise them is a slot machine, not somebody you passed.
