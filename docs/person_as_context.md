@@ -190,20 +190,30 @@ levels. The tint can say something about quality. Cooler tint jobs apply to bett
 hulls."* Unique art per level is straightforwardly good — it makes a level band
 something you SEE.
 
-**But tint is spoken for, twice.** CLAUDE.md, 2026-07-25: *"HULL COLOUR NOW MEANS
-FACTION, EXCLUSIVELY"* — that rule is what moved rare AI specialists off repainted
-hulls and onto a sensor read, and `test_widows` guards it. And quality ALREADY has a
-colour language: the Grade palette (grey / white / green / blue / purple / gold / red,
-always paired with pips for colourblind safety). A third meaning on the same surface
-un-teaches both.
+**Resolved 2026-07-27 (user).** I flagged a collision with *"HULL COLOUR MEANS FACTION,
+EXCLUSIVELY"* — the user scoped it instead:
 
-**Recommended split** (decide before building): better hulls get better ART — more
-elaborate, more detailed, more obviously expensive paint — while the GRADE BORDER and
-PIPS carry quality exactly as they do on every other tile in the Armory. "Cooler" is
-then a fidelity axis, not a colour code, and the shipyard grid teaches the same quality
-vocabulary as the shop beside it. Faction keeps the tint; grade keeps the border.
+> "This is a rule for NPC ships where players need to identify who they are shooting.
+> Player ships should bear markings of pride and not be like wearing a uniform. […]
+> Hue can vary for players though, because players need to look special. They are the
+> heroes."
 
-**Market → grid, plus a real economy question.** Scarcity vs abundance ("is the player
+So the faction rule is a TARGET-READ rule: it binds the ships you are reading, not the
+one you are flying. And what makes player paint safe is the same 2026-07-25 decision
+that raised the flag — once role moved off paint onto a sensor read, colour stopped
+being load-bearing for identification at all, so it is free to carry pride. Identity
+comes from `Ship.classify`, the target bracket and the friendlies roster; never pixels.
+
+**The ladder:** fidelity rises by **GRADE primarily, LEVEL secondarily** — more
+elaborate, more obviously expensive art. "Cooler" is a fidelity axis, not a hue code,
+so the Grade palette (grey / white / green / blue / purple / gold / red + pips, always
+paired for colourblind safety) keeps carrying quality on every tile in every shop, and
+the shipyard grid teaches the same vocabulary as the Armory beside it. **Player hue is
+free on top of that** — the grade border says what it is worth, the paint says whose
+it is.
+
+**Market → grid, plus a real economy question. DEFERRED 2026-07-27 (user): "agreed
+on the market. another place we just haven't had time to create the feature."** Scarcity vs abundance ("is the player
 pushing their luck trading here") is NOT a UI feature: today's green/red only compares a
 good against a venue's fixed import/export list, so the fifth identical run pays exactly
 what the first did. Showing saturation means TradeGoods gains LOCAL STOCK that a sale
