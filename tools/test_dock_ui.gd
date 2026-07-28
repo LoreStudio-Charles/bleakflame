@@ -1390,7 +1390,7 @@ func _case_every_lesson_is_completable() -> void:
 				if at != "" and str((t as Dictionary).get("venue", "station")) != at:
 					continue
 				posted += 1
-				if want in MissionComputer._short(d):
+				if want in ContextScreen.short(d):
 					survives += 1
 			_ok(posted > 0, "lesson '%s' names row '%s' — a contract on that board says it" % [lid, want])
 			_ok(posted > 0 and survives == posted,
