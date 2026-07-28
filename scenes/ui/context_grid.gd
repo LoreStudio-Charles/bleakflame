@@ -34,6 +34,10 @@ func _init(tile_width := 128.0) -> void:
 	# panel, mode row) is never built and every widget call lands on null.
 	super()
 	_tile_w = tile_width
+	# THE SHELF IS THE SCREEN. A grid's detail panel is somewhere to READ one thing
+	# without holding the mouse still on its tooltip — it is not the main event, and at
+	# the list default it took two thirds of a shop and left the goods crammed.
+	detail_ratio(0.55)
 	_shelves = HBoxContainer.new()
 	_shelves.add_theme_constant_override("separation", 16)
 	_shelves.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -75,6 +79,15 @@ func shelf(title := "", hint := "") -> GridContainer:
 		sub.add_theme_font_size_override("font_size", 11)
 		sub.add_theme_color_override("font_color", UiTheme.DIM)
 		col.add_child(sub)
+	# THE EMPTY NOTE GOES ABOVE THE SHELF, not below it. The scroll takes the slack, so a
+	# note added after it lands at the FOOT of the column — hundreds of pixels from the
+	# heading it is explaining, which reads as a stray caption rather than the answer to
+	# "why is this empty".
+	var note_lbl := Label.new()
+	note_lbl.add_theme_color_override("font_color", UiTheme.DIM)
+	note_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note_lbl.visible = false
+	col.add_child(note_lbl)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -88,15 +101,9 @@ func shelf(title := "", hint := "") -> GridContainer:
 	scroll.add_child(g)
 	scroll.resized.connect(func() -> void: fit_columns(scroll.size.x, g))
 	fit_columns(scroll.size.x, g)
-	# THE EMPTY NOTE IS NOT A TILE. Put inside the grid it lands in ONE CELL — a column
-	# one tile wide — and autowraps to a single character per line, which is how it first
-	# shipped: a vertical stack of letters where a sentence should be. It belongs to the
-	# shelf, not to the shelf's contents.
-	var note_lbl := Label.new()
-	note_lbl.add_theme_color_override("font_color", UiTheme.DIM)
-	note_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note_lbl.visible = false
-	col.add_child(note_lbl)
+	# (The note above is NOT A TILE. Put inside the grid it lands in one tile-wide cell
+	# and autowraps to a single character per line — a vertical stack of letters where a
+	# sentence should be, which is how it first shipped.)
 	_grids.append(g)
 	_notes[g] = note_lbl
 	if grid == null:

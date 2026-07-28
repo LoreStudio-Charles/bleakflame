@@ -3,14 +3,28 @@ extends ContextGrid
 ## THE ARMORY — buy and sell ship modules. The second shop through ContextGrid, and the
 ## one that decided the grid needed to hold more than one shelf.
 ##
-## TWO SHELVES ARE NOT A RULE VIOLATION. I very nearly collapsed them behind a mode
-## toggle on the grounds that "everything wanting a third column is one of the three
-## zones in disguise" — user, correctly: "Armory is a place to buy and sell ship
-## modules. What is the third thing?" There isn't one. The details panel IS the right
-## zone; the two grids are both the LEFT zone. The Mission Computer's third column was a
-## violation because it DUPLICATED the second with the action on the copy; a shop's
-## stock and your own gear are the two ends of one transaction, and comparing them is
-## the point ("can I sell this to afford that").
+## A SHOP IS TWO INVENTORIES. Nothing else (user, 2026-07-28): "the only two things
+## important at a shop are: left the inventory of items you may buy, right the inventory
+## of items you may sell."
+##
+## It took two wrong turns to get there, both mine. First I was going to collapse the two
+## grids behind a mode toggle, because "everything wanting a third column is one of the
+## three zones in disguise" — user: "Armory is a place to buy and sell ship modules. What
+## is the third thing?" There isn't one; buying against selling is comparative ("can I
+## sell this to afford that") and a toggle would have destroyed it. Then I kept a details
+## column and hung a Buy button on it — which is the SAME defect the Mission Computer had
+## (a third column restating the second, with the action on the copy), and it also undid
+## a recorded decision: the "Buy/Sell selected" buttons were deleted in 2026-07-20
+## because RIGHT-CLICK is the buy/sell/fit idiom everywhere.
+##
+## Every tile already hovers a full tooltip, so reading a part is covered. The shelves
+## take the whole width, and the verbs live on the tiles.
+##
+## THE SECOND SHELF IS STILL TEMPORARY (user, same day): a tab holds one thing at a time,
+## so selling needs your gear on the shop screen because the tab strip cannot show the
+## Armory and your inventory together. It is a workaround for the HOST. The moment an
+## inventory opens as an overlay over any context, this is the buy screen and one
+## `shelf()` call goes.
 ##
 ## THE SECOND SHELF IS STILL TEMPORARY (user, 2026-07-28): once stations are walkable,
 ## the Armory becomes the BUY screen and selling moves to the ship paperdoll — a
@@ -41,6 +55,11 @@ func _init(p_ship: TestShip) -> void:
 	# EXPLICIT: a subclass _init suppresses the base's, so the shell is never built.
 	super(ItemTile.SHOP_SIZE.x)
 	ship = p_ship
+	# TWO INVENTORIES, NOTHING ELSE (user, 2026-07-28). Every tile already hovers a full
+	# tooltip, so a details column would only restate it — and restating the thing beside
+	# it, with the action on the copy, is precisely the defect this design was written to
+	# end. The shelves take the whole width.
+	hide_detail()
 	_build_filters()
 	_shop = shelf("EQUIPMENT FOR SALE", "right-click to buy")
 	_yours = shelf("YOUR COMPONENTS", "right-click to sell")
@@ -93,29 +112,6 @@ func fill_list() -> void:
 		empty_note("— nothing here%s —" % band, _shop)
 	if shown_yours == 0:
 		empty_note("— nothing in this category%s —" % band, _yours)
-
-
-func render_detail(md: Dictionary) -> void:
-	var comp: ComponentDef = md.comp
-	title(comp.display_name, UiTheme.AMBER)
-	var body := DockScreen.describe_component(comp)
-	if body != "":
-		note(body)
-	if str(md.kind) == "shop":
-		var price := ItemVisuals.buy_price(comp)
-		var stop := ""
-		if Wallet.credits < price:
-			stop = "Short %dc — you have %dc." % [price - Wallet.credits, Wallet.credits]
-		elif not ship.can_carry(comp):
-			stop = "Your hold can't take it — mass %.0f, and you are carrying %.0f of %.0f." % [
-				comp.mass, ship.cargo_used(), float(ship.stats.get("cargo", 0.0))]
-		action("Buy — %dc" % price, stop,
-			func() -> void: buy_requested.emit(str(md.path)))
-		return
-	var source := str(md.source)
-	stat("Held in", "your hold" if source == "hold" else "the station stash")
-	action("Sell — %dc" % ItemVisuals.sell_price(comp), "",
-		func() -> void: sell_requested.emit(comp, source))
 
 
 ## THE FILTER, as a rule rather than a widget — so what a shelf shows is assertable

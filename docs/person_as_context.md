@@ -87,8 +87,29 @@ So the left-hand zone comes in two forms, chosen by what the items ARE:
   leads, research projects, log entries. You read them. `ContextScreen`.
 - **GRID** — for things that are *objects*: equipment, hulls, commodities. You look at
   them, compare them at a glance, and buy them. The **Armory already is this** —
-  icon + grade border + mark pips + price badge, right-click to buy, details panel on
-  the right. It arrived at the shape before the shape had a name.
+  icon + grade border + mark pips + price badge, right-click to buy. It arrived at the
+  shape before the shape had a name. `ContextGrid`.
+
+### A SHOP HAS NO DETAIL PANEL (user, 2026-07-28)
+
+> "The only two things important at a shop are: left the inventory of items you may buy,
+> right the inventory of items you may sell."
+
+The zones still hold — header = you, left = what's here — but for a shop the right-hand
+zone is **empty on purpose**, because every tile already carries a full hover tooltip. A
+details column beside the shelf restates it, and I had gone further and hung a *Buy*
+button on the copy: the exact defect that killed the Mission Computer's third column,
+rebuilt by the person who had just written it down. It also silently undid a recorded
+decision — the "Buy/Sell selected" buttons were deleted 2026-07-20 because **right-click
+is the buy/sell/fit idiom everywhere**.
+
+So: `ContextGrid.hide_detail()`, and the refusal that used to sit under the dead button
+travels through the venue's own message line instead, which is where every other
+rejection in the game already goes.
+
+**A list still earns its panel.** A contract is a sentence, its turn-in has no gesture
+idiom, and the reason it is blocked belongs on the thing it blocks. The two
+presentations differ in this as well as in shape.
 
 Both are the same context: header = you, left = what's here, right = what's selected
 with its action on it. Only the presentation of "what's here" differs. **Every shop is

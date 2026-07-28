@@ -29,6 +29,7 @@ const ROW_CHARS := 46      # short titles left, full text right
 var header_left: HBoxContainer     ## hosts mount the venue's NPC desk here
 var left: VBoxContainer            ## the subclass's presentation goes here
 var _detail: VBoxContainer
+var _frame: PanelContainer
 var _you: RichTextLabel
 var _sel := ""                     ## stable id of the selection, kept across refreshes
 var _mode := ""
@@ -66,8 +67,13 @@ func _init() -> void:
 	_modes_row.visible = false     # only screens that call set_modes() get a switcher
 	left.add_child(_modes_row)
 
-	var frame := PanelContainer.new()
+	_frame = PanelContainer.new()
+	var frame := _frame
 	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# A LIST context reads right-heavy: the row is a short title and the panel holds the
+	# sentence. A SHOP is the other way round — the shelf IS the screen and the panel is
+	# a place to read one part without holding the mouse still. ContextGrid turns this
+	# down; see detail_ratio().
 	frame.size_flags_stretch_ratio = 1.25
 	frame.add_theme_stylebox_override("panel",
 		UiTheme._box(UiTheme.PANEL, Color(0.2, 0.24, 0.32)))
@@ -165,6 +171,8 @@ func mode_bar() -> HBoxContainer:
 
 
 func _rebuild_detail() -> void:
+	if not _frame.visible:
+		return
 	for c in _detail.get_children():
 		_detail.remove_child(c)
 		c.queue_free()
@@ -286,6 +294,24 @@ func step_line(text: String, done := false) -> void:
 	lbl.add_theme_color_override("font_color",
 		Color(0.53, 0.56, 0.63) if done else UiTheme.ACCENT)
 	_detail.add_child(lbl)
+
+
+## HOW MUCH ROOM THE READING PANEL DESERVES, against what is on the left. 1.0 is even.
+func detail_ratio(r: float) -> void:
+	_frame.size_flags_stretch_ratio = r
+
+
+## NO READING PANEL AT ALL — for a screen where the thing IS the tile.
+##
+## User, 2026-07-28, on the Armory: "the rightmost doesn't belong. The only two things
+## important at a shop are: left the inventory of items you may buy, right the inventory
+## of items you may sell." Which is right, and it is this document's own rule pointed at
+## my own work: every tile already carries a full hover tooltip, so a details column
+## restates it — a third column DUPLICATING the second, which is exactly why the Mission
+## Computer's third column had to go. I had even hung the action on the copy, the same
+## way that bug did.
+func hide_detail() -> void:
+	_frame.visible = false
 
 
 ## Anything a screen needs in the detail panel that these widgets do not cover — the

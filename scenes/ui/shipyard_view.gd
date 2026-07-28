@@ -23,15 +23,12 @@ func _init(p_ship: TestShip) -> void:
 	# fit — passing the tile's own constant is what keeps the shelf right when it changes.
 	super(HullTile.TILE.x)
 	ship = p_ship
-	shelf()      # one pile; the Armory beside it is the screen that needs two
-	# WHAT THIS SHELF IS, kept from the column heading the tab used to carry. "Flight-
-	# ready with standard loadout" is the one fact about buying a hull here that is not
-	# visible on any tile, and dropping it in the move would have been the migration
-	# quietly costing the screen a sentence.
-	var cap := Label.new()
-	cap.text = "SHIPYARD — flight-ready hulls, standard loadout"
-	cap.add_theme_color_override("font_color", UiTheme.ACCENT)
-	header_left.add_child(cap)
+	# ONE INVENTORY — you buy hulls here, you do not sell them back — so one shelf, and
+	# no details column: every tile hovers the full hull tooltip already, and a column
+	# restating it beside it is the duplicate this design exists to remove (user,
+	# 2026-07-28). The verb is the right-click, as on every other shelf in the game.
+	hide_detail()
+	shelf("HULLS FOR SALE — flight-ready with standard loadout", "right-click to buy")
 
 
 func header_text() -> String:
@@ -51,28 +48,3 @@ func fill_list() -> void:
 		# starts meaning two things.
 		tile(t, "h:%d" % index, "hull", {"index": index, "build": build},
 			func() -> void: buy_requested.emit(index))
-
-
-func render_detail(md: Dictionary) -> void:
-	var build: ShipBuild = md.build
-	var index := int(md.index)
-	var owned: bool = SampleBuilds.owned.has(index)
-	title(build.hull.display_name, UiTheme.AMBER)
-	# THE SAME TOOLTIP THE TILE HOVERS, given a permanent home — comparing two hulls
-	# should not mean holding the mouse still. Reused rather than restated: a second
-	# description of a hull is a second thing to keep in step with HullDef.
-	var tip := DockScreen.hull_tooltip(build)
-	if tip != null:
-		tip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		detail_box().add_child(tip)
-	if owned:
-		# Not a blocked BUY — there is nothing to buy. Boarding is the Engineering Bay's
-		# verb, and a greyed "Buy" over a ship you own would be a refusal invented to
-		# have something to grey out.
-		note("[color=#6de08f]OWNED — board her in the Engineering Bay.[/color]")
-		return
-	var price := int(build.hull.price)
-	var stop := ""
-	if Wallet.credits < price:
-		stop = "Short %dc — you have %dc." % [price - Wallet.credits, Wallet.credits]
-	action("Buy — %dc" % price, stop, func() -> void: buy_requested.emit(index))

@@ -2106,11 +2106,14 @@ func _case_the_shipyard_is_a_shop_shelf() -> void:
 			"right-clicking a tile buys THAT hull (%d)" % target.index)
 		_ok(SampleBuilds.owned.size() == before + 1, "...and only that one")
 
-	# THE ACTION LIVES ON THE THING, WITH ITS REASON (ContextBase.action). A shelf you
-	# cannot afford must say so on the ship you picked, not leave a dead button — the
-	# defect the whole context shape exists to end.
+	# A SHOP IS ITS INVENTORY — no details column restating the tooltip beside it, and no
+	# Buy button duplicating the right-click (user, 2026-07-28). So the refusal cannot
+	# live in a panel; it has to reach the player some other way, and "every rejection is
+	# visible" is a project rule, not a nice-to-have.
 	Wallet.credits = 0
 	screen.refresh()
+	_ok(_find_button(screen._yard, "Buy —") == null,
+		"no Buy button on the shelf — right-click is the verb everywhere")
 	# RE-COLLECT. refresh() rebuilds every tile, so the array above now holds freed
 	# nodes — clicking one of those tests nothing and reports success either way.
 	var poor: HullTile = null
@@ -2118,13 +2121,13 @@ func _case_the_shipyard_is_a_shop_shelf() -> void:
 		if not (t as HullTile).owned:
 			poor = t
 	if poor != null:
-		_left_click(poor)
-		_ok(_find_text(screen._yard, poor.build.hull.display_name),
-			"clicking a tile opens THAT hull in the details panel")
-		var buy := _find_button(screen._yard, "Buy —")
-		_ok(buy != null and buy.disabled, "a hull you cannot afford has a dead Buy")
-		_ok(_find_text(screen._yard, "Short"),
-			"...and the reason is beside it, in credits you are short")
+		var owned_before := SampleBuilds.owned.size()
+		screen._flash_msg = ""
+		_right_click(poor)
+		_ok(SampleBuilds.owned.size() == owned_before,
+			"a hull you cannot afford is not sold to you")
+		_ok("credits" in screen._flash_msg,
+			"...and the refusal says so out loud (%s)" % screen._flash_msg)
 
 	Wallet.credits = kept_credits
 	SampleBuilds.owned.clear()
@@ -2406,18 +2409,34 @@ func _case_the_armory_sells_from_your_own_shelf() -> void:
 		screen.queue_free()
 		return
 
-	_left_click(mine[0])
-	_ok(_find_button(armory, "Sell —") != null,
-		"picking your own gear offers SELL, not buy")
-	_ok(_find_button(armory, "Buy —") == null,
-		"...and never both — the verb follows the pile it came from")
+	# THE VERB FOLLOWS THE PILE, asserted by what the same gesture DOES in each — which is
+	# the honest form of it now that neither shelf has a button to read. If the two piles
+	# ever lost track of which is which, right-click would mean one thing everywhere and
+	# they really would be duplicates of each other.
+	_ok(_find_button(armory, "Sell —") == null and _find_button(armory, "Buy —") == null,
+		"neither shelf carries a button — right-click is the verb")
 
 	Wallet.credits = 0
 	var worth := ItemVisuals.sell_price(owned)
 	_right_click(mine[0])
 	_ok(Wallet.credits == worth,
-		"right-clicking your own tile sells it for %dc (got %dc)" % [worth, Wallet.credits])
+		"right-clicking YOUR tile sells it for %dc (got %dc)" % [worth, Wallet.credits])
 	_ok(screen.ship.cargo.is_empty(), "...and it leaves your hold")
+
+	# ...and the same gesture on the SHOP shelf spends instead of earning.
+	screen.refresh()
+	var stock: Array = []
+	for t in armory._shop.get_children():
+		if not t.is_queued_for_deletion() and t.get("comp") != null:
+			stock.append(t)
+	_ok(not stock.is_empty(), "the shop has stock to buy")
+	if not stock.is_empty():
+		Wallet.credits = 100000
+		var before_credits := Wallet.credits
+		_right_click(stock[0])
+		_ok(Wallet.credits < before_credits,
+			"right-clicking a SHOP tile buys — the verb follows the pile it came from")
+		_ok(not screen.ship.cargo.is_empty(), "...and it lands in your hold")
 
 	Wallet.credits = kept
 	screen.ship.cargo.clear()
