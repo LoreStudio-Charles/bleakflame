@@ -13,16 +13,24 @@ const INFO := {
 		"value": 5,
 	},
 	Grade.SALVAGE: {
-		# RENAMED TO "JUNK" 2026-07-27 (user): "salvage" had become the most overloaded
+		# RENAMED TO "ROUGH" 2026-07-28 (user). "Salvage" had become the most overloaded
 		# word in the project — the [B] SALVAGE panel, Salvage All, BuildShip's salvage
-		# radius, the Salvaged Coupling, the SALVAGE SKILL, and the affix pillar ("salvage
-		# is where treasure comes from") all mean different things by it. "Junk" is free,
-		# and it disambiguates the skill by taking the grade out of its way.
+		# radius, the Salvaged Coupling, the SALVAGE SKILL and the affix pillar ("salvage
+		# is where treasure comes from") all meant different things by it — and it sat too
+		# close to STANDARD, one rung above.
+		#
+		# ROUGH OVER "JUNK" for two reasons. (1) THE MECHANICS: Flotsam is the compromised
+		# tier — it ALWAYS carries a drawback affix. This one carries none. Its defining
+		# property is that it WORKS and simply isn't special, so naming it after rubbish
+		# described the rung below it. (2) GENRE LITERACY (user): "Rough sits close to
+		# Rusty, which is a common RPG [tier], and I think that familiarity earns its
+		# place." A player has read this word on a loot tier before. (Junk also collided
+		# with the level-1 JUNKER SLUGTHROWER, which is this very grade.)
 		#
 		# THE ENUM IDENTIFIER AND ITS ORDINAL DO NOT MOVE. Grade values are serialized in
 		# every .tres on disk (same hazard class as SlotType), so this is a display string
 		# and nothing else — the same rule that keeps the save directory named Bleakflame.
-		"name": "Junk",
+		"name": "Rough",
 		"color": Color(0.92, 0.92, 0.92),
 		"affixes": 0,
 		"drawback": false,

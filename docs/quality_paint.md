@@ -43,7 +43,7 @@ pips. Both halves are therefore **shape**, so every step reads alone:
 | Grade | Paint | Reads as |
 |---|---|---|
 | **Flotsam** | heavy rust, pitting, mismatched panels | found floating, no provenance |
-| **Junk** | scuffed, patched, one replaced panel | someone sold it to you and it barely works |
+| **Rough** | scuffed, patched, one replaced panel | used, unglamorous, and it works |
 | **Standard** | clean | factory |
 | **Advanced** | clean + polished trim | cared for |
 | **Experimental** | + a stripe | marked |
@@ -128,14 +128,24 @@ violet is a LATE-Saga reveal and belongs to that moment, not to a shop item.
 
 ## Also done
 
-**SALVAGE grade renamed to "JUNK"** (user: the word was overloaded — the `[B]` salvage
-panel, Salvage All, `salvage_reach`, the Salvaged Coupling, the SALVAGE SKILL, and the
-affix pillar all meant different things by it). Display string only:
-`Grades.INFO[Grade.SALVAGE].name`. **The enum identifier and its ordinal do not move** —
-grade values are serialized in every `.tres` on disk.
+**SALVAGE grade renamed to "ROUGH"** (user). The word was overloaded — the `[B]` salvage
+panel, Salvage All, `salvage_reach`, the Salvaged Coupling, the SALVAGE SKILL and the affix
+pillar all meant different things by it — and it sat too close to STANDARD one rung above.
+Display string only: `Grades.INFO[Grade.SALVAGE].name`. **The enum identifier and its
+ordinal do not move** — grade values are serialized in every `.tres` on disk.
 
-**Open:** *Flotsam* and *Junk* are near-synonyms, so the bottom two tiers no longer teach
-their own order by name. The paint ladder distinguishes them (rusted vs patched) and the
-fiction can (found floating with no provenance vs sold to you barely working), but if the
-names should carry it, Flotsam is the one to reconsider — "Junk" is the better free word
-and "Scrap" is also taken (Scrap-Cell, Scrap Coupling).
+**Why Rough and not Junk** (the first candidate, briefly committed):
+
+1. **The mechanics.** Flotsam is the compromised tier — it ALWAYS carries a drawback
+   affix. This one carries none; its defining property is that it *works* and simply
+   isn't special. Naming it after rubbish described the rung below it, and left the
+   bottom two tiers as near-synonyms that taught nothing about their own order.
+2. **Genre literacy** (user): *"Rough sits close to Rusty, which is a common RPG [tier],
+   and I think that familiarity earns its place."* A player has read this word on a loot
+   tier before — the ladder gets a free rung of comprehension.
+3. It also collided with the **Junker Slugthrower**, the level-1 weapon that *is* this
+   grade.
+
+Alternates considered and rejected: **Refit** (perfect nautical fit, but "refit" is
+already the verb the Engineering Bay runs on — the exact trap Salvage fell into),
+**Workaday**, **Knockabout**, **Tramp**, and anything starting with S.
