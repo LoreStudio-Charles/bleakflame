@@ -15,6 +15,10 @@ var handler: Callable   # func(action: String) -> String (the NPC's reply)
 var _text: RichTextLabel
 var _choices: VBoxContainer
 var vo_prefix := ""   # host sets this; nodes with no explicit `vo` play audio/vo/<prefix>_<nodekey>
+## One line under the role — WHERE YOU STAND with whoever they speak for. Set before
+## add_child (the panel builds in _ready). Empty = no line, so nothing is implied
+## about a person who represents nobody.
+var subtitle := ""
 
 
 func _init(p_npc: String, p_nodes: Dictionary, p_handler: Callable) -> void:
@@ -76,6 +80,13 @@ func _ready() -> void:
 	role.add_theme_font_size_override("font_size", 10)
 	role.add_theme_color_override("font_color", Color(0.5, 0.55, 0.66))
 	face_col.add_child(role)
+	if subtitle != "":
+		var standing := Label.new()
+		standing.name = "Standing"
+		standing.text = subtitle
+		standing.add_theme_font_size_override("font_size", 10)
+		standing.add_theme_color_override("font_color", UiTheme.ACCENT)
+		face_col.add_child(standing)
 
 	var talk_col := VBoxContainer.new()
 	talk_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -145,6 +156,12 @@ func _on_choice(c: Dictionary) -> void:
 		# still playing — the host may start its own (e.g. an overheard VO).
 		Sfx.stop_voice()
 		var reply: String = handler.call(str(c.action))
+		# A `close` choice HANDS OFF — the handler has opened the thing you asked
+		# for, so this panel steps aside instead of waiting behind it with a stale
+		# "Anything else?". Without it an addressee sits under every screen it opens.
+		if bool(c.get("close", false)):
+			close()
+			return
 		_text.text = reply
 		_set_choices([{"text": "Anything else?", "next": "start"},
 			{"text": "Leave.", "next": "end"}])

@@ -12,25 +12,30 @@ class_name Npcs
 const CAST := {
 	"ruel": {"home": "Landing Bay", "venue": "station", "name": "Harbormaster Ruel", "role": "Station Harbormaster",
 		"flavor": "Runs the Landing Bay ledger and the contract board. Tracks every loss on a physical chart because screens can be argued with.",
-		"idle": "Board's quiet for you right now, pilot. Keep your nose clean and she'll fly."},
+		"idle": "Board's quiet for you right now, pilot. Keep your nose clean and she'll fly.",
+		"greet": "There you are. Don't get comfortable — I've got something for you."},
 	"voss": {"home": "Mission Computer", "venue": "station", "name": "Underwriter Voss", "role": "Insurance Underwriter",
 		"flavor": "Files the claims when ships stop coming home. The paperwork face of the body count, and lately the paperwork is winning.",
-		"idle": "No claims with your name on them today. Let's keep it that way."},
+		"idle": "No claims with your name on them today. Let's keep it that way.",
+		"greet": "Sit down. There's a file open with your name on it."},
 	"odessa": {"home": "Ember Row", "venue": "station", "name": "Odessa", "role": "Keeper of the Ember Row bar",
 		"flavor": "Sells nothing, trades in stories. If it was whispered on this station, it reached her first."},
 	"lab": {"home": "Research Lab", "venue": "station", "name": "Dex", "role": "Research Lab Technician",
 		"flavor": "Runs the station's two study bays alone — quick, wired, and quietly terrified of what the instruments keep telling him. Would take numbers over sleep every time.",
-		"idle": "Instruments are quiet. I don't trust quiet — but there's nothing for you yet."},
+		"idle": "Instruments are quiet. I don't trust quiet — but there's nothing for you yet.",
+		"greet": "Good, good — you're here. The instruments have been saying something."},
 	"hermit": {"home": "Cave", "venue": "planet", "name": "The Counter", "role": "Hermit of the colony's edge",
 		"flavor": "Ex-spacer, decades dirtside. Been counting something's breathing for thirty years. The colony stopped listening; the numbers didn't stop."},
 	"krayt": {"home": "Speak's Easy", "venue": "shoal", "name": "Krayt", "role": "Rust Shoal quartermaster",
 		"flavor": "Pirate quartermaster gone to ground. Swagger stretched thin over genuine terror."},
 	"vyper": {"home": "Speak's Easy", "venue": "shoal", "name": "Vyper", "role": "Rust Shoal, Krayt's successor",
 		"flavor": "Krayt's second, who was on the channel when the dark took him. Inherited a leaderless crew and a grudge with teeth. The Privateer guild's word now — and the one who worked out how to bend light around a hull.",
-		"idle": "Nothing for you today. Drink, don't ask questions, and don't sit in Krayt's chair."},
+		"idle": "Nothing for you today. Drink, don't ask questions, and don't sit in Krayt's chair.",
+		"greet": "You. Yeah, you. Something's come up and your name came up with it."},
 	"imari": {"home": "Landing Pad", "venue": "planet", "name": "Elder Imari", "role": "Steward of the Planet Colony",
 		"flavor": "Keeps the colony's fields, cisterns, and manifests. The Reach eats her freighters too, and she has started to notice which pilots come back. A Trader-guild contact when the guilds land.",
-		"idle": "Fields are in, cisterns full. Nothing pressing, pilot — but it's good to see a ship come home."},
+		"idle": "Fields are in, cisterns full. Nothing pressing, pilot — but it's good to see a ship come home.",
+		"greet": "I hoped that was your ship. Walk with me — there's a matter I'd put to you."},
 	# He owns the clunker now: THE DIG, his freighter parked in the Verge.
 	# "verge" is a venue of its own, so his work is never handed to you by
 	# someone else at a desk he has never sat behind.
@@ -48,7 +53,8 @@ const CAST := {
 		"idle": "Buying or selling, pilot? Either way you're welcome at my counter."},
 	"sella": {"home": "Explorer's Union", "venue": "planet", "name": "Cartographer Sella", "role": "Colony Survey Office",
 		"flavor": "Runs the colony's dusty little map room and pays hard credits for sensor readings from anywhere in the Reach. Says the charts are 'embarrassingly incomplete.' The seed of the Scout / Explorer guild — she's already keeping a list of who brings her the far dark.",
-		"idle": "No new survey work posted. Bring me the far dark whenever you find it."},
+		"idle": "No new survey work posted. Bring me the far dark whenever you find it.",
+		"greet": "Ah — the very pilot. Mind the charts, and mind what I'm about to tell you."},
 }
 
 
@@ -69,6 +75,17 @@ static func flavor(id: String) -> String:
 static func idle_line(id: String) -> String:
 	return str(CAST.get(id, {}).get("idle",
 		"Nothing new right now. Fly safe out there."))
+
+
+## How they open when you walk up to them (Addressee). TWO MOODS, because a greeting
+## must never contradict the list underneath it: `idle` reads "nothing pressing", which
+## is a flat lie sitting on top of a gold quest line. Authoring is optional — an NPC
+## with no `greet` gets a neutral one that is never wrong.
+static func greet_line(id: String, has_news: bool) -> String:
+	if not has_news:
+		return idle_line(id)
+	return str(CAST.get(id, {}).get("greet",
+		"Good timing — there's something waiting for you."))
 
 
 ## Portrait texture or null. Drop-in: assets/portraits/<id>.png.

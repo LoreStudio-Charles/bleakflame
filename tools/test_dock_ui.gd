@@ -47,6 +47,8 @@ func _ready() -> void:
 		_case_planet_talk_appears_on_arrival,
 		_case_every_home_tab_can_host_its_person,
 		_case_office_door_is_earned,
+		_case_the_addressee_ranks_quest_business_first,
+		_case_the_desk_and_the_greeting_agree,
 		_case_office_shows_tree_and_terms,
 		_case_commission_never_joins_on_one_click,
 		_case_every_leader_has_a_room,
@@ -281,6 +283,90 @@ func _case_every_home_tab_can_host_its_person() -> void:
 		screen.queue_free()
 
 
+## THE FRONT DOOR (docs/person_as_context.md, step 3). Everything a person will do with
+## you is ONE ranked list, and campaign business sits at the top of it.
+##
+## THE CLAIM IS NOT "the talk is offered" — it is "the talk is offered FIRST". Being
+## present but further down is exactly how ember_word got lost for ~46 game-days: the
+## talk was queued correctly the whole time, behind a button that answered first.
+## So the fixture stacks the deck against it — Ruel holds a campaign talk AND a
+## commission invitation, which is also gold and also wants the top line.
+func _case_the_addressee_ranks_quest_business_first() -> void:
+	# The RULE, with the host listing its offers in the wrong order on purpose.
+	var jumbled := [
+		Addressee.offer("office", "About the commission.", Addressee.Kind.DOOR),
+		Addressee.offer("board", "Anything on the board?", Addressee.Kind.SERVICE),
+		Addressee.offer("quest", "About the Meridian.", Addressee.Kind.QUEST),
+	]
+	var order := Addressee.ranked(jumbled)
+	_ok(order.size() == 3 and str(order[0].id) == "quest",
+		"quest business sorts first however the host happened to list it")
+	_ok(str(order[1].id) == "board" and str(order[2].id) == "office",
+		"...and everything behind it keeps the host's own order")
+	_ok(Addressee.style_of(order[0]) == "primary",
+		"story business is gold — the campaign always reads as a moment that matters")
+	_ok(Addressee.style_of(order[1]) == "secondary",
+		"an ordinary service is not gold, or gold would stop meaning anything")
+
+	# And THROUGH THE REAL DESK, because a correct rule nobody calls is a failure this
+	# project has already paid for.
+	var screen := _fresh_dock(true)
+	Standing.reset()
+	Pilot.profession = ""
+	Standing.add("guardian", Standing.INVITE_AT)   # a gold invitation, competing
+	screen.refresh()
+	screen._held_talks["ruel"] = [{"quest": "Standing With the Board", "giver": "ruel",
+		"text": "Two jobs, cleanly done."}]
+
+	var panel := _addressee(screen, "ruel")
+	_ok(panel != null, "the desk opens Ruel's addressee")
+	var said := _choice_texts(panel, [])
+	_ok(said.size() >= 3,
+		"he offers the talk, the commission and a way out — %s" % str(said))
+	_ok(said.size() > 0 and "Standing With the Board" in str(said[0]),
+		"the queued campaign talk is the FIRST thing he says, above the invitation")
+	# The greeting must not contradict the list under it. "Board's quiet for you" over
+	# a gold quest line tells the player two opposite things at once.
+	_ok(not _find_text(panel, "Board's quiet"),
+		"and he doesn't open with 'nothing pressing' while holding a job for you")
+	_dispose(screen, panel)
+	screen.queue_free()
+
+
+## A SCREEN MUST NOT CONTRADICT ITSELF. The desk outside says whether someone is holding
+## something for you; the greeting inside says the same thing in their own voice. Found
+## in a screenshot, not a test: the desk read "They have an offer for you" while Ruel
+## opened with "Board's quiet for you right now" — because only the desk counted a
+## waiting invitation as news. Both halves were individually correct, which is exactly
+## why nothing caught it. So the claim is about AGREEMENT, and the fixture is the case
+## where they disagreed: an invitation and NO queued talk.
+func _case_the_desk_and_the_greeting_agree() -> void:
+	var screen := _fresh_dock(true)
+	Standing.reset()
+	Pilot.profession = ""
+	Standing.add("guardian", Standing.INVITE_AT)
+	screen.refresh()
+	_ok((screen._held_talks.get("ruel", []) as Array).is_empty(),
+		"the fixture is an INVITATION alone — no queued talk propping it up")
+	_ok(screen._has_news("ruel"),
+		"an earned invitation counts as news, so the desk lights for it")
+
+	var panel := _addressee(screen, "ruel")
+	_ok(not _find_text(panel, "Board's quiet"),
+		"...and he does not greet you with 'nothing pressing' while holding one")
+	_dispose(screen, panel)
+
+	# The other direction: nothing waiting, and the quiet greeting is correct again.
+	Standing.reset()
+	screen.refresh()
+	_ok(not screen._has_news("ruel"), "with nothing waiting the desk goes quiet")
+	var idle := _addressee(screen, "ruel")
+	_ok(_find_text(idle, "Board's quiet"),
+		"...and he says so, rather than promising news he doesn't have")
+	_dispose(screen, idle)
+	screen.queue_free()
+
+
 ## THE DOOR IS EARNED. No invitation, no office — the leader is just a person at
 ## a counter. Standing crosses the line and the door appears where they work.
 func _case_office_door_is_earned() -> void:
@@ -290,13 +376,29 @@ func _case_office_door_is_earned() -> void:
 	Standing.reset()
 	Pilot.profession = ""
 	screen.refresh()
-	_ok(_find_button(screen, Professions.office_name("guardian")) == null,
-		"no office door before an invitation is earned")
+	# The door is a LINE HE SAYS now, not a button beside him — so the question is
+	# what Ruel offers when you walk up, and the absence has to be read off a panel
+	# that definitely opened, or "no door" and "no conversation" look identical.
+	var before := _addressee(screen, "ruel")
+	_ok(before != null, "Ruel always talks to you — the desk is never a dead click")
+	_ok(not _find_button(before, "About the commission"),
+		"no commission offered before an invitation is earned")
+	_dispose(screen, before)
 
 	Standing.add("guardian", Standing.INVITE_AT)
 	screen.refresh()
-	_ok(_find_button(screen, Professions.office_name("guardian")) != null,
-		"Ruel's office door appears once standing earns the invitation")
+	var after := _addressee(screen, "ruel")
+	var door := _find_button(after, "About the commission")
+	_ok(door != null,
+		"Ruel offers the commission once standing earns the invitation")
+	if door != null:
+		# Taking him up on it must actually go somewhere — and must not leave the
+		# conversation parked underneath the room it just opened.
+		door.pressed.emit()
+		_ok(_find_office(screen) != null, "...and taking him up on it opens the office")
+		_ok(after.is_queued_for_deletion(),
+			"...and the conversation steps aside instead of waiting behind it")
+	_dispose(screen, after)
 	screen.queue_free()
 
 
@@ -895,8 +997,10 @@ func _case_office_door_is_taught() -> void:
 	Standing.reset()
 	Professions.dev_unlock_offices = true
 	screen.refresh()
-	_ok(_find_button(screen, Professions.office_name("guardian")) != null,
+	var peek := _addressee(screen, "ruel")
+	_ok(_find_button(peek, "About the commission") != null,
 		"the dev unlock still opens doors for inspection")
+	_dispose(screen, peek)
 	_ok(not _tutor_knows("office"),
 		"...but a dev-unlocked door is never announced as an invitation")
 	Professions.dev_unlock_offices = false
@@ -1905,6 +2009,35 @@ func _count_buttons(root: Node, needle: String) -> int:
 			n += 1
 		n += _count_buttons(child, needle)
 	return n
+
+
+## WALK UP TO SOMEONE. Presses the real desk and hands back the addressee it opened,
+## so every claim below is made against the panel a player would be looking at rather
+## than against the offer list that fed it.
+func _addressee(screen: DockScreen, npc: String) -> DialoguePanel:
+	screen._on_desk_talk(npc)
+	for c in screen.get_children():
+		if c is DialoguePanel:
+			return c
+	return null
+
+
+## Dispose IMMEDIATELY, not queue_free: a deferred panel is still in the tree this
+## frame, and the next lookup would happily answer from the last conversation.
+func _dispose(screen: DockScreen, panel: Node) -> void:
+	if panel == null or not is_instance_valid(panel) or panel.is_queued_for_deletion():
+		return
+	screen.remove_child(panel)
+	panel.free()
+
+
+## What they offer, in the order offered.
+func _choice_texts(root: Node, out: Array = []) -> Array:
+	for child in root.get_children():
+		if child is Button:
+			out.append((child as Button).text)
+		_choice_texts(child, out)
+	return out
 
 
 func _find_office(root: Node) -> GuildOffice:

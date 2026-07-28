@@ -1172,8 +1172,14 @@ func _do_action(action: String) -> void:
 				# the screen — and the same exchange with the same person AT THE
 				# STATION opened a proper panel with their portrait. Campaign talks
 				# down here already present as a DialoguePanel (_try_quest_talks);
-				# only the idle ones were second-class. Same construction as the
-				# dock's _idle_chat, so the two venues cannot drift apart again.
+				# only the idle ones were second-class.
+				#
+				# THE DOCK HAS SINCE MOVED PAST THIS (2026-07-28). Up there, greeting
+				# someone opens their ADDRESSEE — one ranked list of everything they'll
+				# do with you, campaign business at the top (scenes/ui/addressee.gd) —
+				# and the separate idle path is gone. The town still splits quest talks
+				# from idle ones by hand, which is the shape the addressee replaced, so
+				# this is the next venue to convert rather than a parallel that holds.
 				Pilot.meet(who)
 				var nodes := {"start": {
 					"text": Npcs.idle_line(who),

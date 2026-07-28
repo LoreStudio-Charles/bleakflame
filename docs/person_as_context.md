@@ -173,8 +173,36 @@ incrementally while tabs still work.
    (`_build_missions_tab`), and it demonstrates every rule.
 2. Extract the context component (list / detail / action) from it.
 3. Move the four tab-bound leaders onto addressees: Ruel, Dex, Imari, Sella.
+   **BUILT 2026-07-28** — `scenes/ui/addressee.gd`. Pressing any NPC desk opens that
+   person's ranked offer list instead of branching by hand between "held talks",
+   "a bare idle line" and "the office door standing off to one side".
 4. `SpeakEasy` / `ProspectDeck` swap their `VenueLayout` columns for an addressee. The
    shell keeps the header, the venue's own trade (`venue_box`) and the launch line.
+
+### What step 3 actually settled
+
+- **Rank is a property of the list, not a habit.** `Addressee.ranked()` buckets by
+  `Kind` (QUEST / SERVICE / DOOR), so quest business is first *by construction*.
+  `DockScreen._addressee_offers` deliberately lists the durable stuff FIRST and today's
+  campaign talk LAST — the opposite of how it presents — so that "the campaign comes
+  first" can never quietly become true because of where a line sits in the host.
+- **The commission door moved inside**, from a button under the portrait to a line the
+  person says. It is gold only when an invitation is earned and unanswered — a decision
+  waiting, which is what gold means everywhere else. The `office_door` tutor anchor now
+  points at the PERSON, which is what the lesson was asking for anyway.
+- **`DialoguePanel` gained two things**: a `subtitle` (where you stand with whoever they
+  speak for) and `"close": true` on a choice, so an offer can HAND OFF to the screen it
+  opens instead of parking the conversation underneath it.
+- **A screen must not contradict itself.** The desk outside and the greeting inside are
+  now one `_has_news()`. They were written separately and immediately disagreed — the
+  desk lit for a waiting invitation, the greeting said "board's quiet". Both halves were
+  individually correct, which is exactly why no assertion caught it; a screenshot did.
+- **ODESSA IS STILL BESPOKE, on purpose.** She is the only face with an authored
+  dialogue tree, and she is already quest-first — she is not the bug, she is the merge
+  that has to be done properly: folding `Dialogues.ODESSA_BAR`'s own choices into the
+  offer list rather than hanging the whole tree behind one more click.
+- **The walkable town is the next venue, not a parallel.** `epharon_town.gd` still
+  splits quest talks from idle ones by hand — the exact shape the addressee replaced.
 
 ## The shops (user, 2026-07-27) — and one collision to resolve first
 

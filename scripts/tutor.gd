@@ -174,7 +174,7 @@ const LESSONS := {
 	# with no visible claimant draws nothing until there is one.
 	"office": [
 		{"anchor": "office_door", "where": "dock", "dwell": 10.0,
-			"text": "A door has opened. Commissions are signed in person, in their office — and reading the terms costs you nothing. Step inside and see what it grants before you decide."},
+			"text": "A door has opened. Commissions are signed in person — talk to them, and the commission will be the first thing they bring up after business. Reading the terms costs you nothing, so go and see what it grants before you decide."},
 	],
 
 	# THE SHOAL'S LADDER, taught the moment Vyper's banner lands (user, 2026-07-27:
@@ -244,7 +244,7 @@ const LESSONS := {
 	# announces that it's now available.
 	"commission": [
 		{"venue": "station", "anchor": "tab_pilot", "where": "dock", "tab": "Pilot", "text": "Someone's been watching your work. Open PILOT."},
-		{"anchor": "commissions", "where": "dock", "text": "Green means an invitation. You sign on with the LEADER, not here — go and see them where they work, and their office door will be beside them."},
+		{"anchor": "commissions", "where": "dock", "text": "Green means an invitation. You sign on with the LEADER, not here — go and see them where they work, and ask them about the commission."},
 	],
 
 	# GROUND-MODE onboarding (2026-07-25) — the town replaces tab-poking with WALKING.

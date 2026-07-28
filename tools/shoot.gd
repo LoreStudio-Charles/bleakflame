@@ -29,6 +29,7 @@ extends Node
 ##   --credits=<n>      wallet
 ##   --prof=<id>        join a commission before building the screen
 ##   --tab=<name>       select a tab by title, for the tabbed dock screens
+##   --talk=<npc>       press that person's desk, photographing their ADDRESSEE
 ##   --frames=<n>       frames to settle before capturing (default 30)
 ##   --dir=<path>       output directory
 
@@ -85,6 +86,11 @@ func _ready() -> void:
 	if screen.has_method("refresh"):
 		screen.refresh()
 	_select_tab(screen)
+	# WALK UP TO SOMEONE. The addressee is a screen in its own right now, and the only
+	# way to reach one is to press a desk — so the shooter presses it, rather than the
+	# panel becoming the one UI surface nobody can photograph.
+	if _args.has("talk") and screen.has_method("_on_desk_talk"):
+		screen.call("_on_desk_talk", str(_args.talk))
 
 	var frames := int(_args.get("frames", "30"))
 	for _i in frames:

@@ -1245,25 +1245,93 @@ func _mount_desk(parent: Node, npc: String) -> NpcDesk:
 	return desk
 
 
-## The single talk router. Odessa keeps her quest-first / rumour-chat path; anyone
-## else opens their held talks, or a short idle exchange when they hold nothing —
-## the always-visible button is never a dead click.
+## The single talk router: pressing a desk opens that person's ADDRESSEE — one ranked
+## list of everything they'll do with you, quest business at the top in gold
+## (scenes/ui/addressee.gd). It absorbs the three states this used to switch between
+## by hand — held talks, a bare idle line, the office door standing off to one side —
+## so the button is never a dead click and never a competing one either.
+##
+## ODESSA IS STILL BESPOKE, on purpose. She is the only face with an AUTHORED dialogue
+## tree (Dialogues.ODESSA_BAR, dressed live by _dress_odessa), and she is already
+## quest-first — she is not the bug, she is the merge that has to be done carefully:
+## folding her tree's own choices into the offer list rather than hanging it behind an
+## extra click. Left for when the bar chat is next touched.
 func _on_desk_talk(npc: String) -> void:
 	if npc == "odessa":
 		_on_talk_odessa()
 		return
-	if (_held_talks.get(npc, []) as Array).is_empty():
-		_idle_chat(npc)
-	else:
-		_talk_to(npc)
-
-
-func _idle_chat(npc: String) -> void:
 	Pilot.meet(npc)
-	var nodes := {"start": {
-		"text": Npcs.idle_line(npc),
-		"choices": [{"text": "Fly safe.", "next": "end"}]}}
-	add_child(DialoguePanel.new(npc, nodes, func(_a: String) -> String: return ""))
+	var offers := _addressee_offers(npc)
+	var panel := DialoguePanel.new(npc,
+		Addressee.nodes(Npcs.greet_line(npc, _has_news(npc)), offers),
+		func(a: String) -> String: return _on_addressee(npc, a))
+	panel.subtitle = Addressee.standing_line(npc)
+	panel.closed.connect(refresh)
+	add_child(panel)
+
+
+## WHAT THIS PERSON WILL DO WITH YOU. The host decides what EXISTS; Addressee decides
+## the ORDER — so a service added here can never accidentally out-rank the campaign.
+##
+## LISTED STANDING-FIRST, TODAY'S-BUSINESS-LAST, deliberately the opposite of how it is
+## presented. What a person permanently does for a living is the stable part of this
+## function; what they happen to be holding this docking is the volatile part. Writing
+## it in that order keeps the host honest about the split — if this listed the campaign
+## first, "quest business comes first" would be true because of where a line sits in
+## THIS function, and would quietly stop being true the day someone reorders it.
+func _addressee_offers(npc: String) -> Array:
+	var offers: Array = []
+	var prof := Professions.led_by(npc)
+	if prof != "" and Professions.office_open(prof):
+		var member: bool = Pilot.profession == prof
+		# GOLD ONLY WHEN A DECISION IS WAITING: an invitation you have earned and not
+		# yet answered. A member's own office is a place they walk into, not news.
+		offers.append(Addressee.offer("office",
+			"Let me into the %s." % Professions.office_name(prof) if member
+				else "About the commission.",
+			Addressee.Kind.DOOR, _invitation_waiting(npc), true))
+	var queued: Array = _held_talks.get(npc, [])
+	if not queued.is_empty():
+		# ONE line for the whole queue, because _talk_to drains the whole queue —
+		# Ruel routinely holds a debrief AND the next briefing, and listing them
+		# separately would offer a choice the conversation doesn't actually give you.
+		var label := "About %s." % str((queued[0] as Dictionary).get("quest", "the job"))
+		if queued.size() > 1:
+			label += "   (+%d more)" % (queued.size() - 1)
+		offers.append(Addressee.offer("quest", label, Addressee.Kind.QUEST, false, true))
+	return offers
+
+
+func _on_addressee(npc: String, action: String) -> String:
+	match action:
+		"quest":
+			_talk_to(npc)
+		"office":
+			_open_office(npc, Professions.led_by(npc))
+	return ""
+
+
+## IS THIS PERSON HOLDING SOMETHING FOR YOU. ONE definition, because it is read twice —
+## by the desk (which lights) and by the greeting (which must not contradict the desk).
+## They were computed separately for one build and immediately disagreed: the desk said
+## "They have an offer for you" while Ruel opened with "Board's quiet for you right now",
+## because only the desk counted a waiting invitation. Found by looking at a screenshot,
+## not by a test — a lie a screen tells about itself is invisible to an assertion that
+## checks the two halves apart.
+func _has_news(npc: String) -> bool:
+	if not (_held_talks.get(npc, []) as Array).is_empty():
+		return true
+	if npc == "odessa" and Research.rumor_ready():
+		return true
+	return _invitation_waiting(npc)
+
+
+## An invitation earned and not yet answered — the one commission state that is NEWS
+## rather than scenery, and the reason a desk lights up.
+func _invitation_waiting(npc: String) -> bool:
+	var prof := Professions.led_by(npc)
+	return prof != "" and Professions.office_open(prof) \
+		and Pilot.profession != prof and Standing.eligible(prof)
 
 
 ## Every desk gets its news state and its office door refreshed uniformly. Service
@@ -1286,11 +1354,12 @@ func _refresh_persons() -> void:
 	for npc in _npc_desks:
 		var desk: NpcDesk = _npc_desks[npc]
 		desk.clear_extras()
-		var news := not (_held_talks.get(npc, []) as Array).is_empty()
-		if npc == "odessa" and Research.rumor_ready():
-			news = true
-		desk.set_news(news)
-		_add_office_door(desk.extras, npc)
+		# AN INVITATION IS NEWS — folded into _has_news, which the greeting reads too.
+		# It used to be a green Label under the portrait that the dot knew nothing
+		# about, so a person holding the largest offer in the game looked exactly as
+		# quiet as one holding nothing at all.
+		desk.set_news(_has_news(npc))
+		_note_commission(desk, npc)
 
 
 ## Say who is waiting, in the amber notice line. The pip is the glance; this is
@@ -1307,34 +1376,30 @@ func _announce_waiting() -> void:
 	_flash_msg = line if _flash_msg == "" else _flash_msg + "\n" + line
 
 
-## THE DOOR BEHIND THE COUNTER. If this person leads a commission and you have
-## earned an invitation (or already hold it), their office opens from wherever
-## they work. Before that there is no door — they are just a person at a desk,
-## and the commission is something you have not been offered.
-func _add_office_door(box: VBoxContainer, npc: String) -> void:
+## THE DOOR MOVED INSIDE (2026-07-28). A commission used to be a button floating under
+## the portrait; it is now a line in the person's own offer list, ranked against
+## everything else they'll do with you instead of sitting beside it competing for the
+## same glance. Before an invitation there is still no door at all — they are just a
+## person at a desk, and the commission is something you have not been offered.
+##
+## What stays out here is the TUTOR ANCHOR, now pointed at the PERSON rather than the
+## button — which is what the lesson was asking for anyway ("go and see them where they
+## work"), and the only anchor that still exists on the tab once the door is a spoken
+## offer. Registering the desk also survives the door moving again.
+func _note_commission(desk: NpcDesk, npc: String) -> void:
 	var prof := Professions.led_by(npc)
 	if prof == "" or not Professions.office_open(prof):
 		return
-	var door := Button.new()
-	var member: bool = Pilot.profession == prof
-	door.text = "%s  →  %s" % ["Enter" if member else "Visit",
-		Professions.office_name(prof)]
-	UiTheme.button_flavor(door, "secondary")
-	door.pressed.connect(_open_office.bind(npc, prof))
-	box.add_child(door)
-	# Teach the door the first time one exists anywhere. Registering the BUTTON
-	# (not its box) means the ping frames the door itself, and the lesson only
-	# draws once the pilot is actually looking at the tab it lives on.
-	Tutor.register("office_door", door)
+	Tutor.register("office_door", desk)
 	# Only teach a door the pilot actually EARNED. A dev-unlocked door is not an
 	# invitation, and announcing one at standing 0 reads as a bug to a playtester.
 	# ("office" lesson arms itself off `office_open` in the dock context.)
-	if not member and Standing.eligible(prof):
+	if _invitation_waiting(npc):
 		var hint := Label.new()
 		hint.text = "They have an offer for you."
 		hint.add_theme_font_size_override("font_size", 11)
 		hint.add_theme_color_override("font_color", Color(0.55, 0.85, 0.6))
-		box.add_child(hint)
+		desk.extras.add_child(hint)
 
 
 func _open_office(npc: String, prof: String) -> void:
