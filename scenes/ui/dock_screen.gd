@@ -77,11 +77,6 @@ var _overview_text: RichTextLabel
 var _overview_hold: GridContainer
 var _overview_stash: GridContainer
 var _mend_box: VBoxContainer   # planet only: the Counter mends burned factions
-var _shop_grid: GridContainer
-var _armory_grid: GridContainer
-var _armory_detail: RichTextLabel
-var _armory_filter := -1               # -1 = all; FILTER_CHIPS; else a HardpointDef.SlotType
-var _armory_filter_row: HBoxContainer
 ## CHIPS ARE NOT A SLOT TYPE. A chip is a SystemDef, so `slot_type()` reports SYSTEM
 ## for chips and cargo pods alike and no slot filter can separate them — yet the
 ## chip rack is the one shelf a pilot shops with a completely different question in
@@ -91,10 +86,6 @@ var _armory_filter_row: HBoxContainer
 const FILTER_CHIPS := -2
 ## Level range, inclusive. Gear is authored L1-5 today (docs/gear_levels.md), so the
 ## default span shows everything and the control costs a new pilot nothing.
-var _armory_lvl_min := 1
-var _armory_lvl_max := 60
-var _lvl_min_spin: SpinBox
-var _lvl_max_spin: SpinBox
 var _cargo_grid: GridContainer
 var _stash_grid: GridContainer
 var _board_row: HBoxContainer
@@ -123,6 +114,7 @@ var _sel_gem := -1     # gem slot selected for memorizing in the Loadout panel
 var _missions: MissionComputer
 var _lab: ResearchLabView
 var _yard: ShipyardView
+var _armory: ArmoryView
 var _bar_row: Control
 var _bar_feed: RichTextLabel
 var _bar_last_rumor := ""
@@ -542,47 +534,25 @@ func _build_shipyard_tab() -> void:
 	_tabs.add_child(_yard)
 
 
+## THE ARMORY IS A CONTEXT NOW (2026-07-28). The filter bar, both shelves, the details
+## panel and the buy/sell verbs belong to ArmoryView/ContextGrid, so the one screen for
+## trading modules can hang off a quartermaster in a room instead of only off a tab.
+##
+## TWO SHELVES BECAUSE A TAB HOLDS ONE THING AT A TIME (user, 2026-07-28). Selling needs
+## your own gear on screen, and the tab strip cannot show the Armory and your inventory
+## together — so the shop has to carry your kit itself. The moment an inventory can open
+## as an OVERLAY over any context, this becomes the buy screen and one shelf() call goes.
 func _build_armory_tab() -> void:
-	var root := VBoxContainer.new()
-	root.name = "Armory"
-	Tutor.register("panel_armory", root)
-	root.add_theme_constant_override("separation", 10)
-	_tabs.add_child(root)
-	# Filter bar gates the icon grids below by slot type; icons stay prominent.
-	_armory_filter_row = HBoxContainer.new()
-	_armory_filter_row.add_theme_constant_override("separation", 6)
-	root.add_child(_armory_filter_row)
-	var fgroup := ButtonGroup.new()
-	_add_filter_button("All", -1, fgroup)
-	# SENSOR is listed even though it is last in the enum (new types append there,
-	# never insert — the values are serialized in hull .tres files). Without a
-	# filter of its own a sensor is unfindable except under "All", which for the
-	# one component a ship cannot fly without is the wrong place to hide it.
-	for t in [HardpointDef.SlotType.WEAPON, HardpointDef.SlotType.ENGINE,
-			HardpointDef.SlotType.REACTOR, HardpointDef.SlotType.DEFENSE,
-			HardpointDef.SlotType.SENSOR, HardpointDef.SlotType.SYSTEM]:
-		_add_filter_button(HardpointDef.SlotType.keys()[t].capitalize(), t, fgroup)
-	_add_filter_button("Chips", FILTER_CHIPS, fgroup)
-	_build_level_range_filter()
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 18)
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(row)
-	var shop_col := _action_column(row, "EQUIPMENT FOR SALE", "right-click to buy")
-	_shop_grid = _grid_in(shop_col)
-	Tutor.register("armory_shop", _shop_grid)
-	var hold_col := _action_column(row, "YOUR COMPONENTS", "right-click to sell")
-	_armory_grid = _grid_in(hold_col)
-	var detail_col := _column(row, "DETAILS")
-	detail_col.size_flags_stretch_ratio = 1.2
-	_armory_detail = RichTextLabel.new()
-	_armory_detail.bbcode_enabled = true
-	_armory_detail.fit_content = true
-	_armory_detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_armory_detail.custom_minimum_size = Vector2(240, 0)
-	_armory_detail.add_theme_color_override("default_color", Color(0.82, 0.85, 0.92))
-	_armory_detail.text = "[color=#8890a0]Select an item to inspect it. Right-click to buy or sell.[/color]"
-	detail_col.add_child(_armory_detail)
+	_armory = ArmoryView.new(ship)
+	_armory.name = "Armory"
+	_armory.shop_of = func() -> Array: return SHOP_STOCK
+	Tutor.register("panel_armory", _armory)
+	Tutor.register("armory_shop", _armory)
+	_armory.buy_requested.connect(_buy_component)
+	_armory.sell_requested.connect(_sell_component)
+	_tabs.add_child(_armory)
+
+
 
 
 ## A scrollable 4-wide icon grid inside a column.
@@ -601,60 +571,8 @@ func _grid_in(parent: Node) -> GridContainer:
 	return grid
 
 
-## LEVEL RANGE — two SpinBoxes on the same filter bar.
-##
-## A dual-thumb RANGE SLIDER is the control this wants, and Godot ships no such
-## thing (HSlider is single-value), so it would be a bespoke widget with its own
-## drag/keyboard/focus handling to build and test. Two SpinBoxes cost almost
-## nothing, match the Armory's existing button-bar idiom, and are the more precise
-## instrument anyway when you know the number you want. Revisit the widget when
-## there is nothing more valuable to build (user, 2026-07-26).
-func _build_level_range_filter() -> void:
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(14, 0)
-	_armory_filter_row.add_child(spacer)
-
-	var tag := Label.new()
-	tag.text = "LEVEL"
-	tag.add_theme_font_size_override("font_size", 11)
-	tag.add_theme_color_override("font_color", UiTheme.AMBER)
-	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_armory_filter_row.add_child(tag)
-
-	_lvl_min_spin = _level_spin(_armory_lvl_min)
-	var dash := Label.new()
-	dash.text = "–"
-	dash.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_armory_filter_row.add_child(dash)
-	_lvl_max_spin = _level_spin(_armory_lvl_max)
-
-	# THE TWO ENDS CANNOT CROSS. Without this a pilot can set min 40 / max 5 and get
-	# a permanently empty shop with no visible reason why — the failure looks like a
-	# broken store, not a bad filter. Each end shoves the other rather than refusing
-	# the edit, so there is no rejected input to explain.
-	_lvl_min_spin.value_changed.connect(func(v: float) -> void:
-		_armory_lvl_min = int(v)
-		if _armory_lvl_min > _armory_lvl_max:
-			_armory_lvl_max = _armory_lvl_min
-			_lvl_max_spin.set_value_no_signal(_armory_lvl_max)
-		_refresh_armory())
-	_lvl_max_spin.value_changed.connect(func(v: float) -> void:
-		_armory_lvl_max = int(v)
-		if _armory_lvl_max < _armory_lvl_min:
-			_armory_lvl_min = _armory_lvl_max
-			_lvl_min_spin.set_value_no_signal(_armory_lvl_min)
-		_refresh_armory())
 
 
-func _level_spin(start: int) -> SpinBox:
-	var s := SpinBox.new()
-	s.min_value = 1
-	s.max_value = Pilot.MAX_LEVEL
-	s.value = start
-	s.custom_minimum_size = Vector2(58, 0)
-	s.add_theme_font_size_override("font_size", 11)
-	_armory_filter_row.add_child(s)
-	return s
 
 
 ## A CHIP is anything that GRANTS AN ABILITY — the same question the ability
@@ -673,38 +591,8 @@ static func _is_chip(comp: ComponentDef) -> bool:
 	return false
 
 
-## THE ONE PLACE THE ARMORY DECIDES WHAT IT IS SHOWING. This test used to be
-## copy-pasted at all four grid-fill sites, so every new filter meant editing four
-## conditions that could silently drift apart.
-func _passes_armory_filter(comp: ComponentDef) -> bool:
-	if comp == null:
-		return false
-	var lvl := int(comp.level)
-	if lvl < _armory_lvl_min or lvl > _armory_lvl_max:
-		return false
-	if _armory_filter == -1:
-		return true
-	if _armory_filter == FILTER_CHIPS:
-		return _is_chip(comp)
-	# A chip reports SYSTEM, so an unfiltered "System" shelf would be half chips.
-	# Slot filters mean "what fits this socket", and the chip rack is its own tab.
-	if _armory_filter == HardpointDef.SlotType.SYSTEM and _is_chip(comp):
-		return false
-	return comp.slot_type() == _armory_filter
 
 
-func _add_filter_button(label: String, type: int, group: ButtonGroup) -> void:
-	var b := Button.new()
-	b.text = label
-	b.toggle_mode = true
-	b.button_group = group
-	b.button_pressed = _armory_filter == type
-	b.add_theme_font_size_override("font_size", 11)
-	b.pressed.connect(func() -> void:
-		_armory_filter = type
-		Sfx.play("click", -16.0)
-		_refresh_armory())
-	_armory_filter_row.add_child(b)
 
 
 ## The ship deck: board any owned ship AND refit it, from one screen. Left =
@@ -1837,56 +1725,12 @@ func _dockside_talk() -> String:
 
 
 func _refresh_armory() -> void:
-	# COUNT WHAT WE ADD — do not ask the grid afterwards. `queue_free()` is
-	# DEFERRED to the end of the frame, so the cleared tiles are still children
-	# right now and `get_child_count()` reports the OLD fill plus the new one.
-	# The "nothing here" note below therefore never appeared when two refreshes
-	# landed in one frame (refresh() followed by a filter click), and it only
-	# looked correct in play because a frame usually elapses in between.
-	var shown_shop := 0
-	var shown_hold := 0
-	for c in _shop_grid.get_children():
-		c.queue_free()
-	for c in _armory_grid.get_children():
-		c.queue_free()
-	for path in SHOP_STOCK:
-		var comp: ComponentDef = load(path)
-		if _passes_armory_filter(comp):
-			_shop_grid.add_child(_shop_tile(comp, path))
-			shown_shop += 1
-	# Faction gear (cloak, Crystalline Array, ...) is NOT open-market — it's sold
-	# by each profession's leader in the Pilot-tab QUARTERMASTER, never here.
-	for comp in ship.cargo:
-		if _passes_armory_filter(comp):
-			_armory_grid.add_child(_goods_tile(comp, "hold"))
-			shown_hold += 1
-	for comp in Stash.items:
-		if _passes_armory_filter(comp):
-			_armory_grid.add_child(_goods_tile(comp, "stash"))
-			shown_hold += 1
-	# SAY WHICH FILTER EMPTIED THE SHELF. "Nothing here" under a level range the
-	# pilot set three clicks ago reads as a broken shop; naming the band makes the
-	# cause the first thing they see. Every rejection must be visible.
-	var band := ""
-	if _armory_lvl_min > 1 or _armory_lvl_max < Pilot.MAX_LEVEL:
-		band = " for level %d–%d" % [_armory_lvl_min, _armory_lvl_max]
-	if shown_shop == 0:
-		_empty_note(_shop_grid, "— nothing here%s —" % band)
-	if shown_hold == 0:
-		_empty_note(_armory_grid, "— nothing in this category%s —" % band)
+	if _armory != null:
+		_armory.refresh()
 
 
-## The Armory's two grids, built from the SHARED ItemTile: the shop shelf (right-click
-## buys) and your own goods (right-click sells). The tile draws itself; the dock only
-## binds what its verbs mean here — which is what lets the ground reuse the same widget
-## with `buy` bound to a colony merchant instead.
-func _shop_tile(comp: ComponentDef, path: String) -> ItemTile:
-	var t := ItemTile.new(comp, "shop", ItemTile.Style.SHOP)
-	t.price = ItemVisuals.buy_price(comp)
-	t.hint = "left-click inspect · RIGHT-CLICK to buy (%dc)" % t.price
-	t.on_inspect = _on_armory_tile_selected
-	t.on_interact = func(_c: ComponentDef, _s: String) -> void: _buy_component(path)
-	return t
+
+
 
 
 ## A manifest square: the familiar tile, INSPECT ONLY. No price badge and no
@@ -1927,14 +1771,6 @@ func _commodity_tile(key: String, count: int) -> Control:
 	return box
 
 
-func _goods_tile(comp: ComponentDef, source: String) -> ItemTile:
-	var t := ItemTile.new(comp, source, ItemTile.Style.SHOP)
-	t.price = ItemVisuals.sell_price(comp)
-	t.price_color = Color(0.42, 0.86, 0.46)
-	t.hint = "left-click inspect · RIGHT-CLICK to sell (%dc)" % t.price
-	t.on_inspect = _on_armory_tile_selected
-	t.on_interact = _sell_component
-	return t
 
 
 func _refresh_engineering() -> void:
@@ -2406,6 +2242,13 @@ func _on_fabricate() -> void:
 
 
 func _describe(comp: ComponentDef) -> String:
+	return describe_component(comp)
+
+
+## WHAT A PART IS, in one BBCode block. STATIC because a part reads the same wherever it
+## is shown, and the screens that show it are no longer all this one — ArmoryView is its
+## own context now and would otherwise have grown a second, drifting description.
+static func describe_component(comp: ComponentDef) -> String:
 	var gc := Grades.color(comp.grade).to_html(false)
 	var out := "[b][color=#%s]%s[/color][/b]  —  [color=#%s]Mk %d %s[/color]   mass %.0f   load %.0f   value %dc\n%s" % [
 		gc, comp.display_name, gc,
@@ -2413,7 +2256,7 @@ func _describe(comp: ComponentDef) -> String:
 		ItemVisuals.level_line(comp)]
 	if comp.stat_summary() != "":
 		out += "\n" + comp.stat_summary()
-	var abil := _ability_line(comp)
+	var abil := ItemVisuals.ability_line(comp)
 	if abil != "":
 		out += "\n" + abil
 	# Affix lines: gold for gifts, red for the Flotsam curse.
@@ -2514,10 +2357,10 @@ func _comp_sell_price(comp: ComponentDef) -> int:
 	return ItemVisuals.sell_price(comp)
 
 
+## The Landing Bay's manifest squares inspect through here. The Armory owns its own
+## detail panel now, so this only feeds the shared bottom line.
 func _on_armory_tile_selected(comp: ComponentDef) -> void:
 	_detail = _describe(comp)
-	if _armory_detail != null:
-		_armory_detail.text = _detail
 
 
 func _on_tile_selected(comp: ComponentDef, source: String) -> void:
@@ -2697,8 +2540,7 @@ func _auto_fit(comp: ComponentDef, source: String) -> void:
 ## The Armory shows detail in its own right-hand panel, so the shared bottom
 ## line drops it there instead of doubling up.
 func _armory_showing() -> bool:
-	return _armory_detail != null and _tabs != null \
-		and _tabs.get_current_tab_control() != null \
+	return _tabs != null and _tabs.get_current_tab_control() != null \
 		and _tabs.get_current_tab_control().name == "Armory"
 
 

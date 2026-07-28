@@ -23,6 +23,7 @@ func _init(p_ship: TestShip) -> void:
 	# fit — passing the tile's own constant is what keeps the shelf right when it changes.
 	super(HullTile.TILE.x)
 	ship = p_ship
+	shelf()      # one pile; the Armory beside it is the screen that needs two
 	# WHAT THIS SHELF IS, kept from the column heading the tab used to carry. "Flight-
 	# ready with standard loadout" is the one fact about buying a hull here that is not
 	# visible on any tile, and dropping it in the move would have been the migration

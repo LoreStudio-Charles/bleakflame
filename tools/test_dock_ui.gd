@@ -79,6 +79,7 @@ func _ready() -> void:
 		_case_the_lab_puts_the_spend_on_the_project,
 		_case_the_shipyard_is_a_shop_shelf,
 		_case_armory_filters,
+		_case_the_armory_sells_from_your_own_shelf,
 		_case_level_gates_equipping,
 		_case_the_campaign_banner_never_goes_silent,
 		_case_started_spines_stay_in_the_log,
@@ -2382,63 +2383,100 @@ func _ok(cond: bool, what: String) -> void:
 ## cannot tell them apart, which is why the chip shelf keys off what the item
 ## GRANTS instead. If that ever regresses to a slot test, "Chips" quietly becomes a
 ## second System tab and the System tab fills up with chips.
+## THE OTHER END OF THE TRANSACTION. Two shelves share one selection and one detail
+## panel, and the whole reason that is allowed is that the panel offers the verb
+## belonging to WHERE THE THING CAME FROM — buy for the shop's stock, sell for yours.
+## A grid that lost track of which pile a tile came from would offer Buy on gear you
+## already own, and the two shelves really would be a duplicate.
+func _case_the_armory_sells_from_your_own_shelf() -> void:
+	var screen := _fresh_dock(true)
+	var armory: ArmoryView = screen._armory
+	var kept := Wallet.credits
+	screen.ship.cargo.clear()
+	var owned: ComponentDef = load(str(DockScreen.SHOP_STOCK[0]))
+	screen.ship.add_cargo(owned)
+	screen.refresh()
+
+	var mine: Array = []
+	for t in armory._yours.get_children():
+		if not t.is_queued_for_deletion() and t.get("comp") != null:
+			mine.append(t)
+	_ok(mine.size() == 1, "the thing in your hold is on YOUR COMPONENTS (%d)" % mine.size())
+	if mine.is_empty():
+		screen.queue_free()
+		return
+
+	_left_click(mine[0])
+	_ok(_find_button(armory, "Sell —") != null,
+		"picking your own gear offers SELL, not buy")
+	_ok(_find_button(armory, "Buy —") == null,
+		"...and never both — the verb follows the pile it came from")
+
+	Wallet.credits = 0
+	var worth := ItemVisuals.sell_price(owned)
+	_right_click(mine[0])
+	_ok(Wallet.credits == worth,
+		"right-clicking your own tile sells it for %dc (got %dc)" % [worth, Wallet.credits])
+	_ok(screen.ship.cargo.is_empty(), "...and it leaves your hold")
+
+	Wallet.credits = kept
+	screen.ship.cargo.clear()
+	screen.queue_free()
+
+
 func _case_armory_filters() -> void:
 	var screen := _fresh_dock(true)
 	screen.refresh()
 
+	# THROUGH THE VIEW'S OWN API. The filter used to be a field on the dock; it belongs
+	# to ArmoryView now, and set_filter() is the call its own buttons make.
+	var armory: ArmoryView = screen._armory
+
 	# --- CHIPS shows only things that grant an ability ---
-	screen._armory_filter = DockScreen.FILTER_CHIPS
-	screen._refresh_armory()
+	armory.set_filter(ArmoryView.FILTER_CHIPS)
 	var chips := _shop_tiles(screen)
 	_ok(not chips.is_empty(), "the Chips filter shows something (the shop stocks chips)")
 	for c in chips:
 		_ok(DockScreen._is_chip(c), "'%s' is on the chip shelf and grants an ability" % c.display_name)
 
 	# --- ...and the System shelf is free of them ---
-	screen._armory_filter = HardpointDef.SlotType.SYSTEM
-	screen._refresh_armory()
+	armory.set_filter(HardpointDef.SlotType.SYSTEM)
 	for c in _shop_tiles(screen):
 		_ok(not DockScreen._is_chip(c),
 			"'%s' is a chip and must not sit on the System shelf" % c.display_name)
 
 	# --- LEVEL BAND ---
-	screen._armory_filter = -1
-	screen._armory_lvl_min = 1
-	screen._armory_lvl_max = Pilot.MAX_LEVEL
-	screen._refresh_armory()
+	armory.set_filter(-1)
+	_set_band(armory, 1, Pilot.MAX_LEVEL)
 	var all_count := _shop_tiles(screen).size()
 	_ok(all_count > 0, "the unfiltered shelf has stock (%d)" % all_count)
 
-	screen._armory_lvl_min = 1
-	screen._armory_lvl_max = 5
-	screen._refresh_armory()
+	_set_band(armory, 1, 5)
 	for c in _shop_tiles(screen):
 		_ok(int(c.level) >= 1 and int(c.level) <= 5,
 			"'%s' (L%d) is inside the 1-5 band" % [c.display_name, int(c.level)])
 
 	# A band nothing occupies must EXPLAIN itself, not just look like a broken shop.
-	screen._armory_lvl_min = Pilot.MAX_LEVEL
-	screen._armory_lvl_max = Pilot.MAX_LEVEL
-	screen._refresh_armory()
+	_set_band(armory, Pilot.MAX_LEVEL, Pilot.MAX_LEVEL)
 	_ok(_shop_tiles(screen).is_empty(), "an empty band shows no stock")
-	_ok(_finds_text(screen._shop_grid, "level %d" % Pilot.MAX_LEVEL),
+	# The note belongs to the SHELF, not to the grid — inside the grid it lands in one
+	# tile-wide cell and autowraps to a character a line. So the claim is asked of the
+	# whole screen, which is also what a player sees.
+	_ok(_finds_text(armory, "level %d" % Pilot.MAX_LEVEL),
 		"an empty shelf names the level band that emptied it")
 
 	# --- THE ENDS CANNOT CROSS --- dragging min past max shoves max, and vice
 	# versa. Without this the shop can be left permanently empty with no visible
 	# cause, which reads as a bug rather than a filter.
-	screen._armory_lvl_min = 1
-	screen._armory_lvl_max = 60
-	screen._lvl_min_spin.value = 1
-	screen._lvl_max_spin.value = 60
-	screen._lvl_min_spin.value = 40          # emits -> should shove max up
-	_ok(screen._armory_lvl_max >= 40,
+	_set_band(armory, 1, 60)
+	armory._lvl_min_spin.value = 40          # emits -> should shove max up
+	_ok(armory._lvl_max >= 40,
 		"raising min above max pushed max up (min %d, max %d)"
-		% [screen._armory_lvl_min, screen._armory_lvl_max])
-	screen._lvl_max_spin.value = 3           # emits -> should shove min down
-	_ok(screen._armory_lvl_min <= 3,
+		% [armory._lvl_min, armory._lvl_max])
+	armory._lvl_max_spin.value = 3           # emits -> should shove min down
+	_ok(armory._lvl_min <= 3,
 		"lowering max below min pulled min down (min %d, max %d)"
-		% [screen._armory_lvl_min, screen._armory_lvl_max])
+		% [armory._lvl_min, armory._lvl_max])
 
 	screen.queue_free()
 
@@ -2451,9 +2489,19 @@ func _case_armory_filters() -> void:
 ## look like it did nothing at all (the first run of this case "found" every weapon
 ## in the game on the chip shelf). In play a frame always elapses between refreshes,
 ## so this is a harness concern, not a product bug.
+## THE LEVEL BAND, THROUGH THE SPINS the player actually turns — not by assigning the
+## ints behind them, which would skip the shove rule that keeps the two ends from
+## crossing and leave the case passing over a shop that can never refill.
+func _set_band(armory: ArmoryView, lo: int, hi: int) -> void:
+	armory._lvl_min_spin.value = 1           # widen first, so neither end shoves the other
+	armory._lvl_max_spin.value = Pilot.MAX_LEVEL
+	armory._lvl_min_spin.value = lo
+	armory._lvl_max_spin.value = hi
+
+
 func _shop_tiles(screen: DockScreen) -> Array:
 	var out: Array = []
-	for t in screen._shop_grid.get_children():
+	for t in (screen._armory as ArmoryView)._shop.get_children():
 		if t.is_queued_for_deletion():
 			continue
 		var c = t.get("comp")

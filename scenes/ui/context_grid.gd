@@ -20,9 +20,11 @@ extends ContextBase
 const GAP := 8
 const RING := "SelectionRing"
 
-var grid: GridContainer
+var grid: GridContainer            ## the FIRST shelf — the only one most screens need
 var _tile_w := 128.0
-var _scroll: ScrollContainer
+var _shelves: HBoxContainer
+var _grids: Array[GridContainer] = []
+var _notes := {}                   ## grid -> its "nothing here" label (never a tile)
 var _by_id := {}                   ## stable id -> metadata, for selection across refreshes
 var _nodes := {}                   ## stable id -> the tile drawing it
 
@@ -32,33 +34,91 @@ func _init(tile_width := 128.0) -> void:
 	# panel, mode row) is never built and every widget call lands on null.
 	super()
 	_tile_w = tile_width
-	_scroll = ScrollContainer.new()
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.custom_minimum_size = Vector2(300, 200)
-	left.add_child(_scroll)
-	grid = GridContainer.new()
-	grid.add_theme_constant_override("h_separation", GAP)
-	grid.add_theme_constant_override("v_separation", GAP)
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.add_child(grid)
-	_scroll.resized.connect(func() -> void: fit_columns(_scroll.size.x))
-	fit_columns(_scroll.size.x)
+	_shelves = HBoxContainer.new()
+	_shelves.add_theme_constant_override("separation", 16)
+	_shelves.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_shelves.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.add_child(_shelves)
+
+
+## A PILE OF THINGS, with a heading. Most screens have one. The Armory has two — the
+## shop's stock and your own gear — and that is NOT the Mission Computer's third column
+## in disguise: that column was a DUPLICATE of the one beside it, with the action
+## attached to the copy. These are the two ends of one transaction, and buying against
+## selling is comparative ("can I sell this to afford that", "do I already own one of
+## these"), so collapsing them behind a mode toggle would destroy the comparison the
+## screen exists to support.
+##
+## THE SECOND SHELF IS TEMPORARY, THOUGH (user, 2026-07-28): "when we can walk the
+## stations the armory can be only the buy screen and we could sell from the P > Ship
+## paperdoll." That is this whole design taken to its end — a merchant's context is
+## their STOCK; your own kit is yours, not something you visit a shop to look at. When
+## it happens the Armory drops to one shelf, which is deleting a `shelf()` call.
+##
+## Every shelf shares ONE selection and ONE detail panel, which is what makes the action
+## rule work across them: click anything in any pile and the panel offers the verb that
+## belongs to where it came from.
+func shelf(title := "", hint := "") -> GridContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_shelves.add_child(col)
+	if title != "":
+		var head := Label.new()
+		head.text = title
+		head.add_theme_color_override("font_color", UiTheme.ACCENT)
+		col.add_child(head)
+	if hint != "":
+		var sub := Label.new()
+		sub.text = hint
+		sub.add_theme_font_size_override("font_size", 11)
+		sub.add_theme_color_override("font_color", UiTheme.DIM)
+		col.add_child(sub)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(260, 200)
+	col.add_child(scroll)
+	var g := GridContainer.new()
+	g.add_theme_constant_override("h_separation", GAP)
+	g.add_theme_constant_override("v_separation", GAP)
+	g.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(g)
+	scroll.resized.connect(func() -> void: fit_columns(scroll.size.x, g))
+	fit_columns(scroll.size.x, g)
+	# THE EMPTY NOTE IS NOT A TILE. Put inside the grid it lands in ONE CELL — a column
+	# one tile wide — and autowraps to a single character per line, which is how it first
+	# shipped: a vertical stack of letters where a sentence should be. It belongs to the
+	# shelf, not to the shelf's contents.
+	var note_lbl := Label.new()
+	note_lbl.add_theme_color_override("font_color", UiTheme.DIM)
+	note_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note_lbl.visible = false
+	col.add_child(note_lbl)
+	_grids.append(g)
+	_notes[g] = note_lbl
+	if grid == null:
+		grid = g
+	return g
 
 
 ## How many tiles fit across `width`, floored at one so a narrow window still draws a
 ## shelf rather than dividing by zero into nothing.
-func fit_columns(width: float) -> void:
-	if grid == null:
+func fit_columns(width: float, g: GridContainer = null) -> void:
+	var target := g if g != null else grid
+	if target == null:
 		return
-	grid.columns = maxi(1, int(floor((width + float(GAP)) / (_tile_w + float(GAP)))))
+	target.columns = maxi(1, int(floor((width + float(GAP)) / (_tile_w + float(GAP)))))
 
 
 func _clear_items() -> void:
-	for c in grid.get_children():
-		grid.remove_child(c)
-		c.queue_free()
+	for g in _grids:
+		for c in g.get_children():
+			g.remove_child(c)
+			c.queue_free()
+		(_notes[g] as Label).visible = false
 	_by_id.clear()
 	_nodes.clear()
 
@@ -72,7 +132,7 @@ func _clear_items() -> void:
 ## shelf. `on_verb` is the RIGHT-CLICK — buy, sell, fit — the idiom the Armory
 ## established and every grid keeps.
 func tile(node: Control, id: String, kind: String, data := {},
-		on_verb := Callable()) -> void:
+		on_verb := Callable(), into: GridContainer = null) -> void:
 	var md := {"id": id, "kind": kind}
 	for k in data:
 		md[k] = data[k]
@@ -87,17 +147,17 @@ func tile(node: Control, id: String, kind: String, data := {},
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and on_verb.is_valid():
 			select(id)
 			on_verb.call())
-	grid.add_child(node)
+	(into if into != null else grid).add_child(node)
 
 
 ## An empty shelf still has to say so. A blank column reads as a screen that failed to
 ## draw, which is exactly what a shop with nothing in stock is not.
-func empty_note(text: String) -> void:
-	var lbl := Label.new()
+func empty_note(text: String, into: GridContainer = null) -> void:
+	var lbl: Label = _notes.get(into if into != null else grid)
+	if lbl == null:
+		return
 	lbl.text = text
-	lbl.add_theme_color_override("font_color", UiTheme.DIM)
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	grid.add_child(lbl)
+	lbl.visible = true
 
 
 func select(id: String) -> void:
