@@ -2811,30 +2811,11 @@ func _unload_chip(index: int) -> void:
 
 
 ## Loading a chip into the Coupling — the bag-slot equivalent of _fit_error.
+## THE RULE MOVED TO ShipBuild.chip_error (2026-07-27), where the chips live, so every
+## counter enforces the same one. This is the delegation, kept because the bay calls it
+## in several places and the pilot/level lookups belong at the UI edge, not in the model.
 func _chip_error(chip: AbilityChipDef) -> String:
-	var cap := ship.build.chip_capacity()
-	if cap <= 0:
-		return "No Universal Coupling fitted — nothing to load chips into."
-	if ship.build.chips.size() >= cap:
-		return "Coupling is full (%d/%d). Pull a chip out first." % [
-			ship.build.chips.size(), cap]
-	if chip.profession_lock != "" and chip.profession_lock != Pilot.profession:
-		return "%s needs the %s commission." % [chip.display_name,
-			Professions.display_name(chip.profession_lock)]
-	for c in ship.build.chips:
-		if c != null and c.tags == chip.tags:
-			return "That ability is already loaded."
-	# LEVEL GATES CHIPS TOO (2026-07-27). _fit_error has carried this since the level
-	# requirement shipped, but the Coupling had its own error path and never got it --
-	# so every chip (all 14 are level 5) loaded for any pilot, while a level-5 GUN on
-	# the same shelf was refused with a visible reason. The tile had already dimmed
-	# itself and painted a red L5 badge, and the tooltip already read "Requires level
-	# 5 — you are 2"; only the code disagreed.
-	var need := int(chip.level)
-	if need > Pilot.level():
-		return "%s needs pilot level %d — you are level %d." % [
-			chip.display_name, need, Pilot.level()]
-	return ""
+	return ship.build.chip_error(chip, Pilot.profession, Pilot.level())
 
 
 func _fit_from(comp: ComponentDef, source: String, slot_index: int) -> void:

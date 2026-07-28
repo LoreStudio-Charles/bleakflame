@@ -52,6 +52,9 @@ func _ready() -> void:
 		_case_every_leader_has_a_room,
 		_case_secret_commissions_never_leak,
 		_case_the_privateer_is_earned_at_the_shoal,
+		_case_no_trust_no_shelf,
+		_case_a_stocked_row_states_its_price_of_entry,
+		_case_the_meter_measures_the_rung_being_climbed,
 		_case_withheld_abilities_are_not_on_sale,
 		_case_withholding_is_all_or_nothing,
 		_case_ability_tooltips_carry_numbers,
@@ -555,6 +558,161 @@ func _case_the_privateer_is_earned_at_the_shoal() -> void:
 		"at INVITE_AT the door to The Back Room is drawn at the bar")
 	bar.queue_free()
 	ship.queue_free()
+
+
+## THE TRUST RULE (user, 2026-07-27): "hide the entire tab to someone the quartermaster
+## doesn't trust enough to see the shop."
+##
+## HIDDEN MEANS ABSENT, and that is the whole assertion. A greyed shelf, or a heading
+## over a "take the colors first" caption, is still a shop the player cannot use — which
+## is the DEMO POLISH RULE inverted, and it advertises a faction's inventory as a reward
+## before they have any reason to want it. The bar USED to do exactly that.
+##
+## VISIBILITY, NOT EXISTENCE. The heading is hidden rather than freed, so `_find_text`
+## alone passes for the wrong reason and would keep passing if the hiding broke — the
+## same trap that made a "Take the job" assertion vacuous last session.
+func _case_no_trust_no_shelf() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true
+	Standing.reset()
+	Pilot.profession = ""
+
+	# Every rung BELOW trust, including the two where the player is already welcome.
+	for below in [-50, SpeakEasy.WORK_AT, Standing.INVITE_AT - 1]:
+		Standing.add("privateer", below - Standing.get_points("privateer"))
+		bar.refresh()
+		_ok(not _find_visible_text(bar, "QUARTERMASTER"),
+			"at standing %d the shelf is not on screen at all" % below)
+		for ware in Professions.wares("privateer"):
+			if not ResourceLoader.exists(str(ware)):
+				continue
+			var comp: ComponentDef = load(str(ware))
+			_ok(not _find_visible_text(bar, comp.display_name),
+				"...nor is %s, which they cannot buy" % comp.display_name)
+			break        # one ware proves the shelf; loading all three per rung is waste
+
+	# THE VENUE PUBLISHES ITS OWN TUTOR CONTEXT. `Tutor.safe` is written by the FLIGHT
+	# tick, so a dock screen that does not assert it inherits whatever was true at the
+	# moment of docking — dock while something is hunting you and it stays FALSE, dwell
+	# timers stop, and every lesson behind the active one starves. DockScreen and the
+	# Verge deck each learned this the hard way; the Speak's Easy never asserted it at
+	# all, so the newest venue shipped with the oldest bug. It is the shell's job now,
+	# which is why no venue can forget it again.
+	Tutor.safe = false
+	Tutor.venue = "station"
+	bar.refresh()
+	_ok(Tutor.safe, "the venue asserts a safe tutor context instead of inheriting flight's")
+	_ok(Tutor.venue == "shoal", "...and names itself, so station-only lessons stay home")
+
+	# AND IT OPENS. A gate that is always shut is indistinguishable from a missing
+	# feature, so the same walk must find the shelf the moment trust lands.
+	Standing.add("privateer", Standing.INVITE_AT - Standing.get_points("privateer"))
+	bar.refresh()
+	_ok(_find_visible_text(bar, "QUARTERMASTER"),
+		"at INVITE_AT the shelf is drawn — trust and the back room arrive together")
+	bar.queue_free()
+	ship.queue_free()
+
+
+## "show the faction required to purchase the item and the currency required" (user).
+## Nothing on a counter may be a silent refusal: a row the pilot cannot buy says WHY in
+## words, and every row names what it costs.
+func _case_a_stocked_row_states_its_price_of_entry() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true
+	Standing.reset()
+	Pilot.profession = ""
+	Standing.add("privateer", Standing.INVITE_AT - Standing.get_points("privateer"))
+	bar.refresh()
+
+	# An INVITED but UNCOMMISSIONED pilot: the shelf is visible, and every ware on it is
+	# locked behind the commission whose door stands beside it. That is the pull the
+	# adjacency exists to create, and it only works if the row says so out loud.
+	_ok(_find_visible_text(bar, "requires"),
+		"a ware they cannot buy states its requirement in words, not a dead button")
+	_ok(_find_visible_text(bar, "c"), "...and every row names its price")
+
+	# THE CURRENCY IS NAMED BY ONE FUNCTION. Faction scrip does not exist yet and must
+	# not be invented by a layout pass — but the day it does, this is the only place
+	# that has to learn about it.
+	_ok(VenueLayout.price_text(180) == "180c", "credits print as credits")
+	_ok(VenueLayout.price_text(4, "insight") == "4 Insight",
+		"...and a second currency is NAMED, never assumed to be credits")
+
+	# The rule itself, without a screen. NAME THE REASON, not merely "refused": these
+	# wares are level 5 and the harness pilot is level 1, so BOTH gates are unmet at
+	# once and an assertion that only checks `met == false` passes with the commission
+	# check deleted outright — verified by sabotage, which is how this was caught.
+	# WHICH reason is shown also matters to the player: the commission is the binding
+	# one and its door is standing right beside the shelf.
+	for ware in Professions.wares("privateer"):
+		if not ResourceLoader.exists(str(ware)):
+			continue
+		var comp: ComponentDef = load(str(ware))
+		var locked := VenueLayout.requirement(comp, "privateer", "privateer")
+		_ok(not bool(locked.met), "%s refuses an uncommissioned pilot" % comp.display_name)
+		_ok("commission" in str(locked.text),
+			"...naming THE COMMISSION, the gate they can act on (%s)" % str(locked.text))
+
+		# And with the commission held, the level gate speaks for itself rather than
+		# the row going quiet or claiming to be buyable.
+		var held := Pilot.profession
+		Pilot.profession = "privateer"
+		var levelled := VenueLayout.requirement(comp, "privateer", "privateer")
+		Pilot.profession = held
+		_ok(not bool(levelled.met), "...and a level-%d chip still refuses a level-%d pilot" % [
+			int(comp.level), Pilot.level()])
+		_ok("level" in str(levelled.text),
+			"...naming the LEVEL once the commission is no longer the obstacle (%s)" % str(levelled.text))
+	bar.queue_free()
+	ship.queue_free()
+
+
+## THE METER HAS TO MOVE. Scaled to Standing.MAX (1000) the bar did not visibly change
+## anywhere on the Shoal's ladder — every rung that matters sits between -100 and 100,
+## so a pilot running Vyper's contracts from 0 to 100 watched an empty bar the whole
+## way and learned that the work does nothing. Measured rung-to-rung it fills across
+## exactly the span being climbed.
+##
+## Pure + static, so the ladder is assertable without building a screen.
+func _case_the_meter_measures_the_rung_being_climbed() -> void:
+	var ladder := SpeakEasy.RUNGS
+	var seen := []
+	for p in [-100, -50, 0, 5, 12, 60, 100, 300, 499]:
+		var c := VenueLayout.climb_to_next(ladder, p)
+		_ok(not c.is_empty(), "at standing %d there is still a rung ahead" % p)
+		_ok(float(c.frac) >= 0.0 and float(c.frac) <= 1.0,
+			"...and the fill stays on the bar (%.2f)" % float(c.frac))
+		seen.append(float(c.frac))
+
+	# THE ASSERTION THAT WOULD HAVE CAUGHT THE BUG. Under the old MAX-scaled bar every
+	# one of these rounded to the same empty cell; under this one they must differ.
+	_ok(seen.max() - seen.min() > 0.5,
+		"the bar visibly travels across the Shoal ladder (%.2f..%.2f)" % [
+			seen.min(), seen.max()])
+
+	# Progress is measured from the rung you PASSED, not from zero: at 60 you are most
+	# of the way from 10 to 100, not 6% of the way to anything.
+	var mid := VenueLayout.climb_to_next(ladder, 60)
+	_ok(int(mid.to) == Standing.FRIENDLY_AT, "at 60 the next door is the fence")
+	_ok(float(mid.frac) > 0.4, "...and it reads as most of the way there, not 6%%")
+
+	# Hostile: the climb starts at the floor a written-off faction sits on, so Krayt's
+	# truce reads as real, visible progress rather than a bar still pinned at nothing.
+	var truce := VenueLayout.climb_to_next(ladder, -50)
+	_ok(float(truce.frac) > 0.3, "Krayt's truce shows as ground gained (%.2f)" % float(truce.frac))
+
+	# The top of the ladder is the one place with nothing ahead.
+	_ok(VenueLayout.climb_to_next(ladder, Standing.ALLIED_AT).is_empty(),
+		"at the top rung there is nothing left to climb")
 
 
 ## A tooltip that only says what an ability DOES cannot settle "which of these
@@ -1337,6 +1495,25 @@ func _find_office(root: Node) -> GuildOffice:
 
 ## Does any label anywhere under `root` contain this text? Buttons are how you
 ## act; labels are how you READ, and the prospectus is a reading surface.
+## CAN THE PLAYER SEE IT — the only question the trust rule cares about. Controls here
+## are HIDDEN rather than freed, so an existence check answers yes for a shelf nobody
+## can read and would keep answering yes if the hiding broke.
+func _find_visible_text(root: Node, needle: String) -> bool:
+	for child in root.get_children():
+		var ctrl := child as Control
+		if ctrl != null and not ctrl.is_visible_in_tree():
+			continue
+		if child is RichTextLabel and needle in (child as RichTextLabel).get_parsed_text():
+			return true
+		if child is Label and needle in (child as Label).text:
+			return true
+		if child is Button and needle in (child as Button).text:
+			return true
+		if _find_visible_text(child, needle):
+			return true
+	return false
+
+
 func _find_text(root: Node, needle: String) -> bool:
 	for child in root.get_children():
 		if child is RichTextLabel and needle in (child as RichTextLabel).get_parsed_text():

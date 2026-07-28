@@ -1,19 +1,26 @@
 class_name SpeakEasy
 extends CanvasLayer
 ## The Rust Shoal's dock deck — a speakeasy (illicit bar) AND "speak easy" (no
-## Board listening). Bespoke + minimal on purpose: the station DockScreen's
-## is_station flag is woven through construction and every refresh, so a lawless
-## den isn't worth shoehorning into it. Repairs + save still happen on dock via
-## ship.dock() like any berth; this just shows the receipt and the FENCE.
+## Board listening). Repairs + save still happen on dock via ship.dock() like any
+## berth; this shows the receipt, the FENCE, and Vyper's counter.
+##
+## ON THE STANDARD VENUE LAYOUT (2026-07-27, docs/venue_layout.md). Everything that
+## was identical to Doug's deck — the desk, the board, the hand-ins, the standing
+## meter, the trust-gated quartermaster, the office door — is VenueLayout's now, and
+## was deleted from here rather than copied. What stays is what makes this place
+## worth flying to: the fence, the smoke, and Krayt's table.
+##
 ## The fence (stolen goods → credits + Privateer standing) only opens once you're
-## TRUSTED (Standing.shoal_trusted) — a merely-invited pilot can put down and
-## warm a stool, but the real business waits on your rep. [E] launches (the
-## shared LaunchWindow via flight_test), same as anywhere.
+## TRUSTED (Standing.shoal_trusted) — a merely-invited pilot can put down and warm a
+## stool, but the real business waits on your rep. [E] launches, same as anywhere.
 
 const FENCE_CREDITS := 90
 const FENCE_PRIVATEER := 2
 
-## Grey-market markup on Vyper's gear — the Shoal doesn't run a charity.
+## Grey-market markup on Vyper's gear — the Shoal doesn't run a charity. AGAINST THE
+## GOING RATE (ItemVisuals.buy_price), which is what makes it a markup: it used to
+## multiply the raw `value()`, so this counter quietly sold the same chip for 40% LESS
+## than the back room three feet away charged for it.
 const QUART_MARKUP := 1.2
 
 ## VYPER'S BANNER is what opens her work to you — the middle rung of the Shoal ladder.
@@ -22,15 +29,20 @@ const QUART_MARKUP := 1.2
 ## from there her contracts are the ONLY road to Standing.INVITE_AT and the commission.
 const WORK_AT := 0
 
+## THE SHOAL LADDER, in Vyper's words — what the next scrap of standing actually buys.
+## The meter sits directly under her board, so the work and its consequence are one
+## glance apart. Authored here because these are THIS venue's doors, not generic bands.
+const RUNGS := [
+	{"at": WORK_AT, "label": "Vyper posts her work to you"},
+	{"at": Standing.INVITE_AT, "label": "the back room opens — and her counter"},
+	{"at": Standing.FRIENDLY_AT, "label": "the fence takes your stolen goods"},
+	{"at": Standing.ALLIED_AT, "label": "the Shoal calls you one of theirs"},
+]
+
 var ship: TestShip
+var _venue: VenueLayout
 var _body: RichTextLabel
 var _fence_box: VBoxContainer
-var _quart_box: VBoxContainer
-var _work_box: VBoxContainer
-var _offers: ItemList
-var _take_btn: Button
-var _door_box: HBoxContainer
-var _active_box: VBoxContainer
 var _active_talk: DialoguePanel
 
 
@@ -42,6 +54,10 @@ func _init(p_ship: TestShip) -> void:
 
 func _ready() -> void:
 	add_to_group("dock_screens")
+	var ping := TutorPing.new()
+	ping.anchor = "office_door"
+	add_child(ping)
+
 	var shade := ColorRect.new()
 	shade.color = Color(0.03, 0.02, 0.02, 1.0)   # smoky, rust-dark
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -56,85 +72,33 @@ func _ready() -> void:
 	panel.offset_bottom = -26
 	add_child(panel)
 
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
-	panel.add_child(col)
+	_venue = VenueLayout.new({
+		"ship": ship, "venue": "shoal", "board": "The Speak's Easy",
+		"npc": "vyper", "faction": "shoal", "rungs": RUNGS,
+		"board_title": "VYPER'S WORK",
+		"board_open": func() -> bool: return Standing.get_points("privateer") >= WORK_AT,
+		"board_shut_text": "\"Krayt vouched for you, so drink. Working for us is a different word.\"   (Vyper's banner opens her work)",
+		"price_of": func(comp: ComponentDef) -> int:
+			return int(ItemVisuals.buy_price(comp) * QUART_MARKUP),
+	})
+	panel.add_child(_venue)
+	_venue.build("THE SPEAK'S EASY — Rust Shoal")
+	_venue.changed.connect(refresh)
+	_venue.talk_pressed.connect(_on_talk)
+	_venue.office_opened.connect(_open_office)
+	_venue.ware_bought.connect(_on_buy_install)
 
-	var head := Label.new()
-	head.text = "THE SPEAK'S EASY — Rust Shoal        [E] launch"
-	head.add_theme_color_override("font_color", UiTheme.AMBER)
-	head.add_theme_font_size_override("font_size", 22)
-	col.add_child(head)
+	_body = _venue.body
 
-	_body = RichTextLabel.new()
-	_body.bbcode_enabled = true
-	_body.fit_content = true
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(_body)
-
-	# VYPER'S WORK — the rung between her banner and the commission. Posted here and
-	# turned in here: Shoal work does not get filed with the Board.
-	var work_head := Label.new()
-	work_head.text = "VYPER'S WORK"
-	work_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	col.add_child(work_head)
-	_work_box = VBoxContainer.new()
-	_work_box.add_theme_constant_override("separation", 4)
-	# THE BOARD TAKES THE SLACK. Everything else on this screen is a couple of lines, so
-	# without this the whole bar crams into the top third and two thirds of the panel is
-	# dead space with a 96px scroller in it — three contracts behind a scrollbar on a
-	# 1080-tall screen. The board is the reason to stand here; it gets the room.
-	_work_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(_work_box)
-	_offers = ItemList.new()
-	# SIZED TO THE BOARD, not to the screen. Letting the list take all the slack fixed the
-	# 96px scroller by overshooting into ~700px of empty list under three rows; a venue
-	# posts three or four contracts, so this holds them all with a little room and the
-	# SPACER below takes the leftover instead.
-	_offers.custom_minimum_size = Vector2(0, 200)
-	_offers.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_offers.item_activated.connect(func(_i: int) -> void: _on_accept())
-	_work_box.add_child(_offers)
-	# Buttons sit in a row so they keep their own width. A Button parented straight to a
-	# VBoxContainer stretches to fill it, which made "Take the job" a 1900px bar.
-	var btn_row := HBoxContainer.new()
-	btn_row.add_theme_constant_override("separation", 8)
-	_work_box.add_child(btn_row)
-	_take_btn = Button.new()
-	_take_btn.text = "Take the job"
-	UiTheme.button_flavor(_take_btn, "secondary")
-	_take_btn.pressed.connect(_on_accept)
-	btn_row.add_child(_take_btn)
-	_door_box = HBoxContainer.new()
-	btn_row.add_child(_door_box)
-	_active_box = VBoxContainer.new()
-	_active_box.add_theme_constant_override("separation", 4)
-	_work_box.add_child(_active_box)
-	# The slack lands HERE, so the fence and the quartermaster sit at the foot of the
-	# panel instead of being crowded into the top third with dead space beneath them.
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_work_box.add_child(spacer)
-
+	# THE FENCE — the Shoal's own business, and the reason a hold full of somebody
+	# else's cargo is worth flying out here.
 	var fence_head := Label.new()
 	fence_head.text = "THE FENCE"
 	fence_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	col.add_child(fence_head)
+	_venue.venue_box.add_child(fence_head)
 	_fence_box = VBoxContainer.new()
 	_fence_box.add_theme_constant_override("separation", 4)
-	col.add_child(_fence_box)
-
-	# Vyper's QUARTERMASTER: the ONE place a KoS pilot (locked out of the station's
-	# Engineering bay) can get Privateer gear AND have it installed. Buying here
-	# bolts the module straight into a free System slot — no station refit needed;
-	# Going Dark handles the gem memorize in flight. The Shoal is your home now.
-	var quart_head := Label.new()
-	quart_head.text = "VYPER'S QUARTERMASTER"
-	quart_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	col.add_child(quart_head)
-	_quart_box = VBoxContainer.new()
-	_quart_box.add_theme_constant_override("separation", 4)
-	col.add_child(_quart_box)
+	_venue.venue_box.add_child(_fence_box)
 
 
 func refresh() -> void:
@@ -146,17 +110,24 @@ func refresh() -> void:
 	var txt := "[i][color=#a8b0c2]Low light, lower talk. Nobody here asks where your hold came from — only what you're selling.[/color][/i]\n\n"
 	if repairs > 0 or ammo > 0:
 		txt += "Patched up on the quiet — repairs [color=#f2b859]-%dc[/color], munitions [color=#f2b859]-%dc[/color].\n" % [repairs, ammo]
-	txt += "[color=#8890a0]credits %dc    Privateer standing %d[/color]" % [
-		Wallet.credits, Standing.get_points("privateer")]
+	txt += "[color=#8890a0]credits %dc[/color]" % Wallet.credits
 	_body.text = txt
-	_refresh_work()
-	_refresh_quartermaster()
 
+	_venue.refresh()
+	# Vyper speaks when she has something; otherwise the desk still opens on a word.
+	_venue.desk.set_news(not Quests.talks_for("vyper").is_empty(),
+		"She's watching the door, not you.")
+	_refresh_fence()
+
+
+## Locked BELOW the banner too, not merely below trust: a pilot Vyper won't post work
+## to certainly isn't buying her silence about a hold full of stolen freight.
+func _refresh_fence() -> void:
 	for c in _fence_box.get_children():
 		c.queue_free()
 	if not Standing.shoal_trusted():
 		var locked := Label.new()
-		locked.text = "\"You're good for a drink, stranger. The rest you earn.\"   (the fence opens at Privateer — Friendly)"
+		locked.text = "\"You're good for a drink, stranger. The rest you earn.\"   (the fence opens at Friendly)"
 		locked.add_theme_font_size_override("font_size", 12)
 		locked.add_theme_color_override("font_color", UiTheme.DIM)
 		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -187,97 +158,36 @@ func refresh() -> void:
 	row.add_child(btn)
 
 
-## Vyper's postings, anything of hers you can hand in right now, and the door to The Back
-## Room. All three appear together the moment her banner does, and not one moment before.
-func _refresh_work() -> void:
-	# BOTH ledgers cleared up front, before the locked early-return below. The door lives
-	# in the button row now, so clearing it only on the open path would leave a stale
-	# Back Room door standing on a screen that has just re-locked.
-	for c in _active_box.get_children():
-		c.queue_free()
-	for c in _door_box.get_children():
-		c.queue_free()
-	_offers.clear()
-	var open := Standing.get_points("privateer") >= WORK_AT
-	_offers.visible = open
-	_take_btn.visible = open
-	if not open:
-		var locked := Label.new()
-		locked.text = "\"Krayt vouched for you, so drink. Working for us is a different word.\"   (Vyper's banner opens her work)"
-		locked.add_theme_font_size_override("font_size", 12)
-		locked.add_theme_color_override("font_color", UiTheme.DIM)
-		locked.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_active_box.add_child(locked)
+## Quest business first, a word with her otherwise. Same shape as every other desk:
+## the button is never a dead click.
+func _on_talk(_who: String) -> void:
+	Pilot.meet("vyper")
+	var waiting := Quests.talks_for("vyper")
+	if waiting.is_empty():
+		var chat := DialoguePanel.new("vyper",
+			{"start": {"text": Npcs.idle_line("vyper"),
+				"choices": [{"text": "Later, then.", "next": "end"}]}},
+			func(_a: String) -> String: return "")
+		chat.closed.connect(refresh)
+		_active_talk = chat
+		add_child(chat)
 		return
-
-	for entry in MissionLog.offers_at("shoal", "The Speak's Easy"):
-		var m: Dictionary = entry.m
-		# `desc`, not MissionLog.label() — label appends the giver, which is right on a
-		# board carrying several people's postings and pure noise on a single-giver one.
-		# Every row read "... — Vyper" directly under a heading saying VYPER'S WORK.
-		var idx := _offers.add_item("%s  —  %dc" % [str(m.desc), m.reward])
-		_offers.set_item_metadata(idx, int(entry.index))
-		var face := Npcs.portrait("vyper")
-		if face != null:
-			_offers.set_item_icon(idx, face)
-	if _offers.item_count == 0:
-		_offers.add_item("— the board's bare. Come back when the lane's been busy —")
-		_offers.set_item_disabled(0, true)
-
-	for i in MissionLog.active.size():
-		var m: Dictionary = MissionLog.active[i]
-		if not MissionLog.venue_ok_at(m, "shoal"):
-			continue
-		var done: bool = MissionLog.is_complete(m, ship)
-		var b := Button.new()
-		b.text = "%s  —  %s" % [str(m.desc),
-			"HAND IN (%dc)" % m.reward if done else "in progress"]
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.disabled = not done
-		if done:
-			UiTheme.button_flavor(b, "primary")
-		b.pressed.connect(_turn_in.bind(i))
-		_active_box.add_child(b)
-
-	# THE BACK ROOM. The same GuildOffice every other leader uses — a commission is
-	# administered where its leader stands, and Vyper's counter is a bar in a pirate den.
-	var prof := Professions.led_by("vyper")
-	if prof != "" and Professions.office_open(prof):
-		var door := Button.new()
-		door.text = "%s  →  %s" % [
-			"Enter" if Pilot.profession == prof else "Visit",
-			Professions.office_name(prof)]
-		UiTheme.button_flavor(door, "primary")
-		door.pressed.connect(_open_office.bind(prof))
-		_door_box.add_child(door)
-
-
-## THROUGH take(), never accept(): take() reports WHY a refusal happened (a full log
-## answered a bare accept() with a click and nothing else) and calls ensure_offers itself.
-func _on_accept() -> void:
-	var sel := _offers.get_selected_items()
-	if sel.is_empty() or _offers.is_item_disabled(sel[0]):
-		return
-	var r := MissionLog.take(int(_offers.get_item_metadata(sel[0])))
-	if r.ok:
-		Tutor.did("accepted_contract")
-	else:
-		Sfx.play("click", -16.0, 0.6)
-	ship._flash_note(str(r.msg))
-	refresh()
-
-
-## THROUGH MissionLog.complete(), which carries the standing credit (faction_for ->
-## privateer, the whole reason this board exists), Quests.check_new_work and the turn-in
-## tutor signals. Re-implementing the tail here is how boards drift apart.
-func _turn_in(index: int) -> void:
-	var r := MissionLog.complete(index, ship, "shoal", SaveGame.tutorial_done)
-	if r.ok:
-		Tutor.did("turned_in")
-		Tutor.retire("turn_in")
-		Sfx.play("jingle", -8.0)
-	ship._flash_note(str(r.msg))
-	refresh()
+	var talk: Dictionary = waiting[0]
+	Quests.take_talk("vyper")
+	var panel := DialoguePanel.new("vyper", talk.get("nodes", {}),
+		func(_a: String) -> String: return "")
+	if talk.has("text"):
+		panel = DialoguePanel.new("vyper",
+			{"start": {"text": str(talk.text),
+				"choices": [{"text": "Understood.", "next": "end", "style": "primary"}]}},
+			func(_a: String) -> String: return "")
+	panel.vo_prefix = str(talk.get("vo", ""))
+	panel.closed.connect(func() -> void:
+		if talk.has("advance"):
+			Quests.advance_talk(str(talk.advance))
+		refresh())
+	_active_talk = panel
+	add_child(panel)
 
 
 func _open_office(prof: String) -> void:
@@ -290,6 +200,7 @@ func _open_office(prof: String) -> void:
 			Research.journal.append({"day": GameClock.now(),
 				"text": "Took the Shoal's colors — the %s commission." % Professions.display_name(id)})
 			refresh())
+	office.closed.connect(refresh)
 	add_child(office)
 
 
@@ -304,57 +215,9 @@ func _on_fence() -> void:
 	refresh()
 
 
-## Vyper's stock, buy-and-install. Only a commissioned Privateer can fit her
-## gear (the profession lock), so the shop shows only to them; anyone else gets
-## pointed at the commission.
-func _refresh_quartermaster() -> void:
-	for c in _quart_box.get_children():
-		c.queue_free()
-	if Pilot.profession != "privateer":
-		var note := Label.new()
-		note.text = "\"Shoal gear's for Shoal crew. Take the colors first.\"   (commission with Vyper to requisition)"
-		note.add_theme_font_size_override("font_size", 12)
-		note.add_theme_color_override("font_color", UiTheme.DIM)
-		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_quart_box.add_child(note)
-		return
-	var stock: Array = Professions.wares("privateer")
-	if stock.is_empty():
-		return
-	for path in stock:
-		var sp := str(path)
-		if not ResourceLoader.exists(sp):
-			continue
-		var comp: ComponentDef = load(sp)
-		var price := int(comp.value() * QUART_MARKUP)
-		var owned: bool = _already_fitted(sp)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		_quart_box.add_child(row)
-		var lbl := RichTextLabel.new()
-		lbl.bbcode_enabled = true
-		lbl.fit_content = true
-		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lbl.text = "[b]%s[/b]\n[color=#8890a0]%s[/color]" % [comp.display_name, comp.description]
-		row.add_child(lbl)
-		var btn := Button.new()
-		btn.text = "FITTED" if owned else "Buy & install — %dc" % price
-		btn.disabled = owned
-		UiTheme.button_flavor(btn, "primary")
-		if not owned:
-			btn.pressed.connect(_on_buy_install.bind(sp))
-		row.add_child(btn)
-
-
-func _already_fitted(path: String) -> bool:
-	for comp in ship.build.slots.values():
-		if comp != null and comp.resource_path == path:
-			return true
-	return false
-
-
 ## A free hardpoint this module can legally take: right slot type, empty, mark
-## fits, and the commission lock clears. -1 if none.
+## fits, and the commission lock clears. -1 if none. MODULES ONLY — chips go in the
+## Coupling and never touch a hardpoint (see _on_buy_install).
 func _install_slot(comp: ComponentDef) -> int:
 	var hull := ship.build.hull
 	for i in hull.hardpoints.size():
@@ -365,27 +228,45 @@ func _install_slot(comp: ComponentDef) -> int:
 			continue
 		if comp is SystemDef and not (comp as SystemDef).fittable_by(Pilot.profession):
 			continue
-		# LEVEL GATES VYPER'S COUNTER TOO (2026-07-27). This is a hand-rolled copy of
-		# the Engineering bay's fit rules that checks slot type, occupancy, mark and
-		# profession lock -- everything _fit_error checked BEFORE the level
-		# requirement was added, and nothing since. So the Shoal would bolt a
-		# level-gated module onto a level-2 hull that the dock would refuse.
-		# THE THIRD COPY OF THIS RULE to need the same patch in two days (the
-		# Coupling's _chip_error was the second). The real fix is one shared
-		# ShipFitting.fit_error; until that lands, this keeps the counters honest.
 		if int(comp.level) > Pilot.level():
 			continue
 		return i
 	return -1
 
 
+## Vyper's counter INSTALLS IT: the one place a KoS pilot (locked out of the station's
+## Engineering bay) can get Privateer gear AND have it fitted. No station refit needed.
+##
+## A CHIP GOES IN THE COUPLING (fixed 2026-07-27). Everything Vyper stocks is an
+## AbilityChipDef, and a chip's slot_type() answers SYSTEM — so this used to hunt for a
+## free System HARDPOINT and bolt the chip into it, eating a cargo pod or a sensor mount
+## and putting the ability somewhere the Coupling does not read. It went unnoticed
+## because `comp is SystemDef` is FALSE for a chip (AbilityChipDef extends ComponentDef
+## directly), so the commission lock silently did not apply here either. Both are one
+## fix: chips route through ShipBuild.chip_error, the same rule the Engineering bay uses.
 func _on_buy_install(path: String) -> void:
 	var comp: ComponentDef = load(path)
-	var price := int(comp.value() * QUART_MARKUP)
+	var price := int(ItemVisuals.buy_price(comp) * QUART_MARKUP)
 	if Wallet.credits < price:
 		ship._flash_note("Not enough credits (%dc needed)." % price)
 		Sfx.play("click", -16.0, 0.6)
 		return
+
+	if comp is AbilityChipDef:
+		var err := ship.build.chip_error(comp as AbilityChipDef, Pilot.profession, Pilot.level())
+		if err != "":
+			ship._flash_note(err)
+			Sfx.play("click", -16.0, 0.6)
+			return
+		Wallet.credits -= price
+		ship.build.chips.append(comp)
+		ship.apply_build(ship.build)
+		Sfx.play("jingle", -6.0)
+		ship._flash_note("The Shoal's crew slots it into your Coupling — %s is in your library." \
+			% comp.display_name)
+		refresh()
+		return
+
 	var slot := _install_slot(comp)
 	if slot < 0:
 		ship._flash_note("No free System berth — unfit something first, then come back.")
@@ -395,7 +276,7 @@ func _on_buy_install(path: String) -> void:
 	ship.build.slots[slot] = comp
 	ship.apply_build(ship.build)
 	Sfx.play("jingle", -6.0)
-	ship._flash_note("The Shoal's crew bolts it on — %s installed. Going Dark wires it to a bus slot." % comp.display_name)
+	ship._flash_note("The Shoal's crew bolts it on — %s installed." % comp.display_name)
 	refresh()
 
 
