@@ -90,6 +90,8 @@ static func save_game(ship: TestShip) -> void:
 		"cargo": _comp_paths(ship.cargo),
 		"commodities": ship.commodities,
 		"missions_offers": MissionLog.offers,
+		# WORLD state, like the board above: how glutted or stripped each venue is.
+		"market": TradeGoods.flow_to_dict(),
 		"missions_active": MissionLog.active,
 		"missions_next_uid": MissionLog.next_uid,
 		"total_kills": MissionLog.total_kills,
@@ -165,6 +167,7 @@ static func load_game() -> void:
 		if TradeGoods.GOODS.has(key):
 			_pending_commodities[key] = int(data["commodities"][key])
 	MissionLog.offers = _sanitize_missions(data.get("missions_offers", []))
+	TradeGoods.flow_from_dict(data.get("market", {}))
 	MissionLog.active = _sanitize_missions(data.get("missions_active", []))
 	MissionLog.total_kills = int(data.get("total_kills", 0))
 	MissionLog.next_uid = int(data.get("missions_next_uid", 1))
@@ -295,6 +298,7 @@ static func reset_all_progress() -> void:
 	# had the debt written into their own save at the first dock.
 	Nemesis.reset()
 	MissionLog.offers = []
+	TradeGoods.flow_from_dict({})
 	MissionLog.active = []
 	MissionLog.total_kills = 0
 	MissionLog.next_uid = 1

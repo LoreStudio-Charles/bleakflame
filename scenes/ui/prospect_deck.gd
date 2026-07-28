@@ -152,11 +152,15 @@ func _ore_price(key: String) -> int:
 ## One unit per press, same as the market — deliberate, so a big haul is a
 ## visible stack of payments rather than one anonymous number.
 func _sell_ore(key: String) -> void:
+	# MINER STANDING IS TradeGoods.sell's JOB, not this deck's — it credits any ore sale
+	# anywhere. Adding it here as well paid Doug's crew TWICE for one crate, which is what
+	# routing this counter through the shared transaction quietly introduced: the rule was
+	# already in the shared path, and the local copy stopped being a copy and became a
+	# second helping.
 	var r := TradeGoods.sell(ship, TradeGoods.VERGE_MARKET, key)
 	if not r.ok:
 		_venue.flash(str(r.msg))
 		return
-	Standing.add("miner", 1)   # ore off your hold is Doug's kind of work
 	Sfx.play("click", -14.0)
 	refresh()
 

@@ -151,21 +151,119 @@ static func unit_mass(key: String) -> float:
 const MAX_EDGE := 0.9
 
 
+## ---- LOCAL DEMAND ----
+##
+## "Prices drift toward the average as the player settles supply and demand, recovering
+## slowly over time" — docs/economy_and_contraband.md, Guard 2, the real answer to
+## farming one route forever. A venue you have flooded stops wanting the thing; a venue
+## you have stripped starts paying for it.
+##
+## ONE NUMBER PER (VENUE, GOOD), MOVING BOTH ITS PRICES THE SAME WAY. That is the whole
+## design, and it is what makes this safe to add underneath everything built today. Sell
+## the colony fifty crates of circuits and it has plenty of circuits — so it BUYS them
+## cheaper AND SELLS them cheaper, together. Because both ends scale by the same factor,
+## every ratio survives untouched: the 50% buy-back rule, the no-same-desk-arbitrage
+## invariant and the Trader's convergence guard all hold at EVERY saturation level rather
+## than only at the authored numbers. A model that moved one end alone would have needed
+## all three re-proved, and would have re-opened the exploit at some stock level nobody
+## thought to check.
+##
+## WORLD STATE, NOT PLAYER STATE. Two pilots docked at the same station must see the same
+## shelf, so this is a plain static like MissionLog.offers (the contract board), not a
+## PlayerState field — the rule PlayerState's own header gives for sorting this. Both are
+## natural first tenants of a WorldState when it lands.
+
+## Price move per net unit the player has pushed into a venue. 0.012 means a 25-crate
+## dump costs that venue's prices about 30% — a real dent from a real haul, and nothing
+## from a casual sale.
+const FLOW_STEP := 0.012
+const FLOW_MIN := 0.55          ## a glutted venue still pays SOMETHING; never zero
+const FLOW_MAX := 1.60          ## a stripped one is dear, not extortionate
+## Net units a venue forgets per game day. The clock advances one day per docking
+## (GameClock), so recovery cannot be idled past and needs no real-world timer.
+const FLOW_RECOVER := 4.0
+
+## "venue|good" -> net units the player has moved INTO that venue (sold minus bought).
+static var flow := {}
+static var _flow_stamp := 0     ## clock stamp `flow` has been aged to
+
+
+## How saturated this venue is with this good, as a price multiplier. Above 1.0 they are
+## short and paying up; below 1.0 you have glutted them.
+static func demand_mult(market: Dictionary, key: String) -> float:
+	_age_flow()
+	var net := float(flow.get(_flow_key(market, key), 0.0))
+	return clampf(1.0 - net * FLOW_STEP, FLOW_MIN, FLOW_MAX)
+
+
+## A word for what the multiplier means, or "" when the market is at its baseline. Every
+## rejection must be visible, and so must every price that is not the price on the tin:
+## a number that moved for a reason the player cannot see reads as a bug.
+static func demand_word(market: Dictionary, key: String) -> String:
+	var m := demand_mult(market, key)
+	if m >= 1.15:
+		return "SHORT"          # you stripped them, or the world did
+	if m <= 0.85:
+		return "GLUTTED"        # they have plenty, largely thanks to you
+	return ""
+
+
+## Record units crossing the counter. `units` is POSITIVE when the player sells INTO the
+## venue (flooding it) and NEGATIVE when they buy out of it.
+static func note_flow(market: Dictionary, key: String, units: float) -> void:
+	_age_flow()
+	var k := _flow_key(market, key)
+	flow[k] = float(flow.get(k, 0.0)) + units
+
+
+## Forget `FLOW_RECOVER` units a day, toward zero from either side. Applied lazily on
+## read rather than from a tick: the clock only moves on docking, so there is no frame
+## this could be missed on, and nothing has to remember to call it.
+static func _age_flow() -> void:
+	var days := GameClock.since(_flow_stamp) / float(GameClock.DAY)
+	if days <= 0.0:
+		return
+	_flow_stamp = GameClock.now()
+	var fade := days * FLOW_RECOVER
+	for k in flow.keys():
+		var net := float(flow[k])
+		var eased: float = maxf(0.0, absf(net) - fade) * signf(net)
+		if is_zero_approx(eased):
+			flow.erase(k)
+		else:
+			flow[k] = eased
+
+
+static func _flow_key(market: Dictionary, key: String) -> String:
+	return "%s|%s" % [str(market.get("name", "?")), key]
+
+
+static func flow_to_dict() -> Dictionary:
+	return {"flow": flow.duplicate(), "stamp": _flow_stamp}
+
+
+static func flow_from_dict(data: Dictionary) -> void:
+	flow = (data.get("flow", {}) as Dictionary).duplicate()
+	_flow_stamp = int(data.get("stamp", GameClock.now()))
+
+
 ## Unit price the player PAYS here (their trade background/skill discounts it).
 static func buy_price(market: Dictionary, key: String) -> int:
-	var listed := float(market["sells"][key])
+	var demand := demand_mult(market, key)
+	var listed := float(market["sells"][key]) * demand
 	if not market["buys"].has(key):
 		return int(round(listed * Pilot.trade_buy_mult()))
-	return int(round(_toward_mid(listed, float(market["buys"][key]),
+	return int(round(_toward_mid(listed, float(market["buys"][key]) * demand,
 		1.0 - Pilot.trade_buy_mult())))
 
 
 ## Unit price the player RECEIVES here.
 static func sell_price(market: Dictionary, key: String) -> int:
-	var listed := float(market["buys"][key])
+	var demand := demand_mult(market, key)
+	var listed := float(market["buys"][key]) * demand
 	if not market["sells"].has(key):
 		return int(round(listed * Pilot.trade_sell_mult()))
-	return int(round(_toward_mid(listed, float(market["sells"][key]),
+	return int(round(_toward_mid(listed, float(market["sells"][key]) * demand,
 		Pilot.trade_sell_mult() - 1.0)))
 
 
@@ -186,6 +284,7 @@ static func buy(ship, market: Dictionary, key: String) -> Dictionary:
 		return {"ok": false, "msg": "Hold full."}
 	Wallet.credits -= price
 	ship.add_commodity(key, 1)
+	note_flow(market, key, -1.0)     # a unit off their shelf: they want it more
 	return {"ok": true, "msg": "Bought %s for %dc." % [display_name(key), price]}
 
 
@@ -199,4 +298,5 @@ static func sell(ship, market: Dictionary, key: String) -> Dictionary:
 	Wallet.credits += price
 	if key.ends_with("_ore"):
 		Standing.add("miner", 1)   # ore off your hold = Doug's kind of work
+	note_flow(market, key, 1.0)      # a unit onto their shelf: they want it less
 	return {"ok": true, "msg": "Sold %s for %dc." % [display_name(key), price]}

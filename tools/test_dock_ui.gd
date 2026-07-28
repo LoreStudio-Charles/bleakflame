@@ -80,6 +80,7 @@ func _ready() -> void:
 		_case_the_shipyard_is_a_shop_shelf,
 		_case_a_ship_is_worth_what_is_bolted_to_it,
 		_case_no_counter_pays_back_what_it_charges,
+		_case_demand_moves_prices_without_breaking_anything,
 		_case_armory_filters,
 		_case_the_armory_sells_from_your_own_shelf,
 		_case_level_gates_equipping,
@@ -2092,6 +2093,115 @@ func _case_the_lab_puts_the_spend_on_the_project() -> void:
 ## SWEPT ACROSS THE WHOLE PERK RANGE, not checked at today's numbers. The cap is a
 ## balance dial someone will move; the invariant is not, and a test that only samples the
 ## current value tells you nothing about the one it is changed to.
+## LOCAL DEMAND — docs/economy_and_contraband.md Guard 2, "farming a route is the thing
+## that stops paying". A venue you flood stops wanting the thing; one you strip pays up.
+##
+## THE CLAIM THAT MAKES IT SAFE TO ADD UNDER EVERYTHING ELSE: because one number moves
+## BOTH of a venue's prices the same way, every ratio proved earlier survives at EVERY
+## saturation level, not just at the authored numbers. A model that moved one end alone
+## would re-open the same-desk exploit at some stock level nobody thought to check — so
+## that is exactly what is swept here, from fully glutted to fully stripped.
+func _case_demand_moves_prices_without_breaking_anything() -> void:
+	var kept_prof := Pilot.profession
+	var kept_xp := Wallet.xp
+	TradeGoods.flow_from_dict({})
+
+	# --- THE INVARIANT, ACROSS THE WHOLE RANGE, for a maxed Trader (the worst case) ---
+	Pilot.profession = "trader"
+	Wallet.xp = 9_000_000
+	# The untouched ratio for each good, to measure drift against.
+	var baseline_ratio := {}
+	for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET,
+			TradeGoods.VERGE_MARKET]:
+		for key in market["sells"]:
+			if market["buys"].has(key):
+				# KEYED BY VENUE AND GOOD. Ferrite trades at the station AND the Verge at
+				# different prices, so a good-only key let one overwrite the other and the
+				# sweep compared the station's ratio against the Dig's.
+				baseline_ratio["%s|%s" % [str(market["name"]), str(key)]] = 					float(TradeGoods.sell_price(market, str(key))) 					/ float(TradeGoods.buy_price(market, str(key)))
+	for net in [-200.0, -60.0, -12.0, 0.0, 12.0, 60.0, 200.0]:
+		for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET,
+				TradeGoods.VERGE_MARKET]:
+			for key in market["sells"]:
+				if not market["buys"].has(key):
+					continue
+				TradeGoods.flow_from_dict({})
+				TradeGoods.note_flow(market, str(key), net)
+				var pays := TradeGoods.buy_price(market, str(key))
+				var gets := TradeGoods.sell_price(market, str(key))
+				_ok(gets < pays,
+					"flow %+d: %s at %s pays %dc, gets %dc"
+						% [int(net), TradeGoods.display_name(str(key)),
+							str(market["name"]), pays, gets])
+				# AND THE RATIO HOLDS, which is the claim that "one number moves both
+				# prices" actually buys. gets < pays alone survives one-sided demand —
+				# the 2x buy-back gap is wide enough to absorb it — so it proves the
+				# floor, not the design. Sabotage found exactly that: stripping demand
+				# off one end of the convergence broke nothing this could see.
+				# TOLERANCE SCALES WITH THE PRICE, because these are integers: a credit
+				# of rounding on an 8c ore is 12% of the ratio and on a 120c one is under
+				# 1%. A flat epsilon either fails on cheap goods or proves nothing on
+				# dear ones.
+				var base: float = baseline_ratio["%s|%s" % [str(market["name"]), str(key)]]
+				_ok(float(gets) / float(pays) <= base + 1.5 / float(maxi(pays, 1)),
+					"flow %+d: %s at %s keeps its spread ratio (%.2f vs %.2f)"
+						% [int(net), TradeGoods.display_name(str(key)),
+							str(market["name"]), float(gets) / float(pays), base])
+	Pilot.profession = ""
+	Wallet.xp = 0
+
+	# --- FARMING A ROUTE STOPS PAYING ---
+	# THROUGH TradeGoods.sell(), not by poking note_flow: sabotaging the recording call
+	# inside the real transaction left this green, because the test was driving the
+	# model directly and never touching the wiring. A correct helper nobody calls is a
+	# failure this project has already paid for.
+	TradeGoods.flow_from_dict({})
+	var hauler := TestShip.new()
+	add_child(hauler)
+	hauler.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var fresh := TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits")
+	for _run in 40:
+		hauler.add_commodity("circuits", 1)
+		var r := TradeGoods.sell(hauler, TradeGoods.PLANET_MARKET, "circuits")
+		if not r.ok:
+			break
+	var flooded := TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits")
+	_ok(flooded < fresh,
+		"forty crates in and the colony pays less for circuits (%dc -> %dc)"
+			% [fresh, flooded])
+	_ok(flooded > 0, "...but never nothing — a glutted venue still trades (%dc)" % flooded)
+	_ok(TradeGoods.demand_word(TradeGoods.PLANET_MARKET, "circuits") == "GLUTTED",
+		"...and the screen can say WHY the number moved")
+
+	# STRIPPING ONE WORKS THE OTHER WAY — buying out their shelf makes them want it.
+	TradeGoods.flow_from_dict({})
+	var listed := TradeGoods.buy_price(TradeGoods.STATION_MARKET, "circuits")
+	TradeGoods.note_flow(TradeGoods.STATION_MARKET, "circuits", -40.0)
+	_ok(TradeGoods.buy_price(TradeGoods.STATION_MARKET, "circuits") > listed,
+		"buying out the station's circuits makes the rest dearer")
+	_ok(TradeGoods.demand_word(TradeGoods.STATION_MARKET, "circuits") == "SHORT",
+		"...and it says so")
+
+	# --- AND IT RECOVERS, or a heavy trader bricks their own economy ---
+	TradeGoods.flow_from_dict({})
+	TradeGoods.note_flow(TradeGoods.PLANET_MARKET, "circuits", 40.0)
+	var slumped := TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits")
+	for _day in 12:
+		GameClock.advance()
+	var healed := TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits")
+	_ok(healed > slumped, "a dozen days on, the colony wants circuits again (%dc -> %dc)"
+		% [slumped, healed])
+	for _day in 40:
+		GameClock.advance()
+	_ok(TradeGoods.sell_price(TradeGoods.PLANET_MARKET, "circuits") == fresh,
+		"...and it returns all the way to baseline, not to a permanent dent")
+
+	TradeGoods.flow_from_dict({})
+	hauler.queue_free()
+	Pilot.profession = kept_prof
+	Wallet.xp = kept_xp
+
+
 func _case_no_counter_pays_back_what_it_charges() -> void:
 	# --- COMPONENTS: the rule, swept past anything a perk could plausibly reach ---
 	for pct in [0, 25, 50, 75, 90, 100, 150]:

@@ -2106,9 +2106,14 @@ func _add_market_row(key: String, is_local: bool) -> void:
 	icon.texture = _material_icon(key)
 	rowbox.add_child(icon)
 	var name_lbl := Label.new()
-	name_lbl.text = "%s  (mass %.0f)%s" % [
+	# SAY WHY THE PRICE MOVED. Local demand shifts both of a venue's prices (TradeGoods),
+	# and a number that changed for a reason the player cannot see reads as a bug rather
+	# than as the world responding to them — which is the whole point of it responding.
+	var mood := TradeGoods.demand_word(market, key)
+	name_lbl.text = "%s  (mass %.0f)%s%s" % [
 		TradeGoods.display_name(key), TradeGoods.unit_mass(key),
-		"  [import]" if sells and not is_local else ""]
+		"  [import]" if sells and not is_local else "",
+		"  · %s" % mood if mood != "" else ""]
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_lbl.add_theme_color_override("font_color",
 		(MKT_GREEN if is_local else MKT_RED) if sells else Color(0.85, 0.8, 0.68))
