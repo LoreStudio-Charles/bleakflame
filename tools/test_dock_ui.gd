@@ -2076,28 +2076,39 @@ func _case_the_lab_puts_the_spend_on_the_project() -> void:
 ## exploit 1, arriving quietly, on whichever hull happens to carry the richest loadout.
 func _case_a_ship_is_worth_what_is_bolted_to_it() -> void:
 	for i in SampleBuilds.count():
-		var build := SampleBuilds.get_build(i)
-		var name := build.hull.display_name
-		var sell := ShipValue.sell(build)
-
-		# 1. STRIPPING IS NEVER WORTH IT. Sell the parts loose, sell the bare hull, and
-		#    you must not beat what the yard charged you for the whole thing.
-		var loose := 0
-		for part in ShipValue.fitted(build):
-			loose += ItemVisuals.sell_price(part)
+		var stock := SampleBuilds.stock(i)          # the FACTORY ship, not the pilot's
+		var name := stock.hull.display_name
+		var whole := ShipValue.sell(stock)
 		var bare := ShipBuild.new()
-		bare.hull = build.hull
-		_ok(ShipValue.sell(bare) + loose <= int(build.hull.price),
-			"%s: stripping and selling the pieces (%dc) never beats her price (%dc)"
-				% [name, ShipValue.sell(bare) + loose, int(build.hull.price)])
+		bare.hull = stock.hull
+		var loose := 0
+		for part in ShipValue.fitted(stock):
+			loose += ItemVisuals.sell_price(part)
 
-		# 2. ...AND SELLING HER LOADED IS NOT ROBBERY. Whatever is bolted on has to move
-		#    the number, or a pilot's loot vanishes into the hull price.
-		if not ShipValue.fitted(build).is_empty():
-			_ok(sell > ShipValue.sell(bare),
+		# THE INVARIANT. Sell her whole, or strip her and sell the pieces — same number,
+		# and it is exactly half the asking price, because the asking price already
+		# contained the loadout (user: orig_creds = hull_base + Σ included).
+		#
+		# This ONE equality closes both failures at once. If stripping paid more, that is
+		# exploit 1; if it paid less, a pilot is punished for selling a ship they had
+		# improved, which is exploit 2 wearing a different hat.
+		_ok(ShipValue.sell(bare) + loose == whole,
+			"%s: stripping (%dc) and selling her whole (%dc) come to the same"
+				% [name, ShipValue.sell(bare) + loose, whole])
+		_ok(whole == int(round(float(stock.hull.price) * ShipValue.HULL_RECOVERY)),
+			"%s: a stock ship is worth half her asking price (%dc of %dc)"
+				% [name, whole, int(stock.hull.price)])
+		# ...and the asking price is exactly what she is made of, by construction.
+		_ok(ShipValue.replacement(stock) == int(stock.hull.price),
+			"%s: replacing her costs her sticker — the loadout was always in it" % name)
+
+		# SELLING HER LOADED IS NOT ROBBERY. Anything bolted on has to move the number,
+		# or a pilot's loot vanishes into the hull price.
+		if not ShipValue.fitted(stock).is_empty():
+			_ok(whole > ShipValue.sell(bare),
 				"%s loaded is worth more than %s bare (%dc vs %dc)"
-					% [name, name, sell, ShipValue.sell(bare)])
-			_ok(sell - ShipValue.sell(bare) == loose,
+					% [name, name, whole, ShipValue.sell(bare)])
+			_ok(whole - ShipValue.sell(bare) == loose,
 				"...by exactly what those parts fetch loose (%dc)" % loose)
 
 	# CHIPS COUNT. They are not in `slots`, they cost real money, and a valuation that

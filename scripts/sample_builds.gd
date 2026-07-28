@@ -35,6 +35,18 @@ static func get_build(index: int) -> ShipBuild:
 	return _player_builds[index]
 
 
+## THE FACTORY LOADOUT, unmodified — what the yard sells, not what the pilot has since
+## done to it. `get_build` caches the PLAYER'S copy and hands back their refits; this
+## always rebuilds from the authored spec.
+##
+## ShipValue needs it to answer "what was already included in the asking price", and
+## that question has to be about the ship as sold. Asking `get_build` would mean a pilot
+## who fits expensive loot lowers their own hull's base value — the valuation moving
+## because of the thing it is supposed to be valuing.
+static func stock(index: int) -> ShipBuild:
+	return _create(index)
+
+
 static func _create(index: int) -> ShipBuild:
 	match index:
 		0:
