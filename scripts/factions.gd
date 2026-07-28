@@ -42,6 +42,26 @@ const LIST := {
 	# ARE SAVE KEYS: the faction renames, the ledger never does. Mapped, not renamed.
 	"shoal": {"name": "Rust Shoal", "color": Color(0.85, 0.45, 0.30),
 		"standing": "privateer"},
+	# --- THE COMMISSION BODIES (named with user, 2026-07-27) ---------------------
+	# Every PROFESSION is also a FACTION: it holds a ledger, it can be liked or hated,
+	# and it owns a quarter. Four of the six had no faction entry at all — the ledger
+	# existed (Standing.add("miner", 1) has always worked) but nothing named the body
+	# holding it, so the Verge's meter was headed "miner" in lower case.
+	#
+	# THE ID IS THE PROFESSION ID, which is also the STANDING KEY — so no `standing`
+	# mapping is needed and no save key moves. (The Shoal is the exception that proves
+	# it: its ledger was persisted as "privateer" long before factions existed, so IT
+	# carries the mapping and these do not.)
+	#
+	# NEUTRAL TO EVERYONE (user: "if a profession doesn't have a current faction it
+	# should be neutral"). No BASE row below, which IS neutral — the honest default this
+	# file already documents. They are LEDGERS, not fleets: none of them fields a ship,
+	# so adding them changes no one's guns. A body that should fight has to say so.
+	"miner": {"name": "The Dig", "color": Color(0.72, 0.52, 0.28)},
+	"scout": {"name": "The Explorer's Union", "color": Color(0.45, 0.78, 0.82)},
+	"trader": {"name": "The Long Lane", "color": Color(0.80, 0.70, 0.42)},
+	"science": {"name": "The Reach Institute", "color": Color(0.35, 0.72, 0.68)},
+
 	"widow": {"name": "The Widows", "color": Color(0.12, 0.11, 0.13)},
 	"ooshu": {"name": "The Ooshu", "color": Color(0.62, 0.42, 0.78)},
 	"ghosts": {"name": "The Ghosts", "color": Color(0.58, 0.60, 0.66)},

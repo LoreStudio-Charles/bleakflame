@@ -147,5 +147,29 @@ func _init() -> void:
 	if Pilot.xp_for_level(7) != XP.xp_to_reach(7):
 		f += 1; print("FAIL: Pilot.xp_for_level disagrees with XP.xp_to_reach")
 
+	# 5. EVERY COMMISSION IS ALSO A FACTION (user, 2026-07-27). A profession holds a
+	#    ledger, so something has to NAME the body holding it — four of the six had no
+	#    faction entry at all, which is why the Verge's standing meter was headed
+	#    "miner" in lower case. The two registries were built for different reasons and
+	#    drifted; this is what stops the next commission drifting the same way.
+	for p in Professions.LIST:
+		var pid := str(p.id)
+		var fac := Factions.faction_for_standing(pid)
+		if not Factions.LIST.has(fac):
+			f += 1; print("FAIL: commission '%s' has no faction — nothing names the body holding its ledger" % pid)
+			continue
+		# And the round trip must close, or the meter shows one name and the ledger
+		# moves another.
+		if Factions.standing_key(fac) != pid:
+			f += 1; print("FAIL: faction '%s' does not keep the '%s' ledger" % [fac, pid])
+		var nm := str(Factions.LIST[fac].get("name", ""))
+		if nm == "" or nm == pid:
+			f += 1; print("FAIL: faction '%s' has no player-facing name" % fac)
+		# A leader, and a room to stand in — the third leg of the same join.
+		if Professions.office_name(pid) == "":
+			f += 1; print("FAIL: commission '%s' has no quarter to administer it" % pid)
+		if Npcs.venue_of(str(p.get("leader", ""))) == "":
+			f += 1; print("FAIL: commission '%s' leader stands nowhere" % pid)
+
 	print("test_progression: %s" % ("ALL PASS" if f == 0 else "%d FAILURES" % f))
 	quit()
