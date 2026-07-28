@@ -531,6 +531,7 @@ func _build_shipyard_tab() -> void:
 	_yard.name = "Shipyard"
 	Tutor.register("panel_shipyard", _yard)
 	_yard.buy_requested.connect(_on_buy_ship)
+	_yard.board_requested.connect(_board_ship)
 	_tabs.add_child(_yard)
 
 

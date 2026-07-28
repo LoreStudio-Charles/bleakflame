@@ -29,6 +29,9 @@ var build: ShipBuild
 var index: int                      # SampleBuilds index — what the host acts on
 var owned := false
 var price := -1
+## Amber = what it costs you (default); green = what it is worth to you. Same meaning
+## the component tiles carry, so one colour never means two things across two shops.
+var price_color := Color(0.95, 0.72, 0.35)
 
 var on_inspect: Callable            # func(index)
 var on_interact: Callable           # func(index)  right-click — buy / board
@@ -62,7 +65,14 @@ func _ready() -> void:
 	_name_plate()
 	_corner("L%d" % int(build.hull.level), Control.PRESET_TOP_LEFT,
 		Color(0.62, 0.66, 0.75), HORIZONTAL_ALIGNMENT_LEFT)
-	if owned:
+	# ONE CORNER, TWO MEANINGS, TOLD APART BY COLOUR — the same convention ItemTile uses:
+	# amber is what it costs you, green is what it is worth to you. A ship you own on the
+	# YOUR HULLS shelf shows its value; the shelf it sits on already says it is yours, so
+	# spending the badge on the word "OWNED" would be spending it on what you can see.
+	if owned and price >= 0:
+		_corner("%dc" % price, Control.PRESET_BOTTOM_RIGHT, price_color,
+			HORIZONTAL_ALIGNMENT_RIGHT)
+	elif owned:
 		_corner("OWNED", Control.PRESET_BOTTOM_RIGHT, Color(0.45, 0.82, 0.55),
 			HORIZONTAL_ALIGNMENT_RIGHT)
 	elif price >= 0:

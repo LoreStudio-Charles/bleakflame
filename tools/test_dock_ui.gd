@@ -78,6 +78,7 @@ func _ready() -> void:
 		_case_the_action_sits_on_the_contract,
 		_case_the_lab_puts_the_spend_on_the_project,
 		_case_the_shipyard_is_a_shop_shelf,
+		_case_a_ship_is_worth_what_is_bolted_to_it,
 		_case_armory_filters,
 		_case_the_armory_sells_from_your_own_shelf,
 		_case_level_gates_equipping,
@@ -2061,6 +2062,62 @@ func _case_the_lab_puts_the_spend_on_the_project() -> void:
 ## flight sprite. So this asserts NO SOLD HULL CAN EVER BE A BLANK SQUARE — it has a
 ## sprite, or a silhouette polygon to fall back on. Add a hull with neither and the
 ## suite says so, instead of a player finding an empty tile in the shipyard.
+## A SHIP IS WORTH ITS ASSEMBLY, NOT ITS HULL. The user named the two failures this
+## prevents, before the Shipyard had any way to sell (2026-07-28):
+##
+##   1. "buy a hull, strip it, and sell it for a profit"
+##   2. "buy a hull, fill it out with sweet loot, sell it for the base hull price, and
+##      feel cheated"
+##
+## THE ARITHMETIC IS ASSERTED OVER EVERY SHIPPED HULL, not argued about, because the trap
+## is a UNIT MISMATCH rather than a logic slip: HullDef.price is already a buy-side number
+## while ComponentDef.value() is intrinsic and doubled on its way to a shelf. Add them the
+## obvious way and the hull is priced at half its worth relative to its parts — which is
+## exploit 1, arriving quietly, on whichever hull happens to carry the richest loadout.
+func _case_a_ship_is_worth_what_is_bolted_to_it() -> void:
+	for i in SampleBuilds.count():
+		var build := SampleBuilds.get_build(i)
+		var name := build.hull.display_name
+		var sell := ShipValue.sell(build)
+
+		# 1. STRIPPING IS NEVER WORTH IT. Sell the parts loose, sell the bare hull, and
+		#    you must not beat what the yard charged you for the whole thing.
+		var loose := 0
+		for part in ShipValue.fitted(build):
+			loose += ItemVisuals.sell_price(part)
+		var bare := ShipBuild.new()
+		bare.hull = build.hull
+		_ok(ShipValue.sell(bare) + loose <= int(build.hull.price),
+			"%s: stripping and selling the pieces (%dc) never beats her price (%dc)"
+				% [name, ShipValue.sell(bare) + loose, int(build.hull.price)])
+
+		# 2. ...AND SELLING HER LOADED IS NOT ROBBERY. Whatever is bolted on has to move
+		#    the number, or a pilot's loot vanishes into the hull price.
+		if not ShipValue.fitted(build).is_empty():
+			_ok(sell > ShipValue.sell(bare),
+				"%s loaded is worth more than %s bare (%dc vs %dc)"
+					% [name, name, sell, ShipValue.sell(bare)])
+			_ok(sell - ShipValue.sell(bare) == loose,
+				"...by exactly what those parts fetch loose (%dc)" % loose)
+
+	# CHIPS COUNT. They are not in `slots`, they cost real money, and a valuation that
+	# walks only the hardpoints is the "sold my loot for nothing" complaint in miniature.
+	var chipped := ShipBuild.new()
+	chipped.hull = SampleBuilds.get_build(0).hull
+	var chip: ComponentDef = null
+	for path in DockScreen.SHOP_STOCK:
+		var c: ComponentDef = load(str(path))
+		if c is AbilityChipDef:
+			chip = c
+			break
+	_ok(chip != null, "precondition: the shop stocks a chip to fit")
+	if chip != null:
+		var before := ShipValue.sell(chipped)
+		chipped.chips.append(chip)
+		_ok(ShipValue.sell(chipped) == before + ItemVisuals.sell_price(chip),
+			"a chip in the coupling is part of what the ship is worth")
+
+
 func _case_the_shipyard_is_a_shop_shelf() -> void:
 	var screen := _fresh_dock(true)
 	var kept_credits := Wallet.credits
@@ -2069,7 +2126,10 @@ func _case_the_shipyard_is_a_shop_shelf() -> void:
 	screen.refresh()
 
 	_ok(_count_lists(screen._yard) == 0, "the shipyard shelf is a grid, not a list")
-	var tiles: Array = _collect_tiles(screen._yard.grid)
+	# BOTH SHELVES — for sale, and yours. A hull you own leaves the stock shelf for the
+	# fleet one, so walking a single grid now finds every ship except the ones you have.
+	var tiles: Array = _collect_tiles(screen._yard._stock) \
+		+ _collect_tiles(screen._yard._fleet)
 	_ok(tiles.size() == SampleBuilds.count(),
 		"every hull for sale wears a tile (%d of %d)" % [tiles.size(), SampleBuilds.count()])
 
@@ -2117,7 +2177,7 @@ func _case_the_shipyard_is_a_shop_shelf() -> void:
 	# RE-COLLECT. refresh() rebuilds every tile, so the array above now holds freed
 	# nodes — clicking one of those tests nothing and reports success either way.
 	var poor: HullTile = null
-	for t in _collect_tiles(screen._yard.grid):
+	for t in _collect_tiles(screen._yard._stock):
 		if not (t as HullTile).owned:
 			poor = t
 	if poor != null:
