@@ -99,6 +99,12 @@ func _build_visual() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick(delta)
+	Telemetry.phase("mounts", _t0)
+
+
+func _tick(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
 	if _flash > 0.0 or _beam_time > 0.0:
 		_flash = maxf(0.0, _flash - delta)

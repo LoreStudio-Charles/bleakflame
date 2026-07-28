@@ -106,6 +106,7 @@ static func spawn(parent: Node, pos: Vector2, dir: Vector2, def: WeaponDef,
 	if def.homing > 0.0 and p_shooter != null:
 		p.target_ref = p_shooter.get("target")   # RADIO locks the shooter's selection
 	p.material = additive_material()
+	p.add_to_group("projectiles")
 	parent.add_child(p)
 	# RADIO launched with nothing designated: lock the nearest foe at the muzzle.
 	if def.homing > 0.0 and not def.seek_nearest \
@@ -143,6 +144,12 @@ static func spark(parent: Node, pos: Vector2, spark_color: Color, count: int) ->
 
 
 func _physics_process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick(delta)
+	Telemetry.phase("bolts", _t0)
+
+
+func _tick(delta: float) -> void:
 	# A spent pulse: the tail collapses forward into wherever the front died.
 	if _collapsing:
 		_tail_len -= _pulse_speed * delta

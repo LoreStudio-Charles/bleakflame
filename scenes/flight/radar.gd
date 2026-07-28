@@ -48,6 +48,12 @@ func _to_radar(world_pos: Vector2, clamp_to_rim: bool) -> Variant:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint()
+	Telemetry.phase("radar.draw", _t0)
+
+
+func _paint() -> void:
 	if ship == null or ship.build == null:
 		return
 	var center := size * 0.5

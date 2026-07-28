@@ -359,6 +359,12 @@ func _process(_delta: float) -> void:
 	# doing this before I opened the overlay?", which is the first question anyone asks
 	# about a stutter. No-ops in a release export.
 	Telemetry.note_frame(_delta)
+	var _t0 := Telemetry.now_us()
+	_tick_scene(_delta)
+	Telemetry.phase("scene", _t0)
+
+
+func _tick_scene(_delta: float) -> void:
 	_tick_distress(_delta)
 	_tick_flight_lessons()
 	_tick_dig_site()

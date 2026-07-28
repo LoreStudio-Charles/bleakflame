@@ -332,6 +332,12 @@ func setup(new_build: ShipBuild, p_tactic: Tactic = Tactic.ORBIT,
 
 
 func _physics_process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_think(delta)
+	Telemetry.phase("ai.think", _t0)
+
+
+func _think(delta: float) -> void:
 	if build == null or dead:
 		return
 	tick_common(delta)

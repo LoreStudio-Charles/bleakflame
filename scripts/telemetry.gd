@@ -89,6 +89,7 @@ static func report(tree: SceneTree = null) -> String:
 			prev = float(FRAME_BUCKETS[i])
 		out += "  >  %6.1f ms  %6d   <-- hitches\n" % [
 			prev, frame_hist[FRAME_BUCKETS.size()]]
+	out += _phase_lines()
 	if tree != null:
 		out += _world_lines(tree)
 	out += "warnings this session: %d\n" % warn_total()
@@ -104,9 +105,66 @@ static func report(tree: SceneTree = null) -> String:
 	return out
 
 
+## WHERE THE FRAME ACTUALLY GOES. Added because the frame histogram says a frame costs
+## 26 ms and says nothing about WHY, and this problem has now defeated two confident
+## guesses in a row -- first "it is separation", then "it is refresh/tick judder", both
+## wrong and both expensive. A phase tally cannot be argued with.
+##
+## Usage is two lines at the site:
+##     var t0 := Telemetry.now_us()
+##     ... the work ...
+##     Telemetry.phase("ai.think", t0)
+##
+## Costs one clock read per call and no-ops in a release export, same as everything else
+## here. Cleared with the frame window, so a phase table always describes the same window
+## as the histogram printed beside it.
+static var phase_us := {}
+static var phase_calls := {}
+
+
+## The clock, wrapped so a call site does not have to know which one -- and so the whole
+## mechanism disappears with one edit if it ever needs to.
+static func now_us() -> int:
+	return Time.get_ticks_usec()
+
+
+static func phase(id: String, started_us: int) -> void:
+	if not OS.is_debug_build():
+		return
+	phase_us[id] = int(phase_us.get(id, 0)) + (Time.get_ticks_usec() - started_us)
+	phase_calls[id] = int(phase_calls.get(id, 0)) + 1
+
+
+## NESTED PHASES DOUBLE-COUNT ON PURPOSE. "move" contains "separation", so the two
+## columns are meant to be read as a breakdown, not summed to 100%. Saying so in the
+## output is cheaper than a call tree, and a call tree is not what this question needs.
+static func _phase_lines() -> String:
+	if phase_us.is_empty() or frame_count == 0:
+		return ""
+	var ids := phase_us.keys()
+	ids.sort_custom(func(a, b): return int(phase_us[a]) > int(phase_us[b]))
+	var out := "where the frame goes (nested phases overlap -- a breakdown, not a sum):
+"
+	out += "  %-18s %9s %9s %8s %9s
+" % ["phase", "ms/frame", "% frame", "calls/f", "us/call"]
+	var mean_ms := frame_total / float(frame_count)
+	for id in ids:
+		var total_us := float(phase_us[id])
+		var calls := float(phase_calls[id])
+		var per_frame_ms := total_us / 1000.0 / float(frame_count)
+		out += "  %-18s %9.2f %8.1f%% %8.1f %9.1f
+" % [
+			id, per_frame_ms, 100.0 * per_frame_ms / maxf(0.001, mean_ms),
+			calls / float(frame_count), total_us / maxf(1.0, calls)]
+	return out
+
+
+
 ## Start a fresh measurement window. Nothing else is cleared: the event log and the
 ## warning tallies are the session's history and are worth keeping across samples.
 static func reset_frames() -> void:
+	phase_us.clear()
+	phase_calls.clear()
 	frame_hist.clear()
 	frame_worst = 0.0
 	frame_count = 0

@@ -718,6 +718,12 @@ var _collision_cd := 0.0
 
 ## Shared movement integration: thrust, drift decay, speed cap, plumes.
 func apply_movement(thrust: Vector2, delta: float, speed_mult := 1.0, boosting := false) -> void:
+	var _t0 := Telemetry.now_us()
+	_apply_movement(thrust, delta, speed_mult, boosting)
+	Telemetry.phase("move", _t0)
+
+
+func _apply_movement(thrust: Vector2, delta: float, speed_mult := 1.0, boosting := false) -> void:
 	# AI ships steer around what they are about to hit. Done HERE rather than at
 	# each behaviour's call site because a ship has many movement paths (the guard
 	# wing alone has eight: formation, ring patrol, lane, escort, regroup...) and
@@ -834,6 +840,13 @@ func limp_speed_mult() -> float:
 
 
 func separation_dir() -> Vector2:
+	var _t0 := Telemetry.now_us()
+	var d := _separation_dir()
+	Telemetry.phase("move.separation", _t0)
+	return d
+
+
+func _separation_dir() -> Vector2:
 	var away := Vector2.ZERO
 	var react := velocity.length() * AVOID_REACT_TIME
 	# STRUCTURES — station, outposts, dens. Big, static, and the thing guardians
@@ -986,6 +999,13 @@ var avoids_obstacles := false
 const AVOID_CLEARANCE := 60.0
 
 func avoid_obstacles_dir(intent: Vector2) -> Vector2:
+	var _t0 := Telemetry.now_us()
+	var d := _avoid_obstacles_dir(intent)
+	Telemetry.phase("move.avoid", _t0)
+	return d
+
+
+func _avoid_obstacles_dir(intent: Vector2) -> Vector2:
 	var heading := velocity if velocity.length_squared() > 400.0 else intent
 	if heading.length_squared() < 1.0:
 		return Vector2.ZERO

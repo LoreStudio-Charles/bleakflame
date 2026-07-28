@@ -385,6 +385,12 @@ func _center_rect(ctrl: Control, spec, def: Array) -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_hud()
+	Telemetry.phase("hud", _t0)
+
+
+func _tick_hud() -> void:
 	if ship == null or ship.build == null:
 		return
 	var flying := not ship.dead and ship.docked_at == null
