@@ -75,6 +75,29 @@ VYPER'S WORK              credits 230c   hold 0/44      ← header = YOU
 One component covers contracts, the quartermaster's shelf, the market and the hangar —
 they differ only in content.
 
+## A context has TWO presentations (user, 2026-07-27)
+
+> "I think the Shipyard should take the shape of the Armory. It's a shop, and I think all
+> shops should take the grid of icons with tooltips shape. Market should behave like the
+> Armory as well."
+
+So the left-hand zone comes in two forms, chosen by what the items ARE:
+
+- **LIST** — for things that are *sentences*: contracts, campaign beats, expedition
+  leads, research projects, log entries. You read them. `ContextScreen`.
+- **GRID** — for things that are *objects*: equipment, hulls, commodities. You look at
+  them, compare them at a glance, and buy them. The **Armory already is this** —
+  icon + grade border + mark pips + price badge, right-click to buy, details panel on
+  the right. It arrived at the shape before the shape had a name.
+
+Both are the same context: header = you, left = what's here, right = what's selected
+with its action on it. Only the presentation of "what's here" differs. **Every shop is
+a grid.** Anything you read is a list.
+
+That means the Armory does not get converted — it gets *joined*, and what the two share
+(header, detail panel, selection, the `action(text, blocked, on_press)` rule) is what a
+future `ContextGrid` lifts out of `ContextScreen`.
+
 ## The rules
 
 1. **One context at a time.** Never two lists on screen.
@@ -152,6 +175,42 @@ incrementally while tabs still work.
 3. Move the four tab-bound leaders onto addressees: Ruel, Dex, Imari, Sella.
 4. `SpeakEasy` / `ProspectDeck` swap their `VenueLayout` columns for an addressee. The
    shell keeps the header, the venue's own trade (`venue_box`) and the launch line.
+
+## The shops (user, 2026-07-27) — and one collision to resolve first
+
+**Shipyard → grid.** Needs `assets/icons/hulls/<hull>.png` and a hull tooltip; the
+tooltip already exists (`DockScreen.hull_tooltip` — quality, level, trait, pools, the
+slot set by type and best mark). Structure can land before any art does: components
+already fall back to a slot+mark label when an icon is missing, and hulls can do the
+same, so the screen is right on the day the art arrives.
+
+**The user's art idea:** *"now that we have tintable art we could make unique designs
+per level and grant different classes and qualities of the same hull at different
+levels. The tint can say something about quality. Cooler tint jobs apply to better
+hulls."* Unique art per level is straightforwardly good — it makes a level band
+something you SEE.
+
+**But tint is spoken for, twice.** CLAUDE.md, 2026-07-25: *"HULL COLOUR NOW MEANS
+FACTION, EXCLUSIVELY"* — that rule is what moved rare AI specialists off repainted
+hulls and onto a sensor read, and `test_widows` guards it. And quality ALREADY has a
+colour language: the Grade palette (grey / white / green / blue / purple / gold / red,
+always paired with pips for colourblind safety). A third meaning on the same surface
+un-teaches both.
+
+**Recommended split** (decide before building): better hulls get better ART — more
+elaborate, more detailed, more obviously expensive paint — while the GRADE BORDER and
+PIPS carry quality exactly as they do on every other tile in the Armory. "Cooler" is
+then a fidelity axis, not a colour code, and the shipyard grid teaches the same quality
+vocabulary as the shop beside it. Faction keeps the tint; grade keeps the border.
+
+**Market → grid, plus a real economy question.** Scarcity vs abundance ("is the player
+pushing their luck trading here") is NOT a UI feature: today's green/red only compares a
+good against a venue's fixed import/export list, so the fifth identical run pays exactly
+what the first did. Showing saturation means TradeGoods gains LOCAL STOCK that a sale
+depletes and time replenishes — at which point the tile can show a depth bar and the
+price can decay per unit, and hauling becomes a decision instead of a lookup table.
+That is the same "living world, not gauntlet" pillar as generating contracts from world
+state (below), and the two share a source of truth. Worth doing; worth designing first.
 
 ## Also recorded
 
