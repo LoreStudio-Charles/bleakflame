@@ -94,11 +94,11 @@ func _add_guard_livery() -> void:
 ## whichever pilot that is). When the ambush springs, flight_test flips escort_target
 ## and it breaks to engage, already on-station instead of teleporting in on top of you.
 static func spawn_shadow_escort(parent: Node, pos: Vector2, objective: Vector2,
-		build: ShipBuild) -> GuardianShip:
+		fit: ShipBuild) -> GuardianShip:
 	var g := GuardianShip.new()
 	parent.add_child(g)
 	g.global_position = pos
-	g.setup_guard(build, MIN_R + 100.0)
+	g.setup_guard(fit, MIN_R + 100.0)
 	g.shadow_escort = true
 	g.escort_objective = objective
 	return g
@@ -110,12 +110,12 @@ static func spawn_shadow_escort(parent: Node, pos: Vector2, objective: Vector2,
 ## instead of dying on it. `slot` spreads a wing around the escorted ship.
 ## `level` 0 = field it at its hull's own level. Anything else must be set BEFORE
 ## setup_guard, since apply_build is where the pools are scaled.
-static func spawn_protector(parent: Node, build: ShipBuild, protect_ship: Node2D,
-		slot: int, wing: int, level: int = 0) -> GuardianShip:
+static func spawn_protector(parent: Node, fit: ShipBuild, protect_ship: Node2D,
+		slot: int, wing: int, lvl: int = 0) -> GuardianShip:
 	var g := GuardianShip.new()
 	parent.add_child(g)
-	g.spawn_level = level
-	g.setup_guard(build, MIN_R + 100.0)
+	g.spawn_level = lvl
+	g.setup_guard(fit, MIN_R + 100.0)
 	g.protect = protect_ship
 	g._slot_angle = TAU * float(slot) / float(maxi(wing, 1))
 	g.global_position = protect_ship.global_position \
@@ -126,12 +126,12 @@ static func spawn_protector(parent: Node, build: ShipBuild, protect_ship: Node2D
 ## A single Guardian flying a trade lane end to end, gunning pirates it meets.
 ## Military-grade like the guard wing but off the station's leash — and exposed,
 ## so the beast can take it. Respawns from home when lost (flight_test).
-static func spawn_lane_patrol(parent: Node, pos: Vector2, build: ShipBuild,
-		route: Array[Vector2], level: int = 0) -> GuardianShip:
+static func spawn_lane_patrol(parent: Node, pos: Vector2, fit: ShipBuild,
+		route: Array[Vector2], lvl: int = 0) -> GuardianShip:
 	var g := GuardianShip.new()
 	parent.add_child(g)
-	g.spawn_level = level
-	g.setup_guard(build, MIN_R + 100.0)
+	g.spawn_level = lvl
+	g.setup_guard(fit, MIN_R + 100.0)
 	g.lane_patrol = true
 	g.patrol_points = route
 	g.global_position = pos

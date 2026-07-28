@@ -87,10 +87,10 @@ static func role_of(ship_name: String) -> String:
 ## One line, STABLE for this ship. `ship_name` is the seed as well as the address, so a
 ## hull keeps its voice for as long as it exists.
 static func line(ship_name: String) -> String:
-	var set: Array = LINES.get(role_of(ship_name), LINES[""])
-	if set.is_empty():
+	var pool: Array = LINES.get(role_of(ship_name), LINES[""])
+	if pool.is_empty():
 		return "\"Copy.\""
-	return str(set[absi(ship_name.hash()) % set.size()])
+	return str(pool[absi(ship_name.hash()) % pool.size()])
 
 
 ## The whole reply, addressed. An unregistered hull is named as what it is rather than

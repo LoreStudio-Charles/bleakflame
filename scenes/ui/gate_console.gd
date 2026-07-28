@@ -50,7 +50,10 @@ var _err := 0.0
 var _pulse_targets: Array[CanvasItem] = []
 
 
+@warning_ignore("integer_division")
 static func grid_point(i: int) -> Vector2:
+	# i / 3 is the ROW of a 3x3 grid and the discarded remainder is the column, which
+	# the other half of the expression reads. Both halves are integer maths on purpose.
 	return Vector2(float(i % 3) / 2.0, float(i / 3) / 2.0)
 
 

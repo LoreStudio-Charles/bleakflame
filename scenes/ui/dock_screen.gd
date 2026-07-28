@@ -771,13 +771,13 @@ func _odessa_nodes() -> Dictionary:
 ##
 ## `ready` is a PARAMETER so the rule can be tested without staging research
 ## chain state.
-static func _dress_odessa(nodes: Dictionary, ready: bool) -> void:
+static func _dress_odessa(nodes: Dictionary, rumor_ready: bool) -> void:
 	for key in nodes:
 		var choices: Array = nodes[key].get("choices", [])
 		for i in range(choices.size() - 1, -1, -1):
 			if str(choices[i].get("action", "")) != "rumor":
 				continue
-			if ready:
+			if rumor_ready:
 				choices[i]["style"] = "primary"   # gold: something happens here
 			else:
 				choices.remove_at(i)
@@ -1997,17 +1997,17 @@ func _refresh_paperdoll() -> void:
 		# -90° — so the art's width maps to the box's HEIGHT and vice versa.
 		k = clampf(floorf(minf((box.x - 90.0) / art.y, (box.y - 90.0) / art.x)),
 			1.0, 8.0)
-		var tr := TextureRect.new()
-		tr.texture = tex
-		tr.stretch_mode = TextureRect.STRETCH_SCALE
-		tr.size = Vector2(tex.get_size()) * k
-		tr.position = center - tr.size / 2.0
-		tr.pivot_offset = tr.size / 2.0
-		tr.rotation = -PI / 2.0
+		var tex_rect := TextureRect.new()
+		tex_rect.texture = tex
+		tex_rect.stretch_mode = TextureRect.STRETCH_SCALE
+		tex_rect.size = Vector2(tex.get_size()) * k
+		tex_rect.position = center - tex_rect.size / 2.0
+		tex_rect.pivot_offset = tex_rect.size / 2.0
+		tex_rect.rotation = -PI / 2.0
 		var mat := ShaderMaterial.new()
 		mat.shader = load("res://assets/shaders/hologram.gdshader")
-		tr.material = mat
-		_doll.add_child(tr)
+		tex_rect.material = mat
+		_doll.add_child(tex_rect)
 	else:
 		var poly := Polygon2D.new()
 		poly.polygon = ship.build.hull.silhouette
@@ -2137,7 +2137,9 @@ func _on_trade_scan_data() -> void:
 	else:
 		ship.remove_commodity("scan_data", n)
 		Research.insight += n * Research.SCAN_DATA_INSIGHT
-		Standing.add("science", maxi(1, n / 2))   # data work earns Dex's respect
+		@warning_ignore("integer_division")
+		var respect := n / 2                      # half a datum earns nothing
+		Standing.add("science", maxi(1, respect))   # data work earns Dex's respect
 		Sfx.play("jingle", -8.0)
 		_flash("Archived %d Scan Data — +%d Insight." % [n, n * Research.SCAN_DATA_INSIGHT])
 	refresh()
@@ -2892,14 +2894,14 @@ class SlotSquare extends Button:
 
 	## Drag a fitted component OUT of its slot (drop it on cargo/stash).
 	func _get_drag_data(_at: Vector2) -> Variant:
-		var comp := screen.ship.build.component_at(slot_index)
-		if comp == null:
+		var held := screen.ship.build.component_at(slot_index)
+		if held == null:
 			return null
 		var preview := Label.new()
-		preview.text = comp.display_name
-		preview.add_theme_color_override("font_color", Grades.color(comp.grade))
+		preview.text = held.display_name
+		preview.add_theme_color_override("font_color", Grades.color(held.grade))
 		set_drag_preview(preview)
-		return {"comp": comp, "source": "slot", "slot": slot_index}
+		return {"comp": held, "source": "slot", "slot": slot_index}
 
 	## Only accept inventory tiles (fitting), not other slots — a slot->slot
 	## drag would need a swap the source-removal path doesn't do.

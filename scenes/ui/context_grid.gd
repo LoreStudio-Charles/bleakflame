@@ -62,15 +62,15 @@ func _init(tile_width := 128.0) -> void:
 ## Every shelf shares ONE selection and ONE detail panel, which is what makes the action
 ## rule work across them: click anything in any pile and the panel offers the verb that
 ## belongs to where it came from.
-func shelf(title := "", hint := "") -> GridContainer:
+func shelf(heading := "", hint := "") -> GridContainer:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 4)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_shelves.add_child(col)
-	if title != "":
+	if heading != "":
 		var head := Label.new()
-		head.text = title
+		head.text = heading
 		head.add_theme_color_override("font_color", UiTheme.ACCENT)
 		col.add_child(head)
 	if hint != "":

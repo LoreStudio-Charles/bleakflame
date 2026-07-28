@@ -32,8 +32,8 @@ func _clear_items() -> void:
 
 ## ---- list helpers ----
 
-func section(title: String) -> void:
-	var i := list.add_item("—— %s ——" % title)
+func section(heading: String) -> void:
+	var i := list.add_item("—— %s ——" % heading)
 	list.set_item_disabled(i, true)
 	list.set_item_selectable(i, false)
 	list.set_item_custom_fg_color(i, UiTheme.ACCENT)

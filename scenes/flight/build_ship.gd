@@ -485,14 +485,14 @@ static var _group_cache := {}
 static var _group_frame := -1
 
 
-static func frame_group(tree: SceneTree, name: String) -> Array:
+static func frame_group(tree: SceneTree, group: String) -> Array:
 	var frame := Engine.get_physics_frames()
 	if frame != _group_frame:
 		_group_frame = frame
 		_group_cache.clear()
-	if not _group_cache.has(name):
-		_group_cache[name] = tree.get_nodes_in_group(name)
-	return _group_cache[name]
+	if not _group_cache.has(group):
+		_group_cache[group] = tree.get_nodes_in_group(group)
+	return _group_cache[group]
 
 
 static func engageable(tree: SceneTree, shooter: Object, legacy_group: String) -> Array:

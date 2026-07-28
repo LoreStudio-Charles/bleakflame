@@ -134,7 +134,7 @@ func _new_branch(pts: PackedVector2Array) -> Line2D:
 ## connects); interior points stay within the segment's shrinking displacement envelope.
 ## `gens` subdivisions yield 2^gens segments. Seed `rng` for a deterministic bolt.
 static func fractal_path(a: Vector2, b: Vector2, gens: int, chaos_frac: float,
-		rng: RandomNumberGenerator) -> PackedVector2Array:
+		gen: RandomNumberGenerator) -> PackedVector2Array:
 	var pts := PackedVector2Array([a, b])
 	var offset := a.distance_to(b) * chaos_frac
 	for _g in gens:
@@ -143,7 +143,7 @@ static func fractal_path(a: Vector2, b: Vector2, gens: int, chaos_frac: float,
 			var p0: Vector2 = pts[i]
 			var p1: Vector2 = pts[i + 1]
 			var mid := (p0 + p1) * 0.5
-			mid += (p1 - p0).orthogonal().normalized() * rng.randf_range(-offset, offset)
+			mid += (p1 - p0).orthogonal().normalized() * gen.randf_range(-offset, offset)
 			next.append(p0)
 			next.append(mid)
 		next.append(pts[pts.size() - 1])
@@ -194,11 +194,11 @@ static func arc_textures() -> Array:
 
 ## One arc strip for a bolt, cycling the pool, or null if none exist (bolt falls back to
 ## the solid glow line). Pass an rng for a seeded pick.
-static func random_arc(rng: RandomNumberGenerator = null) -> Texture2D:
+static func random_arc(gen: RandomNumberGenerator = null) -> Texture2D:
 	var arcs := arc_textures()
 	if arcs.is_empty():
 		return null
-	var i := (rng.randi() if rng != null else randi()) % arcs.size()
+	var i := (gen.randi() if gen != null else randi()) % arcs.size()
 	return arcs[i]
 
 

@@ -18,7 +18,6 @@ var surveyed := false
 var hit_radius := 14.0
 var _mine_bank := 0.0
 var _chip_hp := 70.0
-var _flash := 0.0
 var _sprite: Sprite2D
 
 

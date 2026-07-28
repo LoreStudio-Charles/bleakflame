@@ -54,13 +54,13 @@ func header_text() -> String:
 	for m in MissionLog.active:
 		if MissionLog.is_complete(m, ship) and MissionLog.venue_ok_at(m, venue):
 			closeable += 1
-	var ready := "[color=#%s]nothing to hand in here[/color]" % UiTheme.DIM.to_html(false)
+	var hand_in := "[color=#%s]nothing to hand in here[/color]" % UiTheme.DIM.to_html(false)
 	if closeable > 0:
-		ready = "[b][color=#%s]%d %s to close here[/color][/b]" % [
+		hand_in = "[b][color=#%s]%d %s to close here[/color][/b]" % [
 			UiTheme.AMBER.to_html(false), closeable,
 			"job" if closeable == 1 else "jobs"]
 	return "[right]%s     [color=#%s]credits[/color] %dc     [color=#%s]hold[/color] %.0f/%.0f[/right]" % [
-		ready, UiTheme.DIM.to_html(false), Wallet.credits, UiTheme.DIM.to_html(false),
+		hand_in, UiTheme.DIM.to_html(false), Wallet.credits, UiTheme.DIM.to_html(false),
 		ship.cargo_used(), float(ship.stats.get("cargo", 0.0))]
 
 

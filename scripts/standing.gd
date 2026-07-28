@@ -240,7 +240,9 @@ static func seed_from_xp() -> void:
 		return
 	_seeded = true
 	if get_points("guardian") == 0 and Wallet.xp > 0:
-		points["guardian"] = clampi(Wallet.xp / 40, 0, INVITE_AT)
+		@warning_ignore("integer_division")
+		var earned := Wallet.xp / 40   # one rung per 40 XP; the remainder carries nothing
+		points["guardian"] = clampi(earned, 0, INVITE_AT)
 
 
 static func to_dict() -> Dictionary:

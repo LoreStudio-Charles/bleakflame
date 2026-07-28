@@ -113,7 +113,9 @@ static func cadence_text() -> String:
 ## since()/elapsed() instead.
 static func day_number(stamp := NEVER) -> int:
 	var at := _now if stamp == NEVER else stamp
-	return int(at / DAY)
+	@warning_ignore("integer_division")
+	var days := at / DAY   # whole days elapsed; the remainder is the time of day
+	return days
 
 
 ## Subscribe to the passage of time. The callable receives the units advanced.

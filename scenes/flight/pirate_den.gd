@@ -129,15 +129,15 @@ func _build_shoal() -> void:
 			placed.append({"pos": pos, "r": r})
 			add_child(MineableAsteroid.create(texture, pos, 2.0, type, units))
 		else:
-			var scale := rng.randf_range(1.0, 2.0)
-			var r: float = texture.get_width() * 0.46 * scale + 10.0
+			var spread_mult := rng.randf_range(1.0, 2.0)
+			var r: float = texture.get_width() * 0.46 * spread_mult + 10.0
 			var pos := _clear_spot(rng, placed, r)
 			placed.append({"pos": pos, "r": r})
 			var sprite := Sprite2D.new()
 			sprite.texture = texture
 			sprite.position = pos
 			sprite.rotation = rng.randf() * TAU
-			sprite.scale = Vector2.ONE * scale
+			sprite.scale = Vector2.ONE * spread_mult
 			add_child(sprite)
 
 

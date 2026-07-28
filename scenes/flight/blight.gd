@@ -24,7 +24,6 @@ var damage := 30.0
 var _t := 0.0
 var _next_pulse := 0.0
 var _flash := 0.0
-var _seed := 0.0
 
 
 func _ready() -> void:

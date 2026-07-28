@@ -768,10 +768,10 @@ func hail_friendly(member: Node2D) -> void:
 	# every time is a slot machine and the beat needs someone you passed.
 	var mark: String = str(member.get("ship_name")) if member.get("ship_name") != null \
 		else ""
-	var hull: String = member.build.hull.display_name if member.get("build") != null \
+	var hull_name: String = member.build.hull.display_name if member.get("build") != null \
 		else "contact"
 	# TODO(coop/NPCs): a member with an npc_id + dialogue opens a DialoguePanel instead.
-	_flash_note(ShipHails.reply(mark, hull))
+	_flash_note(ShipHails.reply(mark, hull_name))
 	Sfx.play("click", -8.0, 1.3)
 
 

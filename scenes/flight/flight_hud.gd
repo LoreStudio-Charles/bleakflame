@@ -1413,7 +1413,9 @@ class EnergyGauge:
 			Vector2(cx + 3, 2), Vector2(cx - 3, body_h * 0.42),
 			Vector2(cx + 1, body_h * 0.42), Vector2(cx - 3, body_h - 3)]),
 			Color(on_col, 0.9), 1.6)
-		var f := get_theme_default_font()
+		# The bolt alone reads as energy; a number under it was tried and dropped. Kept
+		# commented rather than deleted because it is the obvious thing to want back.
+		#var f := get_theme_default_font()
 		#draw_string(f, Vector2(0, size.y - 1), "%d" % int(round(ship.energy)),
 			#HORIZONTAL_ALIGNMENT_CENTER, w, 11, on_col)
 

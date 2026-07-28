@@ -159,7 +159,7 @@ static func pips_label(grade: int, font_size: int, preset: int,
 	pl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.92))
 	pl.add_theme_constant_override("outline_size", 3)
 	pl.set_anchors_preset(preset)
-	pl.horizontal_alignment = align
+	pl.horizontal_alignment = align as HorizontalAlignment
 	pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return pl
 

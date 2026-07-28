@@ -44,12 +44,12 @@ func setup_navy(new_build: ShipBuild, ring_r: float) -> void:
 
 
 ## A Navy patrol on a lane route — the picket, and the fleet's screen.
-static func spawn_patrol(host: Node, at: Vector2, build: ShipBuild,
-		route: Array[Vector2], level := 0) -> NavyShip:
+static func spawn_patrol(host: Node, at: Vector2, fit: ShipBuild,
+		route: Array[Vector2], lvl := 0) -> NavyShip:
 	var n := NavyShip.new()
 	n.position = at
-	n.spawn_level = level        # BEFORE setup: apply_build is where the level scales pools
+	n.spawn_level = lvl        # BEFORE setup: apply_build is where the level scales pools
 	host.add_child(n)
 	n.patrol_points = route
-	n.setup_navy(build, 0.0)
+	n.setup_navy(fit, 0.0)
 	return n

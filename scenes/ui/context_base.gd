@@ -330,10 +330,10 @@ func curation(key: String, with_order := true) -> void:
 	var row_box := HBoxContainer.new()
 	row_box.add_theme_constant_override("separation", 6)
 	_detail.add_child(row_box)
-	var hidden := MissionTracker.is_hidden(key)
+	var is_hidden := MissionTracker.is_hidden(key)
 	var star := Button.new()
-	star.text = "☆ Hidden from HUD" if hidden else "★ Shown on HUD"
-	star.tooltip_text = "Show this objective in the flight HUD tracker" if hidden \
+	star.text = "☆ Hidden from HUD" if is_hidden else "★ Shown on HUD"
+	star.tooltip_text = "Show this objective in the flight HUD tracker" if is_hidden \
 		else "Hide it from the flight HUD (it stays in the log)"
 	star.pressed.connect(func() -> void:
 		MissionTracker.toggle(key)

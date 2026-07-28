@@ -36,8 +36,6 @@ var price_color := Color(0.95, 0.72, 0.35)
 var on_inspect: Callable            # func(index)
 var on_interact: Callable           # func(index)  right-click — buy / board
 
-var _tip_body := ""
-
 
 func _init(p_build: ShipBuild, p_index: int) -> void:
 	build = p_build
@@ -118,15 +116,15 @@ func _name_plate() -> void:
 	add_child(lbl)
 
 
-func _corner(text: String, preset: int, col: Color, align: int) -> void:
+func _corner(label_text: String, preset: int, col: Color, align: int) -> void:
 	var lbl := Label.new()
-	lbl.text = text
+	lbl.text = label_text
 	lbl.add_theme_font_size_override("font_size", 10)
 	lbl.add_theme_color_override("font_color", col)
 	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.92))
 	lbl.add_theme_constant_override("outline_size", 4)
 	lbl.set_anchors_preset(preset)
-	lbl.horizontal_alignment = align
+	lbl.horizontal_alignment = align as HorizontalAlignment
 	if preset == Control.PRESET_BOTTOM_RIGHT:
 		lbl.grow_vertical = Control.GROW_DIRECTION_BEGIN
 		lbl.grow_horizontal = Control.GROW_DIRECTION_BEGIN
@@ -167,8 +165,8 @@ class SilhouetteFace:
 			lo = lo.min(p)
 			hi = hi.max(p)
 		var span := (hi - lo).max(Vector2.ONE)
-		var scale := minf(size.x * 0.7 / span.x, size.y * 0.7 / span.y)
+		var fit_k := minf(size.x * 0.7 / span.x, size.y * 0.7 / span.y)
 		var out := PackedVector2Array()
 		for p in pts:
-			out.append((p - (lo + hi) * 0.5) * scale + size * 0.5)
+			out.append((p - (lo + hi) * 0.5) * fit_k + size * 0.5)
 		draw_colored_polygon(out, Color(0.62, 0.66, 0.75, 0.55))

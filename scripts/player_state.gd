@@ -68,7 +68,7 @@ var shoal_truce_kills: int = 0
 var met: Array[String] = []
 var gems: Array = ["", "", "", "", ""]
 var ground_gear: Dictionary = {}
-var _ground_cache: Dictionary = {}  # slot -> rebuilt GroundGearDef (not saved)
+var ground_cache: Dictionary = {}  # slot -> rebuilt GroundGearDef (not saved)
 var techniques: Array = ["", "", "", "", ""]
 var ground_kit_granted: bool = false
 

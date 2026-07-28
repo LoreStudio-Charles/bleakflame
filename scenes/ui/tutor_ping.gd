@@ -69,8 +69,8 @@ func _target_rect(node: Control) -> Rect2:
 				# ("Mission Computer" vs "Mission Uplink"), and a step shouldn't
 				# have to know which dock it will be read at.
 				if bar.get_tab_title(i).findn(want) >= 0:
-					var tr := bar.get_tab_rect(i)
-					return Rect2(bar.global_position - global_position + tr.position, tr.size)
+					var tab_rect := bar.get_tab_rect(i)
+					return Rect2(bar.global_position - global_position + tab_rect.position, tab_rect.size)
 
 	# A step can name ONE ROW of a list ("item"), matched on its text. Framing a
 	# whole contract board when exactly one contract is meant makes the player

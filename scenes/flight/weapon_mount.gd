@@ -57,10 +57,10 @@ var _beam_time := 0.0
 var _beam_end := Vector2.ZERO   # mount-local
 
 
-func setup(hp: HardpointDef, weapon: WeaponDef, group: String, sprite_path := "") -> void:
+func setup(hp: HardpointDef, weapon: WeaponDef, for_group: String, sprite_path := "") -> void:
 	hardpoint = hp
 	def = weapon
-	target_group = group
+	target_group = for_group
 	_sprite_path = sprite_path
 	position = hp.offset
 	_facing = deg_to_rad(hp.facing_deg)
@@ -89,11 +89,11 @@ func _build_visual() -> void:
 		base.polygon = points
 		base.color = Color(0.45, 0.48, 0.55)
 		add_child(base)
-	var len := 7.0 + 2.5 * def.mark
+	var ln := 7.0 + 2.5 * def.mark
 	var w := 0.9 + 0.3 * def.mark
 	var barrel := Polygon2D.new()
 	barrel.polygon = PackedVector2Array([
-		Vector2(0, -w), Vector2(len, -w * 0.7), Vector2(len, w * 0.7), Vector2(0, w)])
+		Vector2(0, -w), Vector2(ln, -w * 0.7), Vector2(ln, w * 0.7), Vector2(0, w)])
 	barrel.color = Color(0.85, 0.88, 0.95)
 	add_child(barrel)
 
