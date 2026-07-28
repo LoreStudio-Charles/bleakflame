@@ -54,7 +54,6 @@ const BUY_MULT := 2.0
 ## TabContainer's minimum for EVERY tab (it sizes to its tallest child) and
 ## squeezes the info bar off the panel.
 const DOLL_MIN := Vector2(500, 360)
-const YARD_GAP := 8            # gutter between hull tiles; the column fit reads it
 const HOLO_BLUE := Color(0.45, 0.85, 1.0)
 
 var ship: TestShip
@@ -123,9 +122,7 @@ var _loadout_box: VBoxContainer
 var _sel_gem := -1     # gem slot selected for memorizing in the Loadout panel
 var _missions: MissionComputer
 var _lab: ResearchLabView
-var _yard_grid: GridContainer
-var _yard_detail: RichTextLabel
-var _yard_selected := 0
+var _yard: ShipyardView
 var _bar_row: Control
 var _bar_feed: RichTextLabel
 var _bar_last_rumor := ""
@@ -534,43 +531,15 @@ func _populate_loadout() -> void:
 ## takes the Armory's shape because it sells objects you compare at a glance, not
 ## sentences you read. NO NEW ART: a hull's face is its own flight sprite, so the
 ## shelf shows the ship you will actually fly (ItemVisuals.hull_icon).
+## THE SHELF IS A CONTEXT NOW (2026-07-28), not a hand-built tab. The grid, the column
+## fit, the details panel and the selection all belong to ShipyardView/ContextGrid, so
+## the same shelf can hang off a person in a room instead of only off a tab strip.
 func _build_shipyard_tab() -> void:
-	var row := HBoxContainer.new()
-	row.name = "Shipyard"
-	Tutor.register("panel_shipyard", row)
-	row.add_theme_constant_override("separation", 18)
-	_tabs.add_child(row)
-	var shelf := _action_column(row, "HULLS FOR SALE — flight-ready with standard loadout",
-		"right-click to buy")
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	shelf.add_child(scroll)
-	_yard_grid = GridContainer.new()
-	_yard_grid.add_theme_constant_override("h_separation", YARD_GAP)
-	_yard_grid.add_theme_constant_override("v_separation", YARD_GAP)
-	_yard_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_yard_grid)
-	# COLUMNS ARE DERIVED FROM THE SHELF'S ACTUAL WIDTH, not hardcoded. A fixed 4 left
-	# a third of the shelf empty at the 1920 design base, and any hardcoded number is
-	# wrong at the next window size or the moment the tile changes size — which it
-	# already did once today. Recomputed on resize so it is right everywhere.
-	scroll.resized.connect(func() -> void: _fit_yard_columns(scroll.size.x))
-	_fit_yard_columns(scroll.size.x)
-	var detail_col := _column(row, "DETAILS")
-	_yard_detail = RichTextLabel.new()
-	_yard_detail.bbcode_enabled = true
-	_yard_detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	detail_col.add_child(_yard_detail)
-
-
-## How many hull tiles fit across `width`, floored at one so a narrow window still
-## draws a shelf rather than dividing by zero into nothing.
-func _fit_yard_columns(width: float) -> void:
-	if _yard_grid == null:
-		return
-	var per := HullTile.TILE.x + float(YARD_GAP)
-	_yard_grid.columns = maxi(1, int(floor((width + float(YARD_GAP)) / per)))
+	_yard = ShipyardView.new(ship)
+	_yard.name = "Shipyard"
+	Tutor.register("panel_shipyard", _yard)
+	_yard.buy_requested.connect(_on_buy_ship)
+	_tabs.add_child(_yard)
 
 
 func _build_armory_tab() -> void:
@@ -1669,44 +1638,8 @@ func _refresh_board_ships() -> void:
 
 
 func _refresh_shipyard() -> void:
-	for c in _yard_grid.get_children():
-		_yard_grid.remove_child(c)
-		c.queue_free()
-	for index in SampleBuilds.count():
-		var build := SampleBuilds.get_build(index)
-		var tile := HullTile.new(build, index)
-		tile.owned = SampleBuilds.owned.has(index)
-		tile.price = int(build.hull.price)
-		tile.on_inspect = _on_ship_selected
-		tile.on_interact = _on_buy_ship
-		_yard_grid.add_child(tile)
-	if _yard_selected < 0 or _yard_selected >= SampleBuilds.count():
-		_yard_selected = 0
-	_show_hull_detail(_yard_selected)
-
-
-## The details panel — the same content the hover tooltip carries, given a permanent
-## home so comparing two hulls does not mean holding the mouse still.
-func _show_hull_detail(index: int) -> void:
-	_yard_selected = index
-	if _yard_detail == null:
-		return
-	for c in _yard_detail.get_children():
-		_yard_detail.remove_child(c)
-		c.queue_free()
-	var build := SampleBuilds.get_build(index)
-	var owned := SampleBuilds.owned.has(index)
-	var tip := DockScreen.hull_tooltip(build) as RichTextLabel
-	var line := "[color=#6de08f]OWNED — board her in the Engineering Bay.[/color]" if owned \
-		else ("[color=#f2b859]%dc — right-click her tile to buy.[/color]" % int(build.hull.price) \
-			if Wallet.credits >= int(build.hull.price) \
-			else "[color=#f25a50]%dc — you have %dc.[/color]" % [int(build.hull.price), Wallet.credits])
-	_yard_detail.text = "%s\n\n%s" % [tip.text, line]
-
-
-func _on_ship_selected(index: int) -> void:
-	Sfx.play("click", -18.0, 1.1)
-	_show_hull_detail(index)
+	if _yard != null:
+		_yard.refresh()
 
 
 ## Board an owned ship from the ship-deck strip (clicked ShipIcon).
@@ -1738,7 +1671,6 @@ func _board_ship(index: int) -> void:
 ## shelf, wondering which row it means.
 func _on_buy_ship(index: int) -> void:
 	_flash_msg = ""
-	_yard_selected = index
 	var build := SampleBuilds.get_build(index)
 	if SampleBuilds.owned.has(index):
 		_flash("You already own a %s." % build.hull.display_name)

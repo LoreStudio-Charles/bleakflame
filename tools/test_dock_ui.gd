@@ -2067,8 +2067,8 @@ func _case_the_shipyard_is_a_shop_shelf() -> void:
 	Wallet.credits = 999999
 	screen.refresh()
 
-	_ok(_count_lists(screen._yard_grid) == 0, "the shipyard shelf is a grid, not a list")
-	var tiles: Array = _collect_tiles(screen._yard_grid)
+	_ok(_count_lists(screen._yard) == 0, "the shipyard shelf is a grid, not a list")
+	var tiles: Array = _collect_tiles(screen._yard.grid)
 	_ok(tiles.size() == SampleBuilds.count(),
 		"every hull for sale wears a tile (%d of %d)" % [tiles.size(), SampleBuilds.count()])
 
@@ -2097,10 +2097,33 @@ func _case_the_shipyard_is_a_shop_shelf() -> void:
 		"precondition: an unowned hull that is NOT index 0")
 	if target != null:
 		var before := SampleBuilds.owned.size()
-		target.on_interact.call(target.index)
+		# THROUGH THE REAL GESTURE. The tile's own on_interact is deliberately unset now
+		# — ContextGrid owns click routing — so calling it would test a path the player
+		# cannot reach, and would keep passing if the grid's wiring were cut.
+		_right_click(target)
 		_ok(SampleBuilds.owned.has(target.index),
 			"right-clicking a tile buys THAT hull (%d)" % target.index)
 		_ok(SampleBuilds.owned.size() == before + 1, "...and only that one")
+
+	# THE ACTION LIVES ON THE THING, WITH ITS REASON (ContextBase.action). A shelf you
+	# cannot afford must say so on the ship you picked, not leave a dead button — the
+	# defect the whole context shape exists to end.
+	Wallet.credits = 0
+	screen.refresh()
+	# RE-COLLECT. refresh() rebuilds every tile, so the array above now holds freed
+	# nodes — clicking one of those tests nothing and reports success either way.
+	var poor: HullTile = null
+	for t in _collect_tiles(screen._yard.grid):
+		if not (t as HullTile).owned:
+			poor = t
+	if poor != null:
+		_left_click(poor)
+		_ok(_find_text(screen._yard, poor.build.hull.display_name),
+			"clicking a tile opens THAT hull in the details panel")
+		var buy := _find_button(screen._yard, "Buy —")
+		_ok(buy != null and buy.disabled, "a hull you cannot afford has a dead Buy")
+		_ok(_find_text(screen._yard, "Short"),
+			"...and the reason is beside it, in credits you are short")
 
 	Wallet.credits = kept_credits
 	SampleBuilds.owned.clear()
@@ -2211,6 +2234,23 @@ func _take_offer(host: Node, panel: DialoguePanel, needle: String) -> ContextMod
 		if c is ContextModal:
 			return c
 	return null
+
+
+## A REAL MOUSE GESTURE on a tile. Grid shelves route clicks through ContextGrid's
+## gui_input, so poking a tile's own callback tests a path the player cannot take.
+func _click(node: Control, button: int) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = button
+	ev.pressed = true
+	node.gui_input.emit(ev)
+
+
+func _left_click(node: Control) -> void:
+	_click(node, MOUSE_BUTTON_LEFT)
+
+
+func _right_click(node: Control) -> void:
+	_click(node, MOUSE_BUTTON_RIGHT)
 
 
 ## Dispose IMMEDIATELY, not queue_free: a deferred panel is still in the tree this
