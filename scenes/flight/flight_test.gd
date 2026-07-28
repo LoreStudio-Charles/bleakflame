@@ -211,6 +211,10 @@ func _ready() -> void:
 	# THE LEGEND, beat 3. Where the drone's last handshake points: far out on the
 	# Orivel axis, off the lane, in dark nobody has any business being in.
 	PoiMap.register("ooshu_relay", "Unlisted Return", Vector2(11800, -9400), "signal", false, true)
+	# The chain beat 4 walks. EPHEMERAL like every other quest-only marker: nothing is
+	# there unless the beat places it, and flying past one must not pin a permanent pin.
+	PoiMap.register("ooshu_relay_2", "Unlisted Return II", Vector2(-20700, -23000), "signal", false, true)
+	PoiMap.register("ooshu_relay_3", "The Far Node", Vector2(-56700, -47700), "signal", false, true)
 	PoiMap.register("waygate", "The Ancient Gate", Vector2(-6800, 8200), "gate")
 	if PoiMap.waypoint_id == "":
 		PoiMap.waypoint_id = "station"   # a new pilot can always find home

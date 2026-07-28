@@ -483,6 +483,119 @@ const QUESTS := [
 						]}}},
 		],
 		"rewards": {"credits": 450, "xp": 90}},
+
+	# BEAT 4 — THE LONELINESS (docs/cinder_reach_campaign.md). The user's inversion of a
+	# bad idea: the first proposal was three travel beats to break up the haul, and the
+	# answer was "just a single beat that is the loneliness." Filling emptiness gives a
+	# busier road; making it the SUBJECT gives a beat.
+	#
+	# ITS SPINE WAS PLANTED IN BEAT 3 — the buoy FORWARDS, so there is another beyond it.
+	# Following the chain out is the errand, and the chain is the loneliness made physical:
+	# objects placed by someone, for someone, that will never speak to each other.
+	#
+	# TWO STOPS, NOT FOUR. The whole lane is 90,963 units and three to five minutes end to
+	# end; more waypoints would turn the subject back into connective tissue. The distance
+	# BETWEEN them is the content, which is why they sit at roughly a third and four fifths
+	# of the road rather than anywhere convenient.
+	#
+	# COLD-GATED AT LEVEL 6 — the Long Lane's own band. A level-1 pilot flying it dies to
+	# the Gap, and the campaign is explicitly allowed to go quiet behind a level
+	# (docs: "cold stretches"). pending_reason() surfaces WHY, because a cold trail and a
+	# broken quest look identical from the cockpit and this project has already paid for
+	# that once.
+	#
+	# GIVER IS DEX, and only just. Beat 3 was his too, and a fourth errand in a row would
+	# make the player a courier in their own campaign — so he does not SEND anyone here.
+	# He charts the next link because he is the only one who can, says plainly that he
+	# would rather you did not, and stays behind. The going is the player's.
+	#
+	# NO RETURN LEG. It ends at the far buoy pointing at Orivel (beat 5); making the pilot
+	# fly 90,000 units home to be told what they just read would spend the beat's pacing
+	# on an errand. The debrief waits for whatever they dock at next, which out there is
+	# the capital.
+	{"id": "legend_the_long_way", "title": "The Long Way Out", "giver": "lab",
+		"layer": "campaign", "requires": "legend_who_is_asking", "requires_level": 6,
+		"body": "The buoy forwards. There is another one out there, and another past that — a chain nobody was ever supposed to walk.",
+		"debrief": "You are a long way from Ember Row, and there is nobody to tell.\n\nThe log sits in your hold with four lines of handshake and a name that is not a name, and the only thing waiting at the end of it is a planet you have never landed on.\n\nYou will have to say it out loud eventually. Not yet.",
+		"stages": [
+			{"kind": "talk", "npc": "lab", "venue": "station",
+				"step": "Ask Dex to chart the next link in the chain.",
+				"flash": "He can find the next one. He says so like a man admitting to something.",
+				"dialogue": {
+					"start": {
+						"text": "Dex has the bearing up when you come in, and he has clearly been looking at it for a while without doing anything about it.\n\n\"I found the next one,\" he says, before you ask. \"It took eleven minutes. That's the part I keep coming back to. Eleven minutes, from a bench in a station nobody visits, with equipment I built out of a Kestrel's old sensor stack.\"\n\nHe rubs his eyes.\n\n\"If it was that easy for me, it has been that easy for anyone who thought to look. And nobody has. For years, apparently.\"",
+						"choices": [
+							{"text": "Where is it?", "next": "where", "style": "primary"},
+							{"text": "You've been up all night.", "next": "night"},
+						]},
+					"night": {
+						"text": "\"I have,\" he agrees, without any of the usual delight. \"I kept thinking I'd find the edge of it. A last node. Somewhere the network stops and something with a name starts.\"\n\nHe turns the screen a few degrees, as if a different angle might help.\n\n\"It doesn't stop. It just gets further apart.\"",
+						"choices": [
+							{"text": "Then where's the next one?", "next": "where", "style": "primary"},
+						]},
+					"where": {
+						"text": "\"Out along the lane. Not ON it — off the shoulder, the way the first one was off the axis.\" He marks it. \"Then there's a third, much further, and I can only see that one because the second one talks to it.\"\n\nHe hesitates, and it costs him something.\n\n\"That's the whole road, pilot. Rim to the Navy line. You'd be further out than anyone at this station has been in years, in the stretch nobody patrols, on your own.\"",
+						"choices": [
+							{"text": "Come with me.", "next": "come"},
+							{"text": "Mark them both.", "next": "mark", "style": "primary"},
+						]},
+					"come": {
+						"text": "He laughs — one note, and not a happy one.\n\n\"I'd be a passenger and a witness, and I'd be very bad at both.\" He straightens some things on the bench that did not need straightening. \"Also I would like to be here. That is a cowardly thing to want and I want it anyway.\"\n\nHe looks up.\n\n\"Somebody should know where you went. I'll be the somebody.\"",
+						"choices": [
+							{"text": "Mark them both.", "next": "mark", "style": "primary"},
+						]},
+					"mark": {
+						"text": "He sends the marks across, and then holds the console a moment longer.\n\n\"There will be traffic the whole way. Haulers, liners, a Navy picket at the far end — the lane is busy, it is genuinely busy.\" A pause. \"That is not the same as company. I want you to know that before you go, rather than find it out somewhere around the middle.\"\n\nHe lets go of the console.\n\n\"Keep your comm on. People out there will answer you. It helps more than it should.\"",
+						"choices": [
+							{"text": "I'll keep it on.", "next": "end", "style": "primary"},
+						]}}},
+
+			{"kind": "goto", "pos": [-20700, -23000], "radius": 520.0, "poi": "ooshu_relay_2",
+				"step": "Follow the lane out to the second buoy, off the road's shoulder.",
+				"flash": "Older than the hunt. Whatever this chain is for, it was not built for Conall Phelan.",
+				"dialogue": {
+					"start": {
+						"text": "The road took a long time.\n\nNot difficult — you were never alone on it. A Dray with her holds full went by within hailing distance and wished you a quiet run. Two names sat on your roster for a while, drifted to the edge of comm range, and dropped off. A liner passed far above with all her lights on, carrying people who paid for a window seat, and nobody aboard her looked out.\n\nThen the roster empties, and stays empty, and the buoy is there.",
+						"choices": [
+							{"text": "Read it.", "next": "old", "style": "primary"},
+						]},
+					"old": {
+						"text": "It is the twin of the first one, and it is much older.\n\nThe alloy has the dull frosted look of something that has been sitting in the dark long enough to forget it was ever new. Micrometeorite pitting across the leading face, dense as gooseflesh. Whatever the first buoy was — six weeks of Epharon dust, Dex said — this one has been here for years.\n\nWhich means the chain was not strung to watch an old man on a dust ball. The chain was already here. Someone simply had a use for it.",
+						"choices": [
+							{"text": "What else has gone through it?", "next": "traffic"},
+						]},
+					"traffic": {
+						"text": "Almost nothing, and that is somehow worse than a lot.\n\nMonths between handshakes. Years, in one gap. This is not a listening post working a target; it is infrastructure, left switched on and unattended, in case it was ever wanted.\n\nSomebody built the means to watch the Cinder Reach long before they had a reason to, and then waited to find one.\n\nThe next mark sits a very long way further out. You look at the distance for a while before you burn.",
+						"choices": [
+							{"text": "Burn.", "next": "end", "style": "primary"},
+						]}}},
+
+			{"kind": "goto", "pos": [-56700, -47700], "radius": 560.0, "poi": "ooshu_relay_3",
+				"step": "Run the road to its far end, and find what the chain talks to.",
+				"flash": "The chain does not point outward at some paymaster in the dark. It points at ORIVEL.",
+				"dialogue": {
+					"start": {
+						"text": "The Navy picket passed you an hour ago — a cruiser and her screen, running the line, incurious. Their hail was three words and a lane clearance. You were the smallest thing on their board.\n\nAfter that, nothing. The Reach is a long way behind you now. Epharon is not a planet from here; it is an idea you have about a direction.\n\nThe third buoy is bigger than the others, and it is not asleep.",
+						"choices": [
+							{"text": "Get close enough to read it.", "next": "awake", "style": "primary"},
+						]},
+					"awake": {
+						"text": "It notices you the way the first one did, and unlike the first one it does not go back to sleep.\n\nNothing happens. No challenge, no burst, no lock. It simply stays awake while you sit alongside it, and continues to stay awake, and you find that you are watching it as carefully as it is watching you, and that you have been doing this for some minutes.\n\nYou take the log and get on with it.",
+						"choices": [
+							{"text": "Where does this one send?", "next": "inward", "style": "primary"},
+						]},
+					"inward": {
+						"text": "The handshake is short and it is the only thing in the record that matters.\n\nThis node does not forward to something further out. There is nothing further out. It is the END of the chain — and it talks to exactly one correspondent, close and civil and answering promptly, every time, for years.\n\nThe correspondent is at Orivel.\n\nNot beyond it. Not passing through. AT it — in the traffic of the capital, holding a slot, receiving reports about a system a hundred thousand units away and never once asking the chain to explain itself.",
+						"choices": [
+							{"text": "Somebody at the capital has been listening the whole time.", "next": "alone"},
+						]},
+					"alone": {
+						"text": "You sit with it, out where the Navy's lights are a smudge behind you and Orivel is not yet anything at all.\n\nThe Ooshu did not come to Cinder Reach and go looking. Somebody in the Reach sent for them — and somebody at the capital had been listening long enough to know who to send them to.\n\nThere is no one to say this to. Dex is a day and a half behind you. Odessa is behind him, in a bar, wiping a glass, and she would not thank you for the comm traffic.\n\nSo you say it to nobody, which is the only way it is going to get said out here, and you turn your nose toward the capital.",
+						"choices": [
+							{"text": "Orivel, then.", "next": "end", "style": "primary"},
+						]}}},
+		],
+		"rewards": {"credits": 600, "xp": 140}},
 ]
 
 ## id -> {"stage": int, "count": int}
