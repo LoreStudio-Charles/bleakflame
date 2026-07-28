@@ -153,6 +153,12 @@ func _take_hold_with_me() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.wreck", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_age += delta
 	if _age >= LIFETIME:
 		_take_hold_with_me()

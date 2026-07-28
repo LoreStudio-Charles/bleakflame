@@ -27,6 +27,12 @@ func _init(p_ship: Node2D) -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(_delta)
+	Telemetry.phase("p.range_ruler", _t0)
+
+
+func _tick_p(_delta: float) -> void:
 	if not visible or ship == null or not is_instance_valid(ship):
 		return
 	global_position = ship.global_position
@@ -35,6 +41,12 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.range_ruler", _t0)
+
+
+func _paint_d() -> void:
 	var f := ThemeDB.fallback_font
 	for r in RINGS:
 		draw_arc(Vector2.ZERO, r, 0.0, TAU, 96, RING, 1.5, true)

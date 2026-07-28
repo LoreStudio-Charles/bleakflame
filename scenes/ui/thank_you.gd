@@ -89,6 +89,12 @@ func _build_hold_prompt(box: VBoxContainer) -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.thank_you", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if _leaving:
 		return
 	var holding: bool = _armed and (Input.is_key_pressed(KEY_SPACE) \

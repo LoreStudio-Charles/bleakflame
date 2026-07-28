@@ -40,6 +40,12 @@ func refresh() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.blight", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if not _host_valid():
 		queue_free()
 		return
@@ -73,6 +79,12 @@ func _bite() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.blight", _t0)
+
+
+func _paint_d() -> void:
 	var fade := 1.0
 	var remaining := life - _t
 	if remaining < 4.0:

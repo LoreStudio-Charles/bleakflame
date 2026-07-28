@@ -82,6 +82,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.loot_pickup", _t0)
+
+
+func _paint_d() -> void:
 	var color := Grades.color(def.grade) if def != null else Color(0.92, 0.82, 0.5)
 	# Blink during the last 10 seconds of drift.
 	if LIFETIME - _age < 10.0 and fmod(_age, 0.5) > 0.25:

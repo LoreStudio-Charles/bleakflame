@@ -59,6 +59,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.lightning", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if flicker_hz <= 0.0:
 		return
 	_flicker_t -= delta

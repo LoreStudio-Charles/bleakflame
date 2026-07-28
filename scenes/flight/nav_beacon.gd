@@ -93,11 +93,23 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.nav_beacon", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	queue_redraw()
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.nav_beacon", _t0)
+
+
+func _paint_d() -> void:
 	var phase := fmod(_t, PULSE_PERIOD) / PULSE_PERIOD
 	# THE BODY RETIRES WHEN THE ART LANDS (the WayGate rule: the drawing carries the
 	# object, the procedural layer keeps only the fx). Drawing the mast over the

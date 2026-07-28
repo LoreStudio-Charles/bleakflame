@@ -72,6 +72,12 @@ func _explode() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.target_drone", _t0)
+
+
+func _paint_d() -> void:
 	if _sprite != null:
 		return   # the sprite carries the visual; flash is handled via its modulate
 	var color := Color(0.75, 0.35, 0.35) if _flash <= 0.0 else Color(1, 1, 1)

@@ -122,6 +122,12 @@ func _build_hold() -> Control:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.launch_window", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if _done:
 		return
 	_t -= delta

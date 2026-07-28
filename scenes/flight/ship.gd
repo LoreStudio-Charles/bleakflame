@@ -2200,6 +2200,12 @@ func _update_firing_solution() -> void:
 ## their range. Faint while hunting; hard bright the moment the solution is
 ## good. Flying the pip is the game — this is the confirmation.
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.ship", _t0)
+
+
+func _paint_d() -> void:
 	if build == null or dead or docked_at != null:
 		return
 	var gun_range := 0.0

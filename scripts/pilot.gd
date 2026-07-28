@@ -223,9 +223,10 @@ static func xp_span_to_next() -> int:
 	return 0 if lv >= MAX_LEVEL else xp_for_level(lv + 1) - xp_for_level(lv)
 
 
-@warning_ignore("integer_division")
 static func skill_points_total() -> int:
-	return level() / POINTS_PER_LEVELS   # one point per N levels -- a part level buys nothing
+	# one point per N levels -- a part level buys nothing
+	@warning_ignore("integer_division")
+	return level() / POINTS_PER_LEVELS
 
 
 static func skill_points_spent() -> int:

@@ -30,6 +30,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.tutor_ping", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	# INFORMATIONAL steps ("dwell") retire themselves after being on screen long
 	# enough to read. A tab intro has nothing to DO — there is no click that

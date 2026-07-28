@@ -114,8 +114,11 @@ static func cadence_text() -> String:
 static func day_number(stamp := NEVER) -> int:
 	var at := _now if stamp == NEVER else stamp
 	@warning_ignore("integer_division")
-	var days := at / DAY   # whole days elapsed; the remainder is the time of day
-	return days
+	# `whole`, not `days`: this class has a days() helper and a local of that name
+	# shadows it -- which is how the first attempt at this fix traded one warning for
+	# another.
+	var whole := at / DAY   # the remainder is the time of day
+	return whole
 
 
 ## Subscribe to the passage of time. The callable receives the units advanced.

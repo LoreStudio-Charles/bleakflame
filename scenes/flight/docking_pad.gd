@@ -56,6 +56,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(_delta)
+	Telemetry.phase("p.docking_pad", _t0)
+
+
+func _tick_p(_delta: float) -> void:
 	queue_redraw()
 
 
@@ -353,6 +359,12 @@ func undock_exit(ship: TestShip) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.docking_pad", _t0)
+
+
+func _paint_d() -> void:
 	var player := get_tree().get_first_node_in_group("player_ship") as TestShip
 	if player == null or player.docked_at != null:
 		return

@@ -52,11 +52,66 @@ static func note_frame(delta: float) -> void:
 	frame_count += 1
 	frame_total += ms
 	frame_worst = maxf(frame_worst, ms)
+	_note_hitch(ms)
 	for i in FRAME_BUCKETS.size():
 		if ms <= float(FRAME_BUCKETS[i]):
 			frame_hist[i] += 1
 			return
 	frame_hist[FRAME_BUCKETS.size()] += 1
+
+
+## WHAT WAS HAPPENING DURING THE FRAMES THAT HURT.
+##
+## A mean is not what anyone feels. This session's work took the mean from 38.5 ms to
+## 23.2 and the honest verdict was still "not much better" — which is correct: a steady
+## 43 fps feels fine, and a 43 fps AVERAGE punctuated by 130 ms stalls feels broken.
+## The average was hiding the thing being complained about, so it is the wrong
+## instrument for it.
+##
+## For each bad frame this records the phases that grew MOST DURING THAT FRAME, diffed
+## against the running totals, plus how many nodes appeared — because a spawn burst is
+## the classic cause of a stall and shows up as a jump that no phase timer would
+## otherwise explain.
+const HITCH_MS := 45.0
+const HITCHES_KEPT := 10
+
+static var hitches: Array = []
+static var _phase_mark := {}
+static var _node_mark := 0
+
+
+static func _note_hitch(ms: float) -> void:
+	var nodes := int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))
+	if ms >= HITCH_MS:
+		var grew: Array = []
+		for id in phase_us:
+			var d: int = int(phase_us[id]) - int(_phase_mark.get(id, 0))
+			if d > 0:
+				grew.append([id, d])
+		grew.sort_custom(func(a, b): return int(a[1]) > int(b[1]))
+		hitches.append({"ms": ms, "top": grew.slice(0, 4),
+			"nodes": nodes, "spawned": nodes - _node_mark})
+		if hitches.size() > HITCHES_KEPT:
+			hitches.pop_front()
+	# DUPLICATED, not referenced: phase_us keeps being written all frame long, so holding
+	# a reference to it would make every diff come out as zero.
+	_phase_mark = phase_us.duplicate()
+	_node_mark = nodes
+
+
+static func _hitch_lines() -> String:
+	if hitches.is_empty():
+		return ""
+	var out := "worst frames in this window (>= %.0f ms), and what grew during each:\n" % HITCH_MS
+	for h in hitches:
+		var parts: Array = []
+		for pair in (h.get("top", []) as Array):
+			parts.append("%s %.1fms" % [str(pair[0]), float(pair[1]) / 1000.0])
+		out += "  %6.1f ms   nodes %+d (%d total)   %s\n" % [
+			float(h.get("ms", 0.0)), int(h.get("spawned", 0)), int(h.get("nodes", 0)),
+			"  ".join(parts) if not parts.is_empty() else "(nothing instrumented grew)"]
+	return out
+
 
 
 ## THE WHOLE PICTURE AS TEXT, so it can be pasted, logged, or read off disk by somebody
@@ -89,7 +144,26 @@ static func report(tree: SceneTree = null) -> String:
 			prev = float(FRAME_BUCKETS[i])
 		out += "  >  %6.1f ms  %6d   <-- hitches\n" % [
 			prev, frame_hist[FRAME_BUCKETS.size()]]
+	out += _hitch_lines()
 	out += _phase_lines()
+	# THE ENGINE'S OWN SPLIT, printed beside our phases so the GAP is visible instead of
+	# inferred. Twice now I have reasoned about "the unaccounted milliseconds" and been
+	# wrong about where they were -- first calling them the renderer, then calling them
+	# presentation. The profiler settled it and this puts the same numbers in the text
+	# report, where they can be read without a screenshot.
+	#
+	# If the phases above sum to far less than `process`, the cost is in _process
+	# callbacks nobody has instrumented yet -- that subtraction is the whole point.
+	out += "engine: process %.2f ms   physics %.2f ms   objects %d   nodes %d
+" % [
+		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+		Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))]
+	out += "  draw calls %d   video mem %.0f MB
+" % [
+		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0]
 	if tree != null:
 		out += _world_lines(tree)
 	out += "warnings this session: %d\n" % warn_total()
@@ -163,6 +237,8 @@ static func _phase_lines() -> String:
 ## Start a fresh measurement window. Nothing else is cleared: the event log and the
 ## warning tallies are the session's history and are worth keeping across samples.
 static func reset_frames() -> void:
+	hitches.clear()
+	_phase_mark.clear()
 	phase_us.clear()
 	phase_calls.clear()
 	frame_hist.clear()

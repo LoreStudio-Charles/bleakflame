@@ -21,6 +21,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.killshot_beam", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	if _t >= LIFE:
 		queue_free()
@@ -29,6 +35,12 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.killshot_beam", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / LIFE
 	var a_local := to_local(from_point)
 	var b_local := to_local(to_point)

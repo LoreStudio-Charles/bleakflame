@@ -28,6 +28,12 @@ func take_damage(_amount: float, _source: Node = null) -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.decoy", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	if _t >= life:
 		queue_free()
@@ -38,6 +44,12 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.decoy", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / life
 	var flick := 0.6 + 0.4 * sin(_t * 40.0)
 	draw_circle(Vector2.ZERO, 11.0, Color(1.0, 0.85, 0.45, 0.22 * a))

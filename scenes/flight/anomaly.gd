@@ -111,6 +111,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.anomaly", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	# A slow, wrong breathing — never quite still.
 	var pulse := 0.85 + 0.15 * sin(_t * 1.6)

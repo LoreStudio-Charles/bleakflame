@@ -210,6 +210,12 @@ func _refresh() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(_delta)
+	Telemetry.phase("p.going_dark", _t0)
+
+
+func _tick_p(_delta: float) -> void:
 	if not visible or ship == null or ship.build == null:
 		return
 	var hp_max: float = maxf(1.0, float(ship.stats.hull_hp))

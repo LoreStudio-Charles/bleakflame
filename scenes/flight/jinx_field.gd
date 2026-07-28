@@ -73,6 +73,12 @@ func _release(ally: Node) -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.jinx_field", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	if _t >= life:
 		queue_free()
@@ -87,6 +93,12 @@ func _exit_tree() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.jinx_field", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / life
 	# a scatter of skewed rings — the shimmer of shots going wide
 	for i in 3:

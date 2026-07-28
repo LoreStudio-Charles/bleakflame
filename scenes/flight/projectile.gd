@@ -352,6 +352,12 @@ func _end_flight() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.projectile", _t0)
+
+
+func _paint_d() -> void:
 	var s := bolt_scale
 	if beam_tail > 0.0:
 		# Pulse laser: light-front with the beam trailing behind it. While

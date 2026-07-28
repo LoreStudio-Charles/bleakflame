@@ -13,6 +13,12 @@ const DRAG := 0.82
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.tangle_field", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	if _t >= life or target == null or not is_instance_valid(target) or target.get("dead") == true:
 		queue_free()
@@ -25,6 +31,12 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.tangle_field", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / life
 	var r := 16.0
 	if is_instance_valid(target) and target.get("hit_radius") != null:

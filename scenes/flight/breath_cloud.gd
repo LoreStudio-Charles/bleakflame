@@ -70,6 +70,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.breath_cloud", _t0)
+
+
+func _paint_d() -> void:
 	# Dark breath: layered shadow, NOT additive — it eats light.
 	var fade := clampf(1.0 - _age / LIFETIME, 0.0, 1.0)
 	var swell := minf(_age * 2.2, 1.0)   # blooms outward on arrival

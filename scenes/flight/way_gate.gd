@@ -363,6 +363,12 @@ func _spawn_arc() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.way_gate", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	_ring.rotation = _t * (0.15 + _aperture * 0.9)         # spins up as it wakes
 	$inner.rotation = -_t * (0.28 + _aperture * 1.1)

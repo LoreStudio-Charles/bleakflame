@@ -10,6 +10,12 @@ var _t := 0.0
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.bulwark_field", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	if _t >= life:
 		queue_free()
@@ -18,6 +24,12 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.bulwark_field", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / life
 	# Soft fill + a brighter rim; both fade together with the buff.
 	draw_circle(Vector2.ZERO, radius, Color(0.4, 0.7, 1.0, 0.09 * a))

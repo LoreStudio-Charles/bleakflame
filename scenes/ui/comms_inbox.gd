@@ -85,6 +85,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(_delta)
+	Telemetry.phase("p.comms_inbox", _t0)
+
+
+func _tick_p(_delta: float) -> void:
 	var n := Comms.unread()
 	if n > 0:
 		_badge.text = "✉ %d NEW   [C]" % n

@@ -50,10 +50,10 @@ var _err := 0.0
 var _pulse_targets: Array[CanvasItem] = []
 
 
-@warning_ignore("integer_division")
 static func grid_point(i: int) -> Vector2:
 	# i / 3 is the ROW of a 3x3 grid and the discarded remainder is the column, which
 	# the other half of the expression reads. Both halves are integer maths on purpose.
+	@warning_ignore("integer_division")
 	return Vector2(float(i % 3) / 2.0, float(i / 3) / 2.0)
 
 
@@ -219,6 +219,12 @@ func _rebuild_entry() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.gate_console", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if _err > 0.0:
 		_err = maxf(0.0, _err - delta)
 		if _err == 0.0:

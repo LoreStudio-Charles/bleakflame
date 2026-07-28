@@ -654,7 +654,7 @@ func _tick_flight_lessons() -> void:
 		"carrying_ordnance": carrying_ordnance,
 		# A ROCK you could be chipping: the one moment "guns hot with NO target" is
 		# worth explaining, since every other lesson teaches firing AT something.
-		"rock_near": _nearest_rock_dist(ship) < 900.0,
+		"rock_near": _rock_within(900.0),
 		"weapons_tight": not ship.weapons_free,
 		"skill_points": Pilot.skill_points_available(),
 		"has_standing": not Standing.points.is_empty(),
@@ -663,12 +663,18 @@ func _tick_flight_lessons() -> void:
 
 ## Distance to the nearest mineable rock, or INF. Only the tutor needs this, and only to
 ## answer "is there something here worth shooting that will never shoot back".
-func _nearest_rock_dist(ship) -> float:
-	var best := INF
-	for r in get_tree().get_nodes_in_group("asteroids"):
-		if is_instance_valid(r):
-			best = minf(best, ship.global_position.distance_to(r.global_position))
-	return best
+## NO PARAMETER. It took one, and the body ignored it and read the scene's own `ship`
+## anyway -- so `_nearest_rock_dist(anything)` always answered for the player. The one
+## caller happened to pass `ship`, which is why it was never wrong, only waiting. The
+## shadow warning is what surfaced it.
+##
+## Asked as a QUESTION WITH A RADIUS, since the only caller compares against 900: this
+## ran every frame, from the tutor context snapshot, over every rock in the system.
+func _rock_within(radius: float) -> bool:
+	for r in SpaceHash.near(get_tree(), "asteroids", ship.global_position, radius):
+		if is_instance_valid(r) 				and ship.global_position.distance_squared_to(r.global_position) 					<= radius * radius:
+			return true
+	return false
 
 
 func _tick_distress(delta: float) -> void:
@@ -1142,7 +1148,6 @@ func _apply_vyper_truce() -> void:
 var _waygate: WayGate
 var _left_system := false
 var _gate_console: GateConsole
-var _gate_prompted := false
 var _traversing := false
 var _dev_gate := false          # a dev-summoned gate ([;]); drives the full flow too
 

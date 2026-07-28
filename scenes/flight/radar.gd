@@ -20,6 +20,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(_delta)
+	Telemetry.phase("p.radar", _t0)
+
+
+func _tick_p(_delta: float) -> void:
 	visible = ship != null and not ship.dead and ship.docked_at == null
 	if visible:
 		queue_redraw()

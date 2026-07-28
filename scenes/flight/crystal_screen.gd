@@ -31,6 +31,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.crystal_screen", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	_t += delta
 	if _t >= life:
 		queue_free()
@@ -60,6 +66,12 @@ func _intercept() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.crystal_screen", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / life
 	if _t < 0.25:
 		a *= _t / 0.25          # snaps into being rather than popping

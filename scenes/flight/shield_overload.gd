@@ -38,6 +38,12 @@ func seize(victim: Node2D) -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.shield_overload", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if not _valid():
 		queue_free()
 		return
@@ -69,6 +75,12 @@ func _exit_tree() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.shield_overload", _t0)
+
+
+func _paint_d() -> void:
 	var a := 1.0 - _t / life
 	var r: float = 26.0
 	if is_instance_valid(target) and target.get("hit_radius") != null:

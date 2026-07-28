@@ -226,6 +226,12 @@ func _fire_beam() -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.weapon_mount", _t0)
+
+
+func _paint_d() -> void:
 	if def == null:
 		return
 	var tip := Vector2(7.0 + 2.5 * def.mark, 0)

@@ -74,6 +74,12 @@ func _pick_target() -> BuildShip:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.station_turret", _t0)
+
+
+func _paint_d() -> void:
 	var r := 5.0 + 1.6 * mount.def.mark if mount != null else 8.0
 	draw_circle(Vector2.ZERO, r, Color(0.24, 0.26, 0.32))
 	draw_arc(Vector2.ZERO, r, 0, TAU, 20, Color(0.52, 0.56, 0.66), 1.5)

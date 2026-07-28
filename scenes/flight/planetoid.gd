@@ -58,6 +58,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(_delta)
+	Telemetry.phase("p.planetoid", _t0)
+
+
+func _tick_p(_delta: float) -> void:
 	queue_redraw()
 
 
@@ -336,6 +342,12 @@ func undock_exit(ship: TestShip) -> void:
 
 
 func _draw() -> void:
+	var _t0 := Telemetry.now_us()
+	_paint_d()
+	Telemetry.phase("d.planetoid", _t0)
+
+
+func _paint_d() -> void:
 	# Body is the sprite; only the landing band + gravity rings are drawn,
 	# colored by the player's current approach.
 	# The gravity ring always draws (the well is real on every body); the LANDING

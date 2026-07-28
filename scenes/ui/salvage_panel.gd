@@ -134,6 +134,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	var _t0 := Telemetry.now_us()
+	_tick_p(delta)
+	Telemetry.phase("p.salvage_panel", _t0)
+
+
+func _tick_p(delta: float) -> void:
 	if not _open:
 		return
 	# Loot drifts and the hold changes as you grab — keep the lists live.
