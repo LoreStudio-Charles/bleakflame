@@ -73,11 +73,19 @@ const MAP := KEY_M              # ground -> system -> galaxy -> universe (RMB ou
 const HOLD := KEY_H             # the SHIP's cargo hold
 const BAGS := KEY_B             # the PILOT's personal bags
 const DOSSIER := KEY_P          # pilot + ship sheet
-## FACTIONS is [U] (user, 2026-07-25 — an autocorrect had put Social here and the
-## correction never landed). Social takes the freed [I]; it is reserved and unbuilt, so
-## nothing player-facing moves except the faction sheet.
+## SOCIAL IS [O]. FACTIONS IS [U]. NOTHING IS ON [I].
+##
+## Settled 2026-07-28 by the user, after this line had been rewritten wrongly three
+## times: "Social should be O. That one never was I. Factions were U, then I, then back
+## to U. Nothing should be I yet."
+##
+## SO [I] IS DELIBERATELY UNBOUND — that is the fact worth keeping, because every wrong
+## version of this comment reached for it as a free letter and then invented a reason.
+## A phone autocorrect started it; two later "corrections" each moved the wrong one of
+## the pair. If a future screen wants a key, [I] is available and its emptiness is
+## intentional, not an oversight to be tidied up.
+const SOCIAL := KEY_O           # reserved — not built yet
 const FACTIONS := KEY_U
-const SOCIAL := KEY_I           # reserved — not built yet
 const DARK := KEY_K             # going dark | meditate
 const LOG := KEY_L              # captain's log: quests + objectives
 const COMMS := KEY_C            # archive of past transmissions
