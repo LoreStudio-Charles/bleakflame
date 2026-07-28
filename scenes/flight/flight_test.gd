@@ -237,7 +237,7 @@ func _ready() -> void:
 		# the hook is itself the dev gate — a release export skips this whole block,
 		# so /cash & friends are simply unknown commands there.
 		Chat.dev_command = _run_dev_command
-		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /widow /livery <colour> /ruler /heartbeat /rearm"
+		Chat.dev_help = "[dev] /cash [n] /insight [n] /xp [n] /gate /fleet /widow /livery <colour> /ruler /heartbeat /diag /rearm"
 
 	_populate_world()
 
@@ -354,6 +354,11 @@ func _spawn_belt(center: Vector2, count: int, seed_val: int, aurite_min: int) ->
 
 
 func _process(_delta: float) -> void:
+	# EVERY FRAME, FROM THE SCENE ITSELF rather than from the dev overlay — a histogram
+	# that only fills while somebody is looking at it cannot answer "was it already
+	# doing this before I opened the overlay?", which is the first question anyone asks
+	# about a stutter. No-ops in a release export.
+	Telemetry.note_frame(_delta)
 	_tick_distress(_delta)
 	_tick_flight_lessons()
 	_tick_dig_site()
@@ -1456,6 +1461,24 @@ func _run_dev_command(cmd: String, rest: String) -> bool:
 			AIShip.queue_attackers = not AIShip.queue_attackers
 			_dev_feedback("Dogfights: %s" % ("QUEUED — 2 press, rest circle"
 				if AIShip.queue_attackers else "ALL-IN — everyone presses"))
+			return true
+		"diag", "report":
+			# HAND THE NUMBERS OVER (user, 2026-07-28: "I really wish there was a way to
+			# share the output"). A profiler capture lives and dies inside the editor and
+			# a feeling cannot be bisected — this writes a frame-time histogram, the
+			# refresh/tick relationship, live object counts and the telemetry log to a
+			# file, AND prints it, so it lands in user://logs/godot.log too. Either one
+			# can be read by somebody who was not in the room.
+			var txt := Telemetry.report(get_tree())
+			var path := "user://diag.txt"
+			var fh := FileAccess.open(path, FileAccess.WRITE)
+			if fh != null:
+				fh.store_string(txt)
+				fh.close()
+				_dev_feedback("diagnostic written to %s (and the session log)"
+					% ProjectSettings.globalize_path(path))
+			else:
+				_dev_feedback("could not write %s — it is in the session log instead" % path)
 			return true
 		"heartbeat", "vitals":
 			if _dev_vitals != null:

@@ -961,7 +961,7 @@ func _case_a_stocked_row_states_its_price_of_entry() -> void:
 		if not ResourceLoader.exists(str(ware)):
 			continue
 		var comp: ComponentDef = load(str(ware))
-		var locked := VenueLayout.requirement(comp, "privateer", "privateer")
+		var locked := VenueLayout.requirement(comp, "privateer")
 		_ok(not bool(locked.met), "%s refuses an uncommissioned pilot" % comp.display_name)
 		_ok("commission" in str(locked.text),
 			"...naming THE COMMISSION, the gate they can act on (%s)" % str(locked.text))
@@ -970,7 +970,7 @@ func _case_a_stocked_row_states_its_price_of_entry() -> void:
 		# the row going quiet or claiming to be buyable.
 		var held := Pilot.profession
 		Pilot.profession = "privateer"
-		var levelled := VenueLayout.requirement(comp, "privateer", "privateer")
+		var levelled := VenueLayout.requirement(comp, "privateer")
 		Pilot.profession = held
 		_ok(not bool(levelled.met), "...and a level-%d chip still refuses a level-%d pilot" % [
 			int(comp.level), Pilot.level()])

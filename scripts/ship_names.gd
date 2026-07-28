@@ -74,8 +74,11 @@ static func prefix(role: String, nation := "galean") -> String:
 ## A registry mark for a licensed vessel. `rng` is optional so a caller that wants a stable
 ## fleet (a seeded lane) can hand one in; ships spawned ad hoc take the global generator.
 static func registry(role: String, rng: RandomNumberGenerator = null) -> String:
-	var prefix: String = PREFIX.get(role, "GCT")
-	return prefix + _code(CODE_CHARS, CODE_LEN, rng)
+	# NOT `prefix` — that is this class's own function (above), and shadowing it is a
+	# warning the editor has been carrying. I added the function today and walked
+	# straight into it.
+	var mark: String = PREFIX.get(role, "GCT")
+	return mark + _code(CODE_CHARS, CODE_LEN, rng)
 
 
 ## An unlicensed hull: characters that mean nothing, and — the part that carries the

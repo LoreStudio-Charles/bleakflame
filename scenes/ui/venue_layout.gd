@@ -545,7 +545,7 @@ func _ware_row(comp: ComponentDef, path: String) -> Control:
 	tile.price = int(price_of.call(comp))
 	row.add_child(tile)
 
-	var req := requirement(comp, prof, _standing_key())
+	var req := requirement(comp, _standing_key())
 	var lbl := RichTextLabel.new()
 	lbl.bbcode_enabled = true
 	lbl.fit_content = true
@@ -587,7 +587,7 @@ static func price_text(amount: int, currency := "credits") -> String:
 
 ## CAN THIS PILOT BUY IT, and if not, what in plain words is missing. Pure + static:
 ## the rule a shelf enforces should be assertable without building a shelf.
-static func requirement(comp: ComponentDef, prof_id: String, standing_key: String) -> Dictionary:
+static func requirement(comp: ComponentDef, standing_key: String) -> Dictionary:
 	# READ THE LOCK, DON'T ASK THE CLASS. `comp is SystemDef` is FALSE for every ability
 	# chip — AbilityChipDef extends ComponentDef directly and declares its own
 	# profession_lock — so a type test silently skipped the commission gate on exactly

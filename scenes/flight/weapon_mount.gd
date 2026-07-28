@@ -189,8 +189,9 @@ func _fire_beam() -> void:
 	var dir := Vector2.RIGHT.rotated(global_rotation)
 	var best := def.weapon_range
 	var hit_obj: Node2D = null
-	for group in [target_group, "asteroids"]:
-		for node in get_tree().get_nodes_in_group(group):
+	# `grp`, not `group`: this mount has a `group` member (the fire group).
+	for grp in [target_group, "asteroids"]:
+		for node in get_tree().get_nodes_in_group(grp):
 			if not is_instance_valid(node) or node.get("dead") == true or node == shooter:
 				continue
 			var r := BuildShip.hit_profile_of(node) + shot_grace

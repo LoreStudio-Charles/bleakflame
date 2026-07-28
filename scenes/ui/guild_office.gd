@@ -113,7 +113,6 @@ func refresh() -> void:
 ## in their terms — a pilot should be able to tell whose office they are in with
 ## the labels covered up.
 func _build_header() -> void:
-	var pd := Professions.def(prof)
 	var head := Label.new()
 	head.text = "%s        %s" % [Professions.office_name(prof).to_upper(),
 		"MEMBER" if is_member() else "VISITING"]

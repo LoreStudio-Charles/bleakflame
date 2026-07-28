@@ -70,7 +70,7 @@ func _init() -> void:
 	quit(0)
 
 
-func _write_scene(out: String, art: String, img: Image, br: Dictionary) -> bool:
+func _write_scene(out: String, art: String, _img: Image, br: Dictionary) -> bool:
 	# Offsets that put the art's BASE ANCHOR at the scene origin — the same maths
 	# _spawn_prop uses, so the editor view matches the game exactly.
 	var off := ArtAnchor.base_offset(br)

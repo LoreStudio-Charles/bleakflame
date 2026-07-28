@@ -462,11 +462,12 @@ static func _step_of(id: String, at: int) -> Dictionary:
 ## was told to go and meet Dex at the station's Research Lab. Arming at the right
 ## venue is not enough; the step has to still be right when it finally runs.
 static func _fits(id: String, at: int) -> bool:
-	var step := _step_of(id, at)
-	var where := str(step.get("where", ""))
+	# `at_step`, not `step`: `step` is this class's own static counter.
+	var at_step := _step_of(id, at)
+	var where := str(at_step.get("where", ""))
 	if where != "" and where != context:
 		return false
-	var want := str(step.get("venue", ""))
+	var want := str(at_step.get("venue", ""))
 	return want == "" or want == venue
 
 

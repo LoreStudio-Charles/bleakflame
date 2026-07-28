@@ -200,7 +200,7 @@ class ChartView:
 				best = e
 		return best
 
-	func _zoom_in(id: String) -> void:
+	func _zoom_in(_id: String) -> void:
 		match level:
 			Level.UNIVERSE:
 				level = Level.GALAXY

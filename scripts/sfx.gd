@@ -164,27 +164,29 @@ func _build_synth_streams() -> void:
 
 
 func play(sound: String, volume_db := -8.0, pitch := 1.0) -> void:
-	var stream = _streams.get(sound)
-	if stream == null:
+	# `snd`, not `stream`: this class has its own `stream` member, and a local of the
+	# same name shadows it — one of the warnings that had been piling up unread.
+	var snd = _streams.get(sound)
+	if snd == null:
 		push_warning("Sfx.play: no sound named '%s' — ignored." % sound)
 		return
 	var p := _ui_pool[_ui_i]
 	_ui_i = (_ui_i + 1) % _ui_pool.size()
-	p.stream = stream
+	p.stream = snd
 	p.volume_db = volume_db
 	p.pitch_scale = pitch
 	p.play()
 
 
 func play_at(sound: String, pos: Vector2, volume_db := -6.0, pitch := 1.0) -> void:
-	var stream = _streams.get(sound)
-	if stream == null:
+	var snd = _streams.get(sound)
+	if snd == null:
 		push_warning("Sfx.play_at: no sound named '%s' — ignored." % sound)
 		return
 	var p := _world_pool[_world_i]
 	_world_i = (_world_i + 1) % _world_pool.size()
 	p.global_position = pos
-	p.stream = stream
+	p.stream = snd
 	p.volume_db = volume_db
 	p.pitch_scale = pitch * randf_range(0.96, 1.05)
 	p.play()
