@@ -19,6 +19,7 @@ func _ready() -> void:
 	_case_verbs_are_bound_by_the_host()
 	_case_no_ship_is_not_a_crash()
 	_case_dossier_uses_the_shared_grid()
+	_case_the_dossier_sells_your_gear()
 
 	print("test_inventory_grid: ", "PASS" if _fails == 0 else "FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -84,6 +85,46 @@ func _case_no_ship_is_not_a_crash() -> void:
 	grid.refresh()
 	_chk(grid._grid.get_child_count() == 1, "a shipless grid draws its empty note, not an error")
 	grid.queue_free()
+
+
+## SELLING FROM YOUR OWN SHEET (user, 2026-07-28: "we could sell from the P > Ship
+## paperdoll"). Right-click on a ship part in the dossier used to do NOTHING —
+## _equip_from_hold early-returns on anything that is not ground gear — so this asserts a
+## dead gesture became the verb that belongs to it, and that it refuses out loud in
+## flight rather than silently doing nothing all over again.
+func _case_the_dossier_sells_your_gear() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	ship.add_to_group("player_ship")
+	var part: ComponentDef = load(str(DockScreen.SHOP_STOCK[0]))
+	ship.cargo.clear()
+	ship.add_cargo(part)
+
+	var sheet := CharacterSheet.new()
+	add_child(sheet)
+
+	# IN FLIGHT: no counter, so it must say so rather than eat the click.
+	ship.docked_at = null
+	sheet._say("")
+	sheet._use_from_hold(part)
+	_chk(ship.cargo.size() == 1, "in flight the part stays in your hold")
+	_chk("No buyer" in sheet._note.text,
+		"...and the refusal is visible: %s" % sheet._note.text)
+
+	# DOCKED: the same gesture sells it.
+	ship.docked_at = ship          # any non-null berth; the sheet only asks IF, not WHICH
+	Wallet.credits = 0
+	var worth := ItemVisuals.sell_price(part)
+	sheet._use_from_hold(part)
+	_chk(Wallet.credits == worth,
+		"docked, right-click sells it for %dc (got %dc)" % [worth, Wallet.credits])
+	_chk(ship.cargo.is_empty(), "...and it leaves your hold")
+
+	ship.docked_at = null
+	Wallet.credits = 0
+	sheet.queue_free()
+	ship.queue_free()
 
 
 ## THE RULE ITSELF: the pilot dossier must not hand-roll its own manifest.

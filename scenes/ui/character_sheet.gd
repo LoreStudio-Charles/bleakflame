@@ -160,9 +160,20 @@ func _build_ui() -> void:
 	_inv.title = "CARGO MANIFEST"
 	_inv.empty_text = "— you are carrying nothing —"
 	_inv.item_hint = func(c) -> String:
-		return "RIGHT-CLICK to equip" if c is GroundGearDef else "trade or refit at a proper berth"
+		if c is GroundGearDef:
+			return "RIGHT-CLICK to equip"
+		return "RIGHT-CLICK to sell (%dc)" % ItemVisuals.sell_price(c) if _at_a_counter() 			else "refit at a berth — no buyer out here"
 	_inv.material_hint = func(_k) -> String: return "sell at any market that wants it"
-	_inv.on_item = func(comp: ComponentDef, _s: String) -> void: _equip_from_hold(comp)
+	# SELL YOUR OWN GEAR FROM YOUR OWN SHEET (user, 2026-07-28: "we could sell from the
+	# P > Ship paperdoll"). Right-click on a SHIP part did NOTHING here — _equip_from_hold
+	# early-returns on anything that is not ground gear — so this is a dead gesture being
+	# given the verb that belongs to it, not a second verb competing for one.
+	#
+	# It is the piece that makes a shop able to become buy-only later: your kit is yours,
+	# reachable from anywhere, rather than something you visit a merchant to look at.
+	_inv.item_price = func(c) -> int:
+		return ItemVisuals.sell_price(c) if not (c is GroundGearDef) and _at_a_counter() 			else -1
+	_inv.on_item = func(comp: ComponentDef, _s: String) -> void: _use_from_hold(comp)
 	inv.add_child(_inv)
 
 	_note = Label.new()
@@ -388,6 +399,40 @@ func _equipment_text() -> String:
 ## Right-click verb on the Inventory grid: put a piece of ground gear on. Whatever it
 ## displaces goes back to the hold (add_cargo never destroys; an overfull hold just
 ## blocks new pickups until you sell). The live walker re-derives immediately.
+## Is there anybody to sell to? Docked is the test: every berth in the Reach has a
+## counter behind it, and the sheet has no business knowing WHICH one — component prices
+## are venue-independent (ItemVisuals), unlike commodities.
+func _at_a_counter() -> bool:
+	var ship := get_tree().get_first_node_in_group("player_ship")
+	return ship != null and ship.get("docked_at") != null
+
+
+## One gesture, routed by what the thing IS: ground gear goes on your body, a ship part
+## goes across the counter.
+func _use_from_hold(comp: ComponentDef) -> void:
+	if comp is GroundGearDef:
+		_equip_from_hold(comp)
+		return
+	_sell_from_hold(comp)
+
+
+func _sell_from_hold(comp: ComponentDef) -> void:
+	if not _at_a_counter():
+		# EVERY REFUSAL IS VISIBLE (project convention). A right-click that silently does
+		# nothing is exactly what this gesture used to be.
+		_say("No buyer out here — put down at a berth first.")
+		return
+	var ship := get_tree().get_first_node_in_group("player_ship")
+	var price := ItemVisuals.sell_price(comp)
+	ship.cargo.erase(comp)
+	Wallet.credits += price
+	Sfx.play("click", -12.0)
+	_say("Sold %s — %dc." % [comp.display_name, price])
+	# The dock is showing the same hold behind this sheet; keep it honest.
+	get_tree().call_group("dock_screens", "refresh")
+	_refresh()
+
+
 func _equip_from_hold(comp: ComponentDef) -> void:
 	var g := comp as GroundGearDef
 	if g == null:
