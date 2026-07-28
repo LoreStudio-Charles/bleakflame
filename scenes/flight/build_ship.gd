@@ -443,7 +443,39 @@ static func may_engage(shooter: Object, target: Object, legacy_group: String) ->
 ## Everything `shooter` may currently shoot, as one list. Broad phase is the legacy group
 ## UNION every factioned hull, so a Widow can find a Shoal raider that its own team
 ## membership would never have iterated.
+## ONE SCAN PER SHOOTER PER FRAME, SHARED (2026-07-28 — measured, see
+## tools/bench_avoidance.gd). Every Projectile calls this EVERY PHYSICS FRAME, twice if
+## it has a blast radius, and each call allocated an Array and a Dictionary and walked
+## two groups. Forty bolts in the air cost 1.63 ms a frame at eight ships — TEN PERCENT
+## of a 60fps budget spent before anything is drawn, and eighty bolts cost 22.8%.
+##
+## That is why the game bogged with only four or five pirates: bolts scale with how hard
+## the fight is, not with the ship count. The same measurement cleared the two obvious
+## suspects — separation and asteroid avoidance together are 0.3% of a frame at four
+## ships, and only reach 9.4% at THIRTY.
+##
+## Keyed by SHOOTER INSTANCE, not by faction, because may_engage excludes shooter ==
+## target: a list shared across two ships of one faction would offer each of them the
+## other's self-exclusion. Per-shooter still collapses the dominant duplication, which is
+## one ship's many bolts.
+##
+## THE RETURNED ARRAY IS SHARED — TREAT IT AS READ-ONLY. Callers iterate it; nobody may
+## sort or append. Within a single physics frame a dying ship is flagged `dead` but not
+## yet freed (queue_free defers), so a cached entry is never a dangling reference.
+static var _engage_cache := {}
+static var _engage_frame := -1
+
+
 static func engageable(tree: SceneTree, shooter: Object, legacy_group: String) -> Array:
+	var frame := Engine.get_physics_frames()
+	if frame != _engage_frame:
+		_engage_frame = frame
+		_engage_cache.clear()
+	var key := "%d|%s" % [
+		shooter.get_instance_id() if shooter != null and is_instance_valid(shooter) else 0,
+		legacy_group]
+	if _engage_cache.has(key):
+		return _engage_cache[key]
 	var out := []
 	var seen := {}
 	for grp in [legacy_group, "ships"]:
@@ -454,6 +486,7 @@ static func engageable(tree: SceneTree, shooter: Object, legacy_group: String) -
 				continue
 			seen[n] = true
 			out.append(n)
+	_engage_cache[key] = out
 	return out
 
 
