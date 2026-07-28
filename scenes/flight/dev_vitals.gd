@@ -106,10 +106,21 @@ func _draw_panel() -> void:
 		spike_col = Color(0.95, 0.4, 0.35)      # dropped below 30fps at least once
 	elif _worst_ms > 20.0:
 		spike_col = Color(0.95, 0.75, 0.35)
+	# THE REFRESH RATE IS ON THE LINE TOO, because it decides which bug this is without
+	# anyone having to interpret a feeling. The ship moves ONLY in _physics_process (60
+	# Hz) and the camera is its child, so the world advances in 60 discrete steps a
+	# second. If the display refreshes at 60 those line up; at 120 or 144 they cannot,
+	# and every second or third refresh repeats a position — textbook judder, visible
+	# most clearly flying straight with nothing nearby, which is exactly where it was
+	# reported. That is a PRESENTATION problem (physics interpolation), not a cost one,
+	# and no amount of making the frame cheaper will touch it.
+	var hz := DisplayServer.screen_get_refresh_rate()
+	var mismatch := hz > 0.0 and absf(hz - Engine.physics_ticks_per_second) > 5.0
 	_text(f, Vector2(x + 14, y + 54),
-		"fps %d   frame %.1f   phys %.1f   WORST %.1f ms" % [
-			Engine.get_frames_per_second(), proc + phys, phys, _worst_ms],
-		11, spike_col)
+		"fps %d   frame %.1f   phys %.1f   WORST %.1f ms   %.0fHz/%dtick%s" % [
+			Engine.get_frames_per_second(), proc + phys, phys, _worst_ms,
+			hz, Engine.physics_ticks_per_second, "  MISMATCH" if mismatch else ""],
+		11, Color(0.95, 0.75, 0.35) if mismatch else spike_col)
 	_line(Vector2(x + 10, y + 64), Vector2(x + W - 10, y + 64), Color(0.3, 0.85, 0.6, 0.25))
 
 	# Event feed — newest at top, colour by severity.
