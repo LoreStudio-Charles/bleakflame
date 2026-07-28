@@ -24,6 +24,7 @@ func _ready() -> void:
 	_case_a_bolt_outlives_its_shooter()
 	_case_a_played_pilot_can_still_shoot_pirates()
 	_case_a_bolt_actually_lands_damage()
+	_case_you_may_always_declare_war()
 
 	if _fails.is_empty():
 		print("test_faction_fire: ALL PASS (%d checks)" % _checks)
@@ -106,6 +107,45 @@ func _case_the_broad_phase_finds_across_teams() -> void:
 	_ok(n == 1, "...exactly once, despite being reachable through two groups (%d)" % n)
 	widow.queue_free()
 	shoal.queue_free()
+
+
+## PLAY YOUR WAY (user, 2026-07-27): "Players should always be able to manually declare
+## war on a faction if they wish ... so they can fire on a friendly NPC and ruin their
+## rep if they want to. Generally a bad idea, but play your way I guess."
+##
+## THIS IS THE HALF OF THE MATRIX THAT IS NOT A RESTORATION. The legacy group is a floor,
+## so it can only ever ADD hostility — and a friendly Guardian is in player_team, which no
+## floor will ever make shootable. Only the matrix can grant this, via Standing's peace
+## toggle, which is exactly the case two teams could never express: a target that is
+## friendly to everyone else and fair game to you.
+##
+## It is also the assertion that stops a future "simplification" from collapsing
+## may_engage back to groups-only. That would silently delete piracy.
+func _case_you_may_always_declare_war() -> void:
+	var me := _ship("shoal", "player_team")
+	me.faction = Factions.player_id()
+	var guard := _ship("guardian", "player_team")
+	Standing.reset()
+
+	_ok(not BuildShip.may_engage(me, guard, "hostile_team"),
+		"at peace a Guardian is NOT a target — you cannot shoot allies by accident")
+	_ok(Standing.set_peace("guardian", false), "war can always be declared")
+	_ok(BuildShip.may_engage(me, guard, "hostile_team"),
+		"...and having declared it, your guns will fire on them")
+
+	# SUING FOR PEACE IS NOT SYMMETRIC. Declaring war is instant; taking it back is a
+	# decision the OTHER side gets a say in once you have pushed them into hostility.
+	_ok(Standing.set_peace("guardian", true), "peace can be restored while they still tolerate you")
+	_ok(not BuildShip.may_engage(me, guard, "hostile_team"), "...and the guns stand down")
+	Standing.add("guardian", Standing.HOSTILE_AT - Standing.get_points("guardian"))
+	_ok(not Standing.set_peace("guardian", true),
+		"once they are hostile you cannot simply switch it off — you mend it")
+	_ok(BuildShip.may_engage(me, guard, "hostile_team"),
+		"...and a faction that wants you dead is fair game without any paperwork")
+
+	Standing.reset()
+	me.queue_free()
+	guard.queue_free()
 
 
 ## THE GAME-BREAKER: A PLAYED PILOT COULD NOT SHOOT ANYTHING (playtest, 2026-07-27).
