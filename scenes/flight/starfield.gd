@@ -17,22 +17,47 @@ extends Node2D
 const TILE_DIR := "res://assets/world"
 const TILE_PREFIX := "starfield_"
 
-## INTEGER, because this is pixel art: a fractional scale resamples across the pixel grid
-## and the crisp stars turn to mush. It is also the answer to repetition — a 256 px tile
-## at 1:1 shows about THIRTY-TWO copies at once on a 1920x1080 screen, which reads as
-## wallpaper however good the art is. At 4x it is nearer two.
-const TILE_SCALE := 4
+## TWO KINDS OF TILE, SORTED BY THEIR OWN ALPHA (2026-07-28). The first tile authored was
+## an opaque nebula; the next two came back 97.8% TRANSPARENT — sparse stars and little
+## galaxies meant to sit OVER something. Those are not interchangeable, and drawing them
+## from one pool would have put a rich nebula in one cell and near-nothing in the two
+## beside it: obvious square patches, which is worse than plain tiling.
+##
+## So a BACKDROP covers (mostly opaque) and an OVERLAY decorates (mostly clear), each on
+## its own layer at its own parallax — which is the "build up with additive layers over
+## black" the art was made for.
+##
+## CLASSIFIED BY MEASURING THE ART, not by a naming rule. Drop a tile in and it lands on
+## the right layer because of what it IS; nobody has to remember a suffix, and a tile
+## cannot end up on the wrong layer by being misnamed.
+const BACKDROP_COVERAGE := 0.5
 
-## The slowest thing in the sky. Distant dust should barely move while the near stars
-## stream past; that differential is most of what sells depth at speed.
-const TILE_PARALLAX := 0.06
+## INTEGER SCALES, because this is pixel art: a fractional scale resamples across the
+## pixel grid and turns crisp stars to mush. Scale is also the repetition control — a
+## 256 px tile at 1:1 puts about THIRTY-TWO copies on a 1920x1080 screen, which reads as
+## wallpaper however good the art is.
+##
+## The backdrop goes big (~2 copies on screen) because a nebula's silhouette is what
+## gives repetition away. Overlays stay smaller: they are sparse enough that a repeat is
+## hard to catch, and more cells means more of the eight orientations in view at once.
+const BACKDROP_SCALE := 4
+const OVERLAY_SCALE := 2
 
-## Dialled here rather than by re-authoring the tile. Roughly half of the art is a very
+## The backdrop is the slowest thing in the sky and the overlay drifts a little faster,
+## with the procedural point stars faster still. That laddering is most of what sells
+## depth at speed, and it is the reason to keep dust and stars on separate tiles rather
+## than baking them into one.
+const BACKDROP_PARALLAX := 0.06
+const OVERLAY_PARALLAX := 0.11
+
+## Dialled here rather than by re-authoring art. Roughly half of the nebula tile is very
 ## dark blue haze, and under additive every visible copy lifts the black level of space —
-## fine for one layer, compounding once more are stacked over it.
-const TILE_ALPHA := 1.0
+## fine alone, compounding once layers stack over it.
+const BACKDROP_ALPHA := 1.0
+const OVERLAY_ALPHA := 1.0
 
-static var _tiles: Array[Texture2D] = []
+static var _backdrops: Array[Texture2D] = []
+static var _overlays: Array[Texture2D] = []
 static var _tiles_scanned := false
 
 const LAYERS := [
@@ -88,8 +113,39 @@ static func _scan_tiles() -> void:
 	names.sort()   # stable order, so a cell picks the same tile every run
 	for n in names:
 		var tex := load("%s/%s" % [TILE_DIR, n]) as Texture2D
-		if tex != null:
-			_tiles.append(tex)
+		if tex == null:
+			continue
+		if _coverage(tex) >= BACKDROP_COVERAGE:
+			_backdrops.append(tex)
+		else:
+			_overlays.append(tex)
+
+
+## How much of a tile is actually painted. A tile with no alpha channel at all is opaque
+## by definition — starfield_1 ships an opaque black background on purpose, since black
+## adds nothing under additive blending — so it counts as full coverage.
+##
+## Sampled on a stride: this runs once per tile at load and the answer only has to be
+## right to about a percent, not exact.
+static func _coverage(tex: Texture2D) -> float:
+	var img := tex.get_image()
+	if img == null:
+		return 1.0
+	if not img.detect_alpha():
+		return 1.0
+	var w := img.get_width()
+	var h := img.get_height()
+	if w <= 0 or h <= 0:
+		return 1.0
+	var step := maxi(1, int(round(float(maxi(w, h)) / 64.0)))
+	var painted := 0
+	var total := 0
+	for y in range(0, h, step):
+		for x in range(0, w, step):
+			total += 1
+			if img.get_pixel(x, y).a > 0.02:
+				painted += 1
+	return float(painted) / float(maxi(1, total))
 
 
 ## THE FAR LAYER, CELL-BOMBED. Stamped on an exact grid rather than at random offsets:
@@ -102,30 +158,35 @@ static func _scan_tiles() -> void:
 ## this trick. It is cheap HERE specifically because the tile's edges are its quietest
 ## part: measured, the wrap delta is 0.74x (columns) and 0.37x (rows) of a typical
 ## interior neighbour delta. There is very little there to mismatch.
-func _paint_tiles(cam_pos: Vector2, view_size: Vector2) -> void:
-	if _tiles.is_empty():
+func _paint_tiles(set: Array[Texture2D], scale_i: int, parallax: float, alpha: float,
+		salt: int, cam_pos: Vector2, view_size: Vector2) -> void:
+	if set.is_empty():
 		return
-	var tex_size := Vector2(_tiles[0].get_size())
-	var span := tex_size.x * float(TILE_SCALE)
+	var tex_size := Vector2(set[0].get_size())
+	var span := tex_size.x * float(scale_i)
 	if span <= 0.0:
 		return
-	var origin := cam_pos * TILE_PARALLAX
+	var origin := cam_pos * parallax
 	var first := Vector2i(((origin - view_size * 0.5) / span).floor())
 	var nx := int(view_size.x / span) + 2
 	var ny := int(view_size.y / span) + 2
 	var to_world := cam_pos - origin
-	var tint := Color(1, 1, 1, TILE_ALPHA)
+	var tint := Color(1, 1, 1, alpha)
 	for cy in range(first.y, first.y + ny):
 		for cx in range(first.x, first.x + nx):
-			var h: int = absi(hash(Vector2i(cx, cy)))
-			var tex: Texture2D = _tiles[h % _tiles.size()]
+			# SALTED PER LAYER, so the backdrop and the overlay do not turn the same way
+			# in the same place. Without it both layers hash the same cell to the same
+			# quarter-turn, and their features line up into a visible grid — the one
+			# thing this whole scheme exists to avoid.
+			var h: int = absi(hash(Vector2i(cx, cy)) ^ salt)
+			var tex: Texture2D = set[h % set.size()]
 			var quarter: int = (h >> 5) & 3
 			var mirror := 1.0 if ((h >> 7) & 1) == 0 else -1.0
 			var centre := Vector2(cx + 0.5, cy + 0.5) * span + to_world
 			draw_set_transform(centre, float(quarter) * PI * 0.5,
-				Vector2(mirror, 1.0) * float(TILE_SCALE))
+				Vector2(mirror, 1.0) * float(scale_i))
 			draw_texture(tex, -tex_size * 0.5, tint)
-	# Hand the canvas back unrotated, or every point star after this inherits the last
+	# Hand the canvas back unrotated, or everything drawn after this inherits the last
 	# cell's quarter-turn and mirror.
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
@@ -178,7 +239,10 @@ func _paint_d() -> void:
 
 	# Furthest first: additive blending makes the order irrelevant to the result, but it
 	# keeps the code reading the way the sky is built — dust behind, stars in front.
-	_paint_tiles(cam_pos, view_size)
+	_paint_tiles(_backdrops, BACKDROP_SCALE, BACKDROP_PARALLAX, BACKDROP_ALPHA,
+		0, cam_pos, view_size)
+	_paint_tiles(_overlays, OVERLAY_SCALE, OVERLAY_PARALLAX, OVERLAY_ALPHA,
+		0x5bf03, cam_pos, view_size)
 
 	for layer_i in LAYERS.size():
 		var layer: Dictionary = LAYERS[layer_i]
