@@ -69,11 +69,11 @@ func _ready() -> void:
 			+ ItemVisuals.component_glyph(comp)
 		add_theme_font_size_override("font_size", 16 if style == Style.SHOP else 15)
 		add_theme_color_override("font_color", Grades.color(comp.grade))
-	ItemVisuals.dress_grade(self, comp)
+	ItemVisuals.dress_grade(self, comp.grade)
 
 	if style == Style.SHOP:
 		_add_mark_badge()
-		_add(ItemVisuals.pips_label(comp, 15, Control.PRESET_TOP_RIGHT,
+		_add(ItemVisuals.pips_label(comp.grade, 15, Control.PRESET_TOP_RIGHT,
 			HORIZONTAL_ALIGNMENT_RIGHT), func(l: Label) -> void:
 				l.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 				l.offset_right = -3
@@ -82,7 +82,7 @@ func _ready() -> void:
 		if price >= 0:
 			_add_price_badge()
 	else:
-		_add(ItemVisuals.pips_label(comp, 9, Control.PRESET_BOTTOM_WIDE),
+		_add(ItemVisuals.pips_label(comp.grade, 9, Control.PRESET_BOTTOM_WIDE),
 			func(l: Label) -> void:
 				l.grow_vertical = Control.GROW_DIRECTION_BEGIN
 				l.offset_bottom = -1)

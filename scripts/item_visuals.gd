@@ -102,8 +102,12 @@ static func sell_price(comp: ComponentDef) -> int:
 ## pattern each tile re-implements and one of them forgets.
 
 ## Apply a grade-coloured border + tinted background to any Button-ish control.
-static func dress_grade(ctrl: Control, comp: ComponentDef) -> void:
-	var gc := Grades.color(comp.grade)
+## TAKES A GRADE, NOT A COMPONENT (2026-07-28): a HULL is graded gear too, and it is
+## not a ComponentDef — so keying this off the item type would have forced the
+## shipyard to hand-roll a second copy of the border, which is precisely the drift
+## this file exists to prevent (see the header).
+static func dress_grade(ctrl: Control, grade: int) -> void:
+	var gc := Grades.color(grade)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(gc.r, gc.g, gc.b, TILE_BG_A)
 	sb.border_color = gc
@@ -118,21 +122,39 @@ static func dress_grade(ctrl: Control, comp: ComponentDef) -> void:
 
 ## The rarity pips. `preset`/alignment let a small hold tile put them along the bottom
 ## and a big shop tile put them top-right, without duplicating the styling.
-static func pips_label(comp: ComponentDef, font_size: int, preset: int,
+static func pips_label(grade: int, font_size: int, preset: int,
 		align: int = HORIZONTAL_ALIGNMENT_CENTER) -> Label:
-	var pips: int = Grades.INFO[comp.grade]["pips"]
+	var pips: int = Grades.INFO[grade]["pips"]
 	if pips <= 0:
 		return null
 	var pl := Label.new()
 	pl.text = "•".repeat(pips)
 	pl.add_theme_font_size_override("font_size", font_size)
-	pl.add_theme_color_override("font_color", Grades.color(comp.grade))
+	pl.add_theme_color_override("font_color", Grades.color(grade))
 	pl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.92))
 	pl.add_theme_constant_override("outline_size", 3)
 	pl.set_anchors_preset(preset)
 	pl.horizontal_alignment = align
 	pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return pl
+
+
+## A HULL'S FACE IS ITS OWN SPRITE — no separate icon set (user, 2026-07-28: "do we
+## need art to do the Shipyard if we are using the existing hull for the art?"). All
+## 13 shipped hulls already have one, resolved exactly as the flight scene resolves
+## it: `art_path` first (the faction-folder convention), else the snake-cased name.
+##
+## THREE REASONS this beats drawing icons, even with art budget to spend: one
+## pipeline, so a shop can never show a ship you don't fly; the tile inherits the
+## QUALITY PAINT LADDER for free once those decals land (docs/quality_paint.md),
+## where an icon set would need re-painting 7x per hull; and a hull with no PNG still
+## has `HullDef.silhouette` to fall back on, so it is never a blank square.
+static func hull_icon(hull: HullDef) -> Texture2D:
+	var path: String = hull.art_path if hull.art_path != "" \
+		else "res://assets/ships/%s.png" % hull.display_name.to_snake_case()
+	if ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	return null
 
 
 ## The fallback face when a component has no icon: slot letter + mark ("W2").

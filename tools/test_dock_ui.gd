@@ -73,6 +73,7 @@ func _ready() -> void:
 		_case_quest_log_is_the_tracker,
 		_case_the_action_sits_on_the_contract,
 		_case_the_lab_puts_the_spend_on_the_project,
+		_case_the_shipyard_is_a_shop_shelf,
 		_case_armory_filters,
 		_case_level_gates_equipping,
 		_case_the_campaign_banner_never_goes_silent,
@@ -1802,6 +1803,63 @@ func _case_the_lab_puts_the_spend_on_the_project() -> void:
 	screen.queue_free()
 
 
+## EVERY SHOP IS A GRID (user, 2026-07-28) — the Shipyard sells objects you compare at
+## a glance, so it takes the Armory's shape rather than a list with a "Purchase
+## selected" button under it.
+##
+## The claim worth pinning is that IT NEEDED NO NEW ART: a hull's face is its own
+## flight sprite. So this asserts NO SOLD HULL CAN EVER BE A BLANK SQUARE — it has a
+## sprite, or a silhouette polygon to fall back on. Add a hull with neither and the
+## suite says so, instead of a player finding an empty tile in the shipyard.
+func _case_the_shipyard_is_a_shop_shelf() -> void:
+	var screen := _fresh_dock(true)
+	var kept_credits := Wallet.credits
+	var kept_owned: Array = SampleBuilds.owned.duplicate()
+	Wallet.credits = 999999
+	screen.refresh()
+
+	_ok(_count_lists(screen._yard_grid) == 0, "the shipyard shelf is a grid, not a list")
+	var tiles: Array = _collect_tiles(screen._yard_grid)
+	_ok(tiles.size() == SampleBuilds.count(),
+		"every hull for sale wears a tile (%d of %d)" % [tiles.size(), SampleBuilds.count()])
+
+	# TWO SEPARATE CLAIMS, because "sprite OR silhouette" is satisfied by the silhouette
+	# on every hull in the game — it could not fail, and a sabotage that deleted the
+	# sprite lookup entirely sailed straight through it.
+	for t in tiles:
+		var hull: HullDef = (t as HullTile).build.hull
+		_ok(ItemVisuals.hull_icon(hull) != null,
+			"%s ships with its own sprite — which is why the shipyard needed NO NEW ART"
+				% hull.display_name)
+		_ok((hull.silhouette as PackedVector2Array).size() >= 3,
+			"%s also carries a silhouette, so it is never a blank tile if art moves"
+				% hull.display_name)
+
+	# BUYING ACTS ON THE TILE YOU CLICKED. The offers list already taught this lesson
+	# once: an action that reads a shared "selected" instead of its own item buys
+	# somebody else's ship.
+	# The LAST unowned hull, never the first: an action hardcoded to index 0 buys the
+	# right ship by accident if the test picks index 0, which is exactly what happened.
+	var target: HullTile = null
+	for t in tiles:
+		if not (t as HullTile).owned:
+			target = t
+	_ok(target != null and target.index > 0,
+		"precondition: an unowned hull that is NOT index 0")
+	if target != null:
+		var before := SampleBuilds.owned.size()
+		target.on_interact.call(target.index)
+		_ok(SampleBuilds.owned.has(target.index),
+			"right-clicking a tile buys THAT hull (%d)" % target.index)
+		_ok(SampleBuilds.owned.size() == before + 1, "...and only that one")
+
+	Wallet.credits = kept_credits
+	SampleBuilds.owned.clear()
+	for i in kept_owned:
+		SampleBuilds.owned.append(i)
+	screen.queue_free()
+
+
 # ---- rig ----
 
 ## A dock screen with clean campaign statics behind it. Never touches the save.
@@ -1896,6 +1954,15 @@ func _count_rows(list: ItemList, needle: String) -> int:
 		if needle in list.get_item_text(i):
 			n += 1
 	return n
+
+
+func _collect_tiles(root: Node) -> Array:
+	var out: Array = []
+	for child in root.get_children():
+		if child is HullTile:
+			out.append(child)
+		out += _collect_tiles(child)
+	return out
 
 
 func _is_descendant(node: Node, ancestor: Node) -> bool:

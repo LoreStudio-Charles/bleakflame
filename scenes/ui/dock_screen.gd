@@ -122,7 +122,9 @@ var _loadout_box: VBoxContainer
 var _sel_gem := -1     # gem slot selected for memorizing in the Loadout panel
 var _missions: MissionComputer
 var _lab: ResearchLabView
-var _yard_list: ItemList
+var _yard_grid: GridContainer
+var _yard_detail: RichTextLabel
+var _yard_selected := 0
 var _bar_row: Control
 var _bar_feed: RichTextLabel
 var _bar_last_rumor := ""
@@ -527,16 +529,33 @@ func _populate_loadout() -> void:
 	_loadout_box.add_child(clr)
 
 
+## EVERY SHOP IS A GRID (user, 2026-07-28; docs/person_as_context.md). The Shipyard
+## takes the Armory's shape because it sells objects you compare at a glance, not
+## sentences you read. NO NEW ART: a hull's face is its own flight sprite, so the
+## shelf shows the ship you will actually fly (ItemVisuals.hull_icon).
 func _build_shipyard_tab() -> void:
 	var row := HBoxContainer.new()
 	row.name = "Shipyard"
 	Tutor.register("panel_shipyard", row)
 	row.add_theme_constant_override("separation", 18)
 	_tabs.add_child(row)
-	var col := _column(row, "HULLS FOR SALE — flight-ready with standard loadout")
-	_yard_list = _list(col)
-	_yard_list.item_selected.connect(_on_ship_selected.bind(false))
-	_button(col, "Purchase selected", _on_buy_ship)
+	var shelf := _action_column(row, "HULLS FOR SALE — flight-ready with standard loadout",
+		"right-click to buy")
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	shelf.add_child(scroll)
+	_yard_grid = GridContainer.new()
+	_yard_grid.columns = 4
+	_yard_grid.add_theme_constant_override("h_separation", 8)
+	_yard_grid.add_theme_constant_override("v_separation", 8)
+	_yard_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_yard_grid)
+	var detail_col := _column(row, "DETAILS")
+	_yard_detail = RichTextLabel.new()
+	_yard_detail.bbcode_enabled = true
+	_yard_detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_col.add_child(_yard_detail)
 
 
 func _build_armory_tab() -> void:
@@ -1580,26 +1599,44 @@ func _refresh_board_ships() -> void:
 
 
 func _refresh_shipyard() -> void:
-	_yard_list.clear()
+	for c in _yard_grid.get_children():
+		_yard_grid.remove_child(c)
+		c.queue_free()
 	for index in SampleBuilds.count():
 		var build := SampleBuilds.get_build(index)
-		var owned := SampleBuilds.owned.has(index)
-		var label := "OWNED" if owned else "%dc" % build.hull.price
-		var i := _yard_list.add_item("%s — %s   —   %s" % [
-			build.hull.display_name, build.hull.category, label])
-		_yard_list.set_item_metadata(i, index)
+		var tile := HullTile.new(build, index)
+		tile.owned = SampleBuilds.owned.has(index)
+		tile.price = int(build.hull.price)
+		tile.on_inspect = _on_ship_selected
+		tile.on_interact = _on_buy_ship
+		_yard_grid.add_child(tile)
+	if _yard_selected < 0 or _yard_selected >= SampleBuilds.count():
+		_yard_selected = 0
+	_show_hull_detail(_yard_selected)
 
 
-func _on_ship_selected(list_index: int, _hangar: bool) -> void:
-	var index: int = _yard_list.get_item_metadata(list_index)
+## The details panel — the same content the hover tooltip carries, given a permanent
+## home so comparing two hulls does not mean holding the mouse still.
+func _show_hull_detail(index: int) -> void:
+	_yard_selected = index
+	if _yard_detail == null:
+		return
+	for c in _yard_detail.get_children():
+		_yard_detail.remove_child(c)
+		c.queue_free()
 	var build := SampleBuilds.get_build(index)
-	var s := ShipStats.aggregate(build)
-	_detail = "[b]%s[/b] — %s, %s\n%s\nmass %.0f   thrust %.0f   accel %.1f   dps %.1f   shield %.0f   armor %.0f   hold %.0f   sensors %.0f" % [
-		build.hull.display_name, build.hull.category,
-		HullDef.SizeBand.keys()[build.hull.size_band].capitalize(),
-		build.hull.trait_description,
-		s.mass, s.thrust, s.accel, s.dps, s.shield_hp, s.armor_hp, s.cargo, s.sensor_range]
-	_refresh_info()
+	var owned := SampleBuilds.owned.has(index)
+	var tip := DockScreen.hull_tooltip(build) as RichTextLabel
+	var line := "[color=#6de08f]OWNED — board her in the Engineering Bay.[/color]" if owned \
+		else ("[color=#f2b859]%dc — right-click her tile to buy.[/color]" % int(build.hull.price) \
+			if Wallet.credits >= int(build.hull.price) \
+			else "[color=#f25a50]%dc — you have %dc.[/color]" % [int(build.hull.price), Wallet.credits])
+	_yard_detail.text = "%s\n\n%s" % [tip.text, line]
+
+
+func _on_ship_selected(index: int) -> void:
+	Sfx.play("click", -18.0, 1.1)
+	_show_hull_detail(index)
 
 
 ## Board an owned ship from the ship-deck strip (clicked ShipIcon).
@@ -1626,12 +1663,12 @@ func _board_ship(index: int) -> void:
 ## SaveGame.reset_all_progress(), which is where starting over belongs.
 
 
-func _on_buy_ship() -> void:
+## RIGHT-CLICK IS THE VERB (the one-gesture rule, ItemTile's header): the tile you
+## right-click is the hull you buy — no "purchase selected" button floating under the
+## shelf, wondering which row it means.
+func _on_buy_ship(index: int) -> void:
 	_flash_msg = ""
-	var sel := _yard_list.get_selected_items()
-	if sel.is_empty():
-		return
-	var index: int = _yard_list.get_item_metadata(sel[0])
+	_yard_selected = index
 	var build := SampleBuilds.get_build(index)
 	if SampleBuilds.owned.has(index):
 		_flash("You already own a %s." % build.hull.display_name)
