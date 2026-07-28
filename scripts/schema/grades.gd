@@ -13,7 +13,16 @@ const INFO := {
 		"value": 5,
 	},
 	Grade.SALVAGE: {
-		"name": "Salvage",
+		# RENAMED TO "JUNK" 2026-07-27 (user): "salvage" had become the most overloaded
+		# word in the project — the [B] SALVAGE panel, Salvage All, BuildShip's salvage
+		# radius, the Salvaged Coupling, the SALVAGE SKILL, and the affix pillar ("salvage
+		# is where treasure comes from") all mean different things by it. "Junk" is free,
+		# and it disambiguates the skill by taking the grade out of its way.
+		#
+		# THE ENUM IDENTIFIER AND ITS ORDINAL DO NOT MOVE. Grade values are serialized in
+		# every .tres on disk (same hazard class as SlotType), so this is a display string
+		# and nothing else — the same rule that keeps the save directory named Bleakflame.
+		"name": "Junk",
 		"color": Color(0.92, 0.92, 0.92),
 		"affixes": 0,
 		"drawback": false,
