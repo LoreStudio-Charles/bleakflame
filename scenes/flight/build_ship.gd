@@ -465,6 +465,35 @@ static func may_engage(shooter: Object, target: Object, legacy_group: String) ->
 static var _engage_cache := {}
 static var _engage_frame := -1
 
+## ---- ONE GROUP WALK PER FRAME, SHARED ----
+##
+## `SceneTree.get_nodes_in_group` ALLOCATES A NEW ARRAY EVERY CALL. separation_dir asks
+## for FIVE groups per ship per frame and avoid_obstacles_dir for a sixth, so thirty
+## ships cost 180 array allocations a frame before any distance maths — and the same six
+## lists are rebuilt thirty times over with identical contents.
+##
+## Cached on the physics frame, exactly like the projectile scan above. THE RETURNED
+## ARRAY IS SHARED — treat it as read-only; nobody may sort or append.
+## HOW BIG THE OTHER THING MIGHT BE. A spatial query has to be generous by exactly the
+## largest radius it could meet, or it misses a big hull whose CENTRE sits outside the
+## sweep while its hull does not. Sized to the largest shipped hull and the largest
+## asteroid; both are cheap to over-estimate and expensive to under-estimate.
+const BIGGEST_HULL_R := 90.0
+const BIGGEST_ROCK_R := 140.0
+
+static var _group_cache := {}
+static var _group_frame := -1
+
+
+static func frame_group(tree: SceneTree, name: String) -> Array:
+	var frame := Engine.get_physics_frames()
+	if frame != _group_frame:
+		_group_frame = frame
+		_group_cache.clear()
+	if not _group_cache.has(name):
+		_group_cache[name] = tree.get_nodes_in_group(name)
+	return _group_cache[name]
+
 
 static func engageable(tree: SceneTree, shooter: Object, legacy_group: String) -> Array:
 	var frame := Engine.get_physics_frames()
@@ -814,14 +843,22 @@ func separation_dir() -> Vector2:
 	# crash-looped to death at the planet. The player is never auto-steered, so
 	# they can still fly in and land.
 	for g in ["structures", "outposts", "pirate_dens", "planetoids"]:
-		for st in get_tree().get_nodes_in_group(g):
+		for st in frame_group(get_tree(), g):
 			if not is_instance_valid(st) or not (st is Node2D):
 				continue
 			var r: float = float(st.get("avoid_radius") if st.get("avoid_radius") != null
 				else STRUCTURE_AVOID_R)
 			away += _push_from((st as Node2D).global_position, r + hit_radius + react)
 	# OTHER SHIPS, including the player. Anything that flies is a moving obstacle.
-	for other in get_tree().get_nodes_in_group("ships"):
+	#
+	# THROUGH THE SPATIAL INDEX (SpaceHash), because this is the pair loop that does not
+	# scale: every ship against every other ship, every frame — 900 comparisons at
+	# thirty hulls, and the cost is GDScript's per-iteration overhead, so the only fix
+	# is to iterate less. The widest push any pair can have is our reach plus the
+	# largest hull we might meet, so the query radius is generous on purpose: being
+	# approximate is fine, the precise test below still runs.
+	var ship_reach := hit_radius + BIGGEST_HULL_R + SHIP_CLEARANCE + react
+	for other in SpaceHash.near(get_tree(), "ships", global_position, ship_reach):
 		if other == self or not is_instance_valid(other):
 			continue
 		var b := other as BuildShip
@@ -834,10 +871,16 @@ func separation_dir() -> Vector2:
 
 ## Outward push that grows as the gap closes, and is nothing at all beyond `reach`.
 func _push_from(at: Vector2, reach: float) -> Vector2:
-	var to_me := global_position - at
-	var d := to_me.length()
-	if d >= reach or reach <= 0.0:
+	if reach <= 0.0:
 		return Vector2.ZERO
+	var to_me := global_position - at
+	# SQUARED FIRST. This runs for every ship against every other ship and every
+	# structure, every frame, and the overwhelming majority of those pairs are nowhere
+	# near each other — taking a square root to discover that was most of the cost.
+	var d2 := to_me.length_squared()
+	if d2 >= reach * reach:
+		return Vector2.ZERO
+	var d := sqrt(d2)
 	if d < 1.0:
 		return Vector2.RIGHT.rotated(float(get_instance_id() % 617))   # exactly stacked
 	return (to_me / d) * (1.0 - d / reach)
@@ -949,7 +992,13 @@ func avoid_obstacles_dir(intent: Vector2) -> Vector2:
 	var dir := heading.normalized()
 	var worst := 0.0
 	var steer := Vector2.ZERO
-	for rock in get_tree().get_nodes_in_group("asteroids"):
+	# THROUGH THE SPATIAL INDEX for the same reason as separation: 48 rocks per ship per
+	# frame is 1440 comparisons at thirty hulls, and all but a handful are behind us or
+	# far off the lane. The query is centred AHEAD of the nose, since that is the only
+	# place a look-ahead can find anything.
+	var probe := global_position + dir * (AVOID_LOOKAHEAD * 0.5)
+	for rock in SpaceHash.near(get_tree(), "asteroids", probe,
+			AVOID_LOOKAHEAD * 0.5 + BIGGEST_ROCK_R + hit_radius + AVOID_CLEARANCE):
 		if not is_instance_valid(rock):
 			continue
 		var to_o: Vector2 = rock.global_position - global_position

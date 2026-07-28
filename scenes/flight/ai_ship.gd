@@ -585,7 +585,13 @@ func _attack_slot_open(prey: BuildShip) -> bool:
 		return true
 	var my_d := global_position.distance_squared_to(prey.global_position)
 	var closer := 0
-	for other in get_tree().get_nodes_in_group("hostile_team"):
+	# BOUNDED BY THE QUESTION IT ASKS. This counts hunters CLOSER TO THE PREY than we
+	# are and within AGGRO_RANGE of it, so nothing outside that circle could ever have
+	# counted — yet every engaged pirate used to walk every pirate in the system, every
+	# frame, to discover that. Centred on the PREY, not on us, because the prey is what
+	# the radius is about.
+	for other in SpaceHash.near(get_tree(), "hostile_team", prey.global_position,
+			AGGRO_RANGE):
 		if other == self or other is not AIShip or other.dead:
 			continue
 		var od: float = other.global_position.distance_squared_to(prey.global_position)

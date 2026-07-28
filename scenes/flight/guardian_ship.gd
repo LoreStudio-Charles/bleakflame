@@ -337,7 +337,8 @@ func _fly_lane(delta: float) -> void:
 func _nearest_hostile_near(center: Vector2, reach: float) -> BuildShip:
 	var best: BuildShip = null
 	var best_d := reach * reach
-	for node in get_tree().get_nodes_in_group("hostile_team"):
+	# The reach was already the answer's bound; now it bounds the SEARCH too.
+	for node in SpaceHash.near(get_tree(), "hostile_team", center, reach):
 		# Never fire on the civilians we exist to protect — a trader in
 		# hostile_team is the PLAYER's mark, not ours (the outlaw's crime).
 		if node is not BuildShip or node.dead or node.is_in_group("traders"):
@@ -354,7 +355,10 @@ func _nearest_hostile_near(center: Vector2, reach: float) -> BuildShip:
 func _nearest_threat(station: Vector2) -> BuildShip:
 	var best: BuildShip = null
 	var best_d := INF
-	for node in get_tree().get_nodes_in_group("hostile_team"):
+	# Everything this can return sits within MAX_R of the station — the loop body says
+	# so on its second line. Searching the whole hostile roster to throw most of it away
+	# is the shape that does not scale.
+	for node in SpaceHash.near(get_tree(), "hostile_team", station, MAX_R + 120.0):
 		if node is not BuildShip or node.dead or node.is_in_group("traders"):
 			continue   # protect civilians, never police them
 		if node.global_position.distance_to(station) > MAX_R + 120.0:

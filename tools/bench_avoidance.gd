@@ -15,17 +15,29 @@ extends Node
 ##
 ##   <godot> --headless --path . res://tools/bench_avoidance.tscn --quit-after 600
 
-const SHIPS := [4, 12, 30]
+const SHIPS := [4, 12, 30, 80]
 const ROCKS := 48
 const FRAMES := 120
 
 
 func _ready() -> void:
 	SaveGame.read_only = true
+	# TWO DISTRIBUTIONS, because a spatial index is worth exactly what the sparsity is
+	# worth. The original bench packed every ship into a 2400-unit box — a FURBALL, and
+	# the worst case — while the real lane is 7500 units locally and 90,000 to the
+	# capital. Measuring only the furball understates the fix; measuring only the lane
+	# would hide the case where it does least.
+	print("SPREAD: a realistic lane (ships over 12000 units)")
 	print("ships  rocks |  separation   avoidance |  per frame   -> at 60fps")
 	print("---------------------------------------------------------------")
 	for n in SHIPS:
-		_run(n)
+		_run(n, 12000.0)
+	print("")
+	print("FURBALL: everyone on top of each other (2400 units) — the worst case")
+	print("ships  rocks |  separation   avoidance |  per frame   -> at 60fps")
+	print("---------------------------------------------------------------")
+	for n in SHIPS:
+		_run(n, 2400.0)
 	print("")
 	print("BOLTS IN THE AIR — every projectile calls _foes() -> engageable() EVERY")
 	print("physics frame (twice, for a blast weapon), and each call allocates an Array")
@@ -80,13 +92,14 @@ func _run_bolts(bolts: int, ships: int) -> void:
 	host.queue_free()
 
 
-func _run(n: int) -> void:
+func _run(n: int, spread := 2400.0) -> void:
 	var host := Node2D.new()
 	add_child(host)
 	var rocks: Array[Node2D] = []
 	for i in ROCKS:
 		var r := Rock.new()
-		r.global_position = Vector2(randf_range(-4000, 4000), randf_range(-4000, 4000))
+		r.global_position = Vector2(randf_range(-spread * 1.6, spread * 1.6),
+			randf_range(-spread * 1.6, spread * 1.6))
 		r.add_to_group("asteroids")
 		host.add_child(r)
 		rocks.append(r)
@@ -94,7 +107,8 @@ func _run(n: int) -> void:
 	for i in n:
 		var s := BuildShip.new()
 		s.hit_radius = 16.0
-		s.global_position = Vector2(randf_range(-1200, 1200), randf_range(-1200, 1200))
+		s.global_position = Vector2(randf_range(-spread * 0.5, spread * 0.5),
+			randf_range(-spread * 0.5, spread * 0.5))
 		s.velocity = Vector2(randf_range(-300, 300), randf_range(-300, 300))
 		host.add_child(s)
 		s.add_to_group("ships")
@@ -102,12 +116,16 @@ func _run(n: int) -> void:
 
 	var t0 := Time.get_ticks_usec()
 	for f in FRAMES:
+		BuildShip._group_frame = -1        # a new frame begins; group lists rebuild once
+		SpaceHash.invalidate()             # ...and so does the spatial index
 		for s in fleet:
 			s.separation_dir()
 	var sep := float(Time.get_ticks_usec() - t0) / 1000.0
 
 	t0 = Time.get_ticks_usec()
 	for f in FRAMES:
+		BuildShip._group_frame = -1
+		SpaceHash.invalidate()
 		for s in fleet:
 			s.avoid_obstacles_dir(s.velocity)
 	var avoid := float(Time.get_ticks_usec() - t0) / 1000.0

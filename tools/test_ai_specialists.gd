@@ -216,7 +216,13 @@ func _case_ships_keep_their_distance() -> void:
 	var into := Vector2(600, 0)                 # thrust straight at it
 	steered.velocity = Vector2.ZERO
 	straight.velocity = Vector2.ZERO
+	# THE SPATIAL INDEX READS POSITIONS WHEN IT BUILDS (SpaceHash). Everything above was
+	# teleported inside a single frame, so the grid still describes where these hulls
+	# were before the test moved them. In play the frame boundary rebuilds it; here we
+	# have to say so, and forgetting to is exactly what made this assertion fail.
+	SpaceHash.invalidate()
 	steered.apply_movement(into, 0.2)
+	SpaceHash.invalidate()   # the index reads positions at build time; this file teleports (SpaceHash)
 	straight.apply_movement(into, 0.2)
 	_ok(absf(steered.velocity.angle_to(into)) > absf(straight.velocity.angle_to(into)),
 		"apply_movement actually DEFLECTS an avoiding ship around a neighbour")
@@ -237,6 +243,7 @@ func _case_ships_keep_their_distance() -> void:
 	blocker.avoids_obstacles = false
 	var before: float = flyer.rotation
 	for i in 10:
+		SpaceHash.invalidate()   # the index reads positions at build time; this file teleports (SpaceHash)
 		flyer.apply_movement(Vector2.RIGHT.rotated(flyer.rotation) * 600.0, 0.05)
 	_ok(absf(angle_difference(flyer.rotation, before)) > 0.05,
 		"a ship bearing down on an obstacle TURNS AWAY, not just drifts")
@@ -244,6 +251,7 @@ func _case_ships_keep_their_distance() -> void:
 
 	# Exactly-stacked ships must still separate rather than divide by zero.
 	b.global_position = a.global_position
+	SpaceHash.invalidate()   # ...and this one teleports too (the call is nested in _ok)
 	_ok(a.separation_dir() != Vector2.ZERO, "perfectly stacked hulls still push apart")
 	a.free(); b.free(); player.free()
 
@@ -772,6 +780,7 @@ func _case_nothing_chases_prey_into_a_gravity_well() -> void:
 	hunter.global_position = HOME + Vector2(planet.grav_r * 0.9, 0.0)
 	hunter.velocity = Vector2.ZERO
 	var into_planet := Vector2.LEFT * 400.0          # dead at the core
+	SpaceHash.invalidate()   # the index reads positions at build time; this file teleports (SpaceHash)
 	hunter.apply_movement(into_planet, 0.05)
 	_ok(hunter.velocity.x > 0.0,
 		"a pursuit aimed into the well still drove the ship inward (velocity %s) — "
@@ -907,11 +916,13 @@ func _case_a_holed_ship_cannot_run() -> void:
 	wreck.hull = wreck.stats.hull_hp * 0.05
 	wreck.velocity = Vector2.ZERO
 	for _i in 200:
+		SpaceHash.invalidate()   # the index reads positions at build time; this file teleports (SpaceHash)
 		wreck.apply_movement(Vector2.RIGHT * 9999.0, 0.05)
 	var healthy := _pirate()
 	healthy.global_position = Vector2(74000, 74000)
 	healthy.velocity = Vector2.ZERO
 	for _i in 200:
+		SpaceHash.invalidate()   # the index reads positions at build time; this file teleports (SpaceHash)
 		healthy.apply_movement(Vector2.RIGHT * 9999.0, 0.05)
 	_ok(wreck.velocity.length() < healthy.velocity.length() * 0.75,
 		"a crippled hull actually FLIES slower (%.0f vs %.0f) — the multiplier has "
