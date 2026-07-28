@@ -264,9 +264,17 @@ static func _player_toward(other: String) -> Att:
 	# shoot it), but "it is actively hostile to me" is the one case that must cross over.
 	if _toward_player(other) == Att.HOSTILE:
 		return Att.HOSTILE
-	var key := standing_key(other)
-	if Standing.is_hostile(key) or Standing.at_war(key):
-		return Att.HOSTILE
+	# EVERY LEDGER THIS HULL ANSWERS TO, not just its own (fixed 2026-07-28, found by
+	# test_faction_parity's played-pilot pass). A freighter's faction is `civilian` but
+	# it is ALSO a Long Lane member, and the meter the player actually toggles is the
+	# Long Lane's — so declaring war on the traders left their haulers un-targetable,
+	# while the FactionsView toggle was already telling every hauler in the world to
+	# refresh its hostility. Killing one has always debited both ledgers
+	# (Standing.note_kill -> ledgers_for); permission now reads the same list, so
+	# consequence and permission cannot disagree about who somebody belongs to.
+	for key in Standing.ledgers_for(other):
+		if Standing.is_hostile(str(key)) or Standing.at_war(str(key)):
+			return Att.HOSTILE
 	return Att.NEUTRAL
 
 
