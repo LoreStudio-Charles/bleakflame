@@ -1365,6 +1365,36 @@ func _case_every_lesson_is_completable() -> void:
 	bar.queue_free()
 	bar_ship.queue_free()
 
+	# A STEP MAY NAME ONE ROW OF A LIST BY TEXT (`item`), and TutorPing matches it with
+	# findn on the ROW'S text — which the mission board now SHORTENS (short titles left,
+	# full text right). A needle that falls past the cut points at nothing: the caption
+	# draws, the highlight frames the whole list, and the player is told to pick a
+	# contract the tutor can no longer find. Checked against the shipped templates, so
+	# it holds whichever three the board happens to be showing.
+	for lid in Tutor.LESSONS:
+		for st in Tutor.LESSONS[lid]:
+			var want := str((st as Dictionary).get("item", ""))
+			if want == "":
+				continue
+			# ONLY THE BOARDS THIS STEP CAN RUN AT. Scanning every template let a
+			# station lesson be satisfied by a posting on VYPER'S board — a row the
+			# player will never see from that step (caught by sabotage, 2026-07-27).
+			var at := str((st as Dictionary).get("venue", ""))
+			var posted := 0
+			var survives := 0
+			for t in MissionLog._templates:
+				var d := str((t as Dictionary).get("desc", ""))
+				if not (want in d):
+					continue
+				if at != "" and str((t as Dictionary).get("venue", "station")) != at:
+					continue
+				posted += 1
+				if want in MissionComputer._short(d):
+					survives += 1
+			_ok(posted > 0, "lesson '%s' names row '%s' — a contract on that board says it" % [lid, want])
+			_ok(posted > 0 and survives == posted,
+				"...and every one of them still says it once the row is shortened (%d of %d)" % [survives, posted])
+
 	# Anchors that register the moment their widget is DRAWN rather than when the
 	# screen is built — the office door only exists once you have an invitation.
 	# Anchors owned by TRANSIENT UI a bare build can't stand up: the office door registers
