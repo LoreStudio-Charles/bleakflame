@@ -47,6 +47,29 @@ var target_ref: Node = null   # RADIO's locked target (or HEAT's current pick)
 var ordnance := false
 
 
+## THE SHOOTER, OR NULL IF IT DIED MID-FLIGHT — and every use must go through here.
+##
+## A bolt outlives the ship that fired it, which this file already knew: two
+## `take_damage` calls have long said "pass null, never a freed object". What was NEW is
+## that a freed Object cannot be passed to a TYPED PARAMETER AT ALL — Godot rejects the
+## CALL ("argument 2 (previously freed) is not a subclass of the expected argument
+## class"), so the callee never gets a chance to guard itself. BuildShip.engageable takes
+## `shooter: Object`, and the faction switch added four raw call sites directly beside
+## the two comments warning about exactly this hazard.
+##
+## So the guard lives with the REFERENCE, not at each use: one accessor, nothing to
+## remember to wrap. A bolt whose shooter is gone still flies and still hits — it simply
+## falls back to the legacy team it was fired with, which is the correct allegiance for
+## a shot already in the air.
+func live_shooter() -> Node:
+	return shooter if shooter != null and is_instance_valid(shooter) else null
+
+
+## Everything this bolt may legally hit, asked safely.
+func _foes() -> Array:
+	return BuildShip.engageable(get_tree(), live_shooter(), target_group)
+
+
 static func spawn(parent: Node, pos: Vector2, dir: Vector2, def: WeaponDef,
 		group: String, shot_grace := 0.0, dmg_mult := 1.0, p_shooter: Node = null) -> Projectile:
 	var p := Projectile.new()
@@ -163,7 +186,7 @@ func _physics_process(delta: float) -> void:
 	# splash will hurt — that's near enough. Ships only; rocks don't set
 	# off fuzes (belt flying would be miserable), direct hits still do.
 	if blast > 0.0:
-		for target in BuildShip.engageable(get_tree(), shooter, target_group):
+		for target in _foes():
 			if target.get("dead") == true:
 				continue
 			var r := BuildShip.hit_profile_of(target)
@@ -171,7 +194,7 @@ func _physics_process(delta: float) -> void:
 			if global_position.distance_squared_to(target.global_position) <= fuze * fuze:
 				_detonate()
 				return
-	for target in BuildShip.engageable(get_tree(), shooter, target_group):
+	for target in _foes():
 		if target.get("dead") == true:
 			continue
 		# Evasion shrinks the target's effective profile (player-only; 0 for the
@@ -186,7 +209,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				# The shooter may have died mid-flight — pass null, never a freed
 				# object (a typed Node param rejects it and throws).
-				target.take_damage(damage, shooter if is_instance_valid(shooter) else null)
+				target.take_damage(damage, live_shooter())
 				spark(get_parent(), global_position, color, 6)
 				_end_flight()
 			return
@@ -229,7 +252,7 @@ func _band_of(node: Node) -> int:
 func _nearest_in_group() -> Node:
 	var best: Node = null
 	var best_d := INF
-	for n in BuildShip.engageable(get_tree(), shooter, target_group):
+	for n in _foes():
 		if n.get("dead") == true:
 			continue
 		var d: float = global_position.distance_squared_to(n.global_position)
@@ -251,8 +274,8 @@ func _detonate() -> void:
 	get_parent().add_child(flash)
 	flash.global_position = global_position
 	# The shooter may have died mid-flight — pass null, never a freed object.
-	var src: Node = shooter if is_instance_valid(shooter) else null
-	for target in BuildShip.engageable(get_tree(), shooter, target_group):
+	var src: Node = live_shooter()
+	for target in _foes():
 		if target.get("dead") == true:
 			continue
 		var r := BuildShip.hit_profile_of(target)
