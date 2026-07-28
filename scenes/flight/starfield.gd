@@ -57,26 +57,39 @@ const OVERLAY_PARALLAX := 0.11
 ##
 ## Starting low and building up is the right way round for an additive stack — you are
 ## composing light, so it is far easier to add another layer than to unpick an
-## over-bright one. Started at 0.3, settled at 0.5 on sight (user, 2026-07-28): the dust
-## reads as structure again without the stack clipping anywhere.
+## over-bright one. 0.3, then 0.5, then here (user, 2026-07-28).
+##
+## THE DUST IS HELD DOWN AT 0.25 DELIBERATELY, and it is a READABILITY rule rather than a
+## taste one: at 0.5 the sky was bright enough to compete with the ships and hulls got
+## lost against it. The background is SCENERY, the ships are INFORMATION, and scenery
+## gives way. The brightness taken off the dust was put onto the star layers instead,
+## which puts the light where the player is actually looking.
 ##
 ## Dialled HERE, never by re-authoring the art: the tiles stay full-strength on disk so
 ## the balance is a live decision and not a destructive one.
-const BACKDROP_ALPHA := 0.5
-const OVERLAY_ALPHA := 0.5
+const BACKDROP_ALPHA := 0.25
 
-## The procedural point stars are a layer too, and get the same knob so the whole sky is
-## balanced from one place rather than half here and half in the LAYERS table.
-const STAR_ALPHA := 0.5
+## Star art, but the FURTHEST star layer — parallax 0.11, between the dust and the point
+## stars — so it sits at the dim end of the same ladder the LAYERS table continues.
+const OVERLAY_ALPHA := 0.25
 
 static var _backdrops: Array[Texture2D] = []
 static var _overlays: Array[Texture2D] = []
 static var _tiles_scanned := false
 
+## `alpha` LADDERS WITH DEPTH — 0.25 / 0.45 / 0.65, dimmest furthest out (user,
+## 2026-07-28). Brightness now agrees with parallax instead of fighting it: the slow
+## distant stars are faint and the fast near ones are sharp, which reads as depth even
+## before anything moves. It is also the readability fix — the sky was bright enough to
+## compete with the ships, and a background that competes with the foreground is a
+## gameplay problem, not a taste one.
 const LAYERS := [
-	{"parallax": 0.15, "cell": 140.0, "per_cell": 3, "size": 1.0, "brightness": 0.45},
-	{"parallax": 0.35, "cell": 180.0, "per_cell": 2, "size": 1.6, "brightness": 0.7},
-	{"parallax": 0.65, "cell": 260.0, "per_cell": 1, "size": 2.2, "brightness": 1.0},
+	{"parallax": 0.15, "cell": 140.0, "per_cell": 3, "size": 1.0, "brightness": 0.45,
+		"alpha": 0.25},
+	{"parallax": 0.35, "cell": 180.0, "per_cell": 2, "size": 1.6, "brightness": 0.7,
+		"alpha": 0.45},
+	{"parallax": 0.65, "cell": 260.0, "per_cell": 1, "size": 2.2, "brightness": 1.0,
+		"alpha": 0.65},
 ]
 
 ## A CELL'S STARS NEVER CHANGE. They are hashed from the cell's own coordinates, which is
@@ -277,6 +290,7 @@ func _paint_d() -> void:
 		var size: float = layer["size"]
 		var per_cell: int = layer["per_cell"]
 		var brightness: float = layer["brightness"]
+		var layer_alpha: float = layer["alpha"]
 		# SQUARE STARS, NOT CIRCLES. draw_circle tessellates a polygon per call, and at
 		# ~650 stars a frame that measured 3.02 ms in the seat -- 17.4% of the frame, to
 		# round off a dot one to two pixels across. A rect is two triangles. At this size
@@ -299,5 +313,5 @@ func _paint_d() -> void:
 					# holds what the star IS, this holds how loud the layer is, and only
 					# the second one is meant to be tuned.
 					var c: Color = star[1]
-					c.a = STAR_ALPHA
+					c.a = layer_alpha
 					draw_rect(Rect2(star[0] + to_world - half, box), c)
