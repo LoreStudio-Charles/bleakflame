@@ -48,7 +48,12 @@ const NATION := {
 }
 const ROLE_CODE := {
 	"hauler": "CT",
-	"liner": "VIT",      # reserved: no liner hull exists yet
+	"liner": "VIT",      # reserved: no liner hull exists yet — the PREMIUM passenger tier
+	# THE BUDGET PASSENGER CLASS IS A KNOWN GAP (user, 2026-07-28): "lower rate liners
+	# should exist too, but I don't have a callsign for them." Deliberately unnamed
+	# rather than invented — a made-up code would read as canon the moment it shipped.
+	# Its VOICE is already reserved in ShipHails (cold coffee, homesickness, a long way
+	# to go), which is the register a GVIT explicitly does not have.
 	"navy": "CN",
 	"guardian": "EU",
 }
