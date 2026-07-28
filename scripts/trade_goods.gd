@@ -58,10 +58,23 @@ const GOODS := {
 ## it cannot make. Asserted in test_dock_ui, so the next market authored cannot drift.
 const BUYBACK := 0.5
 
+## ORE IS A COMMODITY LIKE ANY OTHER (user, 2026-07-28: "I feel like it should be a
+## commodity and a trade skill item"). It was half of one — registered in GOODS, carried
+## as cargo, but SELL-ONLY, with no counter anywhere willing to part with a crate. That
+## made it the one cargo in the game outside the market rules, and Doug priced it with a
+## bespoke formula of his own (see ProspectDeck) that reached into this table and
+## multiplied, bypassing every guard here.
+##
+## Now every venue that takes ore also stocks it, at the standard 2x, which does three
+## things: the Fabricator has a source for a pilot who would rather buy than mine, ore
+## inherits the buy-back rule and the Trader's edge for free, and — because both ends
+## move together — BUYING ORE TO RESELL IS NEVER PROFITABLE IN EITHER DIRECTION. Mining
+## stays the only way to make money from rock, which is the point of mining.
 const STATION_MARKET := {
 	"name": "Station",
 	"local": ["circuits"],
-	"sells": {"circuits": 22, "food": 36, "water": 24},   # food/water imported, premium
+	"sells": {"circuits": 22, "food": 36, "water": 24,    # food/water imported, premium
+		"ferrite_ore": 16, "cobalt_ore": 44, "aurite_ore": 120},
 	"buys": {"food": 18, "water": 12, "ferrite_ore": 8, "cobalt_ore": 22,
 		"aurite_ore": 60},
 }
@@ -70,6 +83,22 @@ const PLANET_MARKET := {
 	"local": ["food", "water"],
 	"sells": {"food": 10, "water": 6, "circuits": 68},    # circuits imported, premium
 	"buys": {"circuits": 34},
+}
+
+## THE DIG — Doug's hoppers in the Verge. He is CLOSER TO THE ROCK AND FURTHER FROM
+## EVERYTHING ELSE, so he pays over the station's rate (ORE_PREMIUM, the whole economic
+## argument for the Verge existing) and charges over it too. Ore is `local` here: it is
+## the one place in the Reach that produces it.
+##
+## AUTHORED, NOT DERIVED FROM THE STATION AT RUNTIME. His prices used to be
+## `station_buys x 1.35 x trade_sell_mult` computed inside his deck, which meant a second
+## pricing path that never saw the buy-back rule, the convergence guard or the Trader
+## cap. The premium is still visible in these numbers — it is just a number now.
+const VERGE_MARKET := {
+	"name": "The Dig",
+	"local": ["ferrite_ore", "cobalt_ore", "aurite_ore"],
+	"sells": {"ferrite_ore": 22, "cobalt_ore": 60, "aurite_ore": 162},
+	"buys": {"ferrite_ore": 11, "cobalt_ore": 30, "aurite_ore": 81},
 }
 
 

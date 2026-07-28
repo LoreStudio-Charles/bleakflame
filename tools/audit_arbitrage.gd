@@ -23,7 +23,8 @@ func _init() -> void:
 			str(pilot[0]), Pilot.level(), Pilot.trade_buy_mult(), Pilot.trade_sell_mult()])
 		print("venue        good          pays   gets   round trip")
 		var bad := 0
-		for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET]:
+		for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET,
+				TradeGoods.VERGE_MARKET]:
 			for key in market["sells"]:
 				if not market["buys"].has(key):
 					continue      # cannot sell it back here; no round trip exists
@@ -44,7 +45,13 @@ func _init() -> void:
 		# (user: "it's okay to cross ... that's the trader gameplay, buy low here sell
 		# high there").
 		for leg in [["circuits", TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET],
-				["food", TradeGoods.PLANET_MARKET, TradeGoods.STATION_MARKET]]:
+				["food", TradeGoods.PLANET_MARKET, TradeGoods.STATION_MARKET],
+				# ORE MUST LOSE BOTH WAYS. Doug pays over the station rate, so a naive
+				# "buy cheap at the station, haul it to the premium buyer" is the obvious
+				# thing a player will try — and mining has to stay the only way rock pays.
+				["ferrite_ore", TradeGoods.STATION_MARKET, TradeGoods.VERGE_MARKET],
+				["ferrite_ore", TradeGoods.VERGE_MARKET, TradeGoods.STATION_MARKET],
+				["aurite_ore", TradeGoods.STATION_MARKET, TradeGoods.VERGE_MARKET]]:
 			var key := str(leg[0])
 			var buy_at: Dictionary = leg[1]
 			var sell_at: Dictionary = leg[2]

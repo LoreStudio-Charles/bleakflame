@@ -2118,10 +2118,11 @@ func _case_no_counter_pays_back_what_it_charges() -> void:
 	# A counter pays half what it charges for the same good, so profit can only come from
 	# carrying goods somewhere that wants them. Asserted against the tables because it is
 	# authored data, and the next market someone writes is exactly where it would drift.
-	for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET]:
+	for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET,
+			TradeGoods.VERGE_MARKET]:
 		for key in market["buys"]:
 			if not market["sells"].has(key):
-				continue      # one-sided (ore) — it has no local spread to hold
+				continue      # one-sided — no local spread to hold
 			var charges: int = market["sells"][key]
 			var pays: int = market["buys"][key]
 			_ok(pays <= int(round(float(charges) * TradeGoods.BUYBACK)),
@@ -2152,7 +2153,8 @@ func _case_no_counter_pays_back_what_it_charges() -> void:
 	for xp in [0, 5_000, 100_000, 9_000_000]:
 		Pilot.profession = "trader"
 		Wallet.xp = xp
-		for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET]:
+		for market in [TradeGoods.STATION_MARKET, TradeGoods.PLANET_MARKET,
+				TradeGoods.VERGE_MARKET]:
 			for key in market["sells"]:
 				if not market["buys"].has(key):
 					continue      # no round trip exists here; nothing to protect
@@ -2176,6 +2178,27 @@ func _case_no_counter_pays_back_what_it_charges() -> void:
 	_ok(trader_run > plain_run,
 		"the cross-region run still rewards a Trader (%+dc vs %+dc a unit)"
 			% [trader_run, plain_run])
+
+	# --- ORE IS A COMMODITY, AND MINING IS STILL THE ONLY WAY IT PAYS ---
+	#
+	# Doug pays OVER the station rate, which is the Verge's whole economic argument — and
+	# also the obvious thing a player will try to exploit: buy rock cheap at the station,
+	# haul it to the premium buyer. Both directions must lose, or mining is pointless and
+	# the Verge becomes a money printer with a commute.
+	for key in ["ferrite_ore", "cobalt_ore", "aurite_ore"]:
+		var out_leg := TradeGoods.sell_price(TradeGoods.VERGE_MARKET, key) 			- TradeGoods.buy_price(TradeGoods.STATION_MARKET, key)
+		var back_leg := TradeGoods.sell_price(TradeGoods.STATION_MARKET, key) 			- TradeGoods.buy_price(TradeGoods.VERGE_MARKET, key)
+		_ok(out_leg < 0, "hauling bought %s out to Doug loses (%+dc a unit)"
+			% [TradeGoods.display_name(key), out_leg])
+		_ok(back_leg < 0, "...and hauling his %s home loses too (%+dc a unit)"
+			% [TradeGoods.display_name(key), back_leg])
+		# AND THE VERGE IS STILL WORTH FLYING TO for rock you dug yourself.
+		_ok(TradeGoods.sell_price(TradeGoods.VERGE_MARKET, key)
+				> TradeGoods.sell_price(TradeGoods.STATION_MARKET, key),
+			"Doug pays over the station for mined %s (%dc vs %dc)"
+				% [TradeGoods.display_name(key),
+					TradeGoods.sell_price(TradeGoods.VERGE_MARKET, key),
+					TradeGoods.sell_price(TradeGoods.STATION_MARKET, key)])
 
 	Pilot.profession = kept_prof
 	Wallet.xp = kept_xp

@@ -13,8 +13,10 @@ extends CanvasLayer
 ## He is also the Miner commission's front door and the game's mining teacher —
 ## the first person who explains that a gun chips a rock but a cutter opens it.
 
-## What Doug pays over the station's price. He is closer to the rock and further
-## from everything else; the premium is the trip.
+## What Doug pays over the station's price. He is closer to the rock and further from
+## everything else; the premium is the trip. AUTHORED INTO TradeGoods.VERGE_MARKET now
+## rather than applied here — this constant remains as the ratio those numbers were set
+## from, and as what the flavour text below quotes.
 const ORE_PREMIUM := 1.35
 
 ## THE MINERS' LADDER, in Doug's words. Ore sold across his scale is the verb that
@@ -137,20 +139,23 @@ func _refresh_ore() -> void:
 		_ore_box.add_child(none)
 
 
-## Derived from the STATION's standing price, so Doug's premium is always
-## visibly "more than they'd give you back home" even if that table moves.
+## THROUGH THE SHARED MARKET RULES (2026-07-28). This used to be
+## `station_buys x ORE_PREMIUM x trade_sell_mult`, computed here — a second pricing path
+## that reached into the station's table and never saw the buy-back rule, the convergence
+## guard or the Trader cap. His premium is authored into TradeGoods.VERGE_MARKET now, so
+## it is still visibly "more than they'd give you back home" and it obeys the same rules
+## as every other counter in the Reach.
 func _ore_price(key: String) -> int:
-	var base: int = int(TradeGoods.STATION_MARKET["buys"].get(key, 0))
-	return int(round(base * ORE_PREMIUM * Pilot.trade_sell_mult()))
+	return TradeGoods.sell_price(TradeGoods.VERGE_MARKET, key)
 
 
 ## One unit per press, same as the market — deliberate, so a big haul is a
 ## visible stack of payments rather than one anonymous number.
 func _sell_ore(key: String) -> void:
-	if int(ship.commodities.get(key, 0)) <= 0:
+	var r := TradeGoods.sell(ship, TradeGoods.VERGE_MARKET, key)
+	if not r.ok:
+		_venue.flash(str(r.msg))
 		return
-	ship.remove_commodity(key, 1)
-	Wallet.credits += _ore_price(key)
 	Standing.add("miner", 1)   # ore off your hold is Doug's kind of work
 	Sfx.play("click", -14.0)
 	refresh()
