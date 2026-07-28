@@ -150,6 +150,24 @@ func _apply_state() -> void:
 	if _args.has("tutorial-done"):
 		SaveGame.tutorial_done = true
 	MissionLog.ensure_offers()
+	# CONTRACTS IN HAND — the state the mission board is actually FOR. An empty log
+	# photographs the empty case and nothing else, and "take one, and pretend it is
+	# finished" is two lines rather than a program, so it belongs on the command line
+	# with the rest of the pilot state. `--contracts=2` takes that many from this
+	# venue's board; `--finished` marks them delivered so the turn-in state is visible.
+	var want := int(_args.get("contracts", "0"))
+	if want > 0:
+		var at_station := str(_args.get("screen", "")) != "colony"
+		# RE-READ THE BOARD EACH TIME: accepting removes an offer, so every index after
+		# it shifts — walking one snapshot would take the wrong second contract.
+		while MissionLog.active.size() < want:
+			var here := MissionLog.offers_for(at_station)
+			if here.is_empty() or not MissionLog.accept(int(here[0].index)):
+				break
+		if _args.has("finished"):
+			for m in MissionLog.active:
+				m["n"] = 0                     # 0 of 0 delivered reads as complete
+				m["start_kills"] = MissionLog.total_kills
 
 
 ## Tabbed screens only. Walks for a TabContainer and selects by title, so a shot can name

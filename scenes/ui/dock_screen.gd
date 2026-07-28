@@ -120,14 +120,10 @@ var _skills_box: VBoxContainer
 var _commission_info: VBoxContainer
 var _loadout_box: VBoxContainer
 var _sel_gem := -1     # gem slot selected for memorizing in the Loadout panel
-var _offers_list: ItemList
-var _active_box: VBoxContainer
+var _missions: MissionComputer
 var _yard_list: ItemList
 var _lab_status: RichTextLabel
 var _lab_leads: ItemList
-var _mission_log: RichTextLabel
-var _quests_active: QuestLogView
-var _quests_done: QuestLogView
 var _bar_row: Control
 var _bar_feed: RichTextLabel
 var _bar_last_rumor := ""
@@ -179,7 +175,7 @@ func _build_ui() -> void:
 	# Ping overlays sit ABOVE the whole screen and ignore the mouse, so they can
 	# point at any control on any tab without ever being the thing you click.
 	for a in ["tab_pilot", "loadout", "commissions", "tab_market", "market_goods",
-			"tab_missions", "offers", "contracts_held", "market_goods_planet",
+			"tab_missions", "offers", "market_goods_planet",
 			"tab_missions_planet", "tab_market_planet", "launch_hint", "coupling",
 			"tab_explorers", "office_door",
 			"tab_armory", "armory_shop", "tab_engineering", "paperdoll",
@@ -1031,48 +1027,24 @@ func _build_market_tab() -> void:
 	_market_hold = _list(hold_col)
 
 
+## THE MISSION COMPUTER — one context, two columns (docs/person_as_context.md).
+## The three-column board this replaced is described in mission_computer.gd; the
+## host's job here is only to mount it, name the tutor anchors, stand Voss in its
+## header, and own the two ACTIONS (they move the wallet and standing, so they
+## stay on the shared paths every other board calls).
 func _build_missions_tab(title: String) -> void:
-	var row := HBoxContainer.new()
-	row.name = title
-	Tutor.register("panel_missions", row)
+	_missions = MissionComputer.new(ship, is_station)
+	_missions.name = title
+	_tabs.add_child(_missions)
+	Tutor.register("panel_missions", _missions)
 	Tutor.register("tab_missions" if is_station else "tab_missions_planet", _tabs)
-	row.add_theme_constant_override("separation", 18)
-	_tabs.add_child(row)
-	# Both venues post work now: the station board and the colony board.
-	var offer_col := _column(row, "CONTRACTS ON OFFER" if is_station else "COLONY CONTRACTS")
+	Tutor.register("offers", _missions.list)
 	# Voss works this board (Sella's colony contracts are hers, but her HOME is
 	# the Explorer's Union — she is only ever spoken to there).
 	if is_station:
-		_mount_desk(offer_col, "voss")
-	_offers_list = _list(offer_col)
-	Tutor.register("offers", _offers_list)
-	# Row-height icons so each offer wears its giver's face.
-	_offers_list.fixed_icon_size = Vector2i(36, 36)
-	_offers_list.icon_mode = ItemList.ICON_MODE_LEFT
-	_button(offer_col, "Accept selected", _on_accept)
-	var active_col := _column(row, "CONTRACTS IN HAND")
-	_active_box = VBoxContainer.new()
-	Tutor.register("contracts_held", _active_box)
-	active_col.add_child(_active_box)
-	# The quest log proper: Active (expandable entries), Completed (history
-	# you can re-read), Chronicle (the day-stamped Captain's Log stream).
-	var log_col := _column(row, "QUEST LOG")
-	log_col.size_flags_stretch_ratio = 1.3
-	# Curation lives ON the Active-tab entries now (★ / ▲▼ / tint) — no separate panel.
-	var subtabs := TabContainer.new()
-	subtabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	log_col.add_child(subtabs)
-	_quests_active = QuestLogView.new(ship, "active")
-	_quests_active.name = "Active"
-	subtabs.add_child(_quests_active)
-	_quests_done = QuestLogView.new(ship, "completed")
-	_quests_done.name = "Completed"
-	subtabs.add_child(_quests_done)
-	_mission_log = RichTextLabel.new()
-	_mission_log.name = "Chronicle"
-	_mission_log.bbcode_enabled = true
-	_mission_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	subtabs.add_child(_mission_log)
+		_mount_desk(_missions.header_left, "voss")
+	_missions.accept_offer.connect(_on_accept_offer)
+	_missions.turn_in_requested.connect(_on_turn_in)
 
 
 func _column(parent: Node, title: String) -> VBoxContainer:
@@ -2307,59 +2279,8 @@ func _market_gap(parent: Node) -> void:
 
 
 func _refresh_missions() -> void:
-	if _offers_list != null:
-		_offers_list.clear()
-		for entry in MissionLog.offers_for(is_station):
-			var m: Dictionary = entry.m
-			var idx := _offers_list.add_item("%s  —  %dc" % [MissionLog.label(m), m.reward])
-			# Metadata is the GLOBAL offer index so accept() targets the right
-			# one after venue filtering.
-			_offers_list.set_item_metadata(idx, int(entry.index))
-			var face := Npcs.portrait(str(m.get("giver", "")))
-			if face != null:
-				_offers_list.set_item_icon(idx, face)
-	for child in _active_box.get_children():
-		child.queue_free()
-	if MissionLog.active.is_empty():
-		var lbl := Label.new()
-		lbl.text = "No contracts in hand."
-		_active_box.add_child(lbl)
-	for i in MissionLog.active.size():
-		var m: Dictionary = MissionLog.active[i]
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		_active_box.add_child(row)
-		# The giver's face beside their contract — a standing reminder of
-		# whose work this is. Blank until the NPC art is dropped in.
-		var face := Npcs.portrait(str(m.get("giver", "")))
-		if face != null:
-			var pic := TextureRect.new()
-			pic.texture = face
-			pic.custom_minimum_size = Vector2(40, 40)
-			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			row.add_child(pic)
-		var lbl := Label.new()
-		lbl.text = "%s  [%d/%d]" % [MissionLog.label(m), MissionLog.progress(m, ship), m.n]
-		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(lbl)
-		var b := Button.new()
-		b.text = "Turn in (%dc)" % m.reward
-		b.disabled = not (MissionLog.is_complete(m, ship) and MissionLog.venue_ok(m, is_station))
-		b.pressed.connect(_on_turn_in.bind(i))
-		row.add_child(b)
-	_quests_active.rebuild()
-	_quests_done.rebuild()
-
-	var log_txt := ""
-	for i in range(Research.journal.size() - 1, -1, -1):
-		var entry: Dictionary = Research.journal[i]
-		log_txt += "[color=#f2b859]%s[/color]  —  %s\n" % [GameClock.label(int(entry.day)), entry.text]
-	if log_txt == "":
-		log_txt = "[color=#8890a0]No entries yet. The Reach keeps its stories close.[/color]"
-	_mission_log.text = log_txt
+	if _missions != null:
+		_missions.refresh()
 
 
 func _refresh_research() -> void:
@@ -3049,13 +2970,11 @@ func _toggle_location(comp: ComponentDef, source: String) -> void:
 	refresh()
 
 
-func _on_accept() -> void:
+## Take the offer the player selected. `index` is the GLOBAL offers index — the
+## board's lists are venue-filtered, and the screen re-derives it at click time.
+func _on_accept_offer(index: int) -> void:
 	_flash_msg = ""
-	var sel := _offers_list.get_selected_items()
-	if sel.is_empty():
-		return
-	# The list is venue-filtered; the row's metadata is the global offer index.
-	var r := MissionLog.take(int(_offers_list.get_item_metadata(sel[0])))
+	var r := MissionLog.take(index)
 	if not r.ok:
 		_flash(str(r.msg))
 	else:

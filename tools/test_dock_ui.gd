@@ -71,6 +71,7 @@ func _ready() -> void:
 		_case_talk_to_odessa_does_quest_first,
 		_case_every_npc_desk_is_uniform,
 		_case_quest_log_is_the_tracker,
+		_case_the_action_sits_on_the_contract,
 		_case_armory_filters,
 		_case_level_gates_equipping,
 		_case_the_campaign_banner_never_goes_silent,
@@ -1586,6 +1587,94 @@ func _case_quest_log_is_the_tracker() -> void:
 	ship.queue_free()
 
 
+## THE ACTION SITS ON THE THING IT ACTS ON (docs/person_as_context.md, rules 2+3).
+##
+## Playtest 2026-07-27, the tester: "Where do I turn this in?" The Mission Computer
+## had THREE columns — offers | in hand | quest log — and `Turn in (150c)` floated in
+## the middle one, detached from the contract it closed, in a column that was 90%
+## empty AND redundant: the quest log beside it listed the very same contract. The
+## third column existed because it duplicated the second, so the action ended up
+## attached to the throwaway copy.
+##
+## Asserted at the SHAPE level, not by finding a button somewhere on the tab: one
+## list, each contract listed once, and the button a DESCENDANT of the detail panel
+## that names the contract. A button that is merely "on the tab" is exactly what the
+## tester couldn't find.
+func _case_the_action_sits_on_the_contract() -> void:
+	var screen := _fresh_dock(true)          # the STATION
+	var kept := MissionLog.active.duplicate(true)
+	MissionLog.active.clear()
+	var desc := "Recover the Meridian's strongbox"
+	# Finished (n = 0 of 0) and closes HERE.
+	MissionLog.active.append({"type": "recovery", "n": 0, "reward": 140, "giver": "voss",
+		"venue": "station", "turn_in": "station", "uid": 9001, "desc": desc})
+	screen.refresh()
+	var mc: MissionComputer = screen._missions
+	mc._sel = "m:9001"
+	mc.refresh()
+
+	_ok(_count_lists(mc) == 1, "the mission computer shows exactly ONE list")
+	_ok(_count_rows(mc.list, "Meridian's strongbox") == 1,
+		"a held contract is listed once — not once per column")
+	_ok(_find_text(mc, "to close here"),
+		"the header answers 'where do I turn this in' before anything is clicked")
+
+	var turn := _find_button(mc, "Turn in")
+	_ok(turn != null, "the turn-in button exists")
+	_ok(turn != null and not turn.disabled, "...and is live on a contract that closes here")
+	_ok(turn != null and _is_descendant(turn, mc._detail),
+		"...and lives in the detail panel, not floating in a column of its own")
+	_ok(_find_text(mc._detail, desc),
+		"...on a panel that names the contract it closes")
+
+	# A DEAD BUTTON MUST SAY WHY. Greyed with nothing beside it is how a player ends
+	# up asking where the turn-in is while looking straight at it.
+	MissionLog.active[0]["turn_in"] = "planet"
+	mc.refresh()
+	var away := _find_button(mc, "Turn in")
+	_ok(away != null and away.disabled, "a contract that closes elsewhere greys its button")
+	_ok(_find_text(mc._detail, "the colony"), "...the panel says WHERE it closes")
+	# PIN THE REASON, not the venue: the panel already names the colony in its stat
+	# block, so an assertion that only looked for "the colony" passed with the reason
+	# line deleted outright (caught by sabotage, 2026-07-27).
+	_ok(_find_text(mc._detail, "not at this desk"),
+		"...and the dead button says why IT is dead, not just where the work ends")
+
+	# The commoner refusal: not finished. Same rule, its own sentence.
+	MissionLog.active[0]["turn_in"] = "station"
+	MissionLog.active[0]["n"] = 3
+	mc.refresh()
+	var unfinished := _find_button(mc, "Turn in")
+	_ok(unfinished != null and unfinished.disabled, "an unfinished contract greys its button")
+	_ok(_find_text(mc._detail, "Not finished yet"), "...and says so, with the count")
+	MissionLog.active[0]["n"] = 0
+
+	# THE OTHER ACTION, same rule — and it must take the offer the player is READING.
+	# The lists are venue-filtered, so the row's global index is re-derived on click;
+	# a stale or hardcoded index takes somebody else's contract.
+	var offers := MissionLog.offers_for(true)
+	_ok(offers.size() >= 2, "precondition: the station board is stocked")
+	if offers.size() >= 2:
+		var want: Dictionary = offers[offers.size() - 1].m
+		mc._sel = "o:%s" % str(want.desc)
+		mc.refresh()
+		var accept := _find_button(mc, "Accept")
+		_ok(accept != null and _is_descendant(accept, mc._detail),
+			"the accept button sits on the offer being read, not under the list")
+		_press(accept)
+		var took := false
+		for m in MissionLog.active:
+			if str(m.get("desc", "")) == str(want.desc):
+				took = true
+		_ok(took, "accepting takes the offer the player selected (got: %s)" % [
+			MissionLog.active.map(func(m: Dictionary) -> String: return str(m.get("desc", "")))])
+
+	MissionLog.active.clear()
+	for m in kept:
+		MissionLog.active.append(m)
+	screen.queue_free()
+
+
 # ---- rig ----
 
 ## A dock screen with clean campaign statics behind it. Never touches the save.
@@ -1658,6 +1747,36 @@ func _find_visible_text(root: Node, needle: String) -> bool:
 			return true
 		if _find_visible_text(child, needle):
 			return true
+	return false
+
+
+## How many ItemLists are on screen. "Never two lists at once" is the rule the
+## three-column board broke, and it is a SHAPE, so it is checked as one.
+func _count_lists(root: Node) -> int:
+	var n := 0
+	for child in root.get_children():
+		if child is ItemList:
+			n += 1
+		n += _count_lists(child)
+	return n
+
+
+## Rows of `list` whose text contains `needle` — a contract listed in two columns
+## shows up here as 2.
+func _count_rows(list: ItemList, needle: String) -> int:
+	var n := 0
+	for i in list.item_count:
+		if needle in list.get_item_text(i):
+			n += 1
+	return n
+
+
+func _is_descendant(node: Node, ancestor: Node) -> bool:
+	var p := node
+	while p != null:
+		if p == ancestor:
+			return true
+		p = p.get_parent()
 	return false
 
 
