@@ -11,6 +11,54 @@ the way for any form of multiplayer."*
 
 ---
 
+## WOULD THE SERVER HAVE FIXED THE 2026-07-28 FRAME BOG? (mostly yes)
+
+The first concrete data point in the coop-vs-MMO fork, and worth recording because I
+got the general claim wrong first.
+
+**What happened.** The game bogged with four or five pirates on screen. Measurement
+(`tools/bench_avoidance.gd`) found it was not ship count at all: every projectile
+re-ran `engageable()` — a two-group scan with two container allocations — **every
+physics frame**, twice for a blast weapon. Eighty bolts cost 22.8% of a 60fps frame
+before anything was drawn. Fixed client-side by caching one scan per shooter per frame
+(`af395e3`).
+
+**I said a server could not have helped, "because a server can't fix a client that's
+slow before it draws." That was wrong** — it conflated rendering cost with simulation
+cost, and what I had just measured was simulation. The user's correction stands: *"If
+those checks are moved to the server and the client only handles moving the objects,
+collecting input, and showing the explosions, we wouldn't be doing all those hit scans
+on the client, correct?"* Correct.
+
+**And the split is unusually favourable here**, which is the part worth keeping:
+
+- **Moves cleanly to the server** — hit resolution, AI prey selection, faction
+  arbitration, damage application, standing. All authoritative, none of it needs to be
+  local, and *all* of it is the O(bolts × targets) work. That is the expensive half.
+- **Cannot move** — your own hull's motion under your own input. Waiting on a round
+  trip to learn where your nose is pointing is unplayable in a twitch game, so
+  client-side prediction stays whatever the topology. But that is **O(1): one ship**.
+
+So the costly part is exactly the part that leaves, and the part that must stay is
+cheap. That is a genuine argument for the MMO road, not merely a neutral one.
+
+**The caveat to test rather than assume.** The proven figure is 1200 players and 8000
+NPC entities at a 100 ms refresh — that is *entity state*, a different workload from
+projectile hit resolution. A 900 u/s bolt covers 90 units per 100 ms tick, which is
+coarse against small fast hulls. Landing this needs one of: a higher combat tick, server
+-side path sweeping (rewind/lag compensation), or client-reported hits the server
+validates. The user anticipated this — *"could probably do well even if we bumped up the
+response rates"* — and it should be measured against **bolts**, not against the
+entity-count benchmark.
+
+**What none of this changes.** The fix was ~15 lines and an afternoon, and it makes
+single-player and coop good *today*, on the road we are actually on. If the MMO lands,
+that code moves or dies at no loss. The measurement harness is the durable part: it is
+what you would want in hand to check whether the server actually helps, rather than
+assuming it does.
+
+---
+
 ## The mechanism
 
 `PlayerState` (RefCounted) holds one pilot's data. `PlayerState.local` is *me*.
