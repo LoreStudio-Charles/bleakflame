@@ -79,6 +79,7 @@ func _ready() -> void:
 		_case_the_action_sits_on_the_contract,
 		_case_the_lab_puts_the_spend_on_the_project,
 		_case_the_shipyard_is_a_shop_shelf,
+		_case_the_market_shows_why_a_price_moved,
 		_case_a_ship_is_worth_what_is_bolted_to_it,
 		_case_no_counter_pays_back_what_it_charges,
 		_case_demand_moves_prices_without_breaking_anything,
@@ -2419,6 +2420,67 @@ func _case_a_ship_is_worth_what_is_bolted_to_it() -> void:
 		chipped.chips.append(chip)
 		_ok(ShipValue.sell(chipped) == before + ItemVisuals.sell_price(chip),
 			"a chip in the coupling is part of what the ship is worth")
+
+
+## THE EXCHANGE IS A GRID, AND IT SAYS WHY. Deferred in 2026-07-27 with a reason —
+## "scarcity vs abundance" had nothing to display while a venue's prices were constants,
+## so the label would have been decoration. Local demand landed, so this asserts the pair
+## that makes it real: the price MOVES, and the screen SAYS SO.
+##
+## A number that changed for a cause the player cannot see reads as a bug rather than as
+## the world responding to them, which is the entire point of it responding.
+func _case_the_market_shows_why_a_price_moved() -> void:
+	var screen := _fresh_dock(true)
+	TradeGoods.flow_from_dict({})
+	screen.refresh()
+	var mv: MarketView = screen._market
+	_ok(mv != null, "the market is a MarketView")
+	if mv == null:
+		screen.queue_free()
+		return
+	_ok(_count_lists(mv) == 0, "the exchange is a grid, not a list")
+
+	var stocked: Array = _collect_market_tiles(mv._shelf)
+	_ok(not stocked.is_empty(), "the counter stocks something (%d)" % stocked.size())
+	var before := Wallet.credits
+	Wallet.credits = 100000
+	screen.refresh()
+	stocked = _collect_market_tiles(mv._shelf)
+	if not stocked.is_empty():
+		var t0: MaterialStackTile = stocked[0]
+		var key := t0.key
+		var paid := TradeGoods.buy_price(TradeGoods.STATION_MARKET, key)
+		_right_click(t0)
+		_ok(Wallet.credits == 100000 - paid,
+			"right-clicking a shelf tile buys one %s for %dc" % [key, paid])
+		_ok(int(screen.ship.commodities.get(key, 0)) >= 1, "...and it lands in the hold")
+
+		# GLUT THEM and the tile must both drop its price AND say why.
+		var was := TradeGoods.sell_price(TradeGoods.STATION_MARKET, "food")
+		TradeGoods.note_flow(TradeGoods.STATION_MARKET, "food", 60.0)
+		screen.refresh()
+		_ok(TradeGoods.sell_price(TradeGoods.STATION_MARKET, "food") < was,
+			"sixty crates in, the station pays less for food")
+		var said := false
+		for tile in _collect_market_tiles(mv._shelf):
+			if (tile as MaterialStackTile).key == "food" 					and "GLUTTED" in (tile as MaterialStackTile).hint:
+				said = true
+		_ok(said, "...and the food tile says GLUTTED, so the drop is not a mystery")
+
+	TradeGoods.flow_from_dict({})
+	Wallet.credits = before
+	screen.ship.commodities.clear()
+	screen.queue_free()
+
+
+## Every commodity tile on a shelf, skipping nodes already queued for deletion — a
+## refresh frees the old fill and the replacements land in the same frame.
+func _collect_market_tiles(grid: Node) -> Array:
+	var out: Array = []
+	for c in grid.get_children():
+		if c is MaterialStackTile and not c.is_queued_for_deletion():
+			out.append(c)
+	return out
 
 
 func _case_the_shipyard_is_a_shop_shelf() -> void:

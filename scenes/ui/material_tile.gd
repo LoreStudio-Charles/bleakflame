@@ -13,6 +13,17 @@ extends Button
 ##     t.on_interact     = func(key, src): ...   # right-click — THE verb
 ##     t.on_alt_interact = func(key, src): ...   # shift+right-click: hold <-> stash
 
+## The tile's footprint, NAMED so a grid's column fit reads the same number the tile
+## draws (ContextGrid). A copy of "52" in a shop is a copy that drifts.
+const SIZE := Vector2(52, 52)
+
+## A SHOP SHELF IS WIDER, because it spells the good out. In a hold you already know what
+## you loaded; on a counter you are CHOOSING, and food, water and three ores are all
+## small crates — telling them apart by icon alone is a guess. HullTile made this call
+## first ("a hull is bought by NAME as much as by silhouette"); commodities need it more,
+## not less, because their art has less to distinguish.
+const SHOP_SIZE := Vector2(88, 70)
+
 var key: String
 var qty: int
 var source: String                 # "hold" | "stash" | "shop"
@@ -37,8 +48,12 @@ func _init(p_key: String, p_qty: int, p_source: String) -> void:
 	source = p_source
 
 
+## Spell the good out under the icon — shop shelves only (see SHOP_SIZE).
+var show_name := false
+
+
 func _ready() -> void:
-	custom_minimum_size = Vector2(52, 52)
+	custom_minimum_size = SHOP_SIZE if show_name else SIZE
 	var tex := ItemVisuals.material_icon(key)
 	if tex != null:
 		icon = tex
@@ -48,6 +63,21 @@ func _ready() -> void:
 		text = ItemVisuals.material_glyph(key)
 		add_theme_font_size_override("font_size", 15)
 		add_theme_color_override("font_color", ItemVisuals.material_color(key))
+	if show_name:
+		var plate := Label.new()
+		plate.text = TradeGoods.display_name(key)
+		plate.add_theme_font_size_override("font_size", 10)
+		plate.add_theme_color_override("font_color", ItemVisuals.material_color(key))
+		plate.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+		plate.add_theme_constant_override("outline_size", 3)
+		plate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		plate.autowrap_mode = TextServer.AUTOWRAP_OFF
+		plate.clip_text = true
+		plate.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		plate.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		plate.offset_bottom = -2
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(plate)
 	if source == "stash":
 		modulate = Color(1, 1, 1, 0.68)   # stash rides dimmer than the hold
 	tooltip_text = "%s ×%d\nmaterial   mass %.0f ea   [%s]%s" % [
@@ -83,7 +113,10 @@ func _ready() -> void:
 		pb.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 		pb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		pb.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		pb.offset_bottom = -1
+		# THE NAME PLATE OWNS THE LAST LINE, so the price takes the one above it. Both
+		# anchored to the bottom rendered "Circuits" and "22c" as one smear — the exact
+		# collision HullTile hit at 96px and fixed the same way. A footer is two rows.
+		pb.offset_bottom = -15 if show_name else -1
 		pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(pb)
 

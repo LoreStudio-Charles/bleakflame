@@ -104,8 +104,7 @@ var _tab_pips: TabPips
 var _eng_stats: RichTextLabel
 var _eng_selected: Array = []      # [comp, source] of the clicked tile
 var _selected_slot := -1
-var _market_hold: ItemList
-var _commodity_box: VBoxContainer
+var _market: MarketView
 var _pilot_info: VBoxContainer
 var _skills_box: VBoxContainer
 var _commission_info: VBoxContainer
@@ -869,23 +868,25 @@ func _build_person_tab(title: String, npc: String, place: String) -> void:
 		bcol.add_child(note)
 
 
+## THE EXCHANGE IS A CONTEXT NOW (2026-07-28) — the last shop to leave this file. It
+## waited on the ECONOMY rather than the layout: scarcity had nothing to display until
+## local demand existed (TradeGoods). Both shelves, the prices and the reason a price
+## moved are MarketView's.
 func _build_market_tab() -> void:
-	var row := HBoxContainer.new()
-	row.name = "Market Terminal" if is_station else "Market"
-	Tutor.register("panel_market", row)
+	_market = MarketView.new(ship, market)
+	_market.name = "Market Terminal" if is_station else "Market"
+	Tutor.register("panel_market", _market)
 	Tutor.register("tab_market" if is_station else "tab_market_planet", _tabs)
-	row.add_theme_constant_override("separation", 18)
-	_tabs.add_child(row)
-	var trade_col := _column(row, "%s EXCHANGE" % market.name.to_upper())
-	_commodity_box = VBoxContainer.new()
-	trade_col.add_child(_commodity_box)
-	# Venue-specific anchor as well as the shared one: the outbound lesson buys
-	# at the STATION and the return leg buys at the COLONY, and they must not
+	# THE GOODS ANCHOR IS THE SHELF ITSELF. The trade lessons point AT the counter's
+	# stock ("buy 4 circuits"), so it must be the grid, not the tab — and the
+	# venue-specific anchor stays separate from the shared one, because the outbound
+	# lesson buys at the STATION and the return leg at the COLONY and they must not
 	# advance each other.
-	Tutor.register("market_goods" if is_station else "market_goods_planet", _commodity_box)
-	Tutor.register("market_goods_any", _commodity_box)
-	var hold_col := _column(row, "YOUR GOODS")
-	_market_hold = _list(hold_col)
+	Tutor.register("market_goods" if is_station else "market_goods_planet", _market)
+	Tutor.register("market_goods_any", _market)
+	_market.buy_requested.connect(_on_buy_commodity)
+	_market.sell_requested.connect(_on_sell_commodity)
+	_tabs.add_child(_market)
 
 
 ## THE MISSION COMPUTER — one context, two columns (docs/person_as_context.md).
@@ -2104,96 +2105,18 @@ func _sell_price(key: String) -> int:
 
 
 func _refresh_market() -> void:
-	for child in _commodity_box.get_children():
-		child.queue_free()
-	# What this dock actually produces; everything else it sells is imported. Read from
-	# the market table (TradeGoods) so the ground shop colours deals by the same rule.
-	var local: Array = market.get("local", [])
-	# Ordered: this dock's own products (exports) first, then what it imports,
-	# then sell-only goods (ore the industry buys).
-	var keys: Array = []
-	for k in local:
-		if (market.sells.has(k) or market.buys.has(k)) and not keys.has(k):
-			keys.append(k)
-	for k in market.sells:
-		if not keys.has(k):
-			keys.append(k)
-	for k in market.buys:
-		if not keys.has(k):
-			keys.append(k)
-	for key in keys:
-		_add_market_row(key, key in local)
-
-	_market_hold.clear()
-	for key in ship.commodities:
-		var note := "sells %dc/u here" % _sell_price(key) if market.buys.has(key) \
-			else "no buyer here"
-		_market_hold.add_item("%s x%d  (%s)" % [
-			TradeGoods.display_name(key), ship.commodities[key], note])
-	_placeholder_if_empty(_market_hold, "— no goods aboard —")
+	if _market != null:
+		_market.refresh()
 
 
-const MKT_GREEN := Color(0.42, 0.86, 0.46)   # a good deal for the player
-const MKT_RED := Color(0.93, 0.45, 0.42)     # a poor deal for the player
 
 
-## One left-aligned exchange row: "Name (mass) [import]  ....  [Buy Nc] [Sell Nc]".
-## Colour is the signal: buy an export (local, cheap) = green, an import
-## (premium) = red; sell to a market that WANTS it = green, dump a local glut
-## = red. Missing sides get a fixed gap so the Buy/Sell columns line up.
-func _add_market_row(key: String, is_local: bool) -> void:
-	var sells: bool = market.sells.has(key)
-	var buys: bool = market.buys.has(key)
-	var rowbox := HBoxContainer.new()
-	rowbox.add_theme_constant_override("separation", 8)
-	_commodity_box.add_child(rowbox)
-	# Icon + text: read the good at a glance, not off one word. Fixed slot so
-	# rows align even for a good whose drop-in icon hasn't landed yet.
-	var icon := TextureRect.new()
-	icon.custom_minimum_size = Vector2(30, 30)
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture = _material_icon(key)
-	rowbox.add_child(icon)
-	var name_lbl := Label.new()
-	# SAY WHY THE PRICE MOVED. Local demand shifts both of a venue's prices (TradeGoods),
-	# and a number that changed for a reason the player cannot see reads as a bug rather
-	# than as the world responding to them — which is the whole point of it responding.
-	var mood := TradeGoods.demand_word(market, key)
-	name_lbl.text = "%s  (mass %.0f)%s%s" % [
-		TradeGoods.display_name(key), TradeGoods.unit_mass(key),
-		"  [import]" if sells and not is_local else "",
-		"  · %s" % mood if mood != "" else ""]
-	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_lbl.add_theme_color_override("font_color",
-		(MKT_GREEN if is_local else MKT_RED) if sells else Color(0.85, 0.8, 0.68))
-	rowbox.add_child(name_lbl)
-	if sells:
-		_market_button(rowbox, "Buy %dc" % _buy_price(key),
-			MKT_GREEN if is_local else MKT_RED, _on_buy_commodity.bind(key))
-	else:
-		_market_gap(rowbox)
-	if buys:
-		_market_button(rowbox, "Sell %dc" % _sell_price(key),
-			MKT_RED if is_local else MKT_GREEN, _on_sell_commodity.bind(key))
-	else:
-		_market_gap(rowbox)
 
 
-func _market_button(parent: Node, text: String, col: Color, handler: Callable) -> void:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(96, 0)
-	b.add_theme_color_override("font_color", col)
-	b.add_theme_color_override("font_hover_color", col)
-	b.pressed.connect(func() -> void: Sfx.play("click", -16.0))
-	b.pressed.connect(handler)
-	parent.add_child(b)
 
 
-func _market_gap(parent: Node) -> void:
-	var g := Control.new()
-	g.custom_minimum_size = Vector2(96, 0)
-	parent.add_child(g)
+
+
 
 
 func _refresh_missions() -> void:
