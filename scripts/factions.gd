@@ -70,8 +70,9 @@ const LIST := {
 
 ## A HULL CAN ANSWER TO MORE THAN ONE LEDGER (user, 2026-07-27: haulers answer to
 ## "probably both"). A freighter is a Long Lane member and a Reach civilian at once —
-## which its own registry marks already say, since GCT is a Galean Commercial Transport
-## and GVIT is the civilian prefix. Kill one and both minds change.
+## which its own registry marks already say: GCT is a Galean Commercial Transport, and
+## the civilian registry as a whole (GCT freight, GVIT liners) is stamped by the same
+## authority. Kill one and both minds change.
 ##
 ## Only ASYMMETRIC extras go here: a faction's own key is always included.
 const ALSO_ANSWERS_TO := {

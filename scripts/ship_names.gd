@@ -28,12 +28,42 @@ const CODE_LEN := 5
 ## the point — this is a transponder nobody maintains, or one spoofing something it isn't.
 const SCRAMBLE_CHARS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+## A REGISTRY MARK IS NATION + ROLE (user, 2026-07-28), and knowing that is what makes
+## the next one authorable instead of invented:
+##
+##   G    Galean
+##   CT   Cargo Transport
+##   VIT  Vitality Insured Transport — LIVE CARGO. Colloquially "Very Important Things":
+##        when your family ships out, that is just what folk say. "Be careful, you're
+##        carrying very important things."
+##   CN   Confederate Navy
+##   EU   Enforcement Unit
+##
+## "Other nations and races will have their own prefixes, but the structure remains
+## similar." So the nation letter and the role code are the source of truth and PREFIX is
+## their product — a Quarn hauler is a new NATION entry, not a new opaque string, and
+## test_ship_hails asserts the table still equals the rule so the two cannot drift.
+const NATION := {
+	"galean": "G",
+}
+const ROLE_CODE := {
+	"hauler": "CT",
+	"liner": "VIT",      # reserved: no liner hull exists yet
+	"navy": "CN",
+	"guardian": "EU",
+}
+
 const PREFIX := {
-	"hauler": "GCT",     # Galean Commercial Transport
-	"liner": "GVIT",     # reserved: no liner hull exists yet
+	"hauler": "GCT",
+	"liner": "GVIT",
 	"navy": "GCN",
 	"guardian": "GEU",
 }
+
+
+## The mark a nation stamps on a role. Adding the Quarn is one NATION entry.
+static func prefix(role: String, nation := "galean") -> String:
+	return str(NATION.get(nation, "")) + str(ROLE_CODE.get(role, ""))
 
 
 ## A registry mark for a licensed vessel. `rng` is optional so a caller that wants a stable

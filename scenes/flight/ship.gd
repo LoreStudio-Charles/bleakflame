@@ -760,9 +760,18 @@ func _eject(loot) -> void:
 func hail_friendly(member: Node2D) -> void:
 	if member == null or not is_instance_valid(member):
 		return
-	var who: String = member.build.hull.display_name if member.get("build") != null else "wingman"
-	# TODO(coop/NPCs): if member has an npc_id + dialogue, open DialoguePanel.
-	_flash_note("%s: \"Reading you, Captain. Holding station — call if it gets loud.\"" % who)
+	# THEY ANSWER, AND THEY FLY ON (docs/cinder_reach_campaign.md, beat 4 — the
+	# loneliness). This used to be ONE canned line for every ship in the game, so hailing
+	# twice told you it was a system rather than a person. The reply is now keyed to the
+	# hull's registry mark: a hauler sounds like a hauler, a Guardian like a patrol, and
+	# the SAME ship always says the SAME thing, because a stranger who answers differently
+	# every time is a slot machine and the beat needs someone you passed.
+	var mark: String = str(member.get("ship_name")) if member.get("ship_name") != null \
+		else ""
+	var hull: String = member.build.hull.display_name if member.get("build") != null \
+		else "contact"
+	# TODO(coop/NPCs): a member with an npc_id + dialogue opens a DialoguePanel instead.
+	_flash_note(ShipHails.reply(mark, hull))
 	Sfx.play("click", -8.0, 1.3)
 
 

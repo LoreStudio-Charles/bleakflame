@@ -185,7 +185,12 @@ climax** (see The Braid).
    is the engine the rest of the Campaign runs on. Odessa's reaction is the beat's
    real payoff — she hears "gone, not taken" and it does not comfort her at all.
 
-   IMPLEMENTATION SHAPE (not built): the cave interior needs a **wrecked state**
+   **BUILT 2026-07-27** (`legend_empty_cave`): the wrecked cave state, the scrit pack
+   lying in wait, the drone as carried cargo, and Odessa's ID of it on the return. The
+   shape below is what it was built to — kept because it records WHY each piece is
+   there, not because anything is outstanding.
+
+   IMPLEMENTATION SHAPE: the cave interior needs a **wrecked state**
    (`epharon_town.INTERIORS["?"]` gains a variant — flavour text, scattered props, the
    hermit actor absent, the wall drawn bare), flipped by a quest flag. The stage is a
    `goto`/enter rather than a `talk`, since the point is that there is nobody to talk
