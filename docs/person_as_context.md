@@ -178,6 +178,35 @@ incrementally while tabs still work.
    "a bare idle line" and "the office door standing off to one side".
 4. `SpeakEasy` / `ProspectDeck` swap their `VenueLayout` columns for an addressee. The
    shell keeps the header, the venue's own trade (`venue_box`) and the launch line.
+   **BUILT 2026-07-28.** The board, the hand-ins, the shelf and the office door are
+   offers behind the person now; the meter stays (it is the room's own status, and the
+   `venue_standing` lesson anchors on it).
+
+### What step 4 actually settled
+
+- **The board IS the Mission Computer.** It took a venue NAME instead of `is_station` —
+  a bool can only say two of the four places that have a board, which is exactly why the
+  Shoal and The Dig each grew a private copy with its own take/hand-in tail. One screen,
+  told where it is standing.
+- **`ContextModal`** is what makes rule 6 literal: one context over the room, and the
+  way out says *"← Back to Vyper"*. Offers that open one CLOSE the conversation on the
+  way (rule 1), and closing the context reopens it, rebuilt — so the offer list is
+  honest after you have just spent your credits.
+- **An authored conversation is not a service.** Doug's mining lesson is a real
+  branching tree and had to survive as a TREE. `VenueLayout` grew an `offers` callable
+  + `offer_chosen` signal so a host folds its own business into the ranked list rather
+  than being replaced by it. That is the seam Odessa's bar chat will use.
+- **Hand-ins are still never gated**, and moving the board put that at risk in a new
+  way: gate the OFFER on `board_open` and the whole screen that closes a contract
+  becomes unreachable while the board itself stays perfectly correct.
+- **One word for a standing number.** The meter said NEUTRAL at 10 points while Vyper's
+  own line said TRUSTED — `Standing.state` has no name for the invitation rung.
+  `Addressee.rank_word` / `rank_color` are the single source; the meter reads them.
+- **A sparse room is the design; a sparse room hanging off the ceiling is a bug.** With
+  the columns gone the venue is a desk, some flavour, a meter and the local trade — so
+  the band is capped to a readable measure and centred instead of stretched over 1920.
+  OPEN: the Shoal now has real space in it, which is the argument for **the concourse**
+  (below) arriving sooner than planned — a room should look like a place.
 
 ### What step 3 actually settled
 

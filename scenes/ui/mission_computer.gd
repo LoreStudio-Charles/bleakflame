@@ -25,15 +25,24 @@ signal accept_offer(index: int)          ## global MissionLog.offers index
 signal turn_in_requested(index: int)     ## MissionLog.active index
 
 var ship: TestShip
-var is_station: bool
+## WHERE THIS DESK STANDS — "station" / "planet" / "shoal" / "verge". A venue NAME, not
+## the `is_station` bool this used to take: a bool can only say two of the four places
+## that have a board, so the Rust Shoal and The Dig each grew their own copy of a
+## contract board rather than being able to use this one. Two implementations of "can I
+## hand this in here" is how boards drift apart.
+var venue: String
+## Which board's postings this desk shows. "" = the venue's public board; a name picks a
+## PERSON'S board out of it (Vyper's work, Doug's rock).
+var board: String
 
 
-func _init(p_ship: TestShip, p_is_station: bool) -> void:
+func _init(p_ship: TestShip, p_venue: String, p_board := "") -> void:
 	# EXPLICIT: declaring _init here suppresses the base's, so the shell (header, list,
 	# detail panel) is never built and every widget call lands on null.
 	super()
 	ship = p_ship
-	is_station = p_is_station
+	venue = p_venue
+	board = p_board
 	set_modes([["work", "WORK"], ["log", "HISTORY"]])
 
 
@@ -43,7 +52,7 @@ func _init(p_ship: TestShip, p_is_station: bool) -> void:
 func header_text() -> String:
 	var closeable := 0
 	for m in MissionLog.active:
-		if MissionLog.is_complete(m, ship) and MissionLog.venue_ok(m, is_station):
+		if MissionLog.is_complete(m, ship) and MissionLog.venue_ok_at(m, venue):
 			closeable += 1
 	var ready := "[color=#%s]nothing to hand in here[/color]" % UiTheme.DIM.to_html(false)
 	if closeable > 0:
@@ -81,7 +90,7 @@ func _fill_work() -> void:
 			str(s.id), "entry", {"entry": s}, UiTheme.DIM)
 
 	section("ON OFFER HERE")
-	var offers := MissionLog.offers_for(is_station)
+	var offers := MissionLog.offers_at(venue, board)
 	if offers.is_empty():
 		empty_row("— the board is bare — check back after a run —")
 	for e in offers:
@@ -105,7 +114,7 @@ func _track_row(t: Dictionary, rich: Dictionary, is_current: bool) -> void:
 	var closeable := false
 	if ci >= 0:
 		var m: Dictionary = MissionLog.active[ci]
-		closeable = MissionLog.is_complete(m, ship) and MissionLog.venue_ok(m, is_station)
+		closeable = MissionLog.is_complete(m, ship) and MissionLog.venue_ok_at(m, venue)
 	if closeable:
 		txt = "✓ " + txt
 		tint = UiTheme.AMBER
@@ -188,7 +197,7 @@ func _detail_contract(md: Dictionary) -> void:
 	var stop := ""
 	if not MissionLog.is_complete(m, ship):
 		stop = "Not finished yet — %d of %d." % [have, need]
-	elif not MissionLog.venue_ok(m, is_station):
+	elif not MissionLog.venue_ok_at(m, venue):
 		stop = "Finished — but not at this desk."
 	action("Turn in — %dc" % int(m.get("reward", 0)), stop,
 		func() -> void: turn_in_requested.emit(_contract_index(str(md.key))))

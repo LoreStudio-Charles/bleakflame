@@ -74,6 +74,7 @@ func _ready() -> void:
 		"board_title": "VYPER'S WORK",
 		"board_open": func() -> bool: return Standing.get_points("privateer") >= WORK_AT,
 		"board_shut_text": "\"Krayt vouched for you, so drink. Working for us is a different word.\"   (Vyper's banner opens her work)",
+		"board_ask": "Anything on the board?",
 		"price_of": func(comp: ComponentDef) -> int:
 			return int(ItemVisuals.buy_price(comp) * QUART_MARKUP),
 	})
@@ -81,7 +82,6 @@ func _ready() -> void:
 	_venue.build("THE SPEAK'S EASY — Rust Shoal")
 	_venue.mount_pings(self)
 	_venue.changed.connect(refresh)
-	_venue.talk_pressed.connect(_on_talk)
 	_venue.office_opened.connect(_open_office)
 	_venue.ware_bought.connect(_on_buy_install)
 	# When the whole chain of talks has played out, redraw once against the final
@@ -156,23 +156,6 @@ func _refresh_fence() -> void:
 	UiTheme.button_flavor(btn, "secondary")
 	btn.pressed.connect(_on_fence)
 	row.add_child(btn)
-
-
-## Quest business first, a word with her otherwise. THROUGH THE SHARED TalkChain: this
-## used to pop ONE held talk and stop, with no check_new_work and no replay guard —
-## three playtest bugs DockScreen had already fixed and the bar was written without.
-## The button is never a dead click.
-func _on_talk(_who: String) -> void:
-	if _venue.talks.drain("vyper"):
-		return
-	Pilot.meet("vyper")
-	var chat := DialoguePanel.new("vyper",
-		{"start": {"text": Npcs.idle_line("vyper"),
-			"choices": [{"text": "Later, then.", "next": "end"}]}},
-		func(_a: String) -> String: return "")
-	chat.closed.connect(refresh)
-	_active_talk = chat
-	add_child(chat)
 
 
 func _open_office(prof: String) -> void:

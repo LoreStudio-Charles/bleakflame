@@ -92,9 +92,15 @@ static func standing_line(npc: String) -> String:
 		rank_word(faction), Standing.get_points(faction)]
 
 
-## The word for a standing number. TRUSTED is the INVITE_AT step — "trusted enough to
-## be offered a commission" — which is the one crossing in the neutral band that
-## changes what a person will do with you, so it gets a name of its own.
+## THE WORD FOR A STANDING NUMBER, and the ONLY one — the venue's meter reads this too.
+## They were computed separately for one build and immediately disagreed: at 10 points
+## the Shoal's meter said NEUTRAL while Vyper's own line said TRUSTED, because
+## Standing.state has no name for the invitation rung and this does.
+##
+## TRUSTED is the INVITE_AT step — "trusted enough to be offered a commission" — the one
+## crossing inside the neutral band that changes what a person will do with you, so it
+## earns a name. That is exactly why it cannot live only here: a rung the meter can't
+## say is a rung the player watches themselves fail to reach.
 static func rank_word(faction: String) -> String:
 	match Standing.state(faction):
 		"kos":
@@ -106,3 +112,16 @@ static func rank_word(faction: String) -> String:
 		"friendly":
 			return "FRIENDLY"
 	return "TRUSTED" if Standing.eligible(faction) else "NEUTRAL"
+
+
+## The colour that word wears. Beside rank_word on purpose: a word and its colour are one
+## piece of information, and splitting them across two files is how they drift.
+static func rank_color(faction: String) -> String:
+	match rank_word(faction):
+		"ALLIED": return "#6de08f"
+		"FRIENDLY": return "#8fe08f"
+		"TRUSTED": return "#9fd8a8"
+		"NEUTRAL": return "#73bff2"
+		"HOSTILE": return "#f2a24a"
+		"HUNTED": return "#f25a50"
+	return "#8890a0"

@@ -58,12 +58,19 @@ func _ready() -> void:
 		"ship": ship, "venue": "verge", "board": "The Dig",
 		"npc": "doug", "faction": "miner", "rungs": RUNGS,
 		"board_title": "DIG WORK — all of it involves rock",
+		"board_ask": "Anything that needs digging?",
+		# HIS LESSON IS AN OFFER, NOT THE CONVERSATION. Doug is the game's mining
+		# teacher and DOUG_DECK is a real authored TREE — folding it into a one-line
+		# reply would delete it. It becomes one line in his list instead, ranked with
+		# everything else, and still opens the whole tree when taken.
+		"offers": func() -> Array: return [Addressee.offer(
+			"rock", "Tell me about the rock.", Addressee.Kind.SERVICE, false, true)],
 	})
 	panel.add_child(_venue)
 	_venue.build("THE DIG — Doug Diggs, Prospector Guild")
 	_venue.mount_pings(self)
 	_venue.changed.connect(refresh)
-	_venue.talk_pressed.connect(_on_talk)
+	_venue.offer_chosen.connect(_on_offer)
 	_venue.office_opened.connect(_open_office)
 	_venue.ware_bought.connect(_buy_ware)
 	_venue.talks.chain_finished.connect(refresh)
@@ -151,11 +158,10 @@ func _sell_ore(key: String) -> void:
 
 ## THROUGH THE SHARED TalkChain — drains everything he holds, runs check_new_work
 ## here, and never replays the line just spoken. This used to pop one talk and stop.
-func _on_talk(_who: String) -> void:
-	if _venue.talks.drain("doug"):
+## Doug's own offer: the mining lesson nothing else in the game teaches.
+func _on_offer(id: String) -> void:
+	if id != "rock":
 		return
-	Pilot.meet("doug")
-	# No business — just Doug, and the mining lesson nothing else teaches.
 	var chat := DialoguePanel.new("doug", Dialogues.DOUG_DECK,
 		func(_a: String) -> String: return "")
 	chat.vo_prefix = "doug_deck"

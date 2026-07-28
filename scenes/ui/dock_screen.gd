@@ -1055,7 +1055,7 @@ func _build_market_tab() -> void:
 ## header, and own the two ACTIONS (they move the wallet and standing, so they
 ## stay on the shared paths every other board calls).
 func _build_missions_tab(title: String) -> void:
-	_missions = MissionComputer.new(ship, is_station)
+	_missions = MissionComputer.new(ship, "station" if is_station else "planet")
 	_missions.name = title
 	_tabs.add_child(_missions)
 	Tutor.register("panel_missions", _missions)

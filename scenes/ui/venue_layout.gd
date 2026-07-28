@@ -11,29 +11,42 @@ extends VBoxContainer
 ##
 ##   ┌ header ─────────────────────────────────────────────────────┐
 ##   │ <NpcDesk> · flavour        │  <venue_box>  — the local trade │
-##   │ CONTRACTS                  │  QUARTERMASTER (trust-gated)    │
-##   │   board · take · hand in   │    shelf, each row's price      │
-##   │ ── STANDING ──             │  <office door>                  │
+##   │ ── STANDING ── + next rung │                                 │
 ##   └─────────────────────────────────────────────────────────────┘
+##            │
+##            └── the addressee ──┬── the board   (MissionComputer, this venue)
+##                                ├── the shelf   (quartermaster, trust-gated)
+##                                ├── the door    (GuildOffice)
+##                                └── quest business — always first, always gold
 ##
-## CONTRACTS SIT DIRECTLY ABOVE THE METER THEY MOVE. Standing lives on the Pilot
-## tab today, a screen away from the board that changes it, so a player cannot see
-## the work and its consequence at once. The adjacency is the point.
+## PERSON AS CONTEXT, STEP 4 (2026-07-28, docs/person_as_context.md). The board, the
+## hand-ins, the shelf and the office door were COLUMNS here until this pass — better
+## organised than the scatter they replaced, and still a room full of information. They
+## are OFFERS now: one ranked list behind the person who owns them, each opening a
+## single context that returns to the conversation rather than to the venue.
 ##
-## THE HOST KEEPS WHAT IS ITS OWN. The fence, the ore buyer, the flavour text —
-## anything that is the REASON to fly here — goes in `venue_box` and `body`. This
-## owns only the parts that were identical everywhere.
+## THE ROOM KEEPS WHAT IS THE ROOM. The fence, the ore buyer, the flavour, the standing
+## meter — the reason to fly here — stay on screen in `venue_box` and `body`. The rest
+## was always business you transact with a PERSON, and it reads like it now.
+##
+## THE DESK SITS DIRECTLY ABOVE THE METER. Contracts used to, for a stated reason: work
+## and its consequence one glance apart, where the Pilot tab put them a screen apart.
+## The work moved one click behind the desk, so the desk inherited the adjacency —
+## you ask for the job from a person standing on top of the meter it moves.
 
 signal talk_pressed(npc: String)
 signal office_opened(prof: String)
 signal ware_bought(path: String)
 signal changed                      ## something here altered the world; host should redraw
+## A HOST'S OWN OFFER was chosen — anything this shell knows nothing about. Doug's
+## mining lesson is the first: an authored dialogue tree that must stay a tree, folded
+## into his list as one line rather than being replaced by the addressee wholesale.
+signal offer_chosen(id: String)
 
-## The board is sized to a BOARD, not to the screen. A venue posts three or four
-## contracts; letting the list take the slack overshoots into hundreds of pixels of
-## empty list under three rows, and pinning it short hides the third behind a
-## scrollbar. The spacer below takes the leftover instead.
-const BOARD_H := 200
+## How wide a room reads. The design base is 1920 (CLAUDE.md) and a venue is now a desk,
+## some flavour, a meter and the local trade — content that does not want a nineteen-
+## hundred-pixel measure. The slack goes to the margins instead of between the columns.
+const ROOM_W := 1180
 
 ## THE ANCHORS EVERY VENUE OFFERS, so a lesson can point at the board or the meter at
 ## ANY faction quarter without knowing which one it is standing in. The shell registers
@@ -64,6 +77,17 @@ var trust: Callable
 var board_open: Callable
 var board_shut_text := ""
 var board_title := "CONTRACTS"
+## HOW THE PLAYER ASKS FOR WORK, in their own voice — the addressee's offer line. The
+## old `board_title` was a COLUMN HEADING ("VYPER'S WORK"); a spoken list needs a
+## question, and flattening every venue to one generic phrasing is what cost them their
+## voice the first time this was extracted. Doug's board is about rock and says so.
+var board_ask := "Anything on the board?"
+
+## THE HOST'S OWN OFFERS, evaluated each time the list is drawn. Returns an Array of
+## Addressee.offer dicts; the ids come back on `offer_chosen`. This is how an authored
+## conversation survives the migration — Doug's mining lesson is a real dialogue TREE
+## and must not be flattened into a one-line reply, so it becomes an offer that opens it.
+var extra_offers: Callable = func() -> Array: return []
 
 ## What this venue charges. Defaults to the going rate; a host that marks up or
 ## discounts sets this, and it is the SAME callable the buy button prints and the
@@ -78,13 +102,11 @@ var talks: TalkChain                ## drain-all / check_new_work / no-replay / 
 
 var _msg := ""                      ## said once, then cleared — never goes stale
 var _msg_label: RichTextLabel
-var _offers: ItemList
-var _take_btn: Button
-var _active_box: VBoxContainer
 var _meter: RichTextLabel
-var _quart_head: Label
-var _quart_box: VBoxContainer
-var _door_box: HBoxContainer
+var _shut_note: Label
+## Where CanvasLayer children go — a context, a conversation, a ping. A VBoxContainer
+## would lay a full-rect overlay out as a row, so none of them can be parented here.
+var _canvas: Node
 
 
 func _init(cfg: Dictionary) -> void:
@@ -104,6 +126,9 @@ func _init(cfg: Dictionary) -> void:
 	board_open = cfg.get("board_open", func() -> bool: return true)
 	board_shut_text = str(cfg.get("board_shut_text", ""))
 	board_title = str(cfg.get("board_title", "CONTRACTS"))
+	board_ask = str(cfg.get("board_ask", "Anything on the board?"))
+	if cfg.has("offers"):
+		extra_offers = cfg.offers
 	talks = TalkChain.new(self, venue)
 	if cfg.has("price_of"):
 		price_of = cfg.price_of
@@ -133,19 +158,41 @@ func build(title: String) -> void:
 
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 22)
-	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# CENTRED, NOT STRETCHED. With the board and the shelf moved behind the desk, the
+	# room is genuinely short — and pinned to the top it read as a screen that had
+	# forgotten to finish drawing, which is the exact complaint the old tall board list
+	# was sized to answer. A sparse room is the design; a sparse room hanging off the
+	# ceiling is a bug. Taking its natural height and sitting in the middle of the panel
+	# reads as composed, and it stays right as venues gain their own business.
+	cols.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# AND CAPPED, NOT STRETCHED ACROSS 1920. Two columns holding a desk and a meter,
+	# spread over the full design width, put ~1200px of nothing between them and read as
+	# two unrelated fragments rather than one room. Held to a readable measure and
+	# centred, they read as a place with space in it.
+	cols.custom_minimum_size = Vector2(ROOM_W, 0)
+	cols.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var lead := Control.new()
+	lead.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(lead)
 	add_child(cols)
+	var trail := Control.new()
+	trail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(trail)
 
 	cols.add_child(_build_left())
 	cols.add_child(_build_right())
-	Tutor.register("venue_board", _offers)
 	if _meter != null:
 		Tutor.register("venue_standing", _meter)
 
 
 ## Ping overlays go on the HOST canvas, never in this VBox: a TutorPing is a full-rect
 ## Control and a container would lay it out as a row. The host calls this once.
+##
+## IT ALSO REMEMBERS THE CANVAS, which is what lets this open its own conversations and
+## contexts. The alternative — a signal per context for the host to answer by building
+## the same modal each time — is the copied-per-venue shape this class exists to end.
 func mount_pings(canvas: Node) -> void:
+	_canvas = canvas
 	for a in ANCHORS:
 		var ping := TutorPing.new()
 		ping.anchor = str(a)
@@ -156,11 +203,17 @@ func _build_left() -> Control:
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override("separation", 10)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	desk = NpcDesk.new(npc)
-	desk.talk_pressed.connect(func(who: String) -> void: talk_pressed.emit(who))
+	desk.talk_pressed.connect(func(who: String) -> void:
+		talk_pressed.emit(who)
+		open_addressee())
 	left.add_child(desk)
+	# THE BOARD AND THE DOOR ARE REACHED THROUGH THE PERSON NOW, so a lesson pointing at
+	# either points at them. The anchors keep their names because what they MEAN — where
+	# the work is, where the commission is signed — has not changed, only where it lives.
+	Tutor.register("venue_board", desk)
+	Tutor.register("office_door", desk)
 
 	body = RichTextLabel.new()
 	body.bbcode_enabled = true
@@ -168,45 +221,17 @@ func _build_left() -> Control:
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_child(body)
 
-	# THE SHELL OWNS THE SHAPE, THE VENUE OWNS THE WORDS. "CONTRACTS" is the honest
-	# default for a board several people post to; a single-giver board says whose it is
-	# ("VYPER'S WORK", "DIG WORK — all of it involves rock"), and flattening those into
-	# one generic word cost the venues their voice the first time this was extracted.
-	var work_head := Label.new()
-	work_head.text = board_title
-	work_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	left.add_child(work_head)
-
-	_offers = ItemList.new()
-	# THE BOARD TAKES THE COLUMN. Sized to a minimum so it never collapses, and allowed
-	# to grow so the left column has no void in it: an ItemList draws its own panel, so
-	# a tall one reads as a NOTICE BOARD with room on it, where the same emptiness as
-	# bare background read as a screen that forgot to finish. This is the third sizing
-	# this list has had — 96px hid the third posting behind a scrollbar, an unpinned
-	# expand left ~700px of blank list ABOVE nothing, and the difference now is that the
-	# meter below anchors the bottom, so the list is framed instead of dangling.
-	_offers.custom_minimum_size = Vector2(0, BOARD_H)
-	_offers.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_offers.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_offers.fixed_icon_size = Vector2i(32, 32)
-	_offers.icon_mode = ItemList.ICON_MODE_LEFT
-	_offers.item_activated.connect(func(_i: int) -> void: take_selected())
-	left.add_child(_offers)
-
-	# Buttons sit in a row so they keep their own width. A Button parented straight
-	# to a VBoxContainer stretches to fill it, which made "Take the job" a 1900px bar.
-	var btn_row := HBoxContainer.new()
-	btn_row.add_theme_constant_override("separation", 8)
-	left.add_child(btn_row)
-	_take_btn = Button.new()
-	_take_btn.text = "Take the job"
-	UiTheme.button_flavor(_take_btn, "secondary")
-	_take_btn.pressed.connect(take_selected)
-	btn_row.add_child(_take_btn)
-
-	_active_box = VBoxContainer.new()
-	_active_box.add_theme_constant_override("separation", 4)
-	left.add_child(_active_box)
+	# WHY THE BOARD IS SHUT, in the venue's own voice, kept BESIDE THE METER rather than
+	# hidden with the offer. The trust rule (absent, not greyed) is about advertising an
+	# inventory you have not earned; this is a fact about YOUR STANDING, which the meter
+	# directly below is already explaining — so it says the quiet part out loud instead
+	# of leaving a pilot to wonder why nobody here has work for them.
+	_shut_note = Label.new()
+	_shut_note.add_theme_font_size_override("font_size", 12)
+	_shut_note.add_theme_color_override("font_color", UiTheme.DIM)
+	_shut_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_shut_note.visible = false
+	left.add_child(_shut_note)
 
 	if _standing_key() != "":
 		var st_head := Label.new()
@@ -218,6 +243,7 @@ func _build_left() -> Control:
 		_meter.fit_content = true
 		_meter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		left.add_child(_meter)
+
 	return left
 
 
@@ -225,29 +251,11 @@ func _build_right() -> Control:
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 10)
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	venue_box = VBoxContainer.new()
 	venue_box.add_theme_constant_override("separation", 6)
 	right.add_child(venue_box)
 
-	_quart_head = Label.new()
-	_quart_head.add_theme_color_override("font_color", UiTheme.ACCENT)
-	right.add_child(_quart_head)
-	_quart_box = VBoxContainer.new()
-	_quart_box.add_theme_constant_override("separation", 6)
-	right.add_child(_quart_box)
-
-	# THE DOOR FOLLOWS THE COUNTER. Pushed to the foot of the column by a spacer it hung
-	# alone in several hundred pixels of nothing, reading as a stray button rather than
-	# the way out of the room — and the counter it belongs to was up at the ceiling.
-	# One continuous block; the slack falls below all of it.
-	_door_box = HBoxContainer.new()
-	right.add_child(_door_box)
-
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right.add_child(spacer)
 	return right
 
 
@@ -266,10 +274,10 @@ func refresh() -> void:
 	_msg_label.visible = _msg != ""
 	_msg_label.text = "[color=#f2b859]%s[/color]" % _msg
 	_msg = ""
-	_refresh_board()
+	var open: bool = board_open.call()
+	_shut_note.visible = not open and board_shut_text != ""
+	_shut_note.text = board_shut_text
 	_refresh_meter()
-	_refresh_quartermaster()
-	_refresh_door()
 	# LAST, so the snapshot sees the finished screen (the same ordering rule
 	# DockScreen's _dock_context follows — a context built mid-refresh describes a
 	# half-drawn room).
@@ -318,59 +326,121 @@ func flash(text: String) -> void:
 	changed.emit()
 
 
-func _refresh_board() -> void:
-	_offers.clear()
-	for c in _active_box.get_children():
-		c.queue_free()
-	# THE BOARD KEEPS ITS SHAPE WHEN IT IS SHUT. Hiding the list collapsed the left
-	# column to a few lines against a whole empty screen, which reads as a venue that
-	# has not been built — when in fact it is a venue you have not been let into yet.
-	# The refusal belongs ON the board, where the postings would be.
+## ---- THE ADDRESSEE (docs/person_as_context.md step 4) ------------------------
+##
+## The board, the shelf and the office door used to be COLUMNS on this screen — the
+## room-full-of-information the design is undoing. They are OFFERS now: one ranked list
+## behind the person who owns them, quest business first, and each opens a single
+## context that returns here rather than to the venue.
+##
+## The venue keeps what makes it worth flying to — the fence, the ore counter, the
+## flavour, the standing meter. Those are the ROOM. The rest was always business you
+## transact with a person.
+func open_addressee() -> void:
+	if _canvas == null:
+		return
+	Pilot.meet(npc)
+	var panel := DialoguePanel.new(npc,
+		Addressee.nodes(Npcs.greet_line(npc, talks.has_news(npc)), _offers_for_npc()),
+		func(a: String) -> String: return _on_offer(a))
+	panel.subtitle = Addressee.standing_line(npc)
+	panel.closed.connect(func() -> void: changed.emit())
+	_canvas.add_child(panel)
+
+
+## LISTED STANDING-FIRST, TODAY'S-BUSINESS-LAST — deliberately the opposite of how
+## Addressee presents them, so "the campaign comes first" can never quietly become true
+## because of the order these lines happen to sit in.
+func _offers_for_npc() -> Array:
+	var offers: Array = []
+	# THE BOARD, or the work you already agreed to. Its presence is NOT simply
+	# `board_open`: hand-ins are never gated (a job you took must always have somewhere
+	# to be closed), so a pilot whose standing has since slipped below the posting line
+	# can still reach the desk that closes it. Only the WORDS change.
 	var open: bool = board_open.call()
-	_take_btn.visible = open
-	if not open:
-		if board_shut_text != "":
-			_offers.add_item(board_shut_text)
-			_offers.set_item_disabled(0, true)
-	else:
-		for entry in MissionLog.offers_at(venue, board):
-			var m: Dictionary = entry.m
-			var idx := _offers.add_item("%s  —  %dc" % [_row_text(m), m.reward])
-			_offers.set_item_metadata(idx, int(entry.index))
-			var face := Npcs.portrait(str(m.get("giver", npc)))
-			if face != null:
-				_offers.set_item_icon(idx, face)
-		if _offers.item_count == 0:
-			_offers.add_item("— the board's bare. Come back when the lane's been busy —")
-			_offers.set_item_disabled(0, true)
-		_take_btn.disabled = _offers.item_count == 1 and _offers.is_item_disabled(0)
-
-	# HAND-INS ARE NEVER GATED. The old board returned early when it was shut, so work
-	# you had ALREADY TAKEN became unturnable-in the moment your standing slipped below
-	# the posting line — the job stayed in your log with nowhere on the map to close it.
-	# You can always finish what you agreed to.
-	for i in MissionLog.active.size():
-		var m: Dictionary = MissionLog.active[i]
-		if not MissionLog.venue_ok_at(m, venue):
-			continue
-		var done: bool = MissionLog.is_complete(m, ship)
-		var b := Button.new()
-		b.text = "%s  —  %s" % [_row_text(m),
-			"HAND IN (%dc)" % m.reward if done else "in progress"]
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.disabled = not done
-		if done:
-			UiTheme.button_flavor(b, "primary")
-		b.pressed.connect(turn_in.bind(i))
-		_active_box.add_child(b)
+	if open or _has_work_here():
+		offers.append(Addressee.offer("work",
+			board_ask if open else "I've got work to close out.",
+			Addressee.Kind.SERVICE, _has_turn_in_here(), true))
+	# THE SHELF — absent, not greyed, below trust (docs/venue_layout.md's trust rule).
+	if prof != "" and trust.call():
+		offers.append(Addressee.offer("shelf", "Show me what's on the shelf.",
+			Addressee.Kind.SERVICE, false, true))
+	if prof != "" and Professions.office_open(prof):
+		var member: bool = Pilot.profession == prof
+		offers.append(Addressee.offer("office",
+			"Let me into the %s." % Professions.office_name(prof) if member
+				else "About the commission.",
+			Addressee.Kind.DOOR,
+			not member and _standing_key() != "" and Standing.eligible(_standing_key()),
+			true))
+	# THE HOST'S OWN BUSINESS, ranked with everything else rather than around it.
+	for o in (extra_offers.call() as Array):
+		offers.append(o)
+	if talks.has_news(npc):
+		var held := talks.held_for(npc)
+		var label := "About %s." % str((held[0] as Dictionary).get("quest", "the job")) \
+			if not held.is_empty() else "You wanted a word."
+		if held.size() > 1:
+			label += "   (+%d more)" % (held.size() - 1)
+		offers.append(Addressee.offer("quest", label, Addressee.Kind.QUEST, false, true))
+	return offers
 
 
-## `desc` on a single-giver board, `label` where several people post. MissionLog.label
-## appends the giver, which is right on a shared board and pure noise on a personal
-## one — every row at the Speak's Easy read "… — Vyper" under a heading saying
-## VYPER'S WORK. Derived per row rather than configured, so it cannot go stale.
-func _row_text(m: Dictionary) -> String:
-	return str(m.desc) if str(m.get("giver", "")) == npc else MissionLog.label(m)
+func _on_offer(action: String) -> String:
+	match action:
+		"work": _open_work()
+		"shelf": _open_shelf()
+		"office": office_opened.emit(prof)
+		"quest": talks.drain(npc)
+		# NOT OURS — the host offered it, the host answers it.
+		_: offer_chosen.emit(action)
+	return ""
+
+
+## Is there anything of this venue's to do at the board at all — work in hand that
+## closes here, finished or not?
+func _has_work_here() -> bool:
+	for m in MissionLog.active:
+		if MissionLog.venue_ok_at(m, venue):
+			return true
+	return false
+
+
+## THE BOARD IS THE MISSION COMPUTER. Not a lookalike of it: the Shoal and The Dig each
+## grew a private board with its own take/hand-in tail, which is precisely how two
+## boards drift apart — and the station's had already been rebuilt to the context shape
+## after a tester asked "where do I turn this in?". One screen, told which venue it is
+## standing at, answers that question the same way everywhere.
+func _open_work() -> void:
+	var mc := MissionComputer.new(ship, venue, board)
+	var modal := _open_context(mc)
+	mc.accept_offer.connect(func(i: int) -> void:
+		take(i)
+		modal.refresh())
+	mc.turn_in_requested.connect(func(i: int) -> void:
+		turn_in(i)
+		modal.refresh())
+
+
+func _open_shelf() -> void:
+	_open_context(_build_shelf())
+
+
+## ONE CONTEXT AT A TIME (rule 1), AND IT RETURNS TO THE ADDRESSEE (rule 6). The offer
+## closed the conversation on its way here, so nothing is stacked; closing this reopens
+## it, rebuilt — which is also how the offer list stays honest after you have just
+## accepted a contract or spent your last credits at the shelf.
+##
+## Not merely cosmetic: DialoguePanel sits on layer 25 and a modal on 20, so an
+## addressee left open would draw straight over the context it had just opened.
+func _open_context(content: Control) -> ContextModal:
+	var modal := ContextModal.new(content, Npcs.display_name(npc))
+	modal.closed.connect(func() -> void:
+		changed.emit()
+		open_addressee())
+	_canvas.add_child(modal)
+	return modal
 
 
 ## The meter, and THE NEXT RUNG — what more standing would actually open, in this
@@ -381,9 +451,11 @@ func _refresh_meter() -> void:
 		return
 	var key := _standing_key()
 	var p := Standing.get_points(key)
-	var st := Standing.state(key)
+	# THROUGH Addressee, which is where the word for a standing number lives now — this
+	# used to call Standing.state directly and print NEUTRAL at 10 points while the
+	# person standing beside it called you TRUSTED.
 	var txt := "[b]%s[/b]\n[color=%s]%s[/color]   [color=#8890a0]standing %d[/color]" % [
-		faction_label(faction), _state_color(st), st.to_upper(), p]
+		faction_label(faction), Addressee.rank_color(key), Addressee.rank_word(key), p]
 	var climb := climb_to_next(rungs, p)
 	if climb.is_empty():
 		txt += "\n%s\n[color=#8890a0]top of their ladder — there is nothing left to prove[/color]" % _bar(1.0)
@@ -433,15 +505,16 @@ static func climb_to_next(ladder: Array, points: int) -> Dictionary:
 ##
 ## Above the line the shelf shows in full and EVERY ROW STATES ITS OWN PRICE OF ENTRY,
 ## so nothing is ever a silent refusal.
-func _refresh_quartermaster() -> void:
-	for c in _quart_box.get_children():
-		c.queue_free()
-	var trusted: bool = prof != "" and trust.call()
-	_quart_head.visible = trusted
-	_quart_box.visible = trusted
-	if not trusted:
-		return
-	_quart_head.text = "QUARTERMASTER — %s" % Npcs.display_name(npc)
+## Only ever built when the offer to see it was on the list, so there is no locked
+## state to draw here — asking for it IS the trust check.
+func _build_shelf() -> Control:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	var head := Label.new()
+	head.text = "QUARTERMASTER — %s" % Npcs.display_name(npc)
+	head.add_theme_font_size_override("font_size", 18)
+	head.add_theme_color_override("font_color", UiTheme.AMBER)
+	col.add_child(head)
 	var stock: Array = Professions.wares(prof)
 	var shown := 0
 	for path in stock:
@@ -449,12 +522,13 @@ func _refresh_quartermaster() -> void:
 		if not ResourceLoader.exists(sp):
 			continue
 		shown += 1
-		_quart_box.add_child(_ware_row(load(sp), sp))
+		col.add_child(_ware_row(load(sp), sp))
 	if shown == 0:
 		var soon := Label.new()
 		soon.text = "Nothing on the shelf yet — modules land here as they are forged."
 		soon.add_theme_color_override("font_color", UiTheme.DIM)
-		_quart_box.add_child(soon)
+		col.add_child(soon)
+	return col
 
 
 ## One row: the real ItemTile (same grade border, mark badge and pips as the Armory —
@@ -559,31 +633,10 @@ static func band_name(points: int) -> String:
 	return "Neutral"
 
 
-## The commission's door, when its leader stands here and has opened it. Same
-## GuildOffice every other leader uses — a commission is administered where its
-## leader stands, whether that is a station counter or a bar in a pirate den.
-func _refresh_door() -> void:
-	for c in _door_box.get_children():
-		c.queue_free()
-	if prof == "" or not Professions.office_open(prof):
-		return
-	var door := Button.new()
-	door.text = "%s  →  %s" % [
-		"Enter" if Pilot.profession == prof else "Visit",
-		Professions.office_name(prof)]
-	UiTheme.button_flavor(door, "primary")
-	door.pressed.connect(func() -> void: office_opened.emit(prof))
-	_door_box.add_child(door)
-	Tutor.register("office_door", door)
-
-
 ## THROUGH take(), never accept(): take() reports WHY a refusal happened (a full log
 ## answered a bare accept() with a click and nothing else) and calls ensure_offers.
-func take_selected() -> void:
-	var sel := _offers.get_selected_items()
-	if sel.is_empty() or _offers.is_item_disabled(sel[0]):
-		return
-	var r := MissionLog.take(int(_offers.get_item_metadata(sel[0])))
+func take(index: int) -> void:
+	var r := MissionLog.take(index)
 	if r.ok:
 		Tutor.did("accepted_contract")
 	else:
@@ -628,12 +681,3 @@ func _bar(frac: float) -> String:
 	return "[color=#6de08f]%s[/color][color=#39414f]%s[/color]" % [
 		"▰".repeat(lit), "▱".repeat(CELLS - lit)]
 
-
-func _state_color(state: String) -> String:
-	match state:
-		"allied": return "#6de08f"
-		"friendly": return "#8fe08f"
-		"neutral": return "#73bff2"
-		"hostile": return "#f2a24a"
-		"kos": return "#f25a50"
-	return "#8890a0"

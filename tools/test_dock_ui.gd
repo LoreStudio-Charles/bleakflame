@@ -49,6 +49,8 @@ func _ready() -> void:
 		_case_office_door_is_earned,
 		_case_the_addressee_ranks_quest_business_first,
 		_case_the_desk_and_the_greeting_agree,
+		_case_a_shut_board_still_closes_work_you_took,
+		_case_an_authored_conversation_survives_the_addressee,
 		_case_office_shows_tree_and_terms,
 		_case_commission_never_joins_on_one_click,
 		_case_every_leader_has_a_room,
@@ -331,6 +333,92 @@ func _case_the_addressee_ranks_quest_business_first() -> void:
 		"and he doesn't open with 'nothing pressing' while holding a job for you")
 	_dispose(screen, panel)
 	screen.queue_free()
+
+
+## YOU CAN ALWAYS FINISH WHAT YOU AGREED TO. The old board carried this rule explicitly —
+## it returned early when shut, so work you had ALREADY TAKEN became unturnable-in the
+## moment your standing slipped below the posting line, and the job sat in your log with
+## nowhere on the map to close it.
+##
+## MOVING THE BOARD BEHIND THE PERSON PUT THAT RULE BACK AT RISK IN A NEW WAY: if the
+## offer to talk about work appears only while the board is OPEN, the whole screen that
+## closes a contract becomes unreachable — the same bug, one level up, and invisible
+## because the board itself is still perfectly correct.
+func _case_a_shut_board_still_closes_work_you_took() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var bar := SpeakEasy.new(ship)
+	add_child(bar)
+	bar.visible = true
+	Standing.reset()
+	Pilot.profession = ""
+	MissionLog.active.clear()
+	MissionLog.ensure_offers()
+
+	# Banner up, take one of her jobs.
+	Standing.add("privateer", SpeakEasy.WORK_AT - Standing.get_points("privateer"))
+	bar.refresh()
+	var posted := MissionLog.offers_at("shoal", "The Speak's Easy")
+	_ok(not posted.is_empty(), "she has work posted to take")
+	if posted.is_empty():
+		bar.queue_free()
+		ship.queue_free()
+		return
+	MissionLog.take(int(posted[0].index))
+	_ok(MissionLog.active.size() == 1, "the contract is in hand")
+
+	# Now fall back under her banner — a truce guest again, holding her job.
+	Standing.add("privateer", -50 - Standing.get_points("privateer"))
+	bar.refresh()
+	var talk := _venue_talk(bar)
+	_ok(_find_button(talk, "Anything on the board") == null,
+		"her board is shut again — she posts nothing to a guest")
+	var closing := _find_button(talk, "close out")
+	_ok(closing != null,
+		"...but the work you already took can still be reached, in different words")
+	var work := _take_offer(bar, talk, "close out")
+	_ok(work != null and _find_text(work, str(MissionLog.active[0].desc)),
+		"...and the contract is on the screen that closes it")
+	if work != null:
+		work.free()
+	MissionLog.active.clear()
+	bar.queue_free()
+	ship.queue_free()
+
+
+## AN AUTHORED CONVERSATION IS NOT A SERVICE, and the addressee must not eat one. Doug is
+## the game's mining teacher and Dialogues.DOUG_DECK is a real branching tree — folding it
+## into a one-line reply would have deleted the only place the game explains that a gun
+## chips a rock and a cutter opens it. It becomes ONE OFFER in his list instead, which is
+## the same merge Odessa's bar chat is still waiting for.
+func _case_an_authored_conversation_survives_the_addressee() -> void:
+	var ship := TestShip.new()
+	add_child(ship)
+	ship.apply_build(SampleBuilds.get_build(SampleBuilds.current))
+	var deck := ProspectDeck.new(ship)
+	add_child(deck)
+	deck.visible = true
+	deck.refresh()
+
+	var talk := _venue_talk(deck)
+	_ok(talk != null, "Doug is always talkable — he is the game's mining teacher")
+	var ask := _find_button(talk, "about the rock")
+	_ok(ask != null, "his mining lesson is one of the things he'll do with you")
+	_dispose(deck, talk)
+	if ask != null:
+		ask.pressed.emit()
+		var lesson := _live_panel(deck)
+		# THE WHOLE TREE, not a flattened line: DOUG_DECK's opening node, and more than
+		# one way on from it. A one-choice panel would be the flattening this guards.
+		_ok(lesson != null and _find_text(lesson,
+			str((Dialogues.DOUG_DECK["start"] as Dictionary).text).substr(0, 24)),
+			"...and taking it opens his authored tree, not a canned reply")
+		_ok(lesson != null and _choice_texts(lesson, []).size() > 1,
+			"...with its branches intact")
+		_dispose(deck, lesson)
+	deck.queue_free()
+	ship.queue_free()
 
 
 ## A SCREEN MUST NOT CONTRADICT ITSELF. The desk outside says whether someone is holding
@@ -648,32 +736,45 @@ func _case_the_privateer_is_earned_at_the_shoal() -> void:
 	add_child(bar)
 	bar.visible = true          # refresh() early-returns on a hidden screen
 
+	# THE LADDER IS NOW READ OFF WHAT SHE OFFERS. The board, the shelf and the back room
+	# stopped being columns on this screen in the person-as-context pass — they are lines
+	# in Vyper's own list — so the question "can the player reach it" is asked by walking
+	# up to her, which is also the only way a player can ask it.
 	Standing.reset()
 	Pilot.profession = ""
 	Standing.add("privateer", -50 - Standing.get_points("privateer"))   # Krayt's truce
 	bar.refresh()
-	# IS_VISIBLE_IN_TREE, not `== null`. The button is hidden rather than freed, so a
-	# null check passes for the wrong reason and would keep passing if the hiding broke.
-	# This asks the only question that matters: can the player see it and click it?
-	var locked := _find_button(bar, "Take the job")
-	_ok(locked == null or not locked.is_visible_in_tree(),
-		"under Krayt's truce there is no work to take — you are a guest, not crew")
-	_ok(_find_button(bar, Professions.office_name("privateer")) == null,
-		"...and The Back Room's door is not drawn")
+	var guest := _venue_talk(bar)
+	_ok(guest != null, "Vyper always talks — a guest can still stand at the bar")
+	_ok(_find_button(guest, "Anything on the board") == null,
+		"under Krayt's truce she offers no work — you are a guest, not crew")
+	_ok(_find_button(guest, "About the commission") == null,
+		"...and The Back Room is not mentioned")
+	_dispose(bar, guest)
 
 	Standing.add("privateer", 50)                                      # Vyper's banner
 	bar.refresh()
-	var take := _find_button(bar, "Take the job")
-	_ok(take != null and take.is_visible_in_tree(),
+	var crew := _venue_talk(bar)
+	_ok(_find_button(crew, "Anything on the board") != null,
 		"Vyper's banner puts a job on the board")
-	_ok(_find_text(bar, "VYPER'S WORK"), "...under her own heading")
-	_ok(_find_button(bar, Professions.office_name("privateer")) == null,
+	_ok(_find_button(crew, "About the commission") == null,
 		"...but The Back Room is still shut at 0 — the work comes first")
+	# AND THE BOARD IS REALLY BEHIND IT: her postings, in the shared Mission Computer.
+	var work := _take_offer(bar, crew, "Anything on the board")
+	_ok(work != null, "...and asking opens her board")
+	if work != null:
+		_ok(_find_text(work, str(MissionLog.offers_at("shoal", "The Speak's Easy")[0].m.desc)),
+			"...with her own postings on it, not the station's")
+		_ok(_find_button(work, "Back to Vyper") != null,
+			"...and the way out returns to her, not to the room")
+		work.free()
 
 	Standing.add("privateer", Standing.INVITE_AT)                       # her work, run
 	bar.refresh()
-	_ok(_find_button(bar, Professions.office_name("privateer")) != null,
+	var trusted := _venue_talk(bar)
+	_ok(_find_button(trusted, "About the commission") != null,
 		"at INVITE_AT the door to The Back Room is drawn at the bar")
+	_dispose(bar, trusted)
 	bar.queue_free()
 	ship.queue_free()
 
@@ -700,11 +801,18 @@ func _case_no_trust_no_shelf() -> void:
 	Pilot.profession = ""
 
 	# Every rung BELOW trust, including the two where the player is already welcome.
+	# ABSENT NOW MEANS SHE DOES NOT OFFER IT: the shelf moved behind Vyper, so "not on
+	# screen" is the wrong question — a screen it was never on would pass that forever.
+	# The question is whether she will show it to you when you ask her for gear.
 	for below in [-50, SpeakEasy.WORK_AT, Standing.INVITE_AT - 1]:
 		Standing.add("privateer", below - Standing.get_points("privateer"))
 		bar.refresh()
+		var talk := _venue_talk(bar)
+		_ok(talk != null, "she is talkable at standing %d" % below)
+		_ok(_find_button(talk, "on the shelf") == null,
+			"at standing %d she does not offer the shelf at all" % below)
 		_ok(not _find_visible_text(bar, "QUARTERMASTER"),
-			"at standing %d the shelf is not on screen at all" % below)
+			"...and it is nowhere on the room behind her either")
 		for ware in Professions.wares("privateer"):
 			if not ResourceLoader.exists(str(ware)):
 				continue
@@ -712,6 +820,7 @@ func _case_no_trust_no_shelf() -> void:
 			_ok(not _find_visible_text(bar, comp.display_name),
 				"...nor is %s, which they cannot buy" % comp.display_name)
 			break        # one ware proves the shelf; loading all three per rung is waste
+		_dispose(bar, talk)
 
 	# THE VENUE PUBLISHES ITS OWN TUTOR CONTEXT. `Tutor.safe` is written by the FLIGHT
 	# tick, so a dock screen that does not assert it inherits whatever was true at the
@@ -730,8 +839,14 @@ func _case_no_trust_no_shelf() -> void:
 	# feature, so the same walk must find the shelf the moment trust lands.
 	Standing.add("privateer", Standing.INVITE_AT - Standing.get_points("privateer"))
 	bar.refresh()
-	_ok(_find_visible_text(bar, "QUARTERMASTER"),
-		"at INVITE_AT the shelf is drawn — trust and the back room arrive together")
+	var open_talk := _venue_talk(bar)
+	_ok(_find_button(open_talk, "on the shelf") != null,
+		"at INVITE_AT she offers the shelf — trust and the back room arrive together")
+	var shelf := _take_offer(bar, open_talk, "on the shelf")
+	_ok(shelf != null and _find_text(shelf, "QUARTERMASTER"),
+		"...and asking for gear actually opens her counter")
+	if shelf != null:
+		shelf.free()
 	bar.queue_free()
 	ship.queue_free()
 
@@ -751,12 +866,26 @@ func _case_a_stocked_row_states_its_price_of_entry() -> void:
 	Standing.add("privateer", Standing.INVITE_AT - Standing.get_points("privateer"))
 	bar.refresh()
 
-	# An INVITED but UNCOMMISSIONED pilot: the shelf is visible, and every ware on it is
-	# locked behind the commission whose door stands beside it. That is the pull the
+	# An INVITED but UNCOMMISSIONED pilot: she will show the shelf, and every ware on it
+	# is locked behind the commission she offers in the same breath. That is the pull the
 	# adjacency exists to create, and it only works if the row says so out loud.
-	_ok(_find_visible_text(bar, "requires"),
+	var counter := _take_offer(bar, _venue_talk(bar), "on the shelf")
+	_ok(counter != null, "she shows an invited pilot the counter")
+	_ok(counter != null and _find_text(counter, "requires"),
 		"a ware they cannot buy states its requirement in words, not a dead button")
-	_ok(_find_visible_text(bar, "c"), "...and every row names its price")
+	# THE ACTUAL PRICE, not merely "a lowercase c somewhere on the screen" — which the
+	# word "credits" in the header satisfied, and which no sabotage of the price could
+	# ever have failed.
+	var priced := ""
+	for ware in Professions.wares("privateer"):
+		if ResourceLoader.exists(str(ware)):
+			priced = VenueLayout.price_text(
+				int(ItemVisuals.buy_price(load(str(ware))) * SpeakEasy.QUART_MARKUP))
+			break
+	_ok(priced != "" and counter != null and _find_text(counter, priced),
+		"...and every row names its price, at her markup (%s)" % priced)
+	if counter != null:
+		counter.free()
 
 	# THE CURRENCY IS NAMED BY ONE FUNCTION. Faction scrip does not exist yet and must
 	# not be invented by a layout pass — but the day it does, this is the only place
@@ -2016,15 +2145,61 @@ func _count_buttons(root: Node, needle: String) -> int:
 ## than against the offer list that fed it.
 func _addressee(screen: DockScreen, npc: String) -> DialoguePanel:
 	screen._on_desk_talk(npc)
-	for c in screen.get_children():
-		if c is DialoguePanel:
+	return _live_panel(screen)
+
+
+## WALK UP TO A VENUE'S FACE. Same idea as _addressee at the dock: press the real desk
+## and hand back the panel, so claims are made against what a player sees.
+func _venue_talk(host: Node) -> DialoguePanel:
+	# The shell is a GRANDCHILD (the host wraps it in a PanelContainer), so this walks
+	# rather than scanning one level — the panels it opens are direct children of the
+	# host canvas, which is why those are found flat below.
+	var shell := _find_venue(host)
+	if shell == null:
+		return null
+	shell.open_addressee()
+	return _live_panel(host)
+
+
+## The NEWEST live conversation. SKIPPING QUEUED-FOR-DELETION IS LOAD-BEARING: an offer
+## that hands off closes its panel with queue_free, which does not take effect until the
+## end of the frame — so the previous conversation is still a child, still first in the
+## list, and a naive walk reads the answers to the LAST question asked.
+func _live_panel(host: Node) -> DialoguePanel:
+	var found: DialoguePanel = null
+	for c in host.get_children():
+		if c is DialoguePanel and not c.is_queued_for_deletion():
+			found = c
+	return found
+
+
+func _find_venue(root: Node) -> VenueLayout:
+	for c in root.get_children():
+		if c is VenueLayout:
+			return c
+		var hit := _find_venue(c)
+		if hit != null:
+			return hit
+	return null
+
+
+## Take one of their offers and hand back the context it opened. The offer CLOSES the
+## conversation on its way (one context at a time), so the panel is disposed here.
+func _take_offer(host: Node, panel: DialoguePanel, needle: String) -> ContextModal:
+	var btn := _find_button(panel, needle)
+	if btn == null:
+		return null
+	btn.pressed.emit()
+	_dispose(host, panel)
+	for c in host.get_children():
+		if c is ContextModal:
 			return c
 	return null
 
 
 ## Dispose IMMEDIATELY, not queue_free: a deferred panel is still in the tree this
 ## frame, and the next lookup would happily answer from the last conversation.
-func _dispose(screen: DockScreen, panel: Node) -> void:
+func _dispose(screen: Node, panel: Node) -> void:
 	if panel == null or not is_instance_valid(panel) or panel.is_queued_for_deletion():
 		return
 	screen.remove_child(panel)
