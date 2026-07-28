@@ -1,7 +1,39 @@
 extends Node2D
-## Infinite scrolling starfield with parallax layers, generated procedurally —
-## stars are hashed from world-cell coordinates so the field is stable and
-## endless with no textures or bounds.
+## Infinite scrolling starfield: an AUTHORED far layer with procedural point stars
+## parallaxing over it. Both are hashed from world-cell coordinates, so the field is
+## stable and endless with no bounds — fly out and back and the sky is where you left it.
+##
+## BUILT UP ADDITIVELY OVER BLACK (user, 2026-07-28). Space is emissive: stars and dust
+## are light ADDED to a void, not surfaces that occlude each other. So the tiles ship with
+## an opaque black background and the node blends additive — black contributes nothing,
+## layers stack in any order, and there is no alpha channel to get wrong. It also means a
+## tile can be dropped in without any transparency surgery.
+
+## ---- THE FAR LAYER: authored nebula tiles, drop-in ----
+##
+## Any `assets/world/starfield_*.png` is picked up automatically and joins the rotation —
+## add art, get sky, no code. With none present the field is purely procedural, exactly as
+## it was before.
+const TILE_DIR := "res://assets/world"
+const TILE_PREFIX := "starfield_"
+
+## INTEGER, because this is pixel art: a fractional scale resamples across the pixel grid
+## and the crisp stars turn to mush. It is also the answer to repetition — a 256 px tile
+## at 1:1 shows about THIRTY-TWO copies at once on a 1920x1080 screen, which reads as
+## wallpaper however good the art is. At 4x it is nearer two.
+const TILE_SCALE := 4
+
+## The slowest thing in the sky. Distant dust should barely move while the near stars
+## stream past; that differential is most of what sells depth at speed.
+const TILE_PARALLAX := 0.06
+
+## Dialled here rather than by re-authoring the tile. Roughly half of the art is a very
+## dark blue haze, and under additive every visible copy lifts the black level of space —
+## fine for one layer, compounding once more are stacked over it.
+const TILE_ALPHA := 1.0
+
+static var _tiles: Array[Texture2D] = []
+static var _tiles_scanned := false
 
 const LAYERS := [
 	{"parallax": 0.15, "cell": 140.0, "per_cell": 3, "size": 1.0, "brightness": 0.45},
@@ -24,6 +56,78 @@ const CACHE_CAP := 8192
 static var _cells := {}
 
 @onready var camera: Camera2D = get_viewport().get_camera_2d()
+
+
+func _ready() -> void:
+	# ADDITIVE, so the tiles' black background costs nothing and every layer only ever
+	# adds light. NEAREST, because everything here is pixel art and the default bilinear
+	# filter would smear a one-pixel star across four.
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	material = mat
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_scan_tiles()
+
+
+## Drop-in: every starfield_*.png in assets/world joins the rotation. Scanned once per
+## run and shared, since the set cannot change while the game is up.
+static func _scan_tiles() -> void:
+	if _tiles_scanned:
+		return
+	_tiles_scanned = true
+	var dir := DirAccess.open(TILE_DIR)
+	if dir == null:
+		return
+	var names: Array[String] = []
+	for f in dir.get_files():
+		# Godot hands an exported build ".png.import"; strip it so both cases resolve.
+		var clean := f.trim_suffix(".import")
+		if clean.begins_with(TILE_PREFIX) and clean.ends_with(".png"):
+			if not names.has(clean):
+				names.append(clean)
+	names.sort()   # stable order, so a cell picks the same tile every run
+	for n in names:
+		var tex := load("%s/%s" % [TILE_DIR, n]) as Texture2D
+		if tex != null:
+			_tiles.append(tex)
+
+
+## THE FAR LAYER, CELL-BOMBED. Stamped on an exact grid rather than at random offsets:
+## the tile is seamless, so offsets buy nothing and would open gaps in a layer that has
+## to cover the screen. What needs breaking up is the SHAPE — a nebula is recognisable in
+## a way an anonymous dot is not — so each cell hashes its own tile, quarter-turn and
+## mirror, giving eight orientations per tile before any new art is drawn.
+##
+## Rotating a neighbour breaks continuity across that edge, which is normally the cost of
+## this trick. It is cheap HERE specifically because the tile's edges are its quietest
+## part: measured, the wrap delta is 0.74x (columns) and 0.37x (rows) of a typical
+## interior neighbour delta. There is very little there to mismatch.
+func _paint_tiles(cam_pos: Vector2, view_size: Vector2) -> void:
+	if _tiles.is_empty():
+		return
+	var tex_size := Vector2(_tiles[0].get_size())
+	var span := tex_size.x * float(TILE_SCALE)
+	if span <= 0.0:
+		return
+	var origin := cam_pos * TILE_PARALLAX
+	var first := Vector2i(((origin - view_size * 0.5) / span).floor())
+	var nx := int(view_size.x / span) + 2
+	var ny := int(view_size.y / span) + 2
+	var to_world := cam_pos - origin
+	var tint := Color(1, 1, 1, TILE_ALPHA)
+	for cy in range(first.y, first.y + ny):
+		for cx in range(first.x, first.x + nx):
+			var h: int = absi(hash(Vector2i(cx, cy)))
+			var tex: Texture2D = _tiles[h % _tiles.size()]
+			var quarter: int = (h >> 5) & 3
+			var mirror := 1.0 if ((h >> 7) & 1) == 0 else -1.0
+			var centre := Vector2(cx + 0.5, cy + 0.5) * span + to_world
+			draw_set_transform(centre, float(quarter) * PI * 0.5,
+				Vector2(mirror, 1.0) * float(TILE_SCALE))
+			draw_texture(tex, -tex_size * 0.5, tint)
+	# Hand the canvas back unrotated, or every point star after this inherits the last
+	# cell's quarter-turn and mirror.
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## The stars of one cell in LAYER SPACE, with their colour already resolved.
@@ -71,6 +175,10 @@ func _paint_d() -> void:
 			return
 	var view_size := get_viewport_rect().size
 	var cam_pos := camera.get_screen_center_position()
+
+	# Furthest first: additive blending makes the order irrelevant to the result, but it
+	# keeps the code reading the way the sky is built — dust behind, stars in front.
+	_paint_tiles(cam_pos, view_size)
 
 	for layer_i in LAYERS.size():
 		var layer: Dictionary = LAYERS[layer_i]
