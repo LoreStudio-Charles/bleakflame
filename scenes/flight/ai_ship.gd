@@ -552,14 +552,27 @@ func _pick_prey() -> BuildShip:
 		return null          # no eyes, no hunt
 	var best: BuildShip = null
 	var best_d := reach * reach
-	for node in get_tree().get_nodes_in_group("player_team"):
-		var bs := node as BuildShip
-		if bs == null or not _prey_valid(bs, reach):
-			continue
-		var d := global_position.distance_squared_to(bs.global_position)
-		if d < best_d:
-			best_d = d
-			best = bs
+	# THE LEGACY TEAM *UNION* EVERY FACTIONED HULL (faction slice 2) — the same rule
+	# BuildShip.engageable applies, so this finds everything it always did AND the hulls
+	# a shared team was hiding: a Widow can hunt a Shoal raider riding "hostile_team"
+	# beside it. Additive; the team stays a FLOOR, so nothing that was prey stops being it.
+	#
+	# WALKED IN PLACE RATHER THAN THROUGH engageable(), which builds an Array and a
+	# Dictionary per call. THIS RUNS EVERY PHYSICS FRAME for any hunter without a valid
+	# mark — which is most pirates most of the time, since an idle patroller re-picks
+	# continuously — so a per-frame allocation here is multiplied by the pirate count and
+	# then by 60. Duplicates between the two groups are harmless: we are taking a
+	# MINIMUM, so a hull considered twice simply loses to itself.
+	for pass_i in 2:
+		for node in get_tree().get_nodes_in_group(
+				enemy_group if pass_i == 0 else "ships"):
+			var bs := node as BuildShip
+			if bs == null or not BuildShip.may_engage(self, bs, enemy_group) 					or not _prey_valid(bs, reach):
+				continue
+			var d := global_position.distance_squared_to(bs.global_position)
+			if d < best_d:
+				best_d = d
+				best = bs
 	return best
 
 

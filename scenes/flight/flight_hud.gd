@@ -691,7 +691,7 @@ class TargetBearing:
 		# edge nearest the target, pointing outward toward it.
 		var at := Vector2(clampf(sp.x, inner.position.x, inner.end.x),
 			clampf(sp.y, inner.position.y, inner.end.y))
-		var hostile: bool = t.is_in_group(ship.enemy_group)
+		var hostile: bool = BuildShip.may_engage(ship, t, ship.enemy_group)
 		var col := Color(0.95, 0.45, 0.3) if hostile else Color(0.45, 0.9, 0.75)
 		var fwd := dir.normalized()
 		var perp := Vector2(-fwd.y, fwd.x)

@@ -547,7 +547,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 	# IF AND ONLY IF you had none. A fight you're already running is never re-aimed by
 	# an off-angle potshot. TARGET only, never weapons state: if your guns are free the
 	# reply starts; if tight, you've been pointed at them and the trigger stays yours.
-	if target == null and source != null and is_instance_valid(source) 			and source.is_in_group(enemy_group):
+	if target == null and source != null and is_instance_valid(source) 			and BuildShip.may_engage(self, source, enemy_group):
 		target = source
 	var before := limp_speed_mult()
 	super(amount, source)
@@ -647,7 +647,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _cycle_target(group: String) -> void:
 	var sensor := sensor_reach(600.0)   # 0 with no sensor fitted: blind is blind
 	var candidates: Array[Node2D] = []
-	for node in get_tree().get_nodes_in_group(group):
+	# CYCLING FOES GOES THROUGH engageable() (faction slice 2) so [TAB] reaches
+	# anything you may actually shoot, not merely whatever shares a team with you.
+	# A target you can hit but cannot cycle to is the kind of gap that reads as the
+	# key being broken. Any OTHER group (allies) is still a plain membership walk.
+	var pool: Array = BuildShip.engageable(get_tree(), self, group) 		if group == enemy_group else get_tree().get_nodes_in_group(group)
+	for node in pool:
 		if node == self or node.get("dead") == true:
 			continue
 		if global_position.distance_to(node.global_position) <= sensor:
@@ -801,7 +806,7 @@ func _select_target_at(point: Vector2, engage := true) -> void:
 		# anything — that would open fire inside the station sanctuary by accident. And a
 		# LEFT-click never arms either, whatever it lands on: that is the safe "just look
 		# at / just target this" gesture.
-		if engage and target.is_in_group(enemy_group):
+		if engage and BuildShip.may_engage(self, target, enemy_group):
 			set_weapons_free(true)
 
 
@@ -1936,7 +1941,8 @@ func _physics_process(delta: float) -> void:
 	# STAND-DOWN is not decided here — _on_target_died does that, when the target says so.
 	if not _target_valid():
 		target = null
-	var aim_node := target if (target != null and target.is_in_group(enemy_group)) \
+	var aim_node := target if (target != null \
+			and BuildShip.may_engage(self, target, enemy_group)) \
 		else _nearest_hostile()
 	if aim_node != null:
 		update_mounts(aim_node.global_position, delta, _velocity_of(aim_node))
@@ -2118,7 +2124,7 @@ func _draw_target_marker() -> void:
 	var hr = target.get("hit_radius")
 	var r: float = (float(hr) if hr != null else 12.0) * 1.35 + 6.0
 	var spin := Time.get_ticks_msec() * 0.0012
-	var hostile := target.is_in_group(enemy_group)
+	var hostile := BuildShip.may_engage(self, target, enemy_group)
 	var color := Color(0.45, 0.9, 0.75)              # friendly teal
 	if hostile:
 		color = Color(0.95, 0.45, 0.3)               # hostile orange
@@ -2155,7 +2161,8 @@ func _update_firing_solution() -> void:
 			if speed <= 0.0:
 				speed = mount.def.projectile_speed
 			gun_range = minf(gun_range, mount.def.weapon_range)
-	if speed <= 0.0 or not _target_valid() or not target.is_in_group(enemy_group):
+	if speed <= 0.0 or not _target_valid() \
+			or not BuildShip.may_engage(self, target, enemy_group):
 		return
 	var tv := _velocity_of(target)
 	var pred := target.global_position
@@ -2225,11 +2232,18 @@ func _velocity_of(node: Node2D) -> Vector2:
 func _nearest_hostile() -> Node2D:
 	var best: Node2D = null
 	var best_dist := INF
-	for hostile in get_tree().get_nodes_in_group(enemy_group):
-		if hostile.get("dead") == true or hostile == self:
-			continue   # a WANTED player is in hostile_team — never auto-aim at yourself
-		var d: float = global_position.distance_squared_to(hostile.global_position)
-		if d < best_dist:
-			best_dist = d
-			best = hostile
+	# LEGACY TEAM UNION EVERY FACTIONED HULL, walked in place — auto-aim runs every
+	# frame, so this takes the same allocation-free shape as AIShip._pick_prey rather
+	# than building a list through engageable(). Duplicates are harmless to a minimum.
+	for pass_i in 2:
+		var grp := enemy_group if pass_i == 0 else "ships"
+		for hostile in get_tree().get_nodes_in_group(grp):
+			if hostile.get("dead") == true or hostile == self:
+				continue   # a WANTED player rides hostile_team — never auto-aim at self
+			if not BuildShip.may_engage(self, hostile, enemy_group):
+				continue
+			var d: float = global_position.distance_squared_to(hostile.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = hostile
 	return best
