@@ -178,6 +178,60 @@ static func mend(faction: String) -> int:
 	return points[faction] - before
 
 
+## ---- REPRISAL: what killing somebody costs you (user, 2026-07-27) ----
+##
+## "Should cost faction loss 1, 2, 3, 5 based on tier. And yes, you gain with rivals.
+## Triple if they are currently friendly toward you."
+##
+## THE RULE IS DERIVED, NOT LISTED. Before this, one hardcoded pair of lines in
+## flight_test granted +1 Guardian / -1 Shoal for every kill — wired only to PIRATE
+## spawns, on the assumption that everything you shoot is a pirate. So gunning down the
+## guard wing cost nothing at all: no XP, no standing, no consequence. Now that every
+## hull carries a faction, who you killed answers the question by itself, and the old
+## pirate behaviour falls out as the ordinary case rather than being special.
+const KILL_COST := [1, 2, 3, 5]     # by Threat.Rank: NORMAL, ELITE, MILITARY, SPEC_OPS
+
+## KILLING A FRIEND IS A BETRAYAL, and costs treble. Read off the FRIENDLY band rather
+## than "not currently shooting at me": the game already has a word for being on good
+## terms with someone, and using it means the multiplier is something a player can see
+## coming on their own standing meter.
+const BETRAYAL_MULT := 3
+
+
+## Apply the consequences of the player killing a member of `faction`.
+## COMMAND, not query — it moves ledgers and returns nothing.
+static func note_kill(faction: String, rank: int) -> void:
+	if faction == "" or Factions.is_player(faction):
+		return
+	var base: int = KILL_COST[clampi(rank, 0, KILL_COST.size() - 1)]
+	# EVERY LEDGER THIS HULL ANSWERS TO (user: haulers answer to "both"). A freighter is
+	# a Long Lane member AND a Reach civilian — the GCT mark on its hull says commercial
+	# transport, the GVIT mark says civilian — so both minds are changed when it dies.
+	for key in ledgers_for(faction):
+		var cost := base
+		if state(key) in ["friendly", "allied"]:
+			cost *= BETRAYAL_MULT
+		add(key, -cost)
+	# AND THEIR RIVALS ARE PLEASED — the ones who AUTHORED a stake in it, never everyone
+	# who happens to be hostile. They gain the base, not the betrayal multiple: the
+	# multiplier is about YOUR relationship with the dead, not a bonus to strangers.
+	# This is where "kill a pirate, the Guardians like you" now comes from.
+	for other in Factions.LIST:
+		if str(other) != faction and Factions.is_rival(str(other), faction):
+			add(Factions.standing_key(str(other)), base)
+
+
+## Every standing key a member of `faction` answers to. Usually just its own; a hauler
+## answers to its guild AND to the citizenry it belongs to.
+static func ledgers_for(faction: String) -> Array:
+	var out := [Factions.standing_key(faction)]
+	for extra in Factions.ALSO_ANSWERS_TO.get(faction, []):
+		var key := Factions.standing_key(str(extra))
+		if not out.has(key):
+			out.append(key)
+	return out
+
+
 ## One-time: veterans with banked XP begin with some Guardian standing so the
 ## system is felt from the first dock. Other factions build forward from their
 ## own verbs as those hooks land.

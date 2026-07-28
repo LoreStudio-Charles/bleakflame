@@ -171,5 +171,53 @@ func _init() -> void:
 		if Npcs.venue_of(str(p.get("leader", ""))) == "":
 			f += 1; print("FAIL: commission '%s' leader stands nowhere" % pid)
 
+	# 6. REPRISAL (user, 2026-07-27): "Should cost faction loss 1, 2, 3, 5 based on tier.
+	#    And yes, you gain with rivals. Triple if they are currently friendly toward you."
+	#    Killing a friendly used to cost NOTHING — the standing lines were hardcoded to
+	#    +1 Guardian / -1 Shoal and connected only to pirate spawns, so the guard wing
+	#    could be gunned down for free.
+	Standing.reset()
+	Standing.note_kill("shoal", Threat.Rank.NORMAL)
+	if Standing.get_points("privateer") != Standing.OPENING["privateer"] - 1:
+		f += 1; print("FAIL: a NORMAL kill costs 1 (got %d)" % Standing.get_points("privateer"))
+	if Standing.get_points("guardian") != 1:
+		f += 1; print("FAIL: a named rival gains from the kill (got %d)" % Standing.get_points("guardian"))
+	# THE MISANTHROPES ARE NOT PLEASED. The Widows hate the Shoal only via "*", which is a
+	# disposition, not a quarrel — counting it would have them thanking you for every kill.
+	if Standing.get_points("widow") != 0:
+		f += 1; print("FAIL: a blanket hater counted as a rival (got %d)" % Standing.get_points("widow"))
+
+	# The tiers, straight off the user's numbers.
+	for tier_pair in [[Threat.Rank.NORMAL, 1], [Threat.Rank.ELITE, 2],
+			[Threat.Rank.MILITARY, 3], [Threat.Rank.SPEC_OPS, 5]]:
+		Standing.reset()
+		Standing.note_kill("shoal", tier_pair[0])
+		var lost: int = Standing.OPENING["privateer"] - Standing.get_points("privateer")
+		if lost != tier_pair[1]:
+			f += 1; print("FAIL: tier %d should cost %d, cost %d" % [tier_pair[0], tier_pair[1], lost])
+
+	# BETRAYAL IS TREBLE. Kill a Guardian while they like you and it stings threefold.
+	Standing.reset()
+	Standing.add("guardian", Standing.FRIENDLY_AT)
+	Standing.note_kill("guardian", Threat.Rank.NORMAL)
+	if Standing.get_points("guardian") != Standing.FRIENDLY_AT - 3:
+		f += 1; print("FAIL: betraying a friendly faction is not treble (got %d)"
+			% Standing.get_points("guardian"))
+	# ...and a stranger is only the base, so the multiplier means something.
+	Standing.reset()
+	Standing.note_kill("guardian", Threat.Rank.NORMAL)
+	if Standing.get_points("guardian") != -1:
+		f += 1; print("FAIL: killing a neutral should cost base only (got %d)"
+			% Standing.get_points("guardian"))
+
+	# A HAULER ANSWERS TO BOTH LEDGERS (user: "probably both") — its guild and the
+	# citizenry it belongs to. GCT is a commercial transport, GVIT is civilian.
+	Standing.reset()
+	Standing.note_kill("civilian", Threat.Rank.NORMAL)
+	if Standing.get_points("civilian") != -1 or Standing.get_points("trader") != -1:
+		f += 1; print("FAIL: a hauler kill must hit civilian AND trader (%d / %d)" % [
+			Standing.get_points("civilian"), Standing.get_points("trader")])
+	Standing.reset()
+
 	print("test_progression: %s" % ("ALL PASS" if f == 0 else "%d FAILURES" % f))
 	quit()

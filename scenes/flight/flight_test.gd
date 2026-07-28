@@ -2192,8 +2192,12 @@ func _grant_kill_xp(pirate: Node, kind: String) -> void:
 	MissionLog.note_kill()           # a bounty tally is the player's contract
 	var xp := int(round(float(XP.kill(kind)) * Pilot.kill_xp_mult()))
 	Wallet.xp += xp
-	Standing.add("guardian", 1)     # kills are the Guardian verb (Ruel's watching)
-	Standing.add("privateer", -1)   # ...and the Shoal remembers who guns down their own
+	# STANDING MOVED TO BuildShip._die -> Standing.note_kill (2026-07-27). These two lines
+	# hardcoded "+1 Guardian, -1 Shoal" for every kill and were connected only to PIRATE
+	# spawns, so they were right about pirates by luck and silent about everyone else —
+	# the guard wing could be gunned down for free. The general rule derives both from the
+	# victim's own faction, so the pirate case still lands exactly here and every other
+	# hull is covered without a second wiring. Leaving them would double-count it.
 	if not ship.dead:
 		ship._flash_note("+%d XP" % xp)
 	# Vyper's truce is a PROMISE, not immunity (user, 2026-07-23 — "kill ten and

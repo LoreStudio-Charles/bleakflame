@@ -1034,6 +1034,14 @@ func _die() -> void:
 	# copies its art and momentum off it. Deliberately absent from devour(), which is the
 	# whole point: the beast leaves nothing and now that is something you can SEE.
 	Wreck.spawn(self)
+	# WHO YOU KILLED IS NOW A CONSEQUENCE, and it hangs HERE — the one path every hull
+	# dies through — rather than on each spawn site. The old rule granted +1 Guardian /
+	# -1 Shoal from flight_test, connected only to PIRATE spawns, so shooting down the
+	# guard wing cost nothing whatsoever: no XP, no standing, no reaction. Hanging it on
+	# the shared death instead of a per-spawn signal is what makes that impossible to
+	# forget for the next faction that gets ships.
+	if killed_by_player():
+		Standing.note_kill(faction, int(rank))
 	died.emit()
 	_on_death()
 

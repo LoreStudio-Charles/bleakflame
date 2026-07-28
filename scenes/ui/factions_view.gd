@@ -10,7 +10,18 @@ extends CanvasLayer
 ## The factions that field SHIPS — only these get a peace/war toggle. The
 ## economic guilds show standing (it still gates commissions + prices) but have
 ## no fleet to declare war on.
-const WAR_FACTIONS := ["guardian", "trader", "privateer"]
+## EVERY FACTION GETS THE TOGGLE (user, 2026-07-27): "Eventually we may have ground NPCs
+## or ships for every faction, so probably good to include all. If you can't meet them,
+## why are they a faction."
+##
+## It was a hand-listed three, which meant the Navy, the Widows and the civilian haulers
+## all fielded ships you could not declare war on — and the list could only ever be
+## correct on the day someone remembered to edit it. Membership of Factions.LIST is now
+## the whole rule. The toggle self-gates: it stays locked while a faction is already
+## hostile (mend it first), so anything permanently at war with you simply shows as
+## locked rather than needing to be named here.
+static func war_factions() -> Array:
+	return Factions.LIST.keys()
 
 var ship: TestShip
 var _rows: VBoxContainer
@@ -99,7 +110,7 @@ func _faction_row(fid: String) -> Control:
 		_state_color(st), st.to_upper(), p, _bar(p)]
 	row.add_child(info)
 
-	if fid in WAR_FACTIONS:
+	if fid in war_factions():
 		var toggle := CheckButton.new()
 		toggle.text = "At Peace" if Standing.at_peace(fid) else "At War"
 		toggle.button_pressed = Standing.at_peace(fid)

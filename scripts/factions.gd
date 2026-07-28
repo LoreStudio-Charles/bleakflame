@@ -68,6 +68,17 @@ const LIST := {
 	"leviathan": {"name": "Leviathan", "color": Color(0.45, 0.25, 0.65)},
 }
 
+## A HULL CAN ANSWER TO MORE THAN ONE LEDGER (user, 2026-07-27: haulers answer to
+## "probably both"). A freighter is a Long Lane member and a Reach civilian at once —
+## which its own registry marks already say, since GCT is a Galean Commercial Transport
+## and GVIT is the civilian prefix. Kill one and both minds change.
+##
+## Only ASYMMETRIC extras go here: a faction's own key is always included.
+const ALSO_ANSWERS_TO := {
+	"civilian": ["trader"],     # the citizenry, and the guild that moves its freight
+	"escort": ["trader"],       # hired guns on the lane are the guild's problem too
+}
+
 ## A pilot's own faction id. Every player is their own faction (user), which is what makes
 ## coop allies and PvP expressible at all — and it means the player is not a special case
 ## in any lookup below.
@@ -195,6 +206,33 @@ static func hostile(from: String, to: String) -> bool:
 
 static func allied(from: String, to: String) -> bool:
 	return attitude(from, to) == Att.ALLIED
+
+
+## WHO IS PLEASED WHEN WHOM LOSES — and it is AUTHORED, not derived (user, 2026-07-27:
+## "include HOSTILE, ALLIES, RIVALS and only grant faction for specific rivals").
+##
+## HOSTILITY AND RIVALRY ARE DIFFERENT RELATIONS and a single attitude cannot hold both.
+## The Widows are hostile to the Shoal only because they are hostile to everybody — a
+## disposition, not a quarrel — so inferring rivalry from hostility had the misanthropes
+## sending thank-you notes every time you shot a pirate. The first fix inferred it from
+## whether a row NAMED its target, which is cleverer and still a guess.
+##
+## So it is stated. A rival is somebody with a stake in the outcome: the Guardians police
+## crime, the Long Lane loses freight to it. Everyone else simply does not care who you
+## shot, which is the honest default and keeps standing from inflating across ten ledgers
+## on every kill.
+const RIVALS := {
+	"guardian": ["shoal", "widow"],   # policing them IS the commission
+	"navy": ["widow"],                # the Confederacy's problem is the big one
+	"marines": ["widow"],
+	"shoal": ["guardian", "navy"],    # the law, and they would cheer
+	"trader": ["shoal", "widow"],     # predation on the lane is lost cargo
+}
+
+
+## Does `from` have a stake in `to` coming off worst?
+static func is_rival(from: String, to: String) -> bool:
+	return (RIVALS.get(from, []) as Array).has(to)
 
 
 static func display_name(id: String) -> String:
