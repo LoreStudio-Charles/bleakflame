@@ -50,11 +50,23 @@ const OVERLAY_SCALE := 2
 const BACKDROP_PARALLAX := 0.06
 const OVERLAY_PARALLAX := 0.11
 
-## Dialled here rather than by re-authoring art. Roughly half of the nebula tile is very
-## dark blue haze, and under additive every visible copy lifts the black level of space —
-## fine alone, compounding once layers stack over it.
-const BACKDROP_ALPHA := 1.0
-const OVERLAY_ALPHA := 1.0
+## HOW MUCH EACH LAYER CONTRIBUTES. Additive means these ACCUMULATE rather than replace,
+## so at full strength the layers fought: roughly half the nebula tile is dark blue haze,
+## every visible copy lifted the black level of space, and where a bright star landed on a
+## bright nebula the sum clipped to white (0.74% of the screen, measured).
+##
+## Starting low and building up is the right way round for an additive stack — you are
+## composing light, so it is far easier to add another layer than to unpick an
+## over-bright one. 0.3 each is the starting point (user, 2026-07-28); tune from here.
+##
+## Dialled HERE, never by re-authoring the art: the tiles stay full-strength on disk so
+## the balance is a live decision and not a destructive one.
+const BACKDROP_ALPHA := 0.3
+const OVERLAY_ALPHA := 0.3
+
+## The procedural point stars are a layer too, and get the same knob so the whole sky is
+## balanced from one place rather than half here and half in the LAYERS table.
+const STAR_ALPHA := 0.3
 
 static var _backdrops: Array[Texture2D] = []
 static var _overlays: Array[Texture2D] = []
@@ -282,4 +294,9 @@ func _paint_d() -> void:
 			for cx in range(first_cell.x, first_cell.x + cells_x):
 				for star in cell_stars(layer_i, cx, cy, cell, parallax, per_cell,
 						brightness):
-					draw_rect(Rect2(star[0] + to_world - half, box), star[1])
+					# Alpha applied at DRAW, not baked into the cached colour — the cache
+					# holds what the star IS, this holds how loud the layer is, and only
+					# the second one is meant to be tuned.
+					var c: Color = star[1]
+					c.a = STAR_ALPHA
+					draw_rect(Rect2(star[0] + to_world - half, box), c)
