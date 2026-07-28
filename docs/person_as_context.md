@@ -277,10 +277,12 @@ live. Those are the people with a choice. Bram is not.
   now one `_has_news()`. They were written separately and immediately disagreed — the
   desk lit for a waiting invitation, the greeting said "board's quiet". Both halves were
   individually correct, which is exactly why no assertion caught it; a screenshot did.
-- **ODESSA IS STILL BESPOKE, on purpose.** She is the only face with an authored
-  dialogue tree, and she is already quest-first — she is not the bug, she is the merge
-  that has to be done properly: folding `Dialogues.ODESSA_BAR`'s own choices into the
-  offer list rather than hanging the whole tree behind one more click.
+- **ODESSA — DONE 2026-07-28**, and she was the last bespoke path. `Addressee.merge`
+  folds the ranked offers into an AUTHORED TREE instead of replacing it: her opener, her
+  sub-nodes and her ordering all survive, and the quest line simply sits above them in
+  gold. The earlier fix made her quest talk PRE-EMPT the bar chat, which was correct and
+  still a special case somebody had to remember to write; now she is ranked like
+  everyone else. Same call is what let Doug's mining lesson survive.
 - **The walkable town is the next venue, not a parallel.** `epharon_town.gd` still
   splits quest talks from idle ones by hand — the exact shape the addressee replaced.
 

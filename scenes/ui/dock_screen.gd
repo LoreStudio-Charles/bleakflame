@@ -884,31 +884,12 @@ func _build_bar_tab() -> void:
 	_bar_feed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	feed_row.add_child(_bar_feed)
 	feed_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# ONE NPC desk for Odessa, like every other face. Talking always routes through
-	# _on_talk_odessa (quest business FIRST, bar rumour chat as the fallthrough), so
-	# there can never again be a second, redundant "Talk to Odessa" button hiding a
-	# held quest talk — the ~46-day ember_word freeze (found 2026-07-23 from the
-	# save). Her desk lights on a held talk OR a rumour she's ready to share.
+	# ONE NPC desk for Odessa, like every other face — and one ranked list behind it.
+	# There can never again be a second, redundant "Talk to Odessa" button hiding a held
+	# quest talk (the ~46-day ember_word freeze, found 2026-07-23 in a real save): her
+	# campaign business is the top line of her own bar conversation now, in gold, above
+	# "What's the word?". Her desk lights on a held talk OR a rumour she is holding.
 	_mount_desk(col, "odessa")
-
-
-## Rumors come from conversation now, not from walking through a door:
-## ask Odessa what the word is (DialoguePanel action "rumor").
-func _on_talk_odessa() -> void:
-	Pilot.meet("odessa")
-	# QUEST BUSINESS FIRST. If Odessa has a pending campaign talk (ember_word's
-	# "meet Odessa" beat, or any future one), present THAT — advancing it is what
-	# unfreezes the campaign. Only fall through to the bar rumour chat when she
-	# has no story business waiting. This is the whole ember_word fix: the button
-	# now does the thing the player expected it to.
-	if not (_held_talks.get("odessa", []) as Array).is_empty():
-		_talk_to("odessa")
-		return
-	var panel := DialoguePanel.new("odessa", _odessa_nodes(), _odessa_action)
-	_bar_panel = panel
-	panel.vo_prefix = "odessa_bar"
-	panel.closed.connect(refresh)
-	add_child(panel)
 
 
 ## Her dialogue with the rumor choice DRESSED FOR THE TRUTH. Gold means
@@ -1251,22 +1232,27 @@ func _mount_desk(parent: Node, npc: String) -> NpcDesk:
 ## by hand — held talks, a bare idle line, the office door standing off to one side —
 ## so the button is never a dead click and never a competing one either.
 ##
-## ODESSA IS STILL BESPOKE, on purpose. She is the only face with an AUTHORED dialogue
-## tree (Dialogues.ODESSA_BAR, dressed live by _dress_odessa), and she is already
-## quest-first — she is not the bug, she is the merge that has to be done carefully:
-## folding her tree's own choices into the offer list rather than hanging it behind an
-## extra click. Left for when the bar chat is next touched.
+## ODESSA IS NO LONGER A SEPARATE PATH (2026-07-28). She was the last bespoke one, and
+## she is the reason this pattern exists: her old button opened the bar chat and never
+## looked at her queued campaign talk, freezing ember_word for ~46 game-days of a real
+## save. She goes through the same ranking as everyone else now — what is different
+## about her is only that she has an AUTHORED TREE, which is MERGED INTO rather than
+## replaced (Addressee.merge). Her voice, her sub-nodes and her ordering all survive;
+## the quest line simply sits above them, which is exactly what was missing.
 func _on_desk_talk(npc: String) -> void:
-	if npc == "odessa":
-		_on_talk_odessa()
-		return
 	Pilot.meet(npc)
-	var offers := _addressee_offers(npc)
+	# An authored conversation is a tree, not a menu — see Addressee.merge. Her opener
+	# is passed as "" so her own writing keeps the top of the panel.
+	var authored: Dictionary = _odessa_nodes() if npc == "odessa" else {}
+	var greeting := "" if npc == "odessa" else Npcs.greet_line(npc, _has_news(npc))
 	var panel := DialoguePanel.new(npc,
-		Addressee.nodes(Npcs.greet_line(npc, _has_news(npc)), offers),
+		Addressee.merge(authored, greeting, _addressee_offers(npc)),
 		func(a: String) -> String: return _on_addressee(npc, a))
 	panel.subtitle = Addressee.standing_line(npc)
 	panel.closed.connect(refresh)
+	if npc == "odessa":
+		panel.vo_prefix = "odessa_bar"
+		_bar_panel = panel      # _odessa_action re-dresses it after a rumour is spent
 	add_child(panel)
 
 
@@ -1308,6 +1294,10 @@ func _on_addressee(npc: String, action: String) -> String:
 			_talk_to(npc)
 		"office":
 			_open_office(npc, Professions.led_by(npc))
+		"rumor":
+			# An authored tree's own action, answered by its author. The rank above it
+			# is the shell's business; what she SAYS is hers.
+			return _odessa_action(action)
 	return ""
 
 

@@ -1756,11 +1756,17 @@ func _case_contracts_credit_their_giver_guild() -> void:
 		_ok(f != "", "template from '%s' credits a guild" % str(m.get("giver", "?")))
 
 
-## THE EMBER_WORD FREEZE. Odessa's bespoke "Talk to Odessa" button used to always
-## open the bar rumour chat, ignoring a pending CAMPAIGN talk — so ember_word's
-## "meet Odessa" beat sat un-advanced behind a second, redundant button and the
-## campaign froze (~46 game-days in a real save). "Talk to Odessa" must present
-## her QUEST business first, and only fall through to the bar when she has none.
+## THE EMBER_WORD FREEZE, and the shape of its final fix. Odessa's bespoke "Talk to
+## Odessa" button used to always open the bar rumour chat, ignoring a pending CAMPAIGN
+## talk — so ember_word's "meet Odessa" beat sat un-advanced behind a redundant second
+## button and the campaign froze for ~46 game-days in a real save.
+##
+## THE FIX IS NO LONGER "the quest PRE-EMPTS the bar" (2026-07-28). That was correct and
+## still a special case somebody had to remember to write. She goes through the same
+## ranking as everyone else now: her bar chat opens, with her campaign business as its
+## FIRST line, in gold, above what she does for a living. So the claim to hold is
+## ORDERING, not exclusion — and the sharper claim underneath it is that folding her into
+## the pattern did not eat her: the authored tree is merged into, never replaced.
 func _case_talk_to_odessa_does_quest_first() -> void:
 	var screen := _fresh_dock(true)
 	screen._held_talks.clear()
@@ -1772,20 +1778,30 @@ func _case_talk_to_odessa_does_quest_first() -> void:
 	screen._held_talks["odessa"] = [{"giver": "odessa", "quest": "The Word at Ember Row",
 		"nodes": {"start": {"text": "hi", "choices": [{"text": "ok", "next": "end"}]}},
 		"advance": "ember_word"}]
-	screen._on_talk_odessa()
-	var quest_shown: bool = not screen._talk_queue.is_empty() 		or (screen._active_talk != null and is_instance_valid(screen._active_talk))
-	_ok(quest_shown, "Talk to Odessa presents her pending QUEST talk, not the bar chat")
-	_ok((screen._held_talks.get("odessa", []) as Array).is_empty(),
-		"the held Odessa quest talk is drained (ember_word can advance)")
-	_ok(screen._bar_panel == null, "it did NOT open the bar rumour chat while quest business waits")
+	var panel := _addressee(screen, "odessa")
+	_ok(panel != null, "Talk to Odessa opens her bar conversation")
+	var said := _choice_texts(panel, [])
+	_ok(said.size() > 0 and "The Word at Ember Row" in str(said[0]),
+		"her campaign business is the FIRST thing she offers")
 
-	# With nothing held, the button falls through to the bar chat as before.
-	screen._held_talks.clear()
-	screen._talk_queue.clear()
-	screen._active_talk = null
-	screen._bar_panel = null
-	screen._on_talk_odessa()
-	_ok(screen._bar_panel != null, "with no quest business, Talk to Odessa opens the bar chat")
+	# HER TREE SURVIVED. These are ODESSA_BAR's own authored choices, and if the
+	# addressee had replaced her conversation instead of folding into it they would be
+	# gone — a fix that deletes the writing it was protecting.
+	var authored: Array = (Dialogues.ODESSA_BAR["start"] as Dictionary).choices
+	for c in authored:
+		if str(c.get("action", "")) == "rumor":
+			continue     # hidden unless she is actually holding one — its own rule
+		_ok(_find_button(panel, str(c.text)) != null,
+			"...and her own line \"%s\" is still on the list" % str(c.text))
+	_ok(screen._bar_panel == panel, "the bar chat is what opened — not a generated menu")
+
+	# Taking the quest line drains it, which is what lets ember_word advance.
+	var take := _find_button(panel, "The Word at Ember Row")
+	if take != null:
+		take.pressed.emit()
+	_ok((screen._held_talks.get("odessa", []) as Array).is_empty(),
+		"taking it drains the held talk (ember_word can advance)")
+	_dispose(screen, panel)
 
 	# And there is EXACTLY ONE "Talk to Odessa" button in the whole tree — the
 	# unified NPC desk. The freeze was a SECOND, redundant button; the anti-

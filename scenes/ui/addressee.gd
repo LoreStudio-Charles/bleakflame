@@ -68,16 +68,46 @@ static func style_of(o: Dictionary) -> String:
 ## then the way out. The closer is always cyan — leaving changes nothing.
 static func nodes(greeting: String, offers: Array,
 		closer := "Nothing right now.") -> Dictionary:
-	var choices: Array = []
+	return merge({}, greeting, offers, closer)
+
+
+## FOLD OFFERS INTO AN AUTHORED TREE, rather than replacing it.
+##
+## Some people are not a menu. Odessa's bar chat and Doug's mining lesson are real
+## branching conversations with sub-nodes, written in a voice — flattening either into a
+## ranked list would delete the writing, and "the addressee replaced the conversation"
+## is a worse outcome than the competing-button bug it was built to fix.
+##
+## So the offers are PREPENDED to the tree's opening choices and the author keeps
+## everything else: their own text, their own ordering, their own sub-nodes. The one
+## thing the component still insists on is the rank — story business sits above whatever
+## a person does for a living, in their tree exactly as in a generated one. That is the
+## whole ember_word fix, applied to the conversation it originally broke.
+##
+## An empty tree gets the plain closer, which is what `nodes()` is.
+static func merge(tree: Dictionary, greeting: String, offers: Array,
+		closer := "Nothing right now.") -> Dictionary:
+	var out: Dictionary = tree.duplicate(true)
+	if not out.has("start"):
+		out["start"] = {"vo_once": true,
+			"choices": [{"text": closer, "next": "end"}]}
+	var start: Dictionary = out["start"]
+	# An authored opener STAYS. greet_line exists for people who have none, and
+	# overwriting Odessa's "Sit anywhere that holds you" with a generic line would be
+	# this pass deleting the thing it is meant to protect.
+	if greeting != "":
+		start["text"] = greeting
+	var lead: Array = []
 	for o in ranked(offers):
-		choices.append({
+		lead.append({
 			"text": str(o.get("text", "")),
 			"action": str(o.get("id", "")),
 			"style": style_of(o),
 			"close": bool(o.get("closes", false)),
 		})
-	choices.append({"text": closer, "next": "end"})
-	return {"start": {"text": greeting, "vo_once": true, "choices": choices}}
+	start["choices"] = lead + (start.get("choices", []) as Array)
+	out["start"] = start
+	return out
 
 
 ## WHERE YOU STAND WITH THEM, under their name — the addressee's third job after
