@@ -46,15 +46,30 @@ const LINES := {
 	# is what folk say when their family ships out, so the warmth is real; the register
 	# is unhurried and gracious, a ship with nothing to prove and a schedule it keeps.
 	#
-	# THE BUDGET CROSSING IS A DIFFERENT VOICE, and it has no prefix yet (see
-	# ShipNames.ROLE_CODE). Cold coffee, homesickness and a long way to go belong THERE
-	# — putting them here made the fanciest hull on the lane sound like a bus, which is
-	# the sort of thing that never gets noticed once it ships.
 	"liner": [
 		"\"Reading you clearly, Captain. All quiet aboard. A pleasant crossing to you.\"",
 		"\"Thank you, no. Two hundred and six souls, every one of them accounted for.\"",
 		"\"Signal received. We are carrying very important things, and we know it.\"",
 		"\"Acknowledged, and courteous of you to ask. Few do this far out.\"",
+	],
+	# THE CHEAP CROSSING — WRITTEN, KEPT, AND NOT YET REACHABLE (user, 2026-07-28: "I do
+	# need the one you created though, so don't remove it entirely").
+	#
+	# These were the liner lines until the tier was settled: cold coffee, homesickness, a
+	# long way to go. Wrong for a GVIT, which is the fancy end — right for the lower-rate
+	# passenger class that exists in the fiction and HAS NO CALLSIGN YET
+	# (ShipNames.ROLE_CODE). So the voice waits here as DATA rather than as prose in a
+	# comment, because a comment is what gets deleted in the next tidy-up.
+	#
+	# NOTHING ROUTES HERE. No prefix maps to it, so `line()` can never pick this set —
+	# and the key is deliberately plain rather than lore-shaped, because inventing a
+	# canon-sounding name for something the user has not named is how a placeholder
+	# becomes the record. It gets its real name when the callsign does.
+	"budget_liner": [
+		"\"Reading you. Two hundred and six souls and a lot of cold coffee. All well.\"",
+		"\"Clear signal, Captain. We're carrying very important things. Aren't we all.\"",
+		"\"Copy. Half of them asleep, half of them homesick. Standard crossing.\"",
+		"\"Received, and thank you for asking. Not many do out here.\"",
 	],
 	"navy": [
 		"\"Confederacy vessel. Acknowledged. Maintain your heading.\"",

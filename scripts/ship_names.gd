@@ -52,8 +52,8 @@ const ROLE_CODE := {
 	# THE BUDGET PASSENGER CLASS IS A KNOWN GAP (user, 2026-07-28): "lower rate liners
 	# should exist too, but I don't have a callsign for them." Deliberately unnamed
 	# rather than invented — a made-up code would read as canon the moment it shipped.
-	# Its VOICE is already reserved in ShipHails (cold coffee, homesickness, a long way
-	# to go), which is the register a GVIT explicitly does not have.
+	# Its VOICE IS ALREADY WRITTEN and waiting under ShipHails.LINES["budget_liner"];
+	# adding the prefix here is what wires it up, and nothing else has to change.
 	"navy": "CN",
 	"guardian": "EU",
 }

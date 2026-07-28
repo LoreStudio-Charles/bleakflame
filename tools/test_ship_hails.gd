@@ -37,6 +37,16 @@ func _init() -> void:
 		_ok(ShipHails.LINES.has(str(role)),
 			"a %s can answer as a %s, not as unregistered noise" % [role, role])
 
+	# A WRITTEN VOICE WAITING FOR ITS CALLSIGN. The lower-rate passenger class exists in
+	# the fiction and has no prefix yet (user), so its lines live in LINES with nothing
+	# routing to them. Asserted BOTH ways: the writing must not be tidied away as dead
+	# data, and it must not be wired up before the user has named the class — an
+	# invented prefix reads as canon the moment it ships.
+	_ok(not (ShipHails.LINES.get("budget_liner", []) as Array).is_empty(),
+		"the cheap crossing's voice is kept, waiting for a callsign")
+	_ok(not ShipNames.ROLE_CODE.has("budget_liner"),
+		"...and nothing routes to it yet, because the class is still unnamed")
+
 	# THE SAME SHIP ALWAYS SAYS THE SAME THING. A stranger who answers differently every
 	# time you raise them is a slot machine, not somebody you passed.
 	for mark in ["GCT4K7B2", "GEU91XQ4", "GCNZZ123", "X9QZ4M"]:
